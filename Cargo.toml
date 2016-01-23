@@ -1,0 +1,15 @@
+[package]
+name = "dynamo"
+version = "0.1.0"
+authors = ["Sven Nilsen <bvssvni@gmail.com>"]
+keywords = ["script", "scripting", "game", "language", "piston"]
+description = "A rusty dynamically typed scripting language"
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/pistondevelopers/dynamo.git"
+homepage = "https://github.com/pistondevelopers/dynamo"
+
+[dependencies]
+piston_meta = "0.25.0"
+range = "0.3.1"
+rand = "0.3.13"
