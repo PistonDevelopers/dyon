@@ -57,4 +57,10 @@ mod tests {
         );
     }
 
+    #[bench]
+    fn bench_main(b: &mut Bencher) {
+        b.iter(||
+            run("assets/syntax.txt", "source/bench/main.rs")
+        );
+    }
 }

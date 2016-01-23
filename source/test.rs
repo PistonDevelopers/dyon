@@ -1,8 +1,9 @@
+
+fn x(x: 'return) -> {
+    return {x: x, y: 0}
+}
+
 fn main() {
-    x := [0, 1]
-    y := {0: [0, 0]}
-    for i := 0; i < 2; i += 1 {
-        println(i)
-    }
-    println(y)
+    foo := [0, 1]
+    println(x(foo))
 }
