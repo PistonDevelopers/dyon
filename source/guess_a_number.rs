@@ -1,0 +1,47 @@
+fn main() {
+    curses := ["pig", "monkey", "gorilla", "obedient citizen"]
+    'start: loop {
+        println("I am thinking of a number between 0 and 100")
+        sleep(0.3)
+        println("Can you guess it?")
+        sleep(1.5)
+        x := round(random() * 100)
+        tries := 6
+        loop {
+            print("Type a number between 0 and 100: ")
+            guess := read_number("Expected number")
+            sleep(0.2)
+            println("thinking...")
+            sleep(5)
+            if x == guess {
+                curse := curses[random() * len(curses)]
+                println("RIGHT, you are a smart " + curse)
+                sleep(2)
+                println("See you later, alligator!")
+                break 'start
+            }
+
+            println("WRONG!")
+            sleep(2)
+            println("HAHAHAHAHA!")
+            sleep(1)
+            tries -= 1
+            if tries == 0 {
+                println("Sorry, you lost")
+                sleep(0.5)
+                println("The number was " + to_string(x))
+                println("Try again")
+                sleep(1.5)
+                continue 'start
+            }
+            println("You have now " + to_string(tries) + " tries left")
+            sleep(1)
+
+            if x < guess {
+                println("The number is smaller than " + to_string(guess))
+            } else {
+                println("The number is larger than " + to_string(guess))
+            }
+        }
+    }
+}
