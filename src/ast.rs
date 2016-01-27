@@ -172,6 +172,7 @@ pub enum Expression {
     For(Box<For>),
     If(Box<If>),
     Compare(Box<Compare>),
+    UnOp(Box<UnOpExpression>),
 }
 
 impl Expression {
@@ -254,6 +255,10 @@ impl Expression {
                     convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::Compare(Box::new(val)));
+            } else if let Ok((range, val)) = UnOpExpression::from_meta_data(
+                    convert, ignored) {
+                convert.update(range);
+                result = Some(Expression::UnOp(Box::new(val)));
             } else {
                 let range = convert.ignore();
                 convert.update(range);
@@ -573,6 +578,11 @@ pub enum BinOp {
     Pow
 }
 
+#[derive(Debug, Copy, Clone)]
+pub enum UnOp {
+    Neg
+}
+
 #[derive(Debug, Clone)]
 pub enum Id {
     String(Arc<String>),
@@ -676,6 +686,51 @@ pub struct BinOpExpression {
     pub op: BinOp,
     pub left: Expression,
     pub right: Expression,
+}
+
+#[derive(Debug, Clone)]
+pub struct UnOpExpression {
+    pub op: UnOp,
+    pub expr: Expression
+}
+
+impl UnOpExpression {
+    pub fn from_meta_data(
+        mut convert: Convert,
+        ignored: &mut Vec<Range>)
+    -> Result<(Range, UnOpExpression), ()> {
+        let start = convert.clone();
+        let node = "unop";
+        let start_range = try!(convert.start_node(node));
+        convert.update(start_range);
+
+        let mut unop: Option<UnOp> = None;
+        let mut expr: Option<Expression> = None;
+        loop {
+            if let Ok(range) = convert.end_node(node) {
+                convert.update(range);
+                break;
+            } else if let Ok((range, _)) = convert.meta_bool("!") {
+                convert.update(range);
+                unop = Some(UnOp::Neg);
+            } else if let Ok((range, val)) = Expression::from_meta_data(
+                "expr", convert, ignored) {
+                convert.update(range);
+                expr = Some(val);
+            } else {
+                let range = convert.ignore();
+                convert.update(range);
+                ignored.push(range);
+            }
+        }
+
+        let unop = try!(unop.ok_or(()));
+        let expr = try!(expr.ok_or(()));
+        Ok((convert.subtract(start), UnOpExpression {
+            op: unop,
+            expr: expr
+        }))
+    }
 }
 
 #[derive(Debug, Clone)]

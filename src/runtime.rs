@@ -195,6 +195,7 @@ impl Runtime {
                 self.item(item, side);
                 (Expect::Something, Flow::Continue)
             }
+            UnOp(ref unop) => (Expect::Something, self.unop(unop, side)),
             BinOp(ref binop) => (Expect::Something, self.binop(binop, side)),
             Assign(ref assign) => (Expect::Nothing, self.assign(assign)),
             Number(ref num) => {
@@ -645,6 +646,26 @@ impl Runtime {
                                 };
                             }
                         }
+                        &Variable::Bool(b) => {
+                            unsafe {
+                                match *r {
+                                    Variable::Bool(ref mut n) => {
+                                        match op {
+                                            Set => *n = b,
+                                            _ => unimplemented!()
+                                        }
+                                    }
+                                    Variable::Return => {
+                                        if let Set = op {
+                                            *r = Variable::Bool(b)
+                                        } else {
+                                            panic!("Return has no value")
+                                        }
+                                    }
+                                    _ => panic!("Expected assigning to a bool")
+                                };
+                            }
+                        }
                         &Variable::Text(ref b) => {
                             unsafe {
                                 match *r {
@@ -990,6 +1011,25 @@ impl Runtime {
     fn bool(&mut self, val: &ast::Bool) {
         self.stack.push(Variable::Bool(val.val));
     }
+    fn unop(&mut self, unop: &ast::UnOpExpression, side: Side) -> Flow {
+        match self.expression(&unop.expr, side) {
+            (_, Flow::Return) => { return Flow::Return; }
+            (Expect::Something, Flow::Continue) => {}
+            _ => panic!("Expected something from unary argument")
+        };
+        let val = self.stack.pop().expect("Expected unary argument");
+        let v = match self.resolve(&val) {
+            &Variable::Bool(b) => {
+                Variable::Bool(match unop.op {
+                    ast::UnOp::Neg => !b,
+                    // _ => panic!("Unknown boolean unary operator `{:?}`", unop.op)
+                })
+            }
+            _ => panic!("Invalid type, expected bool")
+        };
+        self.stack.push(v);
+        Flow::Continue
+    }
     fn binop(&mut self, binop: &ast::BinOpExpression, side: Side) -> Flow {
         use ast::BinOp::*;
 
@@ -1016,6 +1056,16 @@ impl Runtime {
                     Pow => a.powf(b)
                 })
             }
+            (&Variable::Bool(a), &Variable::Bool(b)) => {
+                Variable::Bool(match binop.op {
+                    Add => a || b,
+                    // Boolean subtraction with lazy precedence.
+                    Sub => a && !b,
+                    Mul => a && b,
+                    Pow => a ^ b,
+                    _ => panic!("Unknown boolean operator `{:?}`", binop.op)
+                })
+            }
             (&Variable::Text(ref a), &Variable::Text(ref b)) => {
                 match binop.op {
                     Add => {
@@ -1029,7 +1079,7 @@ impl Runtime {
             }
             (&Variable::Text(_), _) =>
                 panic!("The right argument must be a string. Try the `to_string` function"),
-            _ => panic!("Invalid type, expected numbers or strings")
+            _ => panic!("Invalid type, expected numbers, bools or strings")
         };
         self.stack.push(v);
 

@@ -1,7 +1,7 @@
 fn main() {
-    a := [5]
-    b := {a: a}
-    debug()
-    b = clone(b)
-    debug()
+    a := false
+    for i := 0; i < 8; i += 1 {
+        a = !a
+    }
+    println(a)
 }
