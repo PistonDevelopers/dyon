@@ -47,6 +47,35 @@ fn resolve<'a>(stack: &'a Vec<Variable>, var: &'a Variable) -> &'a Variable {
     }
 }
 
+fn deep_clone(v: &Variable, stack: &Vec<Variable>) -> Variable {
+    use self::Variable::*;
+
+    match *v {
+        F64(_) => v.clone(),
+        Return => v.clone(),
+        Bool(_) => v.clone(),
+        Text(_) => v.clone(),
+        Object(ref obj) => {
+            let mut res = obj.clone();
+            for (_, val) in &mut res {
+                *val = deep_clone(val, stack);
+            }
+            Object(res)
+        }
+        Array(ref arr) => {
+            let mut res = arr.clone();
+            for it in &mut res {
+                *it = deep_clone(it, stack);
+            }
+            Array(res)
+        }
+        Ref(ind) => {
+            deep_clone(&stack[ind], stack)
+        }
+        UnsafeRef(_) => panic!("Unsafe reference can not be cloned")
+    }
+}
+
 impl Runtime {
     pub fn new() -> Runtime {
         Runtime {
@@ -240,7 +269,7 @@ impl Runtime {
                         self.push_fn(call.name.clone(), st + 1, lc);
                         let v = self.stack.pop()
                             .expect("There is no value on the stack");
-                        let v = self.resolve(&v).clone();
+                        let v = deep_clone(self.resolve(&v), &self.stack);
                         self.stack.push(v);
                         self.pop_fn(call.name.clone());
                         Expect::Something
