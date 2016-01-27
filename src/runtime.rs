@@ -785,22 +785,43 @@ impl Runtime {
         for &(ref n, id) in local_stack.iter().rev().take(locals) {
             if &**n != name { continue; }
             let v = {
-                let mut var: &Variable = match resolve(stack, &stack[id]) {
+                // Resolve reference of local variable.
+                let id = if let &Variable::Ref(ref_id) = &stack[id] {
+                        ref_id
+                    } else {
+                        id
+                    };
+                // Get the first variable (a.x).y
+                let mut var: &Variable = match &stack[id] {
                     &Variable::Object(ref obj) => {
                         let id = match &item.ids[0] {
                             &Id::String(ref id) => id,
+                            // TODO: Handle computed expression.
                             _ => panic!("Expected string")
                         };
                         match obj.get(id) {
                             None => panic!("Object has no key `{}`", id),
-                            Some(x) => resolve(stack, x)
+                            Some(x) => {
+                                if let &Variable::Ref(id) = x {
+                                    &stack[id]
+                                } else {
+                                    x
+                                }
+                            }
                         }
                     }
                     &Variable::Array(ref arr) => {
                         let id = match &item.ids[0] {
                             &Id::F64(id) => id,
                             &Id::Expression(_) => {
-                                match resolve(stack, &stack[start_stack_len + expr_j]) {
+                                let a = &stack[start_stack_len + expr_j];
+                                // Resolve reference of computed expression.
+                                let a = if let &Variable::Ref(ind) = a {
+                                    &stack[ind]
+                                } else {
+                                    a
+                                };
+                                match a {
                                     &Variable::F64(id) => {
                                         expr_j += 1;
                                         id
@@ -810,19 +831,33 @@ impl Runtime {
                             }
                             _ => panic!("Expected number")
                         };
-                        resolve(stack, &arr[id as usize])
+                        let v = &arr[id as usize];
+                        // Resolve the variable of (a[x]).y
+                        if let &Variable::Ref(ind) = v {
+                            &stack[ind]
+                        } else {
+                            v
+                        }
                     }
                     _ => panic!("Expected object or array")
                 };
+                // Get the rest of the variables.
                 let mut n = 0;
                 for prop in &item.ids[1..] {
                     var = match var {
                         &Variable::Object(ref obj) => {
                             let id = match prop {
                                 &Id::String(ref id) => id,
+                                // TODO: Handle computed expression.
                                 _ => break
                             };
-                            resolve(stack, &obj[id])
+                            let v = &obj[id];
+                            // Resolve reference.
+                            if let &Variable::Ref(id) = v {
+                                &stack[id]
+                            } else {
+                                v
+                            }
                         }
                         &Variable::Array(ref arr) => {
                             let id = match prop {
@@ -839,7 +874,13 @@ impl Runtime {
                                 }
                                 _ => break
                             };
-                            resolve(stack, &arr[id as usize])
+                            let v = &arr[id as usize];
+                            // Resolve reference.
+                            if let &Variable::Ref(id) = v {
+                                &stack[id]
+                            } else {
+                                v
+                            }
                         }
                         _ => break
                     };
