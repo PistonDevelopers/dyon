@@ -625,6 +625,8 @@ impl Node {
                 (_, Kind::Mul) => {}
                 (_, Kind::Call) => {}
                 (_, Kind::Item) => {}
+                (_, Kind::UnOp) => {}
+                (_, Kind::Expr) => {}
                 x => panic!("Unimplemented `{:?}`", x),
             }
             let lifetime = match nodes[c].lifetime(nodes, arg_names) {
@@ -735,6 +737,7 @@ pub enum Kind {
     Id,
     Break,
     Continue,
+    UnOp,
 }
 
 impl Kind {
@@ -772,6 +775,7 @@ impl Kind {
             "id" => Kind::Id,
             "break" => Kind::Break,
             "continue" => Kind::Continue,
+            "unop" => Kind::UnOp,
             _ => return None
         })
     }

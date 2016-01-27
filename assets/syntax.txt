@@ -28,6 +28,7 @@ _seps: "(){}[],.:;=<>*+-/%^"
     compare:"compare"
     add:"add"
     ["(" ?w expr ?w ")"]
+    unop:"unop"
     call:"call"
     text
     num
@@ -37,6 +38,7 @@ _seps: "(){}[],.:;=<>*+-/%^"
 5 lexpr = {
     block:"block"
     ["(" ?w expr ?w ")"]
+    unop:"unop"
     call:"call"
     text
     num
@@ -49,6 +51,7 @@ _seps: "(){}[],.:;=<>*+-/%^"
 9 num = .$_:"num"
 10 text = .t?:"text"
 11 bool = {"true":"bool" "false":!"bool"}
+12 unop = ["!":"!" ?w lexpr:"expr"]
 12 item = [.._seps!:"name" .r?({
     [?w "[" ?w {.t?:"id" .$_:"id" expr:"id"} ?w "]"]
     [?w "." ?w .._seps!:"id"]
