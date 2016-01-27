@@ -1016,6 +1016,16 @@ impl Runtime {
                     Pow => a.powf(b)
                 })
             }
+            (&Variable::Bool(a), &Variable::Bool(b)) => {
+                Variable::Bool(match binop.op {
+                    Add => a || b,
+                    // Boolean subtraction with lazy precedence.
+                    Sub => a && !b,
+                    Mul => a && b,
+                    Pow => a ^ b,
+                    _ => panic!("Unknown boolean operator `{:?}`", binop.op)
+                })
+            }
             (&Variable::Text(ref a), &Variable::Text(ref b)) => {
                 match binop.op {
                     Add => {
