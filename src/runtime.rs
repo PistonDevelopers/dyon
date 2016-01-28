@@ -76,6 +76,66 @@ fn deep_clone(v: &Variable, stack: &Vec<Variable>) -> Variable {
     }
 }
 
+fn item_lookup<'a>(
+    var: &'a mut Variable,
+    stack: &'a mut [Variable],
+    prop: &ast::Id,
+    start_stack_len: usize,
+    expr_j: &mut usize,
+) -> *mut Variable {
+    use ast::Id;
+
+    match var {
+        &mut Variable::Object(ref mut obj) => {
+            let id = match prop {
+                &Id::String(ref id) => id,
+                // TODO: Handle computed expression.
+                _ => panic!("Expected object")
+            };
+            let v = match obj.get_mut(id) {
+                None => panic!("Object has no key `{}`", id),
+                Some(v) => v
+            };
+            // Resolve reference.
+            if let &mut Variable::Ref(id) = v {
+                &mut stack[id]
+            } else {
+                v
+            }
+        }
+        &mut Variable::Array(ref mut arr) => {
+            let id = match prop {
+                &Id::F64(id) => id,
+                &Id::Expression(_) => {
+                    let id = start_stack_len + *expr_j;
+                    // Resolve reference of computed expression.
+                    let id = if let &Variable::Ref(ref_id) = &stack[id] {
+                            ref_id
+                        } else {
+                            id
+                        };
+                    match &mut stack[id] {
+                        &mut Variable::F64(id) => {
+                            *expr_j += 1;
+                            id
+                        }
+                        _ => panic!("Expected number")
+                    }
+                }
+                _ => panic!("Expected array")
+            };
+            let v = &mut arr[id as usize];
+            // Resolve reference.
+            if let &mut Variable::Ref(id) = v {
+                &mut stack[id]
+            } else {
+                v
+            }
+        }
+        _ => panic!("Expected object or array")
+    }
+}
+
 impl Runtime {
     pub fn new() -> Runtime {
         Runtime {
@@ -791,110 +851,30 @@ impl Runtime {
                     } else {
                         id
                     };
+                let (stack, rest) = stack.split_at_mut(id);
                 // Get the first variable (a.x).y
-                let mut var: &Variable = match &stack[id] {
-                    &Variable::Object(ref obj) => {
-                        let id = match &item.ids[0] {
-                            &Id::String(ref id) => id,
-                            // TODO: Handle computed expression.
-                            _ => panic!("Expected string")
-                        };
-                        match obj.get(id) {
-                            None => panic!("Object has no key `{}`", id),
-                            Some(x) => {
-                                if let &Variable::Ref(id) = x {
-                                    &stack[id]
-                                } else {
-                                    x
-                                }
-                            }
-                        }
-                    }
-                    &Variable::Array(ref arr) => {
-                        let id = match &item.ids[0] {
-                            &Id::F64(id) => id,
-                            &Id::Expression(_) => {
-                                let a = &stack[start_stack_len + expr_j];
-                                // Resolve reference of computed expression.
-                                let a = if let &Variable::Ref(ind) = a {
-                                    &stack[ind]
-                                } else {
-                                    a
-                                };
-                                match a {
-                                    &Variable::F64(id) => {
-                                        expr_j += 1;
-                                        id
-                                    }
-                                    _ => panic!("Expected number")
-                                }
-                            }
-                            _ => panic!("Expected number")
-                        };
-                        let v = &arr[id as usize];
-                        // Resolve the variable of (a[x]).y
-                        if let &Variable::Ref(ind) = v {
-                            &stack[ind]
-                        } else {
-                            v
-                        }
-                    }
-                    _ => panic!("Expected object or array")
-                };
+                let mut var: *mut Variable = item_lookup(
+                    &mut rest[0],
+                    stack,
+                    &item.ids[0],
+                    start_stack_len,
+                    &mut expr_j,
+                );
                 // Get the rest of the variables.
-                let mut n = 0;
                 for prop in &item.ids[1..] {
-                    var = match var {
-                        &Variable::Object(ref obj) => {
-                            let id = match prop {
-                                &Id::String(ref id) => id,
-                                // TODO: Handle computed expression.
-                                _ => break
-                            };
-                            let v = &obj[id];
-                            // Resolve reference.
-                            if let &Variable::Ref(id) = v {
-                                &stack[id]
-                            } else {
-                                v
-                            }
-                        }
-                        &Variable::Array(ref arr) => {
-                            let id = match prop {
-                                &Id::F64(id) => id,
-                                &Id::Expression(_) => {
-                                    match resolve(stack,
-                                        &stack[start_stack_len + expr_j]) {
-                                        &Variable::F64(id) => {
-                                            expr_j += 1;
-                                            id
-                                        }
-                                        _ => panic!("Expected number")
-                                    }
-                                }
-                                _ => break
-                            };
-                            let v = &arr[id as usize];
-                            // Resolve reference.
-                            if let &Variable::Ref(id) = v {
-                                &stack[id]
-                            } else {
-                                v
-                            }
-                        }
-                        _ => break
-                    };
-                    n += 1;
+                    let var2 = item_lookup(
+                        unsafe { &mut *var },
+                        stack,
+                        prop,
+                        start_stack_len,
+                        &mut expr_j,
+                    );
+                    var = var2;
                 }
 
-                if n + 1 < item.ids.len() {
-                    panic!("Expected object or array");
-                }
                 match side {
-                    Side::Right => var.clone(),
-                    // TODO: Ideally should be `&mut Variable`.
-                    Side::Left => Variable::UnsafeRef(
-                        var as *const Variable as *mut Variable)
+                    Side::Right => unsafe {&*var}.clone(),
+                    Side::Left => Variable::UnsafeRef(var)
                 }
             };
             stack.truncate(start_stack_len);
