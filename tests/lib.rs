@@ -97,3 +97,8 @@ fn test_new_pos() {
 fn test_lifetime() {
     test_src("source/lifetime.rs");
 }
+
+#[test]
+fn test_insert() {
+    test_src("source/insert.rs");
+}

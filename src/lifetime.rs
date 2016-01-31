@@ -627,6 +627,7 @@ impl Node {
                 (_, Kind::Item) => {}
                 (_, Kind::UnOp) => {}
                 (_, Kind::Expr) => {}
+                (_, Kind::Array) => {}
                 x => panic!("Unimplemented `{:?}`", x),
             }
             let lifetime = match nodes[c].lifetime(nodes, arg_names) {
