@@ -8,7 +8,8 @@ use ast;
 /// Which side an expression is evalutated.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Side {
-    Left,
+    /// Whether to insert key in object when missing.
+    LeftInsert(bool),
     Right
 }
 
@@ -76,14 +77,18 @@ fn deep_clone(v: &Variable, stack: &Vec<Variable>) -> Variable {
     }
 }
 
+// Looks up an item from a variable property.
 fn item_lookup<'a>(
     var: &'a mut Variable,
     stack: &'a mut [Variable],
     prop: &ast::Id,
     start_stack_len: usize,
     expr_j: &mut usize,
+    insert: bool, // Whether to insert key in object.
+    last: bool,   // Whether it is the last property.
 ) -> *mut Variable {
     use ast::Id;
+    use std::collections::hash_map::Entry;
 
     match var {
         &mut Variable::Object(ref mut obj) => {
@@ -92,13 +97,26 @@ fn item_lookup<'a>(
                 // TODO: Handle computed expression.
                 _ => panic!("Expected object")
             };
-            let v = match obj.get_mut(id) {
-                None => panic!("Object has no key `{}`", id),
-                Some(v) => v
+            let v = match obj.entry(id.clone()) {
+                Entry::Vacant(vac) => {
+                    if insert && last {
+                        // Insert a key to overwrite with new value.
+                        vac.insert(Variable::Return)
+                    } else {
+                        panic!("Object has no key `{}`", id);
+                    }
+                }
+                Entry::Occupied(v) => v.into_mut()
             };
             // Resolve reference.
             if let &mut Variable::Ref(id) = v {
-                &mut stack[id]
+                // Do not resolve if last, because references should be
+                // copy-on-write.
+                if last {
+                    v
+                } else {
+                    &mut stack[id]
+                }
             } else {
                 v
             }
@@ -127,7 +145,13 @@ fn item_lookup<'a>(
             let v = &mut arr[id as usize];
             // Resolve reference.
             if let &mut Variable::Ref(id) = v {
-                &mut stack[id]
+                // Do not resolve if last, because references should be
+                // copy-on-write.
+                if last {
+                    v
+                } else {
+                    &mut stack[id]
+                }
             } else {
                 v
             }
@@ -637,21 +661,34 @@ impl Runtime {
         if op == Assign {
             match *left {
                 Expression::Item(ref item) => {
-                    if item.ids.len() != 0 {
-                        unimplemented!();
-                    }
                     match self.expression(right, Side::Right) {
                         (_, Flow::Return) => { return Flow::Return; }
                         (Expect::Something, Flow::Continue) => {}
                         _ => panic!("Expected something from the right side")
                     }
-                    // Copy if it's a reference.
                     let v = match self.stack.pop() {
                         None => panic!("There is no value on the stack"),
-                        Some(x) => self.resolve(&x).clone()
+                        // Use a shallow clone of a reference.
+                        Some(Variable::Ref(ind)) => self.stack[ind].clone(),
+                        Some(x) => x
                     };
-                    self.local_stack.push((item.name.clone(), self.stack.len()));
-                    self.stack.push(v);
+                    if item.ids.len() != 0 {
+                        match self.expression(left, Side::LeftInsert(true)) {
+                            (_, Flow::Return) => { return Flow::Return; }
+                            (Expect::Something, Flow::Continue) => {}
+                            _ => panic!("Expected something from the left side")
+                        };
+                        match self.stack.pop() {
+                            Some(Variable::UnsafeRef(r)) => {
+                                unsafe { *r = v }
+                            }
+                            None => panic!("There is no value on the stack"),
+                            _ => panic!("Expected unsafe reference")
+                        }
+                    } else {
+                        self.local_stack.push((item.name.clone(), self.stack.len()));
+                        self.stack.push(v);
+                    }
                     Flow::Continue
                 }
                 _ => panic!("Expected item")
@@ -663,12 +700,12 @@ impl Runtime {
             match self.expression(right, Side::Right) {
                 (_, Flow::Return) => { return Flow::Return; }
                 (Expect::Something, Flow::Continue) => {}
-                _ => panic!("Expected something from the left side")
+                _ => panic!("Expected something from the right side")
             };
-            match self.expression(left, Side::Left) {
+            match self.expression(left, Side::LeftInsert(false)) {
                 (_, Flow::Return) => { return Flow::Return; }
                 (Expect::Something, Flow::Continue) => {}
-                _ => panic!("Expected something from the right side")
+                _ => panic!("Expected something from the left side")
             };
             match (self.stack.pop(), self.stack.pop()) {
                 (Some(a), Some(b)) => {
@@ -676,9 +713,19 @@ impl Runtime {
                         Variable::Ref(ind) => {
                             &mut self.stack[ind] as *mut Variable
                         }
-                        Variable::UnsafeRef(r) => r,
+                        Variable::UnsafeRef(r) => {
+                            // If reference, use a shallow clone to type check,
+                            // without affecting the original object.
+                            unsafe {
+                                if let Variable::Ref(ind) = *r {
+                                    *r = self.stack[ind].clone()
+                                }
+                            }
+                            r
+                        }
                         x => panic!("Expected reference, found `{:?}`", x)
                     };
+
                     match self.resolve(&b) {
                         &Variable::F64(b) => {
                             unsafe {
@@ -811,6 +858,9 @@ impl Runtime {
             }
         }
     }
+    // `insert` is true for `:=` and false for `=`.
+    // This works only on objects, but does not have to check since it is
+    // ignored for arrays.
     fn item(&mut self, item: &ast::Item, side: Side) {
         use ast::Id;
 
@@ -842,6 +892,10 @@ impl Runtime {
         let locals = local_stack.len() - call_stack.last().unwrap().2;
         let mut expr_j = 0;
         let name = &**item.name;
+        let insert = match side {
+            Side::Right => false,
+            Side::LeftInsert(insert) => insert,
+        };
         for &(ref n, id) in local_stack.iter().rev().take(locals) {
             if &**n != name { continue; }
             let v = {
@@ -852,6 +906,7 @@ impl Runtime {
                         id
                     };
                 let (stack, rest) = stack.split_at_mut(id);
+                let item_len = item.ids.len();
                 // Get the first variable (a.x).y
                 let mut var: *mut Variable = item_lookup(
                     &mut rest[0],
@@ -859,22 +914,27 @@ impl Runtime {
                     &item.ids[0],
                     start_stack_len,
                     &mut expr_j,
+                    insert,
+                    item_len == 1
                 );
                 // Get the rest of the variables.
-                for prop in &item.ids[1..] {
+                for (i, prop) in item.ids[1..].iter().enumerate() {
                     let var2 = item_lookup(
                         unsafe { &mut *var },
                         stack,
                         prop,
                         start_stack_len,
                         &mut expr_j,
+                        insert,
+                        // `i` skips first index.
+                        i + 2 == item_len
                     );
                     var = var2;
                 }
 
                 match side {
                     Side::Right => unsafe {&*var}.clone(),
-                    Side::Left => Variable::UnsafeRef(var)
+                    Side::LeftInsert(_) => Variable::UnsafeRef(var)
                 }
             };
             stack.truncate(start_stack_len);
