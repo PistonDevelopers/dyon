@@ -1,8 +1,33 @@
+fn receive(channel: 'return) -> {
+    return [true, channel]
+}
+
+fn check_msg(obj) {
+    if obj[0] {
+        println(obj[1].msg)
+    } else {
+        println("<connection closed>")
+    }
+}
+
+fn close(obj) {
+    obj[0] = false
+    obj[1] := []
+}
+
 fn main() {
-    x := 3      // `x` is declared and assigned a number.
-    y := x      // `y` is declared and shallow clones `x`.
-    x = 2       // `x` is changed to 2, but `y` is unaffected
-    y = 4       // `y` is changed to 4, but `x` is unaffected
-    println(x)  // prints `2`
-    println(y)  // prints `4`
+    a := {msg: "none"}
+
+    b := receive(a)
+    c := {send: a}
+
+    c.send.msg = "hi!"
+
+    check_msg(b) // prints "hi!"
+
+    close(b)
+
+    c.send.msg = "are you there?"
+
+    check_msg(b) // prints "<connection closed>"
 }
