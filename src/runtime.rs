@@ -78,9 +78,9 @@ fn deep_clone(v: &Variable, stack: &Vec<Variable>) -> Variable {
 }
 
 // Looks up an item from a variable property.
-fn item_lookup<'a>(
-    var: &'a mut Variable,
-    stack: &'a mut [Variable],
+fn item_lookup(
+    var: *mut Variable,
+    stack: &mut [Variable],
     prop: &ast::Id,
     start_stack_len: usize,
     expr_j: &mut usize,
@@ -90,73 +90,75 @@ fn item_lookup<'a>(
     use ast::Id;
     use std::collections::hash_map::Entry;
 
-    match var {
-        &mut Variable::Object(ref mut obj) => {
-            let id = match prop {
-                &Id::String(ref id) => id,
-                // TODO: Handle computed expression.
-                _ => panic!("Expected object")
-            };
-            let v = match obj.entry(id.clone()) {
-                Entry::Vacant(vac) => {
-                    if insert && last {
-                        // Insert a key to overwrite with new value.
-                        vac.insert(Variable::Return)
-                    } else {
-                        panic!("Object has no key `{}`", id);
-                    }
-                }
-                Entry::Occupied(v) => v.into_mut()
-            };
-            // Resolve reference.
-            if let &mut Variable::Ref(id) = v {
-                // Do not resolve if last, because references should be
-                // copy-on-write.
-                if last {
-                    v
-                } else {
-                    &mut stack[id]
-                }
-            } else {
-                v
-            }
-        }
-        &mut Variable::Array(ref mut arr) => {
-            let id = match prop {
-                &Id::F64(id) => id,
-                &Id::Expression(_) => {
-                    let id = start_stack_len + *expr_j;
-                    // Resolve reference of computed expression.
-                    let id = if let &Variable::Ref(ref_id) = &stack[id] {
-                            ref_id
+    unsafe {
+        match *var {
+            Variable::Object(ref mut obj) => {
+                let id = match prop {
+                    &Id::String(ref id) => id,
+                    // TODO: Handle computed expression.
+                    _ => panic!("Expected object")
+                };
+                let v = match obj.entry(id.clone()) {
+                    Entry::Vacant(vac) => {
+                        if insert && last {
+                            // Insert a key to overwrite with new value.
+                            vac.insert(Variable::Return)
                         } else {
-                            id
-                        };
-                    match &mut stack[id] {
-                        &mut Variable::F64(id) => {
-                            *expr_j += 1;
-                            id
+                            panic!("Object has no key `{}`", id);
                         }
-                        _ => panic!("Expected number")
                     }
-                }
-                _ => panic!("Expected array")
-            };
-            let v = &mut arr[id as usize];
-            // Resolve reference.
-            if let &mut Variable::Ref(id) = v {
-                // Do not resolve if last, because references should be
-                // copy-on-write.
-                if last {
-                    v
+                    Entry::Occupied(v) => v.into_mut()
+                };
+                // Resolve reference.
+                if let &mut Variable::Ref(id) = v {
+                    // Do not resolve if last, because references should be
+                    // copy-on-write.
+                    if last {
+                        v
+                    } else {
+                        &mut stack[id]
+                    }
                 } else {
-                    &mut stack[id]
+                    v
                 }
-            } else {
-                v
             }
+            Variable::Array(ref mut arr) => {
+                let id = match prop {
+                    &Id::F64(id) => id,
+                    &Id::Expression(_) => {
+                        let id = start_stack_len + *expr_j;
+                        // Resolve reference of computed expression.
+                        let id = if let &Variable::Ref(ref_id) = &stack[id] {
+                                ref_id
+                            } else {
+                                id
+                            };
+                        match &mut stack[id] {
+                            &mut Variable::F64(id) => {
+                                *expr_j += 1;
+                                id
+                            }
+                            _ => panic!("Expected number")
+                        }
+                    }
+                    _ => panic!("Expected array")
+                };
+                let v = &mut arr[id as usize];
+                // Resolve reference.
+                if let &mut Variable::Ref(id) = v {
+                    // Do not resolve if last, because references should be
+                    // copy-on-write.
+                    if last {
+                        v
+                    } else {
+                        &mut stack[id]
+                    }
+                } else {
+                    v
+                }
+            }
+            _ => panic!("Expected object or array")
         }
-        _ => panic!("Expected object or array")
     }
 }
 
@@ -905,11 +907,10 @@ impl Runtime {
                     } else {
                         id
                     };
-                let (stack, rest) = stack.split_at_mut(id);
                 let item_len = item.ids.len();
                 // Get the first variable (a.x).y
                 let mut var: *mut Variable = item_lookup(
-                    &mut rest[0],
+                    &mut stack[id],
                     stack,
                     &item.ids[0],
                     start_stack_len,
@@ -919,7 +920,7 @@ impl Runtime {
                 );
                 // Get the rest of the variables.
                 for (i, prop) in item.ids[1..].iter().enumerate() {
-                    let var2 = item_lookup(
+                    var = item_lookup(
                         unsafe { &mut *var },
                         stack,
                         prop,
@@ -929,7 +930,6 @@ impl Runtime {
                         // `i` skips first index.
                         i + 2 == item_len
                     );
-                    var = var2;
                 }
 
                 match side {
