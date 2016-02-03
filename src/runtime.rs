@@ -94,8 +94,23 @@ fn item_lookup(
         match *var {
             Variable::Object(ref mut obj) => {
                 let id = match prop {
-                    &Id::String(ref id) => id,
-                    // TODO: Handle computed expression.
+                    &Id::String(ref id) => id.clone(),
+                    &Id::Expression(_) => {
+                        let id = start_stack_len + *expr_j;
+                        // Resolve reference of computed expression.
+                        let id = if let &Variable::Ref(ref_id) = &stack[id] {
+                                ref_id
+                            } else {
+                                id
+                            };
+                        match &mut stack[id] {
+                            &mut Variable::Text(ref id) => {
+                                *expr_j += 1;
+                                id.clone()
+                            }
+                            _ => panic!("Expected string")
+                        }
+                    }
                     _ => panic!("Expected object")
                 };
                 let v = match obj.entry(id.clone()) {
