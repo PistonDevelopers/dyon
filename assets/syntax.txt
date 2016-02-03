@@ -27,6 +27,7 @@ _seps: "(){}[],.:;=<>*+-/%^"
     assign:"assign"
     compare:"compare"
     add:"add"
+    named_call:"named_call"
     ["(" ?w expr ?w ")"]
     unop:"unop"
     call:"call"
@@ -37,6 +38,7 @@ _seps: "(){}[],.:;=<>*+-/%^"
 }
 5 lexpr = {
     block:"block"
+    named_call:"named_call"
     ["(" ?w expr ?w ")"]
     unop:"unop"
     call:"call"
@@ -68,6 +70,7 @@ _seps: "(){}[],.:;=<>*+-/%^"
     ?[?w "else" ?w block:"else_block"]
 ]
 18 call = [.._seps!:"name" ?w "(" .s?.([?w "," ?w] expr:"arg") ?w ")"]
+19 named_call = ["(" ?w .r!([.._seps!:"word" ?w ":" ?w expr:"arg" ?w]) ")"]
 19 assign = [lexpr:"left" ?w assign_op ?w expr:"right"]
 20 assign_op = {
     ":=":":="

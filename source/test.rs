@@ -1,7 +1,11 @@
-fn foo() {}
+fn say_to(msg, person) {
+    print(person + "! ")
+    println(msg)
+}
 
 fn main() {
-    for i := 0; i < 100_000; i += 1 {
-        foo()
-    }
+    // Rusty call syntax.
+    say_to("hi!", "you there")
+    // SmallTalk call syntax.
+    (say: "hi!" to: "you there")
 }

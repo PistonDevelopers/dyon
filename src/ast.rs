@@ -235,6 +235,10 @@ impl Expression {
                     convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::Call(val));
+            } else if let Ok((range, val)) = Call::named_from_meta_data(
+                    convert, ignored) {
+                convert.update(range);
+                result = Some(Expression::Call(val));
             } else if let Ok((range, val)) = Assign::from_meta_data(
                     convert, ignored) {
                 convert.update(range);
@@ -676,6 +680,42 @@ impl Call {
         let name = try!(name.ok_or(()));
         Ok((convert.subtract(start), Call {
             name: name,
+            args: args
+        }))
+    }
+
+    pub fn named_from_meta_data(
+        mut convert: Convert,
+        ignored: &mut Vec<Range>)
+    -> Result<(Range, Call), ()> {
+        let start = convert.clone();
+        let node = "named_call";
+        let start_range = try!(convert.start_node(node));
+        convert.update(start_range);
+
+        let mut name = String::new();
+        let mut args = vec![];
+        loop {
+            if let Ok(range) = convert.end_node(node) {
+                convert.update(range);
+                break;
+            } else if let Ok((range, val)) = convert.meta_string("word") {
+                convert.update(range);
+                if name.len() != 0 { name.push('_'); }
+                name.push_str(&val);
+            } else if let Ok((range, val)) = Expression::from_meta_data(
+                "arg", convert, ignored) {
+                convert.update(range);
+                args.push(val);
+            } else {
+                let range = convert.ignore();
+                convert.update(range);
+                ignored.push(range);
+            }
+        }
+
+        Ok((convert.subtract(start), Call {
+            name: Arc::new(name),
             args: args
         }))
     }
