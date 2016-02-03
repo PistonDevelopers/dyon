@@ -63,4 +63,18 @@ mod tests {
             run("assets/syntax.txt", "source/bench/main.rs")
         );
     }
+
+    #[bench]
+    fn bench_array(b: &mut Bencher) {
+        b.iter(||
+            run("assets/syntax.txt", "source/bench/array.rs")
+        );
+    }
+
+    #[bench]
+    fn bench_object(b: &mut Bencher) {
+        b.iter(||
+            run("assets/syntax.txt", "source/bench/object.rs")
+        );
+    }
 }
