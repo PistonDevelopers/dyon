@@ -77,4 +77,11 @@ mod tests {
             run("assets/syntax.txt", "source/bench/object.rs")
         );
     }
+
+    #[bench]
+    fn bench_call(b: &mut Bencher) {
+        b.iter(||
+            run("assets/syntax.txt", "source/bench/call.rs")
+        );
+    }
 }
