@@ -107,3 +107,8 @@ fn test_insert() {
 fn test_named_call() {
     test_src("source/named_call.rs");
 }
+
+#[test]
+fn test_max_min() {
+    test_src("source/max_min.rs");
+}
