@@ -289,6 +289,9 @@ impl Runtime {
                 self.assign_specific(AssignOp::Set, &item, ret);
                 (Expect::Something, Flow::Return)
             }
+            ReturnVoid => {
+                (Expect::Nothing, Flow::Return)
+            }
             Break(ref b) => (Expect::Nothing, Flow::Break(b.label.clone())),
             Continue(ref b) => (Expect::Nothing, Flow::ContinueLoop(b.label.clone())),
             Call(ref call) => self.call(call),
