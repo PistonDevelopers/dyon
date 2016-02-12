@@ -159,6 +159,7 @@ pub enum Expression {
     Object(Box<Object>),
     Array(Box<Array>),
     Return(Box<Expression>),
+    ReturnVoid,
     Break(Break),
     Continue(Continue),
     Block(Block),
@@ -202,6 +203,9 @@ impl Expression {
                 "return", convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::Return(Box::new(val)));
+            } else if let Ok((range, _)) = convert.meta_bool("return_void") {
+                convert.update(range);
+                result = Some(Expression::ReturnVoid);
             } else if let Ok((range, val)) = Break::from_meta_data(
                     convert, ignored) {
                 convert.update(range);

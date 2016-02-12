@@ -112,3 +112,8 @@ fn test_named_call() {
 fn test_max_min() {
     test_src("source/max_min.rs");
 }
+
+#[test]
+fn test_return_void() {
+    test_src("source/return_void.rs");
+}

@@ -26,6 +26,7 @@ _seps: "(){}[],.:;=<>*+-/%^"
     block:"block"
     assign:"assign"
     compare:"compare"
+    ["return":"return_void"]
     add:"add"
     named_call:"named_call"
     ["(" ?w expr ?w ")"]
