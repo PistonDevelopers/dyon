@@ -457,6 +457,30 @@ impl Runtime {
                         self.pop_fn(call.name.clone());
                         Expect::Something
                     }
+                    "push" => {
+                        self.push_fn(call.name.clone(), st + 1, lc);
+                        let item = match self.stack.pop() {
+                            Some(item) => item,
+                            None => panic!("There is no value on the stack")
+                        };
+                        let v = match self.stack.pop() {
+                            Some(v) => v,
+                            None => panic!("There is no value on the stack")
+                        };
+
+                        if let Variable::Ref(ind) = v {
+                            if let Variable::Array(ref mut arr) =
+                            self.stack[ind] {
+                                arr.push(item);
+                            } else {
+                                panic!("Expected reference to array");
+                            }
+                        } else {
+                            panic!("Expected reference to array");
+                        }
+                        self.pop_fn(call.name.clone());
+                        Expect::Nothing
+                    }
                     "read_line" => {
                         use std::io::{self, Write};
 
