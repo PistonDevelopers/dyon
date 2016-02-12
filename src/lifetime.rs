@@ -55,6 +55,18 @@ pub fn check(data: &[Range<MetaData>]) -> Result<(), String> {
                         let i = *parents.last().unwrap();
                         nodes[i].name = Some(val.clone());
                     }
+                    "word" => {
+                        // Put words together to name.
+                        let i = *parents.last().unwrap();
+                        let ref mut name = nodes[i].name;
+                        if let &mut Some(ref mut name) = name {
+                            let name = Arc::make_mut(name);
+                            name.push('_');
+                            name.push_str(val);
+                        } else {
+                            *name = Some(val.clone());
+                        }
+                    }
                     "lifetime" => {
                         let i = *parents.last().unwrap();
                         nodes[i].lifetime = Some(val.clone());
@@ -221,6 +233,7 @@ pub fn check(data: &[Range<MetaData>]) -> Result<(), String> {
     intrinsics.insert("read_number", READ_NUMBER);
     intrinsics.insert("read_line", READ_LINE);
     intrinsics.insert("len", LEN);
+    intrinsics.insert("push", PUSH);
     intrinsics.insert("trim_right", TRIM_RIGHT);
     intrinsics.insert("to_string", TO_STRING);
     intrinsics.insert("sqrt", SQRT);
@@ -717,7 +730,6 @@ pub enum Kind {
     Exp,
     Val,
     Call,
-    NamedCall,
     Arg,
     Assign,
     Left,
@@ -756,7 +768,7 @@ impl Kind {
             "exp" => Kind::Exp,
             "val" => Kind::Val,
             "call" => Kind::Call,
-            "named_call" => Kind::NamedCall,
+            "named_call" => Kind::Call,
             "arg" => Kind::Arg,
             "assign" => Kind::Assign,
             "left" => Kind::Left,
@@ -856,6 +868,11 @@ static TRIM_RIGHT: Intrinsic = Intrinsic {
 static LEN: Intrinsic = Intrinsic {
     arg_constraints: &[ArgConstraint::Default],
     returns: true
+};
+
+static PUSH: Intrinsic = Intrinsic {
+    arg_constraints: &[ArgConstraint::Default, ArgConstraint::Arg(0)],
+    returns: false
 };
 
 static SQRT: Intrinsic = Intrinsic {

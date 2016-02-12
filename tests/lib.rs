@@ -102,3 +102,8 @@ fn test_lifetime() {
 fn test_insert() {
     test_src("source/insert.rs");
 }
+
+#[test]
+fn test_named_call() {
+    test_src("source/named_call.rs");
+}

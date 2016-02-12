@@ -70,7 +70,8 @@ _seps: "(){}[],.:;=<>*+-/%^"
     ?[?w "else" ?w block:"else_block"]
 ]
 18 call = [.._seps!:"name" ?w "(" .s?.([?w "," ?w] expr:"arg") ?w ")"]
-19 named_call = ["(" ?w .r!([.._seps!:"word" ?w ":" ?w expr:"arg" ?w]) ")"]
+19 named_call = [.._seps!:"word" ?w "(" ?w
+    .s?.([?w "," ?w] [.._seps!:"word" ?w ":" ?w expr:"arg" ?w]) ")"]
 19 assign = [lexpr:"left" ?w assign_op ?w expr:"right"]
 20 assign_op = {
     ":=":":="
