@@ -39,6 +39,14 @@ pub struct Runtime {
     pub functions: Arc<HashMap<Arc<String>, ast::Function>>,
     pub ret: Arc<String>,
     pub rng: rand::ThreadRng,
+    pub text_type: Variable,
+    pub f64_type: Variable,
+    pub return_type: Variable,
+    pub bool_type: Variable,
+    pub object_type: Variable,
+    pub array_type: Variable,
+    pub ref_type: Variable,
+    pub unsafe_ref_type: Variable,
 }
 
 fn resolve<'a>(stack: &'a Vec<Variable>, var: &'a Variable) -> &'a Variable {
@@ -186,6 +194,14 @@ impl Runtime {
             functions: Arc::new(HashMap::new()),
             ret: Arc::new("return".into()),
             rng: rand::thread_rng(),
+            text_type: Variable::Text(Arc::new("string".into())),
+            f64_type: Variable::Text(Arc::new("number".into())),
+            return_type: Variable::Text(Arc::new("return".into())),
+            bool_type: Variable::Text(Arc::new("boolean".into())),
+            object_type: Variable::Text(Arc::new("object".into())),
+            array_type: Variable::Text(Arc::new("array".into())),
+            ref_type: Variable::Text(Arc::new("ref".into())),
+            unsafe_ref_type: Variable::Text(Arc::new("unsafe_ref".into())),
         }
     }
 
@@ -558,6 +574,26 @@ impl Runtime {
                                 Variable::Text(Arc::new(format!("{}", v)))
                             }
                             _ => unimplemented!(),
+                        };
+                        self.stack.push(v);
+                        self.pop_fn(call.name.clone());
+                        Expect::Something
+                    }
+                    "typeof" => {
+                        self.push_fn(call.name.clone(), st + 1, lc);
+                        let v = match self.stack.pop() {
+                            Some(v) => v,
+                            None => panic!("There is no value on the stack")
+                        };
+                        let v = match self.resolve(&v) {
+                            &Variable::Text(_) => self.text_type.clone(),
+                            &Variable::F64(_) => self.f64_type.clone(),
+                            &Variable::Return => self.return_type.clone(),
+                            &Variable::Bool(_) => self.bool_type.clone(),
+                            &Variable::Object(_) => self.object_type.clone(),
+                            &Variable::Array(_) => self.array_type.clone(),
+                            &Variable::Ref(_) => self.ref_type.clone(),
+                            &Variable::UnsafeRef(_) => self.unsafe_ref_type.clone(),
                         };
                         self.stack.push(v);
                         self.pop_fn(call.name.clone());
