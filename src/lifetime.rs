@@ -250,6 +250,7 @@ pub fn check(data: &[Range<MetaData>]) -> Result<(), String> {
     intrinsics.insert("log10", LOG10);
     intrinsics.insert("random", RANDOM);
     intrinsics.insert("load", LOAD);
+    intrinsics.insert("load_source_imports", LOAD_SOURCE_IMPORTS);
     intrinsics.insert("call", CALL);
 
     // Check for duplicate function arguments.
@@ -949,6 +950,11 @@ static TYPEOF: Intrinsic = Intrinsic {
 
 static LOAD: Intrinsic = Intrinsic {
     arg_constraints: &[ArgConstraint::Default],
+    returns: true
+};
+
+static LOAD_SOURCE_IMPORTS: Intrinsic = Intrinsic {
+    arg_constraints: &[ArgConstraint::Default; 2],
     returns: true
 };
 

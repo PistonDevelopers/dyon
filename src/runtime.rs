@@ -658,10 +658,63 @@ impl Runtime {
                             &Variable::Text(ref text) => {
                                 let ast: Vec<ast::Function> = load(text)
                                     .unwrap();
-                                Variable::RustObject(Arc::new(Mutex::new(ast)))
+                                let mut module = Module::new();
+                                for f in &ast {
+                                    module.register(f);
+                                }
+                                Variable::RustObject(Arc::new(Mutex::new(module)))
                             }
                             _ => panic!("Expected text argument")
                         };
+                        self.stack.push(v);
+                        self.pop_fn(call.name.clone());
+                        Expect::Something
+                    }
+                    "load_source_imports" => {
+                        use load;
+
+                        self.push_fn(call.name.clone(), st + 1, lc);
+                        let modules = match self.stack.pop() {
+                            Some(v) => v,
+                            None => panic!("There is no value on the stack")
+                        };
+                        let source = match self.stack.pop() {
+                            Some(v) => v,
+                            None => panic!("There is no value on the stack")
+                        };
+                        let mut new_module = Module::new();
+                        match self.resolve(&modules) {
+                            &Variable::Array(ref array) => {
+                                for it in array {
+                                    match self.resolve(it) {
+                                        &Variable::RustObject(ref obj) => {
+                                            match obj.lock().unwrap().downcast_ref::<Module>() {
+                                                Some(m) => {
+                                                    for f in m.functions.values() {
+                                                        new_module.register(f)
+                                                    }
+                                                }
+                                                None => panic!("Expected `Module`")
+                                            }
+                                        }
+                                        _ => panic!("Expected Rust object")
+                                    }
+                                }
+                            }
+                            _ => panic!("Expected array argument")
+                        }
+                        match self.resolve(&source) {
+                            &Variable::Text(ref text) => {
+                                let ast: Vec<ast::Function> = load(text)
+                                    .unwrap();
+                                for f in &ast {
+                                    new_module.register(f);
+                                }
+                            }
+                            _ => panic!("Expected text argument")
+                        };
+                        let v = Variable::RustObject(Arc::new(
+                            Mutex::new(new_module)));
                         self.stack.push(v);
                         self.pop_fn(call.name.clone());
                         Expect::Something
@@ -694,33 +747,23 @@ impl Runtime {
                         };
 
                         match obj.lock().unwrap()
-                            .downcast_ref::<Vec<ast::Function>>() {
-                            Some(ast) => {
-                                let mut module = Module::new();
-                                for f in ast {
-                                    module.register(f);
-                                }
-                                let mut found = false;
-                                for f in ast {
-                                    if *f.name == **fn_name {
+                            .downcast_ref::<Module>() {
+                            Some(m) => {
+                                match m.functions.get(&fn_name) {
+                                    Some(ref f) => {
                                         if f.args.len() != args.len() {
                                             panic!("Expected `{}` arguments, found `{}`",
                                                 f.args.len(), args.len())
                                         }
-                                        found = true;
-                                        break;
                                     }
+                                    None => panic!("Could not find function `{}`", fn_name)
                                 }
-                                if !found {
-                                    panic!("Could not find function `{}`", fn_name);
-                                }
-
                                 let call = ast::Call {
                                     name: fn_name.clone(),
                                     args: args.into_iter().map(|arg|
                                         ast::Expression::Variable(arg)).collect()
                                 };
-                                self.call(&call, &module);
+                                self.call(&call, &m);
                             }
                             None => panic!("Expected `Vec<ast::Function>`")
                         }
