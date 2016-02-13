@@ -87,6 +87,7 @@ _seps: "(){}[],.:;=<>*+-/%^"
 18 continue = ["continue" ?w ?["'" .._seps!:"label"]]
 19 if = [
     "if" .w! expr:"cond" ?w block:"true_block"
+    .r?([?w "else" w "if" ?w expr:"else_if_cond" ?w block:"else_if_block"])
     ?[?w "else" ?w block:"else_block"]
 ]
 20 call = [.._seps!:"name" ?w "(" .s?.([?w "," ?w] arg_expr:"arg") ?w ")"]

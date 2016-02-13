@@ -84,6 +84,11 @@ fn test_if() {
 }
 
 #[test]
+fn test_else_if() {
+    test_src("source/else_if.rs");
+}
+
+#[test]
 fn test_assign_if() {
     test_src("source/assign_if.rs");
 }

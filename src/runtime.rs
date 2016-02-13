@@ -1085,8 +1085,25 @@ impl Runtime {
             Some(x) => match x {
                 Variable::Bool(val) => {
                     if val {
-                        self.block(&if_expr.true_block)
-                    } else if let Some(ref block) = if_expr.else_block {
+                        return self.block(&if_expr.true_block);
+                    }
+                    for (cond, body) in if_expr.else_if_conds.iter()
+                        .zip(if_expr.else_if_blocks.iter()) {
+                        match self.expression(cond, Side::Right) {
+                            (x, Flow::Return) => { return (x, Flow::Return); }
+                            (Expect::Something, Flow::Continue) => {}
+                            _ => panic!("Expected bool from else if condition")
+                        };
+                        match self.stack.pop() {
+                            None => panic!("There is no value on the stack"),
+                            Some(Variable::Bool(false)) => {}
+                            Some(Variable::Bool(true)) => {
+                                return self.block(body);
+                            }
+                            _ => panic!("Expected bool from else if condition")
+                        }
+                    }
+                    if let Some(ref block) = if_expr.else_block {
                         self.block(block)
                     } else {
                         (Expect::Nothing, Flow::Continue)
