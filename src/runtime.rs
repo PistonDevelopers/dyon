@@ -619,12 +619,79 @@ impl Runtime {
                         self.pop_fn(call.name.clone());
                         Expect::Nothing
                     }
-                    "test_f64" => {
+                    "load" => {
+                        use load;
+
                         self.push_fn(call.name.clone(), st + 1, lc);
-                        self.stack.push(Variable::RustObject(
-                            Arc::new(Mutex::new(5.0))));
+                        let v = match self.stack.pop() {
+                            Some(v) => v,
+                            None => panic!("There is no value on the stack")
+                        };
+                        let v = match self.resolve(&v) {
+                            &Variable::Text(ref text) => {
+                                let ast: Vec<ast::Function> = load(text)
+                                    .unwrap();
+                                Variable::RustObject(Arc::new(Mutex::new(ast)))
+                            }
+                            _ => panic!("Expected text argument")
+                        };
+                        self.stack.push(v);
                         self.pop_fn(call.name.clone());
                         Expect::Something
+                    }
+                    "call" => {
+                        self.push_fn(call.name.clone(), st, lc);
+                        let args = match self.stack.pop() {
+                            Some(v) => v,
+                            None => panic!("There is no value on the stack")
+                        };
+                        let fn_name = match self.stack.pop() {
+                            Some(v) => v,
+                            None => panic!("There is no value on the stack")
+                        };
+                        let module = match self.stack.pop() {
+                            Some(v) => v,
+                            None => panic!("There is no value on the stack")
+                        };
+                        let fn_name = match self.resolve(&fn_name) {
+                            &Variable::Text(ref text) => text.clone(),
+                            _ => panic!("Expected text argument")
+                        };
+                        let args = match self.resolve(&args) {
+                            &Variable::Array(ref arr) => arr.clone(),
+                            _ => panic!("Expected array argument")
+                        };
+                        match self.resolve(&module) {
+                            &Variable::RustObject(ref obj) => {
+                                match obj.lock().unwrap()
+                                    .downcast_ref::<Vec<ast::Function>>() {
+                                    Some(ast) => {
+                                        let mut runtime = Runtime::new();
+                                        for f in ast {
+                                            runtime.register(f);
+                                        }
+                                        for f in ast {
+                                            if *f.name == **fn_name {
+                                                if f.args.len() != args.len() {
+                                                    panic!("Expected `{}` arguments, found `{}`",
+                                                        f.args.len(), args.len())
+                                                }
+                                                let call = ast::Call {
+                                                    name: fn_name.clone(),
+                                                    // TODO: Pass arguments.
+                                                    args: vec![]
+                                                };
+                                                runtime.call(&call);
+                                            }
+                                        }
+                                    }
+                                    None => panic!("Expected `Vec<ast::Function>`")
+                                }
+                            }
+                            _ => panic!("Expected rust object")
+                        }
+                        self.pop_fn(call.name.clone());
+                        Expect::Nothing
                     }
                     _ => panic!("Unknown function `{}`", call.name)
                 };
