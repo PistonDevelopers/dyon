@@ -1,6 +1,7 @@
 extern crate rand;
 
-use std::sync::Arc;
+use std::any::Any;
+use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 use self::rand::Rng;
 use ast;
@@ -47,6 +48,7 @@ pub struct Runtime {
     pub array_type: Variable,
     pub ref_type: Variable,
     pub unsafe_ref_type: Variable,
+    pub rust_object_type: Variable,
 }
 
 fn resolve<'a>(stack: &'a Vec<Variable>, var: &'a Variable) -> &'a Variable {
@@ -81,7 +83,8 @@ fn deep_clone(v: &Variable, stack: &Vec<Variable>) -> Variable {
         Ref(ind) => {
             deep_clone(&stack[ind], stack)
         }
-        UnsafeRef(_) => panic!("Unsafe reference can not be cloned")
+        UnsafeRef(_) => panic!("Unsafe reference can not be cloned"),
+        RustObject(_) => v.clone()
     }
 }
 
@@ -202,6 +205,7 @@ impl Runtime {
             array_type: Variable::Text(Arc::new("array".into())),
             ref_type: Variable::Text(Arc::new("ref".into())),
             unsafe_ref_type: Variable::Text(Arc::new("unsafe_ref".into())),
+            rust_object_type: Variable::Text(Arc::new("rust_object".into())),
         }
     }
 
@@ -593,7 +597,10 @@ impl Runtime {
                             &Variable::Object(_) => self.object_type.clone(),
                             &Variable::Array(_) => self.array_type.clone(),
                             &Variable::Ref(_) => self.ref_type.clone(),
-                            &Variable::UnsafeRef(_) => self.unsafe_ref_type.clone(),
+                            &Variable::UnsafeRef(_) =>
+                                self.unsafe_ref_type.clone(),
+                            &Variable::RustObject(_) =>
+                                self.rust_object_type.clone(),
                         };
                         self.stack.push(v);
                         self.pop_fn(call.name.clone());
@@ -611,6 +618,13 @@ impl Runtime {
                         println!("{:#?}", self.call_stack);
                         self.pop_fn(call.name.clone());
                         Expect::Nothing
+                    }
+                    "test_f64" => {
+                        self.push_fn(call.name.clone(), st + 1, lc);
+                        self.stack.push(Variable::RustObject(
+                            Arc::new(Mutex::new(5.0))));
+                        self.pop_fn(call.name.clone());
+                        Expect::Something
                     }
                     _ => panic!("Unknown function `{}`", call.name)
                 };
@@ -682,7 +696,10 @@ impl Runtime {
                                 if self.stack.len() == 0 =>
                                 panic!("There is no value on the stack"),
                             (true, Expect::Something)
-                                if self.stack.last().unwrap() == &Variable::Return =>
+                                if match self.stack.last().unwrap() {
+                                    &Variable::Return => true,
+                                    _ => false
+                                } =>
                                 // TODO: Could return the last value on the stack.
                                 //       Requires .pop_fn after.
                                 panic!("Function did not return a value"),
@@ -1266,7 +1283,7 @@ impl Runtime {
 pub type Object = HashMap<Arc<String>, Variable>;
 pub type Array = Vec<Variable>;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub enum Variable {
     Return,
     Bool(bool),
@@ -1276,4 +1293,5 @@ pub enum Variable {
     Array(Vec<Variable>),
     Ref(usize),
     UnsafeRef(*mut Variable),
+    RustObject(Arc<Mutex<Any>>),
 }

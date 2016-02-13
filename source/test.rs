@@ -1,13 +1,6 @@
 fn main() {
-    x := if false {0} else if true {1} else {2}
-    println(x)
-    y := if false {0} else if true {1}
-    println(y)
-
-    if false {
-    } else if false {
-    } else if true {
-        println("hi")
-    } else {
-    }
+    // guess_a_number := load("guess_a_number.rs")
+    // call(guess_a_number, "main", [])
+    x := test_f64()
+    println(typeof(x))
 }
