@@ -249,6 +249,7 @@ pub fn check(data: &[Range<MetaData>]) -> Result<(), String> {
     intrinsics.insert("log2", LOG2);
     intrinsics.insert("log10", LOG10);
     intrinsics.insert("random", RANDOM);
+    intrinsics.insert("test_f64", TEST_F64);
 
     // Check for duplicate function arguments.
     let mut arg_names: HashSet<Arc<String>> = HashSet::new();
@@ -942,5 +943,10 @@ static TO_STRING: Intrinsic = Intrinsic {
 
 static TYPEOF: Intrinsic = Intrinsic {
     arg_constraints: &[ArgConstraint::Default],
+    returns: true
+};
+
+static TEST_F64: Intrinsic = Intrinsic {
+    arg_constraints: &[],
     returns: true
 };
