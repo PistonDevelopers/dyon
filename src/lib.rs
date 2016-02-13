@@ -1,9 +1,29 @@
 #![cfg_attr(test, feature(test))]
 extern crate piston_meta;
 
+use std::any::Any;
+use std::sync::{Arc, Mutex};
+use std::collections::HashMap;
+
 pub mod ast;
 pub mod runtime;
 pub mod lifetime;
+
+pub type Object = HashMap<Arc<String>, Variable>;
+pub type Array = Vec<Variable>;
+
+#[derive(Debug, Clone)]
+pub enum Variable {
+    Return,
+    Bool(bool),
+    F64(f64),
+    Text(Arc<String>),
+    Object(Object),
+    Array(Vec<Variable>),
+    Ref(usize),
+    UnsafeRef(*mut Variable),
+    RustObject(Arc<Mutex<Any>>),
+}
 
 /// Runs a program using a syntax file and the source file.
 pub fn run(syntax: &str, source: &str) {

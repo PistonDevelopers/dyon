@@ -6,6 +6,8 @@ use self::range::Range;
 use self::piston_meta::bootstrap::Convert;
 use self::piston_meta::MetaData;
 
+use Variable;
+
 pub fn convert(data: &[Range<MetaData>], ignored: &mut Vec<Range>)
 -> Result<Vec<Function>, ()> {
     let mut functions = vec![];
@@ -174,6 +176,7 @@ pub enum Expression {
     If(Box<If>),
     Compare(Box<Compare>),
     UnOp(Box<UnOpExpression>),
+    Variable(Variable),
 }
 
 impl Expression {

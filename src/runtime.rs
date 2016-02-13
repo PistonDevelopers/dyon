@@ -1,10 +1,13 @@
 extern crate rand;
 
-use std::any::Any;
 use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 use self::rand::Rng;
 use ast;
+
+use Variable;
+use Array;
+use Object;
 
 /// Which side an expression is evalutated.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -75,7 +78,7 @@ fn resolve<'a>(stack: &'a Vec<Variable>, var: &'a Variable) -> &'a Variable {
 }
 
 fn deep_clone(v: &Variable, stack: &Vec<Variable>) -> Variable {
-    use self::Variable::*;
+    use Variable::*;
 
     match *v {
         F64(_) => v.clone(),
@@ -362,6 +365,10 @@ impl Runtime {
             If(ref if_expr) => self.if_expr(if_expr, module),
             Compare(ref compare) => (Expect::Something,
                                      self.compare(compare, module)),
+            Variable(ref var) => {
+                self.stack.push(var.clone());
+                (Expect::Something, Flow::Continue)
+            }
         }
     }
 
@@ -1387,20 +1394,4 @@ impl Runtime {
 
         Flow::Continue
     }
-}
-
-pub type Object = HashMap<Arc<String>, Variable>;
-pub type Array = Vec<Variable>;
-
-#[derive(Debug, Clone)]
-pub enum Variable {
-    Return,
-    Bool(bool),
-    F64(f64),
-    Text(Arc<String>),
-    Object(Object),
-    Array(Vec<Variable>),
-    Ref(usize),
-    UnsafeRef(*mut Variable),
-    RustObject(Arc<Mutex<Any>>),
 }
