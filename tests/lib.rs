@@ -117,3 +117,8 @@ fn test_max_min() {
 fn test_return_void() {
     test_src("source/return_void.rs");
 }
+
+#[test]
+fn test_typeof() {
+    test_src("source/typeof.rs");
+}

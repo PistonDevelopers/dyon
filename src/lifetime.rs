@@ -236,6 +236,7 @@ pub fn check(data: &[Range<MetaData>]) -> Result<(), String> {
     intrinsics.insert("push", PUSH);
     intrinsics.insert("trim_right", TRIM_RIGHT);
     intrinsics.insert("to_string", TO_STRING);
+    intrinsics.insert("typeof", TYPEOF);
     intrinsics.insert("sqrt", SQRT);
     intrinsics.insert("sin", SIN);
     intrinsics.insert("asin", ASIN);
@@ -931,6 +932,11 @@ static LOG10: Intrinsic = Intrinsic {
 };
 
 static TO_STRING: Intrinsic = Intrinsic {
+    arg_constraints: &[ArgConstraint::Default],
+    returns: true
+};
+
+static TYPEOF: Intrinsic = Intrinsic {
     arg_constraints: &[ArgConstraint::Default],
     returns: true
 };
