@@ -717,8 +717,8 @@ impl Runtime {
 
                                 let call = ast::Call {
                                     name: fn_name.clone(),
-                                    // TODO: Pass arguments.
-                                    args: vec![]
+                                    args: args.into_iter().map(|arg|
+                                        ast::Expression::Variable(arg)).collect()
                                 };
                                 self.call(&call, &module);
                             }
