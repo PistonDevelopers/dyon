@@ -43,6 +43,47 @@ pub fn run(syntax: &str, source: &str) {
     runtime.run(&ast);
 }
 
+/// Loads a source from file.
+pub fn load(source: &str) -> Result<Vec<ast::Function>, String> {
+    use std::thread;
+    use std::fs::File;
+    use std::io::Read;
+    use piston_meta::{parse_errstr, syntax_errstr};
+
+    let syntax = include_str!("../assets/syntax.txt");
+    let syntax_rules = try!(syntax_errstr(syntax));
+
+    let mut data_file = File::open(source).unwrap();
+    let mut d = String::new();
+    data_file.read_to_string(&mut d).unwrap();
+
+    let mut data = vec![];
+    try!(parse_errstr(&syntax_rules, &d, &mut data));
+    let check_data = data.clone();
+
+    // Do lifetime checking in parallel directly on meta data.
+    let handle = thread::spawn(move || {
+        let check_data = check_data;
+        lifetime::check(&check_data)
+    });
+
+    // Convert to AST.
+    let mut ignored = vec![];
+    let ast = ast::convert(&data, &mut ignored).unwrap();
+
+    // Check that lifetime checking succeeded.
+    match handle.join().unwrap() {
+        Ok(()) => {}
+        Err(msg) => return Err(msg)
+    }
+
+    if ignored.len() > 0 {
+        unimplemented!();
+    }
+
+    Ok(ast)
+}
+
 #[cfg(test)]
 mod tests {
     extern crate test;
