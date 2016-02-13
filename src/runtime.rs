@@ -37,7 +37,6 @@ pub struct Runtime {
     /// name, stack_len, local_len, returns.
     pub call_stack: Vec<(Arc<String>, usize, usize)>,
     pub local_stack: Vec<(Arc<String>, usize)>,
-    pub functions: Arc<HashMap<Arc<String>, ast::Function>>,
     pub ret: Arc<String>,
     pub rng: rand::ThreadRng,
     pub text_type: Variable,
@@ -49,6 +48,23 @@ pub struct Runtime {
     pub ref_type: Variable,
     pub unsafe_ref_type: Variable,
     pub rust_object_type: Variable,
+}
+
+pub struct Module {
+    pub functions: Arc<HashMap<Arc<String>, ast::Function>>,
+}
+
+impl Module {
+    pub fn new() -> Module {
+        Module {
+            functions: Arc::new(HashMap::new()),
+        }
+    }
+
+    pub fn register(&mut self, function: &ast::Function) {
+        Arc::make_mut(&mut self.functions)
+            .insert(function.name.clone(), function.clone());
+    }
 }
 
 fn resolve<'a>(stack: &'a Vec<Variable>, var: &'a Variable) -> &'a Variable {
@@ -194,7 +210,6 @@ impl Runtime {
             stack: vec![],
             call_stack: vec![],
             local_stack: vec![],
-            functions: Arc::new(HashMap::new()),
             ret: Arc::new("return".into()),
             rng: rand::thread_rng(),
             text_type: Variable::Text(Arc::new("string".into())),
@@ -285,19 +300,24 @@ impl Runtime {
         }
     }
 
-    fn expression(&mut self, expr: &ast::Expression, side: Side) -> (Expect, Flow) {
+    fn expression(
+        &mut self,
+        expr: &ast::Expression,
+        side: Side,
+        module: &Module
+    ) -> (Expect, Flow) {
         use ast::Expression::*;
 
         match *expr {
             Object(ref obj) => {
-                self.object(obj);
+                self.object(obj, module);
                 (Expect::Something, Flow::Continue)
             }
             Array(ref arr) => {
-                self.array(arr);
+                self.array(arr, module);
                 (Expect::Something, Flow::Continue)
             }
-            Block(ref block) => self.block(block),
+            Block(ref block) => self.block(block, module),
             Return(ref ret) => {
                 use ast::{AssignOp, Expression, Item};
 
@@ -306,7 +326,7 @@ impl Runtime {
                         name: self.ret.clone(),
                         ids: vec![]
                     });
-                self.assign_specific(AssignOp::Set, &item, ret);
+                self.assign_specific(AssignOp::Set, &item, ret, module);
                 (Expect::Something, Flow::Return)
             }
             ReturnVoid => {
@@ -314,14 +334,17 @@ impl Runtime {
             }
             Break(ref b) => (Expect::Nothing, Flow::Break(b.label.clone())),
             Continue(ref b) => (Expect::Nothing, Flow::ContinueLoop(b.label.clone())),
-            Call(ref call) => self.call(call),
+            Call(ref call) => self.call(call, module),
             Item(ref item) => {
-                self.item(item, side);
+                self.item(item, side, module);
                 (Expect::Something, Flow::Continue)
             }
-            UnOp(ref unop) => (Expect::Something, self.unop(unop, side)),
-            BinOp(ref binop) => (Expect::Something, self.binop(binop, side)),
-            Assign(ref assign) => (Expect::Nothing, self.assign(assign)),
+            UnOp(ref unop) => (Expect::Something,
+                               self.unop(unop, side, module)),
+            BinOp(ref binop) => (Expect::Something,
+                                 self.binop(binop, side, module)),
+            Assign(ref assign) => (Expect::Nothing,
+                                   self.assign(assign, module)),
             Number(ref num) => {
                 self.number(num);
                 (Expect::Something, Flow::Continue)
@@ -334,20 +357,18 @@ impl Runtime {
                 self.bool(b);
                 (Expect::Something, Flow::Continue)
             }
-            For(ref for_expr) => (Expect::Nothing, self.for_expr(for_expr)),
-            If(ref if_expr) => self.if_expr(if_expr),
-            Compare(ref compare) => (Expect::Something, self.compare(compare)),
+            For(ref for_expr) => (Expect::Nothing,
+                                  self.for_expr(for_expr, module)),
+            If(ref if_expr) => self.if_expr(if_expr, module),
+            Compare(ref compare) => (Expect::Something,
+                                     self.compare(compare, module)),
         }
     }
 
-    fn register(&mut self, function: &ast::Function) {
-        Arc::make_mut(&mut self.functions)
-            .insert(function.name.clone(), function.clone());
-    }
-
     pub fn run(&mut self, ast: &Vec<ast::Function>) {
+        let mut module = Module::new();
         for f in ast {
-            self.register(f);
+            module.register(f);
         }
         let call = ast::Call {
             name: Arc::new("main".into()),
@@ -358,16 +379,16 @@ impl Runtime {
                 if f.args.len() != 0 {
                     panic!("`main` should not have arguments");
                 }
-                self.call(&call);
+                self.call(&call, &module);
             }
         }
     }
 
-    fn block(&mut self, block: &ast::Block) -> (Expect, Flow) {
+    fn block(&mut self, block: &ast::Block, module: &Module) -> (Expect, Flow) {
         let mut expect = Expect::Nothing;
         let lc = self.local_stack.len();
         for e in &block.expressions {
-            expect = match self.expression(e, Side::Right) {
+            expect = match self.expression(e, Side::Right, module) {
                 (x, Flow::Continue) => x,
                 x => { return x; }
             }
@@ -376,14 +397,13 @@ impl Runtime {
         (expect, Flow::Continue)
     }
 
-    fn call(&mut self, call: &ast::Call) -> (Expect, Flow) {
-        let functions = self.functions.clone();
-        match functions.get(&call.name) {
+    fn call(&mut self, call: &ast::Call, module: &Module) -> (Expect, Flow) {
+        match module.functions.get(&call.name) {
             None => {
                 let st = self.stack.len();
                 let lc = self.local_stack.len();
                 for arg in &call.args {
-                    match self.expression(arg, Side::Right) {
+                    match self.expression(arg, Side::Right, module) {
                         (x, Flow::Return) => { return (x, Flow::Return); }
                         (Expect::Something, Flow::Continue) => {}
                         _ => panic!("Expected something from argument")
@@ -661,35 +681,43 @@ impl Runtime {
                             &Variable::Array(ref arr) => arr.clone(),
                             _ => panic!("Expected array argument")
                         };
-                        match self.resolve(&module) {
-                            &Variable::RustObject(ref obj) => {
-                                match obj.lock().unwrap()
-                                    .downcast_ref::<Vec<ast::Function>>() {
-                                    Some(ast) => {
-                                        let mut runtime = Runtime::new();
-                                        for f in ast {
-                                            runtime.register(f);
-                                        }
-                                        for f in ast {
-                                            if *f.name == **fn_name {
-                                                if f.args.len() != args.len() {
-                                                    panic!("Expected `{}` arguments, found `{}`",
-                                                        f.args.len(), args.len())
-                                                }
-                                                let call = ast::Call {
-                                                    name: fn_name.clone(),
-                                                    // TODO: Pass arguments.
-                                                    args: vec![]
-                                                };
-                                                runtime.call(&call);
-                                            }
-                                        }
-                                    }
-                                    None => panic!("Expected `Vec<ast::Function>`")
-                                }
-                            }
+                        let obj = match self.resolve(&module) {
+                            &Variable::RustObject(ref obj) => obj.clone(),
                             _ => panic!("Expected rust object")
+                        };
+
+                        match obj.lock().unwrap()
+                            .downcast_ref::<Vec<ast::Function>>() {
+                            Some(ast) => {
+                                let mut module = Module::new();
+                                for f in ast {
+                                    module.register(f);
+                                }
+                                let mut found = false;
+                                for f in ast {
+                                    if *f.name == **fn_name {
+                                        if f.args.len() != args.len() {
+                                            panic!("Expected `{}` arguments, found `{}`",
+                                                f.args.len(), args.len())
+                                        }
+                                        found = true;
+                                        break;
+                                    }
+                                }
+                                if !found {
+                                    panic!("Could not find function `{}`", fn_name);
+                                }
+
+                                let call = ast::Call {
+                                    name: fn_name.clone(),
+                                    // TODO: Pass arguments.
+                                    args: vec![]
+                                };
+                                self.call(&call, &module);
+                            }
+                            None => panic!("Expected `Vec<ast::Function>`")
                         }
+
                         self.pop_fn(call.name.clone());
                         Expect::Nothing
                     }
@@ -711,7 +739,7 @@ impl Runtime {
                 let st = self.stack.len();
                 let lc = self.local_stack.len();
                 for arg in &call.args {
-                    match self.expression(arg, Side::Right) {
+                    match self.expression(arg, Side::Right, module) {
                         (x, Flow::Return) => { return (x, Flow::Return); }
                         (Expect::Something, Flow::Continue) => {}
                         _ => panic!("Expected something from argument")
@@ -729,7 +757,7 @@ impl Runtime {
                     };
                     self.local_stack.push((arg.name.clone(), j));
                 }
-                match self.block(&f.block) {
+                match self.block(&f.block, module) {
                     (x, flow) => {
                         match flow {
                             Flow::Break(None) =>
@@ -780,10 +808,10 @@ impl Runtime {
         }
     }
 
-    fn object(&mut self, obj: &ast::Object) {
+    fn object(&mut self, obj: &ast::Object, module: &Module) {
         let mut object: Object = HashMap::new();
         for &(ref key, ref expr) in &obj.key_values {
-            self.expression(expr, Side::Right);
+            self.expression(expr, Side::Right, module);
             match self.stack.pop() {
                 None => panic!("There is no value on the stack"),
                 Some(x) => {
@@ -797,10 +825,10 @@ impl Runtime {
         self.stack.push(Variable::Object(object));
     }
 
-    fn array(&mut self, arr: &ast::Array) {
+    fn array(&mut self, arr: &ast::Array, module: &Module) {
         let mut array: Array = Vec::new();
         for item in &arr.items {
-            self.expression(item, Side::Right);
+            self.expression(item, Side::Right, module);
             match self.stack.pop() {
                 None => panic!("There is no value on the stack"),
                 Some(x) => array.push(x)
@@ -809,15 +837,16 @@ impl Runtime {
         self.stack.push(Variable::Array(array));
     }
 
-    fn assign(&mut self, assign: &ast::Assign) -> Flow {
-        self.assign_specific(assign.op, &assign.left, &assign.right)
+    fn assign(&mut self, assign: &ast::Assign, module: &Module) -> Flow {
+        self.assign_specific(assign.op, &assign.left, &assign.right, module)
     }
 
     fn assign_specific(
         &mut self,
         op: ast::AssignOp,
         left: &ast::Expression,
-        right: &ast::Expression
+        right: &ast::Expression,
+        module: &Module
     ) -> Flow {
         use ast::AssignOp::*;
         use ast::Expression;
@@ -825,7 +854,7 @@ impl Runtime {
         if op == Assign {
             match *left {
                 Expression::Item(ref item) => {
-                    match self.expression(right, Side::Right) {
+                    match self.expression(right, Side::Right, module) {
                         (_, Flow::Return) => { return Flow::Return; }
                         (Expect::Something, Flow::Continue) => {}
                         _ => panic!("Expected something from the right side")
@@ -837,7 +866,8 @@ impl Runtime {
                         Some(x) => x
                     };
                     if item.ids.len() != 0 {
-                        match self.expression(left, Side::LeftInsert(true)) {
+                        match self.expression(left, Side::LeftInsert(true),
+                                              module) {
                             (_, Flow::Return) => { return Flow::Return; }
                             (Expect::Something, Flow::Continue) => {}
                             _ => panic!("Expected something from the left side")
@@ -861,12 +891,12 @@ impl Runtime {
             // Evaluate right side before left because the left leaves
             // an raw pointer on the stack which might point to wrong place
             // if there are side effects of the right side affecting it.
-            match self.expression(right, Side::Right) {
+            match self.expression(right, Side::Right, module) {
                 (_, Flow::Return) => { return Flow::Return; }
                 (Expect::Something, Flow::Continue) => {}
                 _ => panic!("Expected something from the right side")
             };
-            match self.expression(left, Side::LeftInsert(false)) {
+            match self.expression(left, Side::LeftInsert(false), module) {
                 (_, Flow::Return) => { return Flow::Return; }
                 (Expect::Something, Flow::Continue) => {}
                 _ => panic!("Expected something from the left side")
@@ -1025,7 +1055,7 @@ impl Runtime {
     // `insert` is true for `:=` and false for `=`.
     // This works only on objects, but does not have to check since it is
     // ignored for arrays.
-    fn item(&mut self, item: &ast::Item, side: Side) {
+    fn item(&mut self, item: &ast::Item, side: Side, module: &Module) {
         use ast::Id;
 
         if item.ids.len() == 0 {
@@ -1044,7 +1074,7 @@ impl Runtime {
         let start_stack_len = self.stack.len();
         for id in &item.ids {
             if let &Id::Expression(ref expr) = id {
-                self.expression(expr, Side::Right);
+                self.expression(expr, Side::Right, module);
             }
         }
         let &mut Runtime {
@@ -1104,13 +1134,13 @@ impl Runtime {
             return;
         }
     }
-    fn compare(&mut self, compare: &ast::Compare) -> Flow {
-        match self.expression(&compare.left, Side::Right) {
+    fn compare(&mut self, compare: &ast::Compare, module: &Module) -> Flow {
+        match self.expression(&compare.left, Side::Right, module) {
             (_, Flow::Return) => { return Flow::Return; }
             (Expect::Something, Flow::Continue) => {}
             _ => panic!("Expected something from the left argument")
         };
-        match self.expression(&compare.right, Side::Right) {
+        match self.expression(&compare.right, Side::Right, module) {
             (_, Flow::Return) => { return Flow::Return; }
             (Expect::Something, Flow::Continue) => {}
             _ => panic!("Expected something from the right argument")
@@ -1158,8 +1188,8 @@ impl Runtime {
         }
         Flow::Continue
     }
-    fn if_expr(&mut self, if_expr: &ast::If) -> (Expect, Flow) {
-        match self.expression(&if_expr.cond, Side::Right) {
+    fn if_expr(&mut self, if_expr: &ast::If, module: &Module) -> (Expect, Flow) {
+        match self.expression(&if_expr.cond, Side::Right, module) {
             (x, Flow::Return) => { return (x, Flow::Return); }
             (Expect::Something, Flow::Continue) => {}
             _ => panic!("Expected bool from if condition")
@@ -1169,11 +1199,11 @@ impl Runtime {
             Some(x) => match x {
                 Variable::Bool(val) => {
                     if val {
-                        return self.block(&if_expr.true_block);
+                        return self.block(&if_expr.true_block, module);
                     }
                     for (cond, body) in if_expr.else_if_conds.iter()
                         .zip(if_expr.else_if_blocks.iter()) {
-                        match self.expression(cond, Side::Right) {
+                        match self.expression(cond, Side::Right, module) {
                             (x, Flow::Return) => { return (x, Flow::Return); }
                             (Expect::Something, Flow::Continue) => {}
                             _ => panic!("Expected bool from else if condition")
@@ -1182,13 +1212,13 @@ impl Runtime {
                             None => panic!("There is no value on the stack"),
                             Some(Variable::Bool(false)) => {}
                             Some(Variable::Bool(true)) => {
-                                return self.block(body);
+                                return self.block(body, module);
                             }
                             _ => panic!("Expected bool from else if condition")
                         }
                     }
                     if let Some(ref block) = if_expr.else_block {
-                        self.block(block)
+                        self.block(block, module)
                     } else {
                         (Expect::Nothing, Flow::Continue)
                     }
@@ -1197,21 +1227,21 @@ impl Runtime {
             }
         }
     }
-    fn for_expr(&mut self, for_expr: &ast::For) -> Flow {
+    fn for_expr(&mut self, for_expr: &ast::For, module: &Module) -> Flow {
         let prev_st = self.stack.len();
         let prev_lc = self.local_stack.len();
-        self.expression(&for_expr.init, Side::Right);
+        self.expression(&for_expr.init, Side::Right, module);
         let st = self.stack.len();
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
         loop {
-            self.expression(&for_expr.cond, Side::Right);
+            self.expression(&for_expr.cond, Side::Right, module);
             match self.stack.pop() {
                 None => panic!("There is no value on the stack"),
                 Some(x) => match x {
                     Variable::Bool(val) => {
                         if val {
-                            match self.block(&for_expr.block) {
+                            match self.block(&for_expr.block, module) {
                                 (_, Flow::Return) => { return Flow::Return; }
                                 (_, Flow::Continue) => {}
                                 (_, Flow::Break(x)) => {
@@ -1243,11 +1273,13 @@ impl Runtime {
                                         }
                                         None => {}
                                     }
-                                    self.expression(&for_expr.step, Side::Right);
+                                    self.expression(&for_expr.step, Side::Right,
+                                                    module);
                                     continue;
                                 }
                             }
-                            self.expression(&for_expr.step, Side::Right);
+                            self.expression(&for_expr.step, Side::Right,
+                                            module);
                         } else {
                             break;
                         }
@@ -1271,8 +1303,13 @@ impl Runtime {
     fn bool(&mut self, val: &ast::Bool) {
         self.stack.push(Variable::Bool(val.val));
     }
-    fn unop(&mut self, unop: &ast::UnOpExpression, side: Side) -> Flow {
-        match self.expression(&unop.expr, side) {
+    fn unop(
+        &mut self,
+        unop: &ast::UnOpExpression,
+        side: Side,
+        module: &Module
+    ) -> Flow {
+        match self.expression(&unop.expr, side, module) {
             (_, Flow::Return) => { return Flow::Return; }
             (Expect::Something, Flow::Continue) => {}
             _ => panic!("Expected something from unary argument")
@@ -1290,15 +1327,20 @@ impl Runtime {
         self.stack.push(v);
         Flow::Continue
     }
-    fn binop(&mut self, binop: &ast::BinOpExpression, side: Side) -> Flow {
+    fn binop(
+        &mut self,
+        binop: &ast::BinOpExpression,
+        side: Side,
+        module: &Module
+    ) -> Flow {
         use ast::BinOp::*;
 
-        match self.expression(&binop.left, side) {
+        match self.expression(&binop.left, side, module) {
             (_, Flow::Return) => { return Flow::Return; }
             (Expect::Something, Flow::Continue) => {}
             _ => panic!("Expected something from left argument")
         };
-        match self.expression(&binop.right, side) {
+        match self.expression(&binop.right, side, module) {
             (_, Flow::Return) => { return Flow::Return; }
             (Expect::Something, Flow::Continue) => {}
             _ => panic!("Expected something from right argument")
