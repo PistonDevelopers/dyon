@@ -1084,6 +1084,8 @@ impl Continue {
 pub struct If {
     pub cond: Expression,
     pub true_block: Block,
+    pub else_if_conds: Vec<Expression>,
+    pub else_if_blocks: Vec<Block>,
     pub else_block: Option<Block>,
 }
 
@@ -1099,6 +1101,8 @@ impl If {
 
         let mut cond: Option<Expression> = None;
         let mut true_block: Option<Block> = None;
+        let mut else_if_conds: Vec<Expression> = vec![];
+        let mut else_if_blocks: Vec<Block> = vec![];
         let mut else_block: Option<Block> = None;
         loop {
             if let Ok(range) = convert.end_node(node) {
@@ -1112,6 +1116,14 @@ impl If {
                 "true_block", convert, ignored) {
                 convert.update(range);
                 true_block = Some(val);
+            } else if let Ok((range, val)) = Expression::from_meta_data(
+                "else_if_cond", convert, ignored) {
+                convert.update(range);
+                else_if_conds.push(val);
+            } else if let Ok((range, val)) = Block::from_meta_data(
+                "else_if_block", convert, ignored) {
+                convert.update(range);
+                else_if_blocks.push(val);
             } else if let Ok((range, val)) = Block::from_meta_data(
                 "else_block", convert, ignored) {
                 convert.update(range);
@@ -1128,6 +1140,8 @@ impl If {
         Ok((convert.subtract(start), If {
             cond: cond,
             true_block: true_block,
+            else_if_conds: else_if_conds,
+            else_if_blocks: else_if_blocks,
             else_block: else_block
         }))
     }
