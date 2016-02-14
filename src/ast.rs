@@ -6,21 +6,26 @@ use self::range::Range;
 use self::piston_meta::bootstrap::Convert;
 use self::piston_meta::MetaData;
 
-pub fn convert(data: &[Range<MetaData>], ignored: &mut Vec<Range>)
--> Result<Vec<Function>, ()> {
-    let mut functions = vec![];
+use Variable;
+use Module;
+
+pub fn convert(
+    data: &[Range<MetaData>],
+    ignored: &mut Vec<Range>,
+    module: &mut Module
+) -> Result<(), ()> {
     let mut convert = Convert::new(data);
     loop {
         if let Ok((range, function)) = Function::from_meta_data(convert, ignored) {
             convert.update(range);
-            functions.push(function);
+            module.register(Arc::new(function));
         } else if convert.remaining_data_len() > 0 {
             return Err(());
         } else {
             break;
         }
     }
-    Ok(functions)
+    Ok(())
 }
 
 #[derive(Debug, Clone)]
@@ -174,6 +179,7 @@ pub enum Expression {
     If(Box<If>),
     Compare(Box<Compare>),
     UnOp(Box<UnOpExpression>),
+    Variable(Variable),
 }
 
 impl Expression {

@@ -7,15 +7,17 @@ use dynamo::*;
 pub fn test_src(source: &str) {
     let data = load_syntax_data("assets/syntax.txt", source);
     let mut ignored = vec![];
-    let _ = ast::convert(&data, &mut ignored).unwrap();
+    let mut module = Module::new();
+    ast::convert(&data, &mut ignored, &mut module).unwrap();
 }
 
 pub fn debug_src(source: &str) {
     let data = load_syntax_data("assets/syntax.txt", source);
     json::print(&data);
     let mut ignored = vec![];
-    let functions = ast::convert(&data, &mut ignored).unwrap();
-    panic!("{:?}", functions);
+    let mut module = Module::new();
+    ast::convert(&data, &mut ignored, &mut module).unwrap();
+    panic!("{:?}", module);
 }
 
 #[test]

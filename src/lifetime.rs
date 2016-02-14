@@ -7,7 +7,67 @@ use std::cmp::{PartialOrd, Ordering};
 use self::piston_meta::MetaData;
 use self::range::Range;
 
-pub fn check(data: &[Range<MetaData>]) -> Result<(), String> {
+use ast;
+use intrinsics::{self, ArgConstraint};
+use Module;
+
+/// Stores preloaded function constraints.
+/// These are already checked.
+pub struct PreludeFunction {
+    pub arg_constraints: Vec<ArgConstraint>,
+    pub returns: bool,
+}
+
+impl PreludeFunction {
+    pub fn new(f: &ast::Function) -> PreludeFunction {
+        let mut arg_constraints: Vec<ArgConstraint> = vec![];
+        'next_arg: for arg in &f.args {
+            if let Some(ref lt) = arg.lifetime {
+                if **lt == "return" {
+                    arg_constraints.push(ArgConstraint::Return);
+                    continue 'next_arg;
+                }
+                for (i, arg2) in f.args.iter().enumerate() {
+                    if **arg2.name == **lt {
+                        arg_constraints.push(ArgConstraint::Arg(i));
+                        continue 'next_arg;
+                    }
+                }
+                panic!("Could not find argument `{}`", lt);
+            } else {
+                arg_constraints.push(ArgConstraint::Default);
+            }
+        }
+        PreludeFunction {
+            arg_constraints: arg_constraints,
+            returns: f.returns,
+        }
+    }
+}
+
+pub struct Prelude {
+    pub functions: HashMap<Arc<String>, PreludeFunction>
+}
+
+impl Prelude {
+    pub fn new() -> Prelude {
+        Prelude {
+            functions: HashMap::new()
+        }
+    }
+
+    pub fn from_module(module: &Module) -> Prelude {
+        let mut functions = HashMap::new();
+        for f in module.functions.values() {
+            functions.insert(f.name.clone(), PreludeFunction::new(f));
+        }
+        Prelude {
+            functions: functions
+        }
+    }
+}
+
+pub fn check(data: &[Range<MetaData>], prelude: &Prelude) -> Result<(), String> {
     let mut nodes: Vec<Node> = vec![];
     let mut parents: Vec<usize> = vec![];
     for (i, d) in data.iter().enumerate() {
@@ -220,36 +280,7 @@ pub fn check(data: &[Range<MetaData>]) -> Result<(), String> {
     }
 
     // List all intrinsic functions.
-    // Stores name, number of arguments, returns
-    let mut intrinsics: HashMap<&'static str, Intrinsic> = HashMap::new();
-    intrinsics.insert("println", PRINTLN);
-    intrinsics.insert("print", PRINT);
-    intrinsics.insert("clone", CLONE);
-    intrinsics.insert("debug", DEBUG);
-    intrinsics.insert("backtrace", BACKTRACE);
-    intrinsics.insert("sleep", SLEEP);
-    intrinsics.insert("round", ROUND);
-    intrinsics.insert("random", RANDOM);
-    intrinsics.insert("read_number", READ_NUMBER);
-    intrinsics.insert("read_line", READ_LINE);
-    intrinsics.insert("len", LEN);
-    intrinsics.insert("push", PUSH);
-    intrinsics.insert("trim_right", TRIM_RIGHT);
-    intrinsics.insert("to_string", TO_STRING);
-    intrinsics.insert("typeof", TYPEOF);
-    intrinsics.insert("sqrt", SQRT);
-    intrinsics.insert("sin", SIN);
-    intrinsics.insert("asin", ASIN);
-    intrinsics.insert("cos", COS);
-    intrinsics.insert("acos", ACOS);
-    intrinsics.insert("tan", TAN);
-    intrinsics.insert("atan", ATAN);
-    intrinsics.insert("exp", EXP);
-    intrinsics.insert("ln", LN);
-    intrinsics.insert("log2", LOG2);
-    intrinsics.insert("log10", LOG10);
-    intrinsics.insert("random", RANDOM);
-    intrinsics.insert("test_f64", TEST_F64);
+    let intrinsics = intrinsics::standard();
 
     // Check for duplicate function arguments.
     let mut arg_names: HashSet<Arc<String>> = HashSet::new();
@@ -292,6 +323,14 @@ pub fn check(data: &[Range<MetaData>]) -> Result<(), String> {
         let i = match function_lookup.get(name) {
             Some(&i) => i,
             None => {
+                // Check whether it is a prelude function.
+                match prelude.functions.get(name) {
+                    Some(pf) => {
+                        node.arg_constraints = pf.arg_constraints.clone();
+                        continue;
+                    }
+                    None => {}
+                }
                 // Check whether it is an intrinsic operation.
                 match intrinsics.get(&***name) {
                     Some(intr) => {
@@ -300,10 +339,9 @@ pub fn check(data: &[Range<MetaData>]) -> Result<(), String> {
                         node.arg_constraints = intr.arg_constraints.into();
                         continue;
                     }
-                    None => {
-                        return Err(format!("Could not find function `{}`", name));
-                    }
+                    None => {}
                 }
+                return Err(format!("Could not find function `{}`", name));
             }
         };
         // Check that number of arguments is the same as in declaration.
@@ -802,151 +840,3 @@ impl Kind {
         })
     }
 }
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum ArgConstraint {
-    Arg(usize),
-    Return,
-    Default,
-}
-
-#[derive(Debug, Copy, Clone)]
-pub struct Intrinsic {
-    pub arg_constraints: &'static [ArgConstraint],
-    pub returns: bool,
-}
-
-static PRINTLN: Intrinsic = Intrinsic {
-    arg_constraints: &[ArgConstraint::Default],
-    returns: false
-};
-
-static PRINT: Intrinsic = Intrinsic {
-    arg_constraints: &[ArgConstraint::Default],
-    returns: false
-};
-
-static CLONE: Intrinsic = Intrinsic {
-    arg_constraints: &[ArgConstraint::Default],
-    returns: false
-};
-
-static DEBUG: Intrinsic = Intrinsic {
-    arg_constraints: &[],
-    returns: false
-};
-
-static BACKTRACE: Intrinsic = Intrinsic {
-    arg_constraints: &[],
-    returns: false
-};
-
-static SLEEP: Intrinsic = Intrinsic {
-    arg_constraints: &[ArgConstraint::Default],
-    returns: false
-};
-
-static ROUND: Intrinsic = Intrinsic {
-    arg_constraints: &[ArgConstraint::Default],
-    returns: true
-};
-
-static RANDOM: Intrinsic = Intrinsic {
-    arg_constraints: &[ArgConstraint::Default],
-    returns: true
-};
-
-static READ_NUMBER: Intrinsic = Intrinsic {
-    arg_constraints: &[ArgConstraint::Default],
-    returns: true
-};
-
-static READ_LINE: Intrinsic = Intrinsic {
-    arg_constraints: &[ArgConstraint::Default],
-    returns: true
-};
-
-static TRIM_RIGHT: Intrinsic = Intrinsic {
-    arg_constraints: &[ArgConstraint::Default],
-    returns: true
-};
-
-static LEN: Intrinsic = Intrinsic {
-    arg_constraints: &[ArgConstraint::Default],
-    returns: true
-};
-
-static PUSH: Intrinsic = Intrinsic {
-    arg_constraints: &[ArgConstraint::Default, ArgConstraint::Arg(0)],
-    returns: false
-};
-
-static SQRT: Intrinsic = Intrinsic {
-    arg_constraints: &[ArgConstraint::Default],
-    returns: true
-};
-
-static ASIN: Intrinsic = Intrinsic {
-    arg_constraints: &[ArgConstraint::Default],
-    returns: true
-};
-
-static SIN: Intrinsic = Intrinsic {
-    arg_constraints: &[ArgConstraint::Default],
-    returns: true
-};
-
-static COS: Intrinsic = Intrinsic {
-    arg_constraints: &[ArgConstraint::Default],
-    returns: true
-};
-
-static ACOS: Intrinsic = Intrinsic {
-    arg_constraints: &[ArgConstraint::Default],
-    returns: true
-};
-
-static TAN: Intrinsic = Intrinsic {
-    arg_constraints: &[ArgConstraint::Default],
-    returns: true
-};
-
-static ATAN: Intrinsic = Intrinsic {
-    arg_constraints: &[ArgConstraint::Default],
-    returns: true
-};
-
-static EXP: Intrinsic = Intrinsic {
-    arg_constraints: &[ArgConstraint::Default],
-    returns: true
-};
-
-static LN: Intrinsic = Intrinsic {
-    arg_constraints: &[ArgConstraint::Default],
-    returns: true
-};
-
-static LOG2: Intrinsic = Intrinsic {
-    arg_constraints: &[ArgConstraint::Default],
-    returns: true
-};
-
-static LOG10: Intrinsic = Intrinsic {
-    arg_constraints: &[ArgConstraint::Default],
-    returns: true
-};
-
-static TO_STRING: Intrinsic = Intrinsic {
-    arg_constraints: &[ArgConstraint::Default],
-    returns: true
-};
-
-static TYPEOF: Intrinsic = Intrinsic {
-    arg_constraints: &[ArgConstraint::Default],
-    returns: true
-};
-
-static TEST_F64: Intrinsic = Intrinsic {
-    arg_constraints: &[],
-    returns: true
-};

@@ -1,9 +1,49 @@
 #![cfg_attr(test, feature(test))]
 extern crate piston_meta;
 
+use std::any::Any;
+use std::sync::{Arc, Mutex};
+use std::collections::HashMap;
+
+use lifetime::Prelude;
+
 pub mod ast;
 pub mod runtime;
 pub mod lifetime;
+pub mod intrinsics;
+
+pub type Object = HashMap<Arc<String>, Variable>;
+pub type Array = Vec<Variable>;
+
+#[derive(Debug, Clone)]
+pub enum Variable {
+    Return,
+    Bool(bool),
+    F64(f64),
+    Text(Arc<String>),
+    Object(Object),
+    Array(Vec<Variable>),
+    Ref(usize),
+    UnsafeRef(*mut Variable),
+    RustObject(Arc<Mutex<Any>>),
+}
+
+#[derive(Debug)]
+pub struct Module {
+    pub functions: HashMap<Arc<String>, Arc<ast::Function>>,
+}
+
+impl Module {
+    pub fn new() -> Module {
+        Module {
+            functions: HashMap::new(),
+        }
+    }
+
+    pub fn register(&mut self, function: Arc<ast::Function>) {
+        self.functions.insert(function.name.clone(), function);
+    }
+}
 
 /// Runs a program using a syntax file and the source file.
 pub fn run(syntax: &str, source: &str) {
@@ -16,12 +56,13 @@ pub fn run(syntax: &str, source: &str) {
     // Do lifetime checking in parallel directly on meta data.
     let handle = thread::spawn(move || {
         let check_data = check_data;
-        lifetime::check(&check_data)
+        lifetime::check(&check_data, &Prelude::new())
     });
 
     // Convert to AST.
     let mut ignored = vec![];
-    let ast = ast::convert(&data, &mut ignored).unwrap();
+    let mut module = Module::new();
+    ast::convert(&data, &mut ignored, &mut module).unwrap();
 
     // Check that lifetime checking succeeded.
     match handle.join().unwrap() {
@@ -40,7 +81,50 @@ pub fn run(syntax: &str, source: &str) {
         println!("END IGNORED");
         panic!("Some meta data was ignored in the syntax");
     }
-    runtime.run(&ast);
+    runtime.run(&module);
+}
+
+/// Loads a source from file.
+pub fn load(source: &str, module: &mut Module) -> Result<(), String> {
+    use std::thread;
+    use std::fs::File;
+    use std::io::Read;
+    use piston_meta::{parse_errstr, syntax_errstr};
+
+    let syntax = include_str!("../assets/syntax.txt");
+    let syntax_rules = try!(syntax_errstr(syntax));
+
+    let mut data_file = File::open(source).unwrap();
+    let mut d = String::new();
+    data_file.read_to_string(&mut d).unwrap();
+
+    let mut data = vec![];
+    try!(parse_errstr(&syntax_rules, &d, &mut data));
+    let check_data = data.clone();
+    let prelude = Prelude::from_module(module);
+
+    // Do lifetime checking in parallel directly on meta data.
+    let handle = thread::spawn(move || {
+        let check_data = check_data;
+        let prelude = prelude;
+        lifetime::check(&check_data, &prelude)
+    });
+
+    // Convert to AST.
+    let mut ignored = vec![];
+    ast::convert(&data, &mut ignored, module).unwrap();
+
+    // Check that lifetime checking succeeded.
+    match handle.join().unwrap() {
+        Ok(()) => {}
+        Err(msg) => return Err(msg)
+    }
+
+    if ignored.len() > 0 {
+        unimplemented!();
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]
