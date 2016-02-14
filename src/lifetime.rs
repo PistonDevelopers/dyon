@@ -624,6 +624,14 @@ impl Node {
         nodes: &[Node],
         arg_names: &ArgNames
     ) -> Option<Lifetime> {
+        match self.kind {
+            Kind::Add | Kind::Mul | Kind::Pow => {
+                if self.children.len() > 1 {
+                    return None;
+                }
+            }
+            _ => {}
+        }
         if let Some(declaration) = self.declaration {
             if self.kind == Kind::Item {
                 let arg = &nodes[declaration];
@@ -682,6 +690,10 @@ impl Node {
                 (_, Kind::Expr) => {}
                 (_, Kind::Array) => {}
                 (_, Kind::ArrayItem) => {}
+                (_, Kind::Arg) => {}
+                (_, Kind::Pow) => {}
+                (_, Kind::Base) => {}
+                (_, Kind::Exp) => {}
                 x => panic!("Unimplemented `{:?}`", x),
             }
             let lifetime = match nodes[c].lifetime(nodes, arg_names) {

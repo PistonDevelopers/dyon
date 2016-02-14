@@ -1,22 +1,16 @@
 extern crate piston_meta;
 extern crate dynamo;
 
-use piston_meta::*;
 use dynamo::*;
 
 pub fn test_src(source: &str) {
-    let data = load_syntax_data("assets/syntax.txt", source);
-    let mut ignored = vec![];
     let mut module = Module::new();
-    ast::convert(&data, &mut ignored, &mut module).unwrap();
+    load(source, &mut module).unwrap();
 }
 
 pub fn debug_src(source: &str) {
-    let data = load_syntax_data("assets/syntax.txt", source);
-    json::print(&data);
-    let mut ignored = vec![];
     let mut module = Module::new();
-    ast::convert(&data, &mut ignored, &mut module).unwrap();
+    load(source, &mut module).unwrap();
     panic!("{:?}", module);
 }
 
@@ -63,6 +57,11 @@ fn test_add() {
 #[test]
 fn test_mul() {
     test_src("source/mul.rs");
+}
+
+#[test]
+fn test_pow() {
+    test_src("source/pow.rs");
 }
 
 #[test]
@@ -128,4 +127,9 @@ fn test_return_void() {
 #[test]
 fn test_typeof() {
     test_src("source/typeof.rs");
+}
+
+#[test]
+fn test_load_module() {
+    test_src("source/load_module.rs");
 }
