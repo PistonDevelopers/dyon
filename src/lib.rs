@@ -8,6 +8,7 @@ use std::collections::HashMap;
 pub mod ast;
 pub mod runtime;
 pub mod lifetime;
+pub mod intrinsics;
 
 pub type Object = HashMap<Arc<String>, Variable>;
 pub type Array = Vec<Variable>;
