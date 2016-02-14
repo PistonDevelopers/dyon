@@ -197,12 +197,9 @@ impl Runtime {
         Expect::Something
     }
 
+    #[inline(always)]
     pub fn push_fn(&mut self, name: Arc<String>, st: usize, lc: usize) {
-        self.call_stack.push((
-            name,
-            st,
-            lc
-        ));
+        self.call_stack.push((name, st, lc));
     }
     pub fn pop_fn(&mut self, name: Arc<String>) {
         match self.call_stack.pop() {
@@ -432,6 +429,7 @@ impl Runtime {
         self.stack.push(Variable::Array(array));
     }
 
+    #[inline(always)]
     fn assign(&mut self, assign: &ast::Assign, module: &Module) -> Flow {
         self.assign_specific(assign.op, &assign.left, &assign.right, module)
     }
@@ -889,12 +887,15 @@ impl Runtime {
         self.local_stack.truncate(prev_lc);
         flow
     }
+    #[inline(always)]
     fn text(&mut self, text: &ast::Text) {
         self.stack.push(Variable::Text(text.text.clone()));
     }
+    #[inline(always)]
     fn number(&mut self, num: &ast::Number) {
         self.stack.push(Variable::F64(num.num));
     }
+    #[inline(always)]
     fn bool(&mut self, val: &ast::Bool) {
         self.stack.push(Variable::Bool(val.val));
     }
