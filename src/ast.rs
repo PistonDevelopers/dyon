@@ -7,22 +7,23 @@ use self::piston_meta::bootstrap::Convert;
 use self::piston_meta::MetaData;
 
 use Variable;
+use Module;
 
 pub fn convert(data: &[Range<MetaData>], ignored: &mut Vec<Range>)
--> Result<Vec<Function>, ()> {
-    let mut functions = vec![];
+-> Result<Module, ()> {
+    let mut module = Module::new();
     let mut convert = Convert::new(data);
     loop {
         if let Ok((range, function)) = Function::from_meta_data(convert, ignored) {
             convert.update(range);
-            functions.push(function);
+            module.register(Arc::new(function));
         } else if convert.remaining_data_len() > 0 {
             return Err(());
         } else {
             break;
         }
     }
-    Ok(functions)
+    Ok(module)
 }
 
 #[derive(Debug, Clone)]

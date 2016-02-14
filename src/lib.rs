@@ -25,6 +25,22 @@ pub enum Variable {
     RustObject(Arc<Mutex<Any>>),
 }
 
+pub struct Module {
+    pub functions: HashMap<Arc<String>, Arc<ast::Function>>,
+}
+
+impl Module {
+    pub fn new() -> Module {
+        Module {
+            functions: HashMap::new(),
+        }
+    }
+
+    pub fn register(&mut self, function: Arc<ast::Function>) {
+        self.functions.insert(function.name.clone(), function);
+    }
+}
+
 /// Runs a program using a syntax file and the source file.
 pub fn run(syntax: &str, source: &str) {
     use std::thread;
@@ -64,7 +80,8 @@ pub fn run(syntax: &str, source: &str) {
 }
 
 /// Loads a source from file.
-pub fn load(source: &str) -> Result<Vec<ast::Function>, String> {
+pub fn load(source: &str, prelude: &[Arc<ast::Function>])
+-> Result<Module, String> {
     use std::thread;
     use std::fs::File;
     use std::io::Read;
@@ -89,7 +106,7 @@ pub fn load(source: &str) -> Result<Vec<ast::Function>, String> {
 
     // Convert to AST.
     let mut ignored = vec![];
-    let ast = ast::convert(&data, &mut ignored).unwrap();
+    let mut ast = ast::convert(&data, &mut ignored).unwrap();
 
     // Check that lifetime checking succeeded.
     match handle.join().unwrap() {
@@ -99,6 +116,10 @@ pub fn load(source: &str) -> Result<Vec<ast::Function>, String> {
 
     if ignored.len() > 0 {
         unimplemented!();
+    }
+
+    for f in prelude {
+        ast.register(f.clone());
     }
 
     Ok(ast)

@@ -8,6 +8,7 @@ use ast;
 use Variable;
 use Array;
 use Object;
+use Module;
 
 /// Which side an expression is evalutated.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -51,23 +52,6 @@ pub struct Runtime {
     pub ref_type: Variable,
     pub unsafe_ref_type: Variable,
     pub rust_object_type: Variable,
-}
-
-pub struct Module {
-    pub functions: Arc<HashMap<Arc<String>, ast::Function>>,
-}
-
-impl Module {
-    pub fn new() -> Module {
-        Module {
-            functions: Arc::new(HashMap::new()),
-        }
-    }
-
-    pub fn register(&mut self, function: &ast::Function) {
-        Arc::make_mut(&mut self.functions)
-            .insert(function.name.clone(), function.clone());
-    }
 }
 
 fn resolve<'a>(stack: &'a Vec<Variable>, var: &'a Variable) -> &'a Variable {
@@ -372,22 +356,19 @@ impl Runtime {
         }
     }
 
-    pub fn run(&mut self, ast: &Vec<ast::Function>) {
-        let mut module = Module::new();
-        for f in ast {
-            module.register(f);
-        }
+    pub fn run(&mut self, module: &Module) {
         let call = ast::Call {
             name: Arc::new("main".into()),
             args: vec![]
         };
-        for f in ast {
-            if *f.name == "main" {
+        match module.functions.get(&call.name) {
+            Some(f) => {
                 if f.args.len() != 0 {
                     panic!("`main` should not have arguments");
                 }
                 self.call(&call, &module);
             }
+            None => panic!("Could not find function `main`")
         }
     }
 
@@ -656,13 +637,8 @@ impl Runtime {
                         };
                         let v = match self.resolve(&v) {
                             &Variable::Text(ref text) => {
-                                let ast: Vec<ast::Function> = load(text)
-                                    .unwrap();
-                                let mut module = Module::new();
-                                for f in &ast {
-                                    module.register(f);
-                                }
-                                Variable::RustObject(Arc::new(Mutex::new(module)))
+                                Variable::RustObject(Arc::new(Mutex::new(
+                                    load(text, &[]).unwrap())))
                             }
                             _ => panic!("Expected text argument")
                         };
@@ -682,7 +658,7 @@ impl Runtime {
                             Some(v) => v,
                             None => panic!("There is no value on the stack")
                         };
-                        let mut new_module = Module::new();
+                        let mut prelude: Vec<Arc<ast::Function>> = vec![];
                         match self.resolve(&modules) {
                             &Variable::Array(ref array) => {
                                 for it in array {
@@ -691,7 +667,7 @@ impl Runtime {
                                             match obj.lock().unwrap().downcast_ref::<Module>() {
                                                 Some(m) => {
                                                     for f in m.functions.values() {
-                                                        new_module.register(f)
+                                                        prelude.push(f.clone())
                                                     }
                                                 }
                                                 None => panic!("Expected `Module`")
@@ -703,18 +679,13 @@ impl Runtime {
                             }
                             _ => panic!("Expected array argument")
                         }
-                        match self.resolve(&source) {
+                        let v = match self.resolve(&source) {
                             &Variable::Text(ref text) => {
-                                let ast: Vec<ast::Function> = load(text)
-                                    .unwrap();
-                                for f in &ast {
-                                    new_module.register(f);
-                                }
+                                Variable::RustObject(Arc::new(Mutex::new(
+                                load(text, &prelude).unwrap())))
                             }
                             _ => panic!("Expected text argument")
                         };
-                        let v = Variable::RustObject(Arc::new(
-                            Mutex::new(new_module)));
                         self.stack.push(v);
                         self.pop_fn(call.name.clone());
                         Expect::Something
