@@ -1,4 +1,4 @@
 
-fn id(x) {
+fn id(x: 'return) -> {
     return x
 }

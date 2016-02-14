@@ -3,5 +3,5 @@ fn foo(x) {
     for i := 0; i < x; i += 1 {
         y += i
     }
-    return y
+    return clone(y)
 }

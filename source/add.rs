@@ -1,3 +1,3 @@
-fn add(x, y) {
+fn add(x, y) -> {
     return x + y + 3
 }
