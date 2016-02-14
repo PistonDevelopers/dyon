@@ -1,5 +1,6 @@
 #![cfg_attr(test, feature(test))]
 extern crate piston_meta;
+extern crate rand;
 
 use std::any::Any;
 use std::sync::{Arc, Mutex};

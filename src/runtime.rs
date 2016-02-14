@@ -1,9 +1,9 @@
-extern crate rand;
-
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::collections::HashMap;
-use self::rand::Rng;
+use rand;
+
 use ast;
+use intrinsics;
 
 use Variable;
 use Array;
@@ -58,36 +58,6 @@ fn resolve<'a>(stack: &'a Vec<Variable>, var: &'a Variable) -> &'a Variable {
     match *var {
         Variable::Ref(ind) => &stack[ind],
         _ => var
-    }
-}
-
-fn deep_clone(v: &Variable, stack: &Vec<Variable>) -> Variable {
-    use Variable::*;
-
-    match *v {
-        F64(_) => v.clone(),
-        Return => v.clone(),
-        Bool(_) => v.clone(),
-        Text(_) => v.clone(),
-        Object(ref obj) => {
-            let mut res = obj.clone();
-            for (_, val) in &mut res {
-                *val = deep_clone(val, stack);
-            }
-            Object(res)
-        }
-        Array(ref arr) => {
-            let mut res = arr.clone();
-            for it in &mut res {
-                *it = deep_clone(it, stack);
-            }
-            Array(res)
-        }
-        Ref(ind) => {
-            deep_clone(&stack[ind], stack)
-        }
-        UnsafeRef(_) => panic!("Unsafe reference can not be cloned"),
-        RustObject(_) => v.clone()
     }
 }
 
@@ -211,52 +181,12 @@ impl Runtime {
         }
     }
 
-    fn resolve<'a>(&'a self, var: &'a Variable) -> &'a Variable {
+    #[inline(always)]
+    pub fn resolve<'a>(&'a self, var: &'a Variable) -> &'a Variable {
         resolve(&self.stack, var)
     }
 
-    fn print_variable(&self, v: &Variable) {
-        match *self.resolve(v) {
-            Variable::Text(ref t) => {
-                print!("{}", t);
-            }
-            Variable::F64(x) => {
-                print!("{}", x);
-            }
-            Variable::Bool(x) => {
-                print!("{}", x);
-            }
-            Variable::Ref(ind) => {
-                self.print_variable(&self.stack[ind]);
-            }
-            Variable::Object(ref obj) => {
-                print!("{{");
-                let n = obj.len();
-                for (i, (k, v)) in obj.iter().enumerate() {
-                    print!("{}: ", k);
-                    self.print_variable(v);
-                    if i + 1 < n {
-                        print!(", ");
-                    }
-                }
-                print!("}}");
-            }
-            Variable::Array(ref arr) => {
-                print!("[");
-                let n = arr.len();
-                for (i, v) in arr.iter().enumerate() {
-                    self.print_variable(v);
-                    if i + 1 < n {
-                        print!(", ");
-                    }
-                }
-                print!("]");
-            }
-            ref x => panic!("Could not print out `{:?}`", x)
-        }
-    }
-
-    fn unary_f64<F: FnOnce(f64) -> f64>(&mut self, f: F) -> Expect {
+    pub fn unary_f64<F: FnOnce(f64) -> f64>(&mut self, f: F) -> Expect {
         let x = self.stack.pop().expect("There is no value on the stack");
         match self.resolve(&x) {
             &Variable::F64(a) => {
@@ -267,14 +197,14 @@ impl Runtime {
         Expect::Something
     }
 
-    fn push_fn(&mut self, name: Arc<String>, st: usize, lc: usize) {
+    pub fn push_fn(&mut self, name: Arc<String>, st: usize, lc: usize) {
         self.call_stack.push((
             name,
             st,
             lc
         ));
     }
-    fn pop_fn(&mut self, name: Arc<String>) {
+    pub fn pop_fn(&mut self, name: Arc<String>) {
         match self.call_stack.pop() {
             None => panic!("Did not call `{}`", name),
             Some((fn_name, st, lc)) => {
@@ -287,7 +217,7 @@ impl Runtime {
         }
     }
 
-    fn expression(
+    pub fn expression(
         &mut self,
         expr: &ast::Expression,
         side: Side,
@@ -385,369 +315,10 @@ impl Runtime {
         (expect, Flow::Continue)
     }
 
-    fn call(&mut self, call: &ast::Call, module: &Module) -> (Expect, Flow) {
+    pub fn call(&mut self, call: &ast::Call, module: &Module) -> (Expect, Flow) {
         match module.functions.get(&call.name) {
             None => {
-                let st = self.stack.len();
-                let lc = self.local_stack.len();
-                for arg in &call.args {
-                    match self.expression(arg, Side::Right, module) {
-                        (x, Flow::Return) => { return (x, Flow::Return); }
-                        (Expect::Something, Flow::Continue) => {}
-                        _ => panic!("Expected something from argument")
-                    };
-                }
-                let expect = match &**call.name {
-                    "clone" => {
-                        self.push_fn(call.name.clone(), st + 1, lc);
-                        let v = self.stack.pop()
-                            .expect("There is no value on the stack");
-                        let v = deep_clone(self.resolve(&v), &self.stack);
-                        self.stack.push(v);
-                        self.pop_fn(call.name.clone());
-                        Expect::Something
-                    }
-                    "println" => {
-                        self.push_fn(call.name.clone(), st, lc);
-                        let x = self.stack.pop()
-                            .expect("There is no value on the stack");
-                        self.print_variable(&x);
-                        println!("");
-                        self.pop_fn(call.name.clone());
-                        Expect::Nothing
-                    }
-                    "print" => {
-                        self.push_fn(call.name.clone(), st, lc);
-                        let x = self.stack.pop()
-                            .expect("There is no value on the stack");
-                        self.print_variable(&x);
-                        self.pop_fn(call.name.clone());
-                        Expect::Nothing
-                    }
-                    "sqrt" => self.unary_f64(|a| a.sqrt()),
-                    "sin" => self.unary_f64(|a| a.sin()),
-                    "asin" => self.unary_f64(|a| a.asin()),
-                    "cos" => self.unary_f64(|a| a.cos()),
-                    "acos" => self.unary_f64(|a| a.acos()),
-                    "tan" => self.unary_f64(|a| a.tan()),
-                    "atan" => self.unary_f64(|a| a.atan()),
-                    "exp" => self.unary_f64(|a| a.exp()),
-                    "ln" => self.unary_f64(|a| a.ln()),
-                    "log2" => self.unary_f64(|a| a.log2()),
-                    "log10" => self.unary_f64(|a| a.log10()),
-                    "sleep" => {
-                        use std::thread::sleep;
-                        use std::time::Duration;
-
-                        self.push_fn(call.name.clone(), st, lc);
-                        let v = match self.stack.pop() {
-                            Some(Variable::F64(b)) => b,
-                            Some(_) => panic!("Expected number"),
-                            None => panic!("There is no value on the stack")
-                        };
-                        let secs = v as u64;
-                        let nanos = (v.fract() * 1.0e9) as u32;
-                        sleep(Duration::new(secs, nanos));
-                        self.pop_fn(call.name.clone());
-                        Expect::Nothing
-                    }
-                    "random" => {
-                        self.push_fn(call.name.clone(), st + 1, lc);
-                        let v = Variable::F64(self.rng.gen());
-                        self.stack.push(v);
-                        self.pop_fn(call.name.clone());
-                        Expect::Something
-                    }
-                    "round" => {
-                        self.push_fn(call.name.clone(), st + 1, lc);
-                        let v = match self.stack.pop() {
-                            Some(Variable::F64(b)) => b,
-                            Some(_) => panic!("Expected number"),
-                            None => panic!("There is no value on the stack")
-                        };
-                        let v = Variable::F64(v.round());
-                        self.stack.push(v);
-                        self.pop_fn(call.name.clone());
-                        Expect::Something
-                    }
-                    "len" => {
-                        self.push_fn(call.name.clone(), st + 1, lc);
-                        let v = match self.stack.pop() {
-                            Some(v) => v,
-                            None => panic!("There is no value on the stack")
-                        };
-
-                        let v = {
-                            let arr = match self.resolve(&v) {
-                                &Variable::Array(ref arr) => arr,
-                                _ => panic!("Expected array")
-                            };
-                            Variable::F64(arr.len() as f64)
-                        };
-                        self.stack.push(v);
-                        self.pop_fn(call.name.clone());
-                        Expect::Something
-                    }
-                    "push" => {
-                        self.push_fn(call.name.clone(), st + 1, lc);
-                        let item = match self.stack.pop() {
-                            Some(item) => item,
-                            None => panic!("There is no value on the stack")
-                        };
-                        let v = match self.stack.pop() {
-                            Some(v) => v,
-                            None => panic!("There is no value on the stack")
-                        };
-
-                        if let Variable::Ref(ind) = v {
-                            if let Variable::Array(ref mut arr) =
-                            self.stack[ind] {
-                                arr.push(item);
-                            } else {
-                                panic!("Expected reference to array");
-                            }
-                        } else {
-                            panic!("Expected reference to array");
-                        }
-                        self.pop_fn(call.name.clone());
-                        Expect::Nothing
-                    }
-                    "read_line" => {
-                        use std::io::{self, Write};
-
-                        self.push_fn(call.name.clone(), st + 1, lc);
-                        let mut input = String::new();
-                        io::stdout().flush().unwrap();
-                        match io::stdin().read_line(&mut input) {
-                            Ok(_) => {}
-                            Err(error) => panic!("{}", error)
-                        };
-                        self.stack.push(Variable::Text(Arc::new(input)));
-                        self.pop_fn(call.name.clone());
-                        Expect::Something
-                    }
-                    "read_number" => {
-                        use std::io::{self, Write};
-
-                        self.push_fn(call.name.clone(), st + 1, lc);
-                        let err = match self.stack.pop() {
-                            Some(Variable::Text(t)) => t,
-                            Some(_) => panic!("Expected text"),
-                            None => panic!("There is no value on the stack")
-                        };
-                        let stdin = io::stdin();
-                        let mut stdout = io::stdout();
-                        let mut input = String::new();
-                        loop {
-                            stdout.flush().unwrap();
-                            match stdin.read_line(&mut input) {
-                                Ok(_) => {}
-                                Err(error) => panic!("{}", error)
-                            };
-                            match input.trim().parse::<f64>() {
-                                Ok(v) => {
-                                    self.stack.push(Variable::F64(v));
-                                    break;
-                                }
-                                Err(_) => {
-                                    println!("{}", err);
-                                }
-                            }
-                        }
-                        self.pop_fn(call.name.clone());
-                        Expect::Something
-                    }
-                    "trim_right" => {
-                        self.push_fn(call.name.clone(), st + 1, lc);
-                        let mut v = match self.stack.pop() {
-                            Some(Variable::Text(t)) => t,
-                            Some(_) => panic!("Expected text"),
-                            None => panic!("There is no value on the stack")
-                        };
-                        {
-                            let w = Arc::make_mut(&mut v);
-                            while let Some(ch) = w.pop() {
-                                if !ch.is_whitespace() { w.push(ch); break; }
-                            }
-                        }
-                        self.stack.push(Variable::Text(v));
-                        self.pop_fn(call.name.clone());
-                        Expect::Something
-                    }
-                    "to_string" => {
-                        self.push_fn(call.name.clone(), st + 1, lc);
-                        let v = match self.stack.pop() {
-                            Some(v) => v,
-                            None => panic!("There is no value on the stack")
-                        };
-                        let v = match self.resolve(&v) {
-                            &Variable::Text(ref t) => Variable::Text(t.clone()),
-                            &Variable::F64(v) => {
-                                Variable::Text(Arc::new(format!("{}", v)))
-                            }
-                            _ => unimplemented!(),
-                        };
-                        self.stack.push(v);
-                        self.pop_fn(call.name.clone());
-                        Expect::Something
-                    }
-                    "typeof" => {
-                        self.push_fn(call.name.clone(), st + 1, lc);
-                        let v = match self.stack.pop() {
-                            Some(v) => v,
-                            None => panic!("There is no value on the stack")
-                        };
-                        let v = match self.resolve(&v) {
-                            &Variable::Text(_) => self.text_type.clone(),
-                            &Variable::F64(_) => self.f64_type.clone(),
-                            &Variable::Return => self.return_type.clone(),
-                            &Variable::Bool(_) => self.bool_type.clone(),
-                            &Variable::Object(_) => self.object_type.clone(),
-                            &Variable::Array(_) => self.array_type.clone(),
-                            &Variable::Ref(_) => self.ref_type.clone(),
-                            &Variable::UnsafeRef(_) =>
-                                self.unsafe_ref_type.clone(),
-                            &Variable::RustObject(_) =>
-                                self.rust_object_type.clone(),
-                        };
-                        self.stack.push(v);
-                        self.pop_fn(call.name.clone());
-                        Expect::Something
-                    }
-                    "debug" => {
-                        self.push_fn(call.name.clone(), st, lc);
-                        println!("Stack {:#?}", self.stack);
-                        println!("Locals {:#?}", self.local_stack);
-                        self.pop_fn(call.name.clone());
-                        Expect::Nothing
-                    }
-                    "backtrace" => {
-                        self.push_fn(call.name.clone(), st, lc);
-                        println!("{:#?}", self.call_stack);
-                        self.pop_fn(call.name.clone());
-                        Expect::Nothing
-                    }
-                    "load" => {
-                        use load;
-
-                        self.push_fn(call.name.clone(), st + 1, lc);
-                        let v = match self.stack.pop() {
-                            Some(v) => v,
-                            None => panic!("There is no value on the stack")
-                        };
-                        let v = match self.resolve(&v) {
-                            &Variable::Text(ref text) => {
-                                let mut module = Module::new();
-                                load(text, &mut module).unwrap();
-                                Variable::RustObject(Arc::new(Mutex::new(
-                                    module)))
-                            }
-                            _ => panic!("Expected text argument")
-                        };
-                        self.stack.push(v);
-                        self.pop_fn(call.name.clone());
-                        Expect::Something
-                    }
-                    "load_source_imports" => {
-                        use load;
-
-                        self.push_fn(call.name.clone(), st + 1, lc);
-                        let modules = match self.stack.pop() {
-                            Some(v) => v,
-                            None => panic!("There is no value on the stack")
-                        };
-                        let source = match self.stack.pop() {
-                            Some(v) => v,
-                            None => panic!("There is no value on the stack")
-                        };
-                        let mut module = Module::new();
-                        match self.resolve(&modules) {
-                            &Variable::Array(ref array) => {
-                                for it in array {
-                                    match self.resolve(it) {
-                                        &Variable::RustObject(ref obj) => {
-                                            match obj.lock().unwrap().downcast_ref::<Module>() {
-                                                Some(m) => {
-                                                    for f in m.functions.values() {
-                                                        module.register(f.clone())
-                                                    }
-                                                }
-                                                None => panic!("Expected `Module`")
-                                            }
-                                        }
-                                        _ => panic!("Expected Rust object")
-                                    }
-                                }
-                            }
-                            _ => panic!("Expected array argument")
-                        }
-                        let v = match self.resolve(&source) {
-                            &Variable::Text(ref text) => {
-                                load(text, &mut module).unwrap();
-                                Variable::RustObject(
-                                    Arc::new(Mutex::new(module)))
-                            }
-                            _ => panic!("Expected text argument")
-                        };
-                        self.stack.push(v);
-                        self.pop_fn(call.name.clone());
-                        Expect::Something
-                    }
-                    "call" => {
-                        self.push_fn(call.name.clone(), st, lc);
-                        let args = match self.stack.pop() {
-                            Some(v) => v,
-                            None => panic!("There is no value on the stack")
-                        };
-                        let fn_name = match self.stack.pop() {
-                            Some(v) => v,
-                            None => panic!("There is no value on the stack")
-                        };
-                        let module = match self.stack.pop() {
-                            Some(v) => v,
-                            None => panic!("There is no value on the stack")
-                        };
-                        let fn_name = match self.resolve(&fn_name) {
-                            &Variable::Text(ref text) => text.clone(),
-                            _ => panic!("Expected text argument")
-                        };
-                        let args = match self.resolve(&args) {
-                            &Variable::Array(ref arr) => arr.clone(),
-                            _ => panic!("Expected array argument")
-                        };
-                        let obj = match self.resolve(&module) {
-                            &Variable::RustObject(ref obj) => obj.clone(),
-                            _ => panic!("Expected rust object")
-                        };
-
-                        match obj.lock().unwrap()
-                            .downcast_ref::<Module>() {
-                            Some(m) => {
-                                match m.functions.get(&fn_name) {
-                                    Some(ref f) => {
-                                        if f.args.len() != args.len() {
-                                            panic!("Expected `{}` arguments, found `{}`",
-                                                f.args.len(), args.len())
-                                        }
-                                    }
-                                    None => panic!("Could not find function `{}`", fn_name)
-                                }
-                                let call = ast::Call {
-                                    name: fn_name.clone(),
-                                    args: args.into_iter().map(|arg|
-                                        ast::Expression::Variable(arg)).collect()
-                                };
-                                self.call(&call, &m);
-                            }
-                            None => panic!("Expected `Vec<ast::Function>`")
-                        }
-
-                        self.pop_fn(call.name.clone());
-                        Expect::Nothing
-                    }
-                    _ => panic!("Unknown function `{}`", call.name)
-                };
-                (expect, Flow::Continue)
+                intrinsics::call_standard(self, call, module)
             }
             Some(ref f) => {
                 if call.args.len() != f.args.len() {
