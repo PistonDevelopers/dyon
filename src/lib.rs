@@ -47,41 +47,10 @@ impl Module {
 }
 
 /// Runs a program using a syntax file and the source file.
-pub fn run(syntax: &str, source: &str) {
-    use std::thread;
-    use piston_meta::{json, load_syntax_data};
-
-    let data = load_syntax_data(syntax, source);
-    let check_data = data.clone();
-
-    // Do lifetime checking in parallel directly on meta data.
-    let handle = thread::spawn(move || {
-        let check_data = check_data;
-        lifetime::check(&check_data, &Prelude::new())
-    });
-
-    // Convert to AST.
-    let mut ignored = vec![];
+pub fn run(source: &str) {
     let mut module = Module::new();
-    ast::convert(&data, &mut ignored, &mut module).unwrap();
-
-    // Check that lifetime checking succeeded.
-    match handle.join().unwrap() {
-        Ok(()) => {}
-        Err(msg) => panic!(msg)
-    }
-
+    load(source, &mut module).unwrap();
     let mut runtime = runtime::Runtime::new();
-    if ignored.len() > 0 {
-        println!("START IGNORED");
-        if ignored.len() > 0 {
-            for r in &ignored {
-                json::print(&data[r.iter()]);
-            }
-        }
-        println!("END IGNORED");
-        panic!("Some meta data was ignored in the syntax");
-    }
     runtime.run(&module);
 }
 
@@ -90,7 +59,7 @@ pub fn load(source: &str, module: &mut Module) -> Result<(), String> {
     use std::thread;
     use std::fs::File;
     use std::io::Read;
-    use piston_meta::{parse_errstr, syntax_errstr};
+    use piston_meta::{parse_errstr, syntax_errstr, json};
 
     let syntax = include_str!("../assets/syntax.txt");
     let syntax_rules = try!(syntax_errstr(syntax));
@@ -122,7 +91,16 @@ pub fn load(source: &str, module: &mut Module) -> Result<(), String> {
     }
 
     if ignored.len() > 0 {
-        unimplemented!();
+        use std::io::Write;
+
+        let mut buf: Vec<u8> = vec![];
+        writeln!(&mut buf, "Some meta data was ignored in the syntax").unwrap();
+        writeln!(&mut buf, "START IGNORED").unwrap();
+        for r in &ignored {
+            json::write(&mut buf, &data[r.iter()]).unwrap();
+        }
+        writeln!(&mut buf, "END IGNORED").unwrap();
+        return Err(String::from_utf8(buf).unwrap());
     }
 
     Ok(())
@@ -138,35 +116,35 @@ mod tests {
     #[bench]
     fn bench_add_two(b: &mut Bencher) {
         b.iter(||
-            run("assets/syntax.txt", "source/bench/add.rs")
+            run("source/bench/add.rs")
         );
     }
 
     #[bench]
     fn bench_main(b: &mut Bencher) {
         b.iter(||
-            run("assets/syntax.txt", "source/bench/main.rs")
+            run("source/bench/main.rs")
         );
     }
 
     #[bench]
     fn bench_array(b: &mut Bencher) {
         b.iter(||
-            run("assets/syntax.txt", "source/bench/array.rs")
+            run("source/bench/array.rs")
         );
     }
 
     #[bench]
     fn bench_object(b: &mut Bencher) {
         b.iter(||
-            run("assets/syntax.txt", "source/bench/object.rs")
+            run("source/bench/object.rs")
         );
     }
 
     #[bench]
     fn bench_call(b: &mut Bencher) {
         b.iter(||
-            run("assets/syntax.txt", "source/bench/call.rs")
+            run("source/bench/call.rs")
         );
     }
 }
