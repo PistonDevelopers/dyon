@@ -5,6 +5,8 @@ use std::any::Any;
 use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 
+use lifetime::Prelude;
+
 pub mod ast;
 pub mod runtime;
 pub mod lifetime;
@@ -26,6 +28,7 @@ pub enum Variable {
     RustObject(Arc<Mutex<Any>>),
 }
 
+#[derive(Debug)]
 pub struct Module {
     pub functions: HashMap<Arc<String>, Arc<ast::Function>>,
 }
@@ -53,7 +56,7 @@ pub fn run(syntax: &str, source: &str) {
     // Do lifetime checking in parallel directly on meta data.
     let handle = thread::spawn(move || {
         let check_data = check_data;
-        lifetime::check(&check_data)
+        lifetime::check(&check_data, &Prelude::new())
     });
 
     // Convert to AST.
@@ -98,11 +101,13 @@ pub fn load(source: &str, module: &mut Module) -> Result<(), String> {
     let mut data = vec![];
     try!(parse_errstr(&syntax_rules, &d, &mut data));
     let check_data = data.clone();
+    let prelude = Prelude::from_module(module);
 
     // Do lifetime checking in parallel directly on meta data.
     let handle = thread::spawn(move || {
         let check_data = check_data;
-        lifetime::check(&check_data)
+        let prelude = prelude;
+        lifetime::check(&check_data, &prelude)
     });
 
     // Convert to AST.
