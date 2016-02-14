@@ -637,8 +637,10 @@ impl Runtime {
                         };
                         let v = match self.resolve(&v) {
                             &Variable::Text(ref text) => {
+                                let mut module = Module::new();
+                                load(text, &mut module).unwrap();
                                 Variable::RustObject(Arc::new(Mutex::new(
-                                    load(text, &[]).unwrap())))
+                                    module)))
                             }
                             _ => panic!("Expected text argument")
                         };
@@ -658,7 +660,7 @@ impl Runtime {
                             Some(v) => v,
                             None => panic!("There is no value on the stack")
                         };
-                        let mut prelude: Vec<Arc<ast::Function>> = vec![];
+                        let mut module = Module::new();
                         match self.resolve(&modules) {
                             &Variable::Array(ref array) => {
                                 for it in array {
@@ -667,7 +669,7 @@ impl Runtime {
                                             match obj.lock().unwrap().downcast_ref::<Module>() {
                                                 Some(m) => {
                                                     for f in m.functions.values() {
-                                                        prelude.push(f.clone())
+                                                        module.register(f.clone())
                                                     }
                                                 }
                                                 None => panic!("Expected `Module`")
@@ -681,8 +683,9 @@ impl Runtime {
                         }
                         let v = match self.resolve(&source) {
                             &Variable::Text(ref text) => {
-                                Variable::RustObject(Arc::new(Mutex::new(
-                                load(text, &prelude).unwrap())))
+                                load(text, &mut module).unwrap();
+                                Variable::RustObject(
+                                    Arc::new(Mutex::new(module)))
                             }
                             _ => panic!("Expected text argument")
                         };

@@ -9,9 +9,11 @@ use self::piston_meta::MetaData;
 use Variable;
 use Module;
 
-pub fn convert(data: &[Range<MetaData>], ignored: &mut Vec<Range>)
--> Result<Module, ()> {
-    let mut module = Module::new();
+pub fn convert(
+    data: &[Range<MetaData>],
+    ignored: &mut Vec<Range>,
+    module: &mut Module
+) -> Result<(), ()> {
     let mut convert = Convert::new(data);
     loop {
         if let Ok((range, function)) = Function::from_meta_data(convert, ignored) {
@@ -23,7 +25,7 @@ pub fn convert(data: &[Range<MetaData>], ignored: &mut Vec<Range>)
             break;
         }
     }
-    Ok(module)
+    Ok(())
 }
 
 #[derive(Debug, Clone)]

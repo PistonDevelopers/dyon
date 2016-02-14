@@ -58,7 +58,8 @@ pub fn run(syntax: &str, source: &str) {
 
     // Convert to AST.
     let mut ignored = vec![];
-    let ast = ast::convert(&data, &mut ignored).unwrap();
+    let mut module = Module::new();
+    ast::convert(&data, &mut ignored, &mut module).unwrap();
 
     // Check that lifetime checking succeeded.
     match handle.join().unwrap() {
@@ -77,12 +78,11 @@ pub fn run(syntax: &str, source: &str) {
         println!("END IGNORED");
         panic!("Some meta data was ignored in the syntax");
     }
-    runtime.run(&ast);
+    runtime.run(&module);
 }
 
 /// Loads a source from file.
-pub fn load(source: &str, prelude: &[Arc<ast::Function>])
--> Result<Module, String> {
+pub fn load(source: &str, module: &mut Module) -> Result<(), String> {
     use std::thread;
     use std::fs::File;
     use std::io::Read;
@@ -107,7 +107,7 @@ pub fn load(source: &str, prelude: &[Arc<ast::Function>])
 
     // Convert to AST.
     let mut ignored = vec![];
-    let mut ast = ast::convert(&data, &mut ignored).unwrap();
+    ast::convert(&data, &mut ignored, module).unwrap();
 
     // Check that lifetime checking succeeded.
     match handle.join().unwrap() {
@@ -119,11 +119,7 @@ pub fn load(source: &str, prelude: &[Arc<ast::Function>])
         unimplemented!();
     }
 
-    for f in prelude {
-        ast.register(f.clone());
-    }
-
-    Ok(ast)
+    Ok(())
 }
 
 #[cfg(test)]
