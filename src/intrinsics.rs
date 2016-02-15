@@ -367,7 +367,9 @@ pub fn call_standard(
             let v = match rt.resolve(&v) {
                 &Variable::Text(ref text) => {
                     let mut module = Module::new();
-                    load(text, &mut module).unwrap();
+                    load(text, &mut module).unwrap_or_else(|err| {
+                        panic!("{}", err);
+                    });
                     Variable::RustObject(Arc::new(Mutex::new(
                         module)))
                 }
@@ -412,7 +414,9 @@ pub fn call_standard(
             }
             let v = match rt.resolve(&source) {
                 &Variable::Text(ref text) => {
-                    load(text, &mut module).unwrap();
+                    load(text, &mut module).unwrap_or_else(|err| {
+                        panic!("{}", err);
+                    });
                     Variable::RustObject(
                         Arc::new(Mutex::new(module)))
                 }
