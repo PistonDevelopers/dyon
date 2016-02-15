@@ -349,7 +349,7 @@ pub fn check(data: &[Range<MetaData>], prelude: &Prelude) -> Result<(), String> 
             return Err(format!("{}: Expected {} arguments, found {}",
                 name, function_args[i], n));
         }
-        node.declaration = Some(i);
+        node.declaration = Some(functions[i]);
     }
 
     // Build a map from (function, argument_name) => (argument, index).
@@ -694,6 +694,7 @@ impl Node {
                 (_, Kind::Pow) => {}
                 (_, Kind::Base) => {}
                 (_, Kind::Exp) => {}
+                (_, Kind::Block) => {}
                 x => panic!("Unimplemented `{:?}`", x),
             }
             let lifetime = match nodes[c].lifetime(nodes, arg_names) {

@@ -1,6 +1,8 @@
+fn one() -> {return 1}
+fn bar(x: 'return) -> {return [x]}
+fn foo() -> {
+    return bar(0)
+}
 fn main() {
-    m := load("source/bench/add.rs")
-    for i := 0; i < 100; i += 1 {
-        call(m, "main", [])
-    }
+    println(foo())
 }
