@@ -49,7 +49,9 @@ impl Module {
 /// Runs a program using a syntax file and the source file.
 pub fn run(source: &str) {
     let mut module = Module::new();
-    load(source, &mut module).unwrap();
+    load(source, &mut module).unwrap_or_else(|err| {
+        panic!("{}", err);
+    });
     let mut runtime = runtime::Runtime::new();
     runtime.run(&module);
 }
@@ -145,6 +147,13 @@ mod tests {
     fn bench_call(b: &mut Bencher) {
         b.iter(||
             run("source/bench/call.rs")
+        );
+    }
+
+    #[bench]
+    fn bench_n_body(b: &mut Bencher) {
+        b.iter(||
+            run("source/bench/n_body.rs")
         );
     }
 }

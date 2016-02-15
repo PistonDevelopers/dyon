@@ -231,6 +231,10 @@ impl Runtime {
                 self.array(arr, module);
                 (Expect::Something, Flow::Continue)
             }
+            ArrayFill(ref array_fill) => {
+                self.array_fill(array_fill, module);
+                (Expect::Something, Flow::Continue)
+            }
             Block(ref block) => self.block(block, module),
             Return(ref ret) => {
                 use ast::{AssignOp, Expression, Item};
@@ -427,6 +431,18 @@ impl Runtime {
             }
         }
         self.stack.push(Variable::Array(array));
+    }
+
+    fn array_fill(&mut self, array_fill: &ast::ArrayFill, module: &Module) {
+        self.expression(&array_fill.fill, Side::Right, module);
+        self.expression(&array_fill.n, Side::Right, module);
+        match (self.stack.pop(), self.stack.pop()) {
+            (None, _) | (_, None) => panic!("There is no value on the stack"),
+            (Some(Variable::F64(n)), Some(x)) => {
+                self.stack.push(Variable::Array(vec![x; n as usize]));
+            }
+            _ => panic!("Expected number for length in `[value; length]`")
+        }
     }
 
     #[inline(always)]
@@ -976,8 +992,11 @@ impl Runtime {
                 }
             }
             (&Variable::Text(_), _) =>
-                panic!("The right argument must be a string. Try the `to_string` function"),
-            _ => panic!("Invalid type, expected numbers, bools or strings")
+                panic!("The right argument must be a string. \
+                        Try the `to_string` function"),
+            _ => panic!("Invalid type for binary operator `{:?}`, \
+                         expected numbers, bools or strings",
+                        binop.op)
         };
         self.stack.push(v);
 

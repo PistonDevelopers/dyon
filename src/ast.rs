@@ -163,6 +163,7 @@ impl Block {
 pub enum Expression {
     Object(Box<Object>),
     Array(Box<Array>),
+    ArrayFill(Box<ArrayFill>),
     Return(Box<Expression>),
     ReturnVoid,
     Break(Break),
@@ -205,6 +206,10 @@ impl Expression {
                     convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::Array(Box::new(val)));
+            } else if let Ok((range, val)) = ArrayFill::from_meta_data(
+                    convert, ignored) {
+                convert.update(range);
+                result = Some(Expression::ArrayFill(Box::new(val)));
             } else if let Ok((range, val)) = Expression::from_meta_data(
                 "return", convert, ignored) {
                 convert.update(range);
@@ -386,6 +391,49 @@ impl Array {
         }
 
         Ok((convert.subtract(start), Array { items: items }))
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ArrayFill {
+    pub fill: Expression,
+    pub n: Expression,
+}
+
+impl ArrayFill {
+    pub fn from_meta_data(
+        mut convert: Convert,
+        ignored: &mut Vec<Range>)
+    -> Result<(Range, ArrayFill), ()> {
+        let start = convert.clone();
+        let node = "array_fill";
+        let start_range = try!(convert.start_node(node));
+        convert.update(start_range);
+
+        let mut fill: Option<Expression> = None;
+        let mut n: Option<Expression> = None;
+        loop {
+            if let Ok(range) = convert.end_node(node) {
+                convert.update(range);
+                break;
+            } else if let Ok((range, val)) = Expression::from_meta_data(
+                "fill", convert, ignored) {
+                convert.update(range);
+                fill = Some(val);
+            } else if let Ok((range, val)) = Expression::from_meta_data(
+                "n", convert, ignored) {
+                convert.update(range);
+                n = Some(val);
+            } else {
+                let range = convert.ignore();
+                convert.update(range);
+                ignored.push(range);
+            }
+        }
+
+        let fill = try!(fill.ok_or(()));
+        let n = try!(n.ok_or(()));
+        Ok((convert.subtract(start), ArrayFill { fill: fill, n: n }))
     }
 }
 
@@ -677,7 +725,7 @@ impl Call {
                 convert.update(range);
                 name = Some(val);
             } else if let Ok((range, val)) = Expression::from_meta_data(
-                "arg", convert, ignored) {
+                "call_arg", convert, ignored) {
                 convert.update(range);
                 args.push(val);
             } else {
@@ -714,7 +762,7 @@ impl Call {
                 if name.len() != 0 { name.push('_'); }
                 name.push_str(&val);
             } else if let Ok((range, val)) = Expression::from_meta_data(
-                "arg", convert, ignored) {
+                "call_arg", convert, ignored) {
                 convert.update(range);
                 args.push(val);
             } else {

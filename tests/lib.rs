@@ -5,12 +5,16 @@ use dynamo::*;
 
 pub fn test_src(source: &str) {
     let mut module = Module::new();
-    load(source, &mut module).unwrap();
+    load(source, &mut module).unwrap_or_else(|err| {
+        panic!("{}", err);
+    });
 }
 
 pub fn debug_src(source: &str) {
     let mut module = Module::new();
-    load(source, &mut module).unwrap();
+    load(source, &mut module).unwrap_or_else(|err| {
+        panic!("{}", err);
+    });
     panic!("{:?}", module);
 }
 
@@ -102,6 +106,11 @@ fn test_new_pos() {
 #[test]
 fn test_lifetime() {
     test_src("source/lifetime.rs");
+}
+
+#[test]
+fn test_lifetime_6() {
+    test_src("source/lifetime_6.rs");
 }
 
 #[test]

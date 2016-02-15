@@ -17,6 +17,7 @@ _seps: "(){}[],.:;=<>*+-/%^"
 4 expr = {
     object:"object"
     array:"array"
+    array_fill:"array_fill"
     ["return" .w! expr:"return"]
     for:"for"
     loop:"loop"
@@ -41,6 +42,7 @@ _seps: "(){}[],.:;=<>*+-/%^"
 5 arg_expr = {
     object:"object"
     array:"array"
+    array_fill:"array_fill"
     if:"if"
     block:"block"
     compare:"compare"
@@ -57,6 +59,7 @@ _seps: "(){}[],.:;=<>*+-/%^"
 6 lexpr = {
     object:"object"
     array:"array"
+    array_fill:"array_fill"
     block:"block"
     named_call:"named_call"
     ["(" ?w expr ?w ")"]
@@ -69,32 +72,33 @@ _seps: "(){}[],.:;=<>*+-/%^"
 }
 7 object = ["{" ?w .s?.([?w "," ?w] key_value:"key_value") ?w "}"]
 8 array = ["[" ?w .s?.([?w "," ?w] expr:"array_item") ?w "]"]
-9 key_value = [.._seps!:"key" ?w ":" ?w expr:"val"]
-10 num = .$_:"num"
-11 text = .t?:"text"
-12 bool = {"true":"bool" "false":!"bool"}
-13 unop = ["!":"!" ?w lexpr:"expr"]
-14 item = [.._seps!:"name" .r?({
+9 array_fill = ["[" ?w [expr:"fill" ?w ";" ?w expr:"n"] ?w "]"]
+10 key_value = [.._seps!:"key" ?w ":" ?w expr:"val"]
+11 num = .$_:"num"
+12 text = .t?:"text"
+13 bool = {"true":"bool" "false":!"bool"}
+14 unop = ["!":"!" ?w lexpr:"expr"]
+15 item = [.._seps!:"name" .r?({
     [?w "[" ?w {.t?:"id" .$_:"id" expr:"id"} ?w "]"]
     [?w "." ?w .._seps!:"id"]
 })]
-15 for = [?["'" .._seps!:"label" ?w ":" ?w] "for" .w!
+16 for = [?["'" .._seps!:"label" ?w ":" ?w] "for" .w!
     expr:"init" ?w ";" ?w
     expr:"cond" ?w ";" ?w
     expr:"step" ?w block:"block"]
-16 loop = [?["'" .._seps!:"label" ?w ":" ?w] "loop" .w!  block:"block"]
-17 break = ["break" ?w ?["'" .._seps!:"label"]]
-18 continue = ["continue" ?w ?["'" .._seps!:"label"]]
-19 if = [
+17 loop = [?["'" .._seps!:"label" ?w ":" ?w] "loop" .w!  block:"block"]
+18 break = ["break" ?w ?["'" .._seps!:"label"]]
+19 continue = ["continue" ?w ?["'" .._seps!:"label"]]
+20 if = [
     "if" .w! expr:"cond" ?w block:"true_block"
     .r?([?w "else" w "if" ?w expr:"else_if_cond" ?w block:"else_if_block"])
     ?[?w "else" ?w block:"else_block"]
 ]
-20 call = [.._seps!:"name" ?w "(" .s?.([?w "," ?w] arg_expr:"arg") ?w ")"]
-21 named_call = [.._seps!:"word" ?w "(" ?w
-    .s?.([?w "," ?w] [.._seps!:"word" ?w ":" ?w arg_expr:"arg" ?w]) ")"]
-22 assign = [lexpr:"left" ?w assign_op ?w expr:"right"]
-23 assign_op = {
+21 call = [.._seps!:"name" ?w "(" .s?.([?w "," ?w] arg_expr:"call_arg") ?w ")"]
+22 named_call = [.._seps!:"word" ?w "(" ?w
+    .s?.([?w "," ?w] [.._seps!:"word" ?w ":" ?w arg_expr:"call_arg" ?w]) ")"]
+23 assign = [lexpr:"left" ?w assign_op ?w expr:"right"]
+24 assign_op = {
     ":=":":="
     "=":"="
     "+=":"+="
@@ -103,8 +107,8 @@ _seps: "(){}[],.:;=<>*+-/%^"
     "/=":"/="
     "%=":"%="
 }
-24 compare = [lexpr:"left" ?w compare_op ?w expr:"right"]
-25 compare_op = {
+25 compare = [lexpr:"left" ?w compare_op ?w expr:"right"]
+26 compare_op = {
     "==":"=="
     "!=":"!="
     "<=":"<="

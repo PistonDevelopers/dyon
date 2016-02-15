@@ -314,7 +314,7 @@ pub fn check(data: &[Range<MetaData>], prelude: &Prelude) -> Result<(), String> 
     for &c in &calls {
         let n = {
             nodes[c].children.iter()
-            .filter(|&&i| nodes[i].kind == Kind::Arg)
+            .filter(|&&i| nodes[i].kind == Kind::CallArg)
             .count()
         };
 
@@ -496,7 +496,11 @@ fn compare_lifetimes(
                 None => {
                     match (l, r) {
                         (Lifetime::Argument(ref l), Lifetime::Argument(ref r)) => {
-                            return Err(format!("Requires `{}: '{}`",
+                            // TODO: Report function name for other cases.
+                            let func = nodes[nodes[r[0]].parent.unwrap()]
+                                .name.as_ref().unwrap();
+                            return Err(format!("Function `{}` requires `{}: '{}`",
+                                func,
                                 nodes[r[0]].name.as_ref().expect("Expected name"),
                                 nodes[l[0]].name.as_ref().expect("Expected name")));
                         }
@@ -572,6 +576,7 @@ pub struct Node {
     pub arg_constraints: Vec<ArgConstraint>,
 }
 
+/// Gets the lifetime of a function argument.
 fn arg_lifetime(
     declaration: usize,
     arg: &Node,
@@ -646,7 +651,7 @@ impl Node {
             if self.kind == Kind::Call && self.arg_constraints.len() > 0 {
                 let mut returns_static = true;
                 'args: for (_, arg) in self.children.iter().map(|&i| &nodes[i])
-                        .filter(|&n| n.kind == Kind::Arg)
+                        .filter(|&n| n.kind == Kind::CallArg)
                         .zip(self.arg_constraints.iter()) {
                     let mut arg = *arg;
                     loop {
@@ -675,8 +680,10 @@ impl Node {
             }
         }
 
+        // Pick the smallest lifetime among children.
         let mut min: Option<Lifetime> = None;
         // TODO: Filter by kind of children.
+        let mut call_arg_ind = 0;
         for &c in &self.children {
             match (self.kind, nodes[c].kind) {
                 (_, Kind::Object) => {}
@@ -690,11 +697,30 @@ impl Node {
                 (_, Kind::Expr) => {}
                 (_, Kind::Array) => {}
                 (_, Kind::ArrayItem) => {}
-                (_, Kind::Arg) => {}
                 (_, Kind::Pow) => {}
                 (_, Kind::Base) => {}
                 (_, Kind::Exp) => {}
                 (_, Kind::Block) => {}
+                (Kind::Call, Kind::CallArg) => {
+                    // If there is no return lifetime on the declared argument,
+                    // there is no need to check it, because the computed value
+                    // does not depend on the lifetime of that argument.
+                    if let Some(declaration) = self.declaration {
+                        if let Some(&arg) = nodes[declaration].children.iter()
+                            .filter(|&&i| nodes[i].kind == Kind::Arg)
+                            .nth(call_arg_ind) {
+                            match arg_lifetime(arg, &nodes[arg],
+                                               nodes, arg_names) {
+                                Some(Lifetime::Return(_)) => {}
+                                _ => {
+                                    call_arg_ind += 1;
+                                    continue;
+                                }
+                            }
+                        }
+                    }
+                    call_arg_ind += 1;
+                }
                 x => panic!("Unimplemented `{:?}`", x),
             }
             let lifetime = match nodes[c].lifetime(nodes, arg_names) {
@@ -774,6 +800,7 @@ pub enum Op {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Kind {
     Fn,
+    Arg,
     Block,
     Expr,
     Add,
@@ -783,7 +810,7 @@ pub enum Kind {
     Exp,
     Val,
     Call,
-    Arg,
+    CallArg,
     Assign,
     Left,
     Right,
@@ -792,6 +819,9 @@ pub enum Kind {
     Object,
     Array,
     ArrayItem,
+    ArrayFill,
+    Fill,
+    N,
     KeyValue,
     For,
     Init,
@@ -814,6 +844,7 @@ impl Kind {
     pub fn new(name: &str) -> Option<Kind> {
         Some(match name {
             "fn" => Kind::Fn,
+            "arg" => Kind::Arg,
             "block" => Kind::Block,
             "expr" => Kind::Expr,
             "add" => Kind::Add,
@@ -823,8 +854,8 @@ impl Kind {
             "exp" => Kind::Exp,
             "val" => Kind::Val,
             "call" => Kind::Call,
+            "call_arg" => Kind::CallArg,
             "named_call" => Kind::Call,
-            "arg" => Kind::Arg,
             "assign" => Kind::Assign,
             "left" => Kind::Left,
             "right" => Kind::Right,
@@ -833,6 +864,9 @@ impl Kind {
             "object" => Kind::Object,
             "array" => Kind::Array,
             "array_item" => Kind::ArrayItem,
+            "array_fill" => Kind::ArrayFill,
+            "fill" => Kind::Fill,
+            "n" => Kind::N,
             "key_value" => Kind::KeyValue,
             "for" => Kind::For,
             "init" => Kind::Init,
