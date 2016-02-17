@@ -6,7 +6,8 @@ fn main() {
 */
 
 fn main() {
-    print("type something: ")
-    x := read_line()
-    print("you typed: " + x)
+    print("type a number: ")
+    err := "It must be a number!"
+    x := read_number(err)
+    println("you typed: " + to_string(x))
 }

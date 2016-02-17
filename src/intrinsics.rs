@@ -273,19 +273,26 @@ pub fn call_standard(
             use std::io::{self, Write};
 
             rt.push_fn(call.name.clone(), st + 1, lc);
-            let err = match rt.stack.pop() {
-                Some(Variable::Text(t)) => t,
-                Some(_) => panic!("Expected text"),
-                None => panic!("There is no value on the stack")
+            let err = rt.stack.pop()
+                    .expect("There is no value on the stack");
+            let err = match rt.resolve(&err) {
+                &Variable::Text(ref t) => t.clone(),
+                _ => return Err(module.error(call.args[0].source_range(),
+                                "Expected text"))
             };
             let stdin = io::stdin();
             let mut stdout = io::stdout();
             let mut input = String::new();
             loop {
+                input.clear();
                 stdout.flush().unwrap();
                 match stdin.read_line(&mut input) {
                     Ok(_) => {}
-                    Err(error) => panic!("{}", error)
+                    Err(error) => {
+                        rt.stack.push(Variable::RustObject(
+                            Arc::new(Mutex::new(error))));
+                        break;
+                    }
                 };
                 match input.trim().parse::<f64>() {
                     Ok(v) => {
