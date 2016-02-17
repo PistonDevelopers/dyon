@@ -6,7 +6,11 @@ fn main() {
 */
 
 fn main() {
-    for i := 0; i < 10; i += 1 {
-        println(i)
+    if true {
+        println("hi")
+    } else if false {
+        println("oh?")
+    } else {
+        println("good bye!")
     }
 }

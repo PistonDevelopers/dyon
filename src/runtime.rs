@@ -869,40 +869,45 @@ impl Runtime {
         match try!(self.expression(&if_expr.cond, Side::Right, module)) {
             (x, Flow::Return) => { return Ok((x, Flow::Return)); }
             (Expect::Something, Flow::Continue) => {}
-            _ => panic!("Expected bool from if condition")
+            _ => return Err(module.error(if_expr.cond.source_range(),
+                "Expected bool from if condition"))
         };
         match self.stack.pop() {
             None => panic!("There is no value on the stack"),
-            Some(x) => match x {
-                Variable::Bool(val) => {
-                    if val {
-                        return self.block(&if_expr.true_block, module);
-                    }
-                    for (cond, body) in if_expr.else_if_conds.iter()
-                        .zip(if_expr.else_if_blocks.iter()) {
-                        match try!(self.expression(cond, Side::Right, module)) {
-                            (x, Flow::Return) => {
-                                return Ok((x, Flow::Return));
-                            }
-                            (Expect::Something, Flow::Continue) => {}
-                            _ => panic!("Expected bool from else if condition")
-                        };
-                        match self.stack.pop() {
-                            None => panic!("There is no value on the stack"),
-                            Some(Variable::Bool(false)) => {}
-                            Some(Variable::Bool(true)) => {
-                                return self.block(body, module);
-                            }
-                            _ => panic!("Expected bool from else if condition")
+            Some(x) => {
+                let val = match x {
+                    Variable::Bool(val) => val,
+                    _ => return Err(module.error(if_expr.cond.source_range(),
+                        "Expected bool from if condition"))
+                };
+                if val {
+                    return self.block(&if_expr.true_block, module);
+                }
+                for (cond, body) in if_expr.else_if_conds.iter()
+                    .zip(if_expr.else_if_blocks.iter()) {
+                    match try!(self.expression(cond, Side::Right, module)) {
+                        (x, Flow::Return) => {
+                            return Ok((x, Flow::Return));
                         }
-                    }
-                    if let Some(ref block) = if_expr.else_block {
-                        self.block(block, module)
-                    } else {
-                        Ok((Expect::Nothing, Flow::Continue))
+                        (Expect::Something, Flow::Continue) => {}
+                        _ => return Err(module.error(cond.source_range(),
+                            "Expected bool from else if condition"))
+                    };
+                    match self.stack.pop() {
+                        None => panic!("There is no value on the stack"),
+                        Some(Variable::Bool(false)) => {}
+                        Some(Variable::Bool(true)) => {
+                            return self.block(body, module);
+                        }
+                        _ => return Err(module.error(cond.source_range(),
+                            "Expected bool from else if condition"))
                     }
                 }
-                _ => panic!("Expected bool")
+                if let Some(ref block) = if_expr.else_block {
+                    self.block(block, module)
+                } else {
+                    Ok((Expect::Nothing, Flow::Continue))
+                }
             }
         }
     }
