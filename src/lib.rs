@@ -31,12 +31,14 @@ pub enum Variable {
 
 #[derive(Debug)]
 pub struct Module {
+    pub source: Option<String>,
     pub functions: HashMap<Arc<String>, Arc<ast::Function>>,
 }
 
 impl Module {
     pub fn new() -> Module {
         Module {
+            source: None,
             functions: HashMap::new(),
         }
     }
@@ -69,6 +71,7 @@ pub fn load(source: &str, module: &mut Module) -> Result<(), String> {
     let mut data_file = File::open(source).unwrap();
     let mut d = String::new();
     data_file.read_to_string(&mut d).unwrap();
+    module.source = Some(d.clone());
 
     let mut data = vec![];
     try!(parse_errstr(&syntax_rules, &d, &mut data));
