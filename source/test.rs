@@ -6,5 +6,5 @@ fn main() {
 */
 
 fn main() {
-    a := (if false {}) + 3
+    a := !(if false {})
 }

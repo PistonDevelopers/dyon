@@ -830,7 +830,8 @@ pub struct BinOpExpression {
 #[derive(Debug, Clone)]
 pub struct UnOpExpression {
     pub op: UnOp,
-    pub expr: Expression
+    pub expr: Expression,
+    pub source_range: Range,
 }
 
 impl UnOpExpression {
@@ -867,7 +868,8 @@ impl UnOpExpression {
         let expr = try!(expr.ok_or(()));
         Ok((convert.subtract(start), UnOpExpression {
             op: unop,
-            expr: expr
+            expr: expr,
+            source_range: convert.source(start).unwrap()
         }))
     }
 }

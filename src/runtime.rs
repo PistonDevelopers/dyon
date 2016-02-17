@@ -1017,7 +1017,8 @@ impl Runtime {
         match try!(self.expression(&unop.expr, side, module)) {
             (_, Flow::Return) => { return Ok(Flow::Return); }
             (Expect::Something, Flow::Continue) => {}
-            _ => panic!("Expected something from unary argument")
+            _ => return Err(module.error(unop.source_range,
+                "Expected something from unary argument"))
         };
         let val = self.stack.pop().expect("Expected unary argument");
         let v = match self.resolve(&val) {
@@ -1027,7 +1028,8 @@ impl Runtime {
                     // _ => panic!("Unknown boolean unary operator `{:?}`", unop.op)
                 })
             }
-            _ => panic!("Invalid type, expected bool")
+            _ => return Err(module.error(unop.source_range,
+                "Invalid type, expected bool"))
         };
         self.stack.push(v);
         Ok(Flow::Continue)
