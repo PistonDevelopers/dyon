@@ -1,4 +1,4 @@
 fn main() {
-    m := load("source/bench/n_body.rs")
-    call(m, "main", [])
+    m := load("source/context/n_body_context.rs")
+    call(m, "start", ["source/context/n_body_test.rs"])
 }
