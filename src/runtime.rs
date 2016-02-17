@@ -64,6 +64,7 @@ fn resolve<'a>(stack: &'a Vec<Variable>, var: &'a Variable) -> &'a Variable {
 
 // Looks up an item from a variable property.
 fn item_lookup(
+    module: &Module,
     var: *mut Variable,
     stack: &mut [Variable],
     prop: &ast::Id,
@@ -71,7 +72,7 @@ fn item_lookup(
     expr_j: &mut usize,
     insert: bool, // Whether to insert key in object.
     last: bool,   // Whether it is the last property.
-) -> *mut Variable {
+) -> Result<*mut Variable, String> {
     use ast::Id;
     use std::collections::hash_map::Entry;
 
@@ -79,7 +80,7 @@ fn item_lookup(
         match *var {
             Variable::Object(ref mut obj) => {
                 let id = match prop {
-                    &Id::String(ref id) => id.clone(),
+                    &Id::String(_, ref id) => id.clone(),
                     &Id::Expression(_) => {
                         let id = start_stack_len + *expr_j;
                         // Resolve reference of computed expression.
@@ -93,10 +94,12 @@ fn item_lookup(
                                 *expr_j += 1;
                                 id.clone()
                             }
-                            _ => panic!("Expected string")
+                            _ => return Err(module.error(prop.source_range(),
+                                            "Expected string"))
                         }
                     }
-                    _ => panic!("Expected object")
+                    &Id::F64(range, _) => return Err(module.error(range,
+                                                     "Expected string"))
                 };
                 let v = match obj.entry(id.clone()) {
                     Entry::Vacant(vac) => {
@@ -104,7 +107,8 @@ fn item_lookup(
                             // Insert a key to overwrite with new value.
                             vac.insert(Variable::Return)
                         } else {
-                            panic!("Object has no key `{}`", id);
+                            return Err(module.error(prop.source_range(),
+                                &format!("Object has no key `{}`", id)));
                         }
                     }
                     Entry::Occupied(v) => v.into_mut()
@@ -114,17 +118,17 @@ fn item_lookup(
                     // Do not resolve if last, because references should be
                     // copy-on-write.
                     if last {
-                        v
+                        Ok(v)
                     } else {
-                        &mut stack[id]
+                        Ok(&mut stack[id])
                     }
                 } else {
-                    v
+                    Ok(v)
                 }
             }
             Variable::Array(ref mut arr) => {
                 let id = match prop {
-                    &Id::F64(id) => id,
+                    &Id::F64(_, id) => id,
                     &Id::Expression(_) => {
                         let id = start_stack_len + *expr_j;
                         // Resolve reference of computed expression.
@@ -138,10 +142,12 @@ fn item_lookup(
                                 *expr_j += 1;
                                 id
                             }
-                            _ => panic!("Expected number")
+                            _ => return Err(module.error(prop.source_range(),
+                                            "Expected number"))
                         }
                     }
-                    _ => panic!("Expected array")
+                    &Id::String(range, _) => return Err(module.error(range,
+                                                        "Expected number"))
                 };
                 let v = &mut arr[id as usize];
                 // Resolve reference.
@@ -149,15 +155,16 @@ fn item_lookup(
                     // Do not resolve if last, because references should be
                     // copy-on-write.
                     if last {
-                        v
+                        Ok(v)
                     } else {
-                        &mut stack[id]
+                        Ok(&mut stack[id])
                     }
                 } else {
-                    v
+                    Ok(v)
                 }
             }
-            _ => panic!("Expected object or array")
+            _ => return Err(module.error(prop.source_range(),
+                            "Look up requires object or array"))
         }
     }
 }
@@ -831,7 +838,8 @@ impl Runtime {
                     };
                 let item_len = item.ids.len();
                 // Get the first variable (a.x).y
-                let mut var: *mut Variable = item_lookup(
+                let mut var: *mut Variable = try!(item_lookup(
+                    module,
                     &mut stack[id],
                     stack,
                     &item.ids[0],
@@ -839,10 +847,11 @@ impl Runtime {
                     &mut expr_j,
                     insert,
                     item_len == 1
-                );
+                ));
                 // Get the rest of the variables.
                 for (i, prop) in item.ids[1..].iter().enumerate() {
-                    var = item_lookup(
+                    var = try!(item_lookup(
+                        module,
                         unsafe { &mut *var },
                         stack,
                         prop,
@@ -851,7 +860,7 @@ impl Runtime {
                         insert,
                         // `i` skips first index.
                         i + 2 == item_len
-                    );
+                    ));
                 }
 
                 match side {

@@ -741,9 +741,19 @@ pub enum UnOp {
 
 #[derive(Debug, Clone)]
 pub enum Id {
-    String(Arc<String>),
-    F64(f64),
+    String(Range, Arc<String>),
+    F64(Range, f64),
     Expression(Expression),
+}
+
+impl Id {
+    pub fn source_range(&self) -> Range {
+        match *self {
+            Id::String(range, _) => range,
+            Id::F64(range, _) => range,
+            Id::Expression(ref expr) => expr.source_range(),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -773,11 +783,13 @@ impl Item {
                 convert.update(range);
                 name = Some(val);
             } else if let Ok((range, val)) = convert.meta_string("id") {
+                let start_id = convert;
                 convert.update(range);
-                ids.push(Id::String(val));
+                ids.push(Id::String(convert.source(start_id).unwrap(), val));
             } else if let Ok((range, val)) = convert.meta_f64("id") {
+                let start_id = convert;
                 convert.update(range);
-                ids.push(Id::F64(val));
+                ids.push(Id::F64(convert.source(start_id).unwrap(), val));
             } else if let Ok((range, val)) = Expression::from_meta_data(
                 "id", convert, ignored) {
                 convert.update(range);

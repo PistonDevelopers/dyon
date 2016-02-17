@@ -6,5 +6,6 @@ fn main() {
 */
 
 fn main() {
-    println(sqrt("hi"))
+    x := {x: 0}
+    x[(6)] = 3
 }
