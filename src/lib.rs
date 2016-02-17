@@ -106,7 +106,10 @@ pub fn load(source: &str, module: &mut Module) -> Result<(), String> {
     // Check that lifetime checking succeeded.
     match handle.join().unwrap() {
         Ok(()) => {}
-        Err(msg) => return Err(msg)
+        Err(err_msg) => {
+            let (range, msg) = err_msg.decouple();
+            return Err(module.error(range, &msg))
+        }
     }
 
     if ignored.len() > 0 {

@@ -67,7 +67,10 @@ impl Prelude {
     }
 }
 
-pub fn check(data: &[Range<MetaData>], prelude: &Prelude) -> Result<(), String> {
+pub fn check(
+    data: &[Range<MetaData>],
+    prelude: &Prelude
+) -> Result<(), Range<String>> {
     let mut nodes: Vec<Node> = vec![];
     let mut parents: Vec<usize> = vec![];
     for (i, d) in data.iter().enumerate() {
@@ -271,8 +274,9 @@ pub fn check(data: &[Range<MetaData>], prelude: &Prelude) -> Result<(), String> 
                         nodes[i].declaration = Some(j);
                     }
                     None => {
-                        return Err(format!("Could not find declaration of `{}`",
-                            nodes[i].name.as_ref().expect("Expected name")));
+                        return Err(nodes[i].source.wrap(
+                            format!("Could not find declaration of `{}`",
+                            nodes[i].name.as_ref().expect("Expected name"))));
                     }
                 }
             }
@@ -290,7 +294,8 @@ pub fn check(data: &[Range<MetaData>], prelude: &Prelude) -> Result<(), String> 
         for &i in nodes[f].children.iter().filter(|&&i| nodes[i].kind == Kind::Arg) {
             let name = nodes[i].name.as_ref().expect("Expected name");
             if arg_names.contains(name) {
-                return Err(format!("Duplicate argument `{}`", name));
+                return Err(nodes[i].source.wrap(
+                    format!("Duplicate argument `{}`", name)));
             } else {
                 arg_names.insert(name.clone());
             }
@@ -304,7 +309,8 @@ pub fn check(data: &[Range<MetaData>], prelude: &Prelude) -> Result<(), String> 
     for (i, &f) in functions.iter().enumerate() {
         let name = nodes[f].name.as_ref().expect("Expected name");
         if function_lookup.contains_key(name) {
-            return Err(format!("Duplicate function `{}`", name));
+            return Err(nodes[f].source.wrap(
+                format!("Duplicate function `{}`", name)));
         } else {
             function_lookup.insert(name.clone(), i);
         }
@@ -341,13 +347,15 @@ pub fn check(data: &[Range<MetaData>], prelude: &Prelude) -> Result<(), String> 
                     }
                     None => {}
                 }
-                return Err(format!("Could not find function `{}`", name));
+                return Err(node.source.wrap(
+                    format!("Could not find function `{}`", name)));
             }
         };
         // Check that number of arguments is the same as in declaration.
         if function_args[i] != n {
-            return Err(format!("{}: Expected {} arguments, found {}",
-                name, function_args[i], n));
+            return Err(node.source.wrap(
+                format!("{}: Expected {} arguments, found {}",
+                name, function_args[i], n)));
         }
         node.declaration = Some(functions[i]);
     }
@@ -368,7 +376,8 @@ pub fn check(data: &[Range<MetaData>], prelude: &Prelude) -> Result<(), String> 
             if let Some(ref lt) = nodes[c].lifetime {
                 if &**lt == "return" { continue; }
                 if !arg_names.contains_key(&(f, lt.clone())) {
-                    return Err(format!("Could not find argument `{}`", lt));
+                    return Err(nodes[c].source.wrap(
+                        format!("Could not find argument `{}`", lt)));
                 }
             }
         }
@@ -387,7 +396,8 @@ pub fn check(data: &[Range<MetaData>], prelude: &Prelude) -> Result<(), String> 
                     .expect("Expected argument index");
                 loop {
                     if visited[ind] {
-                        return Err(format!("Cyclic lifetime for `{}`", lt));
+                        return Err(nodes[arg].source.wrap(
+                                format!("Cyclic lifetime for `{}`", lt)));
                     }
                     visited[ind] = true;
 
@@ -411,14 +421,18 @@ pub fn check(data: &[Range<MetaData>], prelude: &Prelude) -> Result<(), String> 
         let right = nodes[a].children[1];
         let lifetime_left = nodes[i].lifetime(&nodes, &arg_names);
         let lifetime_right = nodes[right].lifetime(&nodes, &arg_names);
-        try!(compare_lifetimes(lifetime_left, lifetime_right, &nodes));
+        try!(compare_lifetimes(lifetime_left, lifetime_right, &nodes)
+                .map_err(|err| nodes[right].source.wrap(err)));
     }
 
     // Check the lifetime of returned values.
     for &i in &returns {
         let right = nodes[i].children[0];
         let lifetime_right = nodes[right].lifetime(&nodes, &arg_names);
-        try!(compare_lifetimes(Some(Lifetime::Return(vec![])), lifetime_right, &nodes));
+        try!(compare_lifetimes(
+            Some(Lifetime::Return(vec![])), lifetime_right, &nodes)
+                .map_err(|err| nodes[right].source.wrap(err))
+        );
     }
 
     // Check that calls satisfy the lifetime constraints of arguments.
@@ -450,7 +464,8 @@ pub fn check(data: &[Range<MetaData>], prelude: &Prelude) -> Result<(), String> 
                             can_be_item = false;
                         }
                         if !can_be_item {
-                            return Err(format!("Requires reference to variable"));
+                            return Err(arg.source.wrap(
+                                format!("Requires reference to variable")));
                         }
                     }
 
@@ -462,7 +477,10 @@ pub fn check(data: &[Range<MetaData>], prelude: &Prelude) -> Result<(), String> 
                         let right = call.children[i];
                         let lifetime_left = nodes[left].lifetime(&nodes, &arg_names);
                         let lifetime_right = nodes[right].lifetime(&nodes, &arg_names);
-                        try!(compare_lifetimes(lifetime_left, lifetime_right, &nodes));
+                        try!(compare_lifetimes(
+                            lifetime_left, lifetime_right, &nodes)
+                                .map_err(|err| arg.source.wrap(err))
+                        );
                     }
                 }
             }

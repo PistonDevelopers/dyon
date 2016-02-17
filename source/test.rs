@@ -5,10 +5,9 @@ fn main() {
 }
 */
 
-fn foo(a) {
-    println("" + a)
-}
-
 fn main() {
-    foo(3)
+    a := {b: 0}
+    b := 3
+    a.b = b
+    println(a.b)
 }
