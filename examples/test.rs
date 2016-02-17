@@ -1,5 +1,10 @@
 extern crate dynamo;
 
 fn main() {
-    dynamo::run("source/test.rs");
+    match dynamo::run("source/test.rs") {
+        Err(err) => {
+            println!("{}", err);
+        }
+        Ok(()) => {}
+    }
 }
