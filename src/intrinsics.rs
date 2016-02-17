@@ -196,7 +196,8 @@ pub fn call_standard(
             rt.push_fn(call.name.clone(), st + 1, lc);
             let v = match rt.stack.pop() {
                 Some(Variable::F64(b)) => b,
-                Some(_) => panic!("Expected number"),
+                Some(_) => return Err(module.error(call.args[0].source_range(),
+                                      "Expected number")),
                 None => panic!("There is no value on the stack")
             };
             let v = Variable::F64(v.round());
@@ -214,7 +215,8 @@ pub fn call_standard(
             let v = {
                 let arr = match rt.resolve(&v) {
                     &Variable::Array(ref arr) => arr,
-                    _ => panic!("Expected array")
+                    _ => return Err(module.error(call.args[0].source_range(),
+                                    "Expected array"))
                 };
                 Variable::F64(arr.len() as f64)
             };
@@ -238,10 +240,12 @@ pub fn call_standard(
                 rt.stack[ind] {
                     arr.push(item);
                 } else {
-                    panic!("Expected reference to array");
+                    return Err(module.error(call.args[0].source_range(),
+                               "Expected reference to array"));
                 }
             } else {
-                panic!("Expected reference to array");
+                return Err(module.error(call.args[0].source_range(),
+                           "Expected reference to array"));
             }
             rt.pop_fn(call.name.clone());
             Expect::Nothing

@@ -445,6 +445,24 @@ pub fn check(
     // Check that calls satisfy the lifetime constraints of arguments.
     for &c in &calls {
         let call = &nodes[c];
+        let is_reference = |i: usize| {
+            let mut n: usize = call.children[i];
+            let mut can_be_item = true;
+            // Item is 4 levels down inside arg/add/mul/val
+            for _ in 0..4 {
+                let node: &Node = &nodes[n];
+                if node.children.len() == 0 {
+                    can_be_item = false;
+                    break;
+                }
+                n = node.children[0];
+            }
+            if can_be_item && nodes[n].kind != Kind::Item {
+                can_be_item = false;
+            }
+            can_be_item
+        };
+
         if let Some(declaration) = call.declaration {
             let function = &nodes[declaration];
             for (i, &a) in function.children.iter()
@@ -456,21 +474,7 @@ pub fn check(
                     // make sure they are referenced.
                     let arg_lifetime = arg_lifetime(a, arg, &nodes, &arg_names);
                     if let Some(Lifetime::Return(_)) = arg_lifetime {
-                        let mut n = call.children[i];
-                        let mut can_be_item = true;
-                        // Item is 4 levels down inside arg/add/mul/val
-                        for _ in 0..4 {
-                            let node = &nodes[n];
-                            if node.children.len() == 0 {
-                                can_be_item = false;
-                                break;
-                            }
-                            n = nodes[n].children[0];
-                        }
-                        if can_be_item && nodes[n].kind != Kind::Item {
-                            can_be_item = false;
-                        }
-                        if !can_be_item {
+                        if !is_reference(i) {
                             return Err(arg.source.wrap(
                                 format!("Requires reference to variable")));
                         }
@@ -480,6 +484,33 @@ pub fn check(
                         // Compare the lifetime of the two arguments.
                         let (_, ind) = *arg_names.get(&(declaration, lt.clone()))
                             .expect("Expected argument name");
+                        let left = call.children[ind];
+                        let right = call.children[i];
+                        let lifetime_left = nodes[left].lifetime(&nodes, &arg_names);
+                        let lifetime_right = nodes[right].lifetime(&nodes, &arg_names);
+                        try!(compare_lifetimes(
+                            lifetime_left, lifetime_right, &nodes)
+                                .map_err(|err| arg.source.wrap(err))
+                        );
+                    }
+                }
+            }
+        } else {
+            // Check that call to intrinsic satisfy the declared constraints.
+            for ((i, &arg_constraint), &call_arg) in
+            call.arg_constraints.iter().enumerate()
+                .zip(call.children.iter()
+                .filter(|&&n| nodes[n].kind == Kind::CallArg)) {
+                let arg = &nodes[call_arg];
+                match arg_constraint {
+                    ArgConstraint::Default => {}
+                    ArgConstraint::Return => {
+                        if !is_reference(i) {
+                            return Err(arg.source.wrap(
+                                format!("Requires reference to variable")));
+                        }
+                    }
+                    ArgConstraint::Arg(ind) => {
                         let left = call.children[ind];
                         let right = call.children[i];
                         let lifetime_left = nodes[left].lifetime(&nodes, &arg_names);
