@@ -713,7 +713,18 @@ impl Node {
                 (_, Kind::Mul) => {}
                 (_, Kind::Call) => {}
                 (_, Kind::Item) => {}
-                (_, Kind::UnOp) => {}
+                (_, Kind::UnOp) => {
+                    // The result of all unary operators does not depend
+                    // on the lifetime of the argument.
+                    continue
+                }
+                (_, Kind::Compare) => {
+                    // The result of all compare operators does not depend
+                    // on the lifetime of the arguments.
+                    continue
+                }
+                (_, Kind::Left) => {}
+                (_, Kind::Right) => {}
                 (_, Kind::Expr) => {}
                 (_, Kind::Array) => {}
                 (_, Kind::ArrayItem) => {}
@@ -721,6 +732,20 @@ impl Node {
                 (_, Kind::Base) => {}
                 (_, Kind::Exp) => {}
                 (_, Kind::Block) => {}
+                (_, Kind::If) => {}
+                (_, Kind::TrueBlock) => {}
+                (_, Kind::ElseIfBlock) => {}
+                (_, Kind::ElseBlock) => {}
+                (_, Kind::Cond) => {
+                    // A condition controls the flow, but the result does not
+                    // depend on its lifetime.
+                    continue
+                }
+                (_, Kind::ElseIfCond) => {
+                    // A condition controls the flow, but the result does not
+                    // depend on its lifetime.
+                    continue
+                }
                 (_, Kind::Fill) => {}
                 (_, Kind::N) => {
                     // The result of array fill does not depend on `n`.

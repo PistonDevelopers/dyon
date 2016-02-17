@@ -6,8 +6,8 @@ fn main() {
 */
 
 fn foo() -> {
-    x := 4
-    return [5; x]
+    x := 5
+    return [5, 3 + x]
 }
 
 fn main() {
