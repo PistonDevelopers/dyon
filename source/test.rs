@@ -5,10 +5,6 @@ fn main() {
 }
 */
 
-fn foo(a) {
-
-}
-
 fn main() {
-    println(foo(3))
+    println(sqrt("hi"))
 }

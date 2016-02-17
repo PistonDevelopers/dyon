@@ -87,6 +87,7 @@ impl Function {
 pub struct Arg {
     pub name: Arc<String>,
     pub lifetime: Option<Arc<String>>,
+    pub source_range: Range,
 }
 
 impl Arg {
@@ -119,7 +120,8 @@ impl Arg {
         let name = try!(name.ok_or(()));
         Ok((convert.subtract(start), Arg {
             name: name,
-            lifetime: lifetime
+            lifetime: lifetime,
+            source_range: convert.source(start).unwrap(),
         }))
     }
 }

@@ -187,15 +187,21 @@ impl Runtime {
         resolve(&self.stack, var)
     }
 
-    pub fn unary_f64<F: FnOnce(f64) -> f64>(&mut self, f: F) -> Expect {
+    pub fn unary_f64<F: FnOnce(f64) -> f64>(
+        &mut self,
+        call: &ast::Call,
+        module: &Module,
+        f: F
+    ) -> Result<Expect, String> {
         let x = self.stack.pop().expect("There is no value on the stack");
         match self.resolve(&x) {
             &Variable::F64(a) => {
                 self.stack.push(Variable::F64(f(a)));
             }
-            _ => panic!("Expected number")
+            _ => return Err(module.error(call.args[0].source_range(),
+                                         "Expected number"))
         }
-        Expect::Something
+        Ok(Expect::Something)
     }
 
     #[inline(always)]
@@ -300,12 +306,14 @@ impl Runtime {
         match module.functions.get(&call.name) {
             Some(f) => {
                 if f.args.len() != 0 {
-                    panic!("`main` should not have arguments");
+                    return Err(module.error(f.args[0].source_range,
+                               "`main` should not have arguments"))
                 }
                 try!(self.call(&call, &module));
                 Ok(())
             }
-            None => panic!("Could not find function `main`")
+            None => return Err(module.error(call.source_range,
+                               "Could not find function `main`"))
         }
     }
 

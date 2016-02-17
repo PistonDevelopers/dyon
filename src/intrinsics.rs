@@ -157,17 +157,17 @@ pub fn call_standard(
             rt.pop_fn(call.name.clone());
             Expect::Nothing
         }
-        "sqrt" => rt.unary_f64(|a| a.sqrt()),
-        "sin" => rt.unary_f64(|a| a.sin()),
-        "asin" => rt.unary_f64(|a| a.asin()),
-        "cos" => rt.unary_f64(|a| a.cos()),
-        "acos" => rt.unary_f64(|a| a.acos()),
-        "tan" => rt.unary_f64(|a| a.tan()),
-        "atan" => rt.unary_f64(|a| a.atan()),
-        "exp" => rt.unary_f64(|a| a.exp()),
-        "ln" => rt.unary_f64(|a| a.ln()),
-        "log2" => rt.unary_f64(|a| a.log2()),
-        "log10" => rt.unary_f64(|a| a.log10()),
+        "sqrt" => try!(rt.unary_f64(call, module, |a| a.sqrt())),
+        "sin" => try!(rt.unary_f64(call, module, |a| a.sin())),
+        "asin" => try!(rt.unary_f64(call, module, |a| a.asin())),
+        "cos" => try!(rt.unary_f64(call, module, |a| a.cos())),
+        "acos" => try!(rt.unary_f64(call, module, |a| a.acos())),
+        "tan" => try!(rt.unary_f64(call, module, |a| a.tan())),
+        "atan" => try!(rt.unary_f64(call, module, |a| a.atan())),
+        "exp" => try!(rt.unary_f64(call, module, |a| a.exp())),
+        "ln" => try!(rt.unary_f64(call, module, |a| a.ln())),
+        "log2" => try!(rt.unary_f64(call, module, |a| a.log2())),
+        "log10" => try!(rt.unary_f64(call, module, |a| a.log10())),
         "sleep" => {
             use std::thread::sleep;
             use std::time::Duration;
