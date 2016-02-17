@@ -63,9 +63,13 @@ impl Module {
 /// Runs a program using a syntax file and the source file.
 pub fn run(source: &str) {
     let mut module = Module::new();
-    load(source, &mut module).unwrap_or_else(|err| {
-        panic!("{}", err);
-    });
+    match load(source, &mut module) {
+        Err(err) => {
+            println!("{}", err);
+            return;
+        }
+        Ok(_) => {}
+    }
     let mut runtime = runtime::Runtime::new();
     runtime.run(&module).unwrap_or_else(|err| {
         println!("{}", err);

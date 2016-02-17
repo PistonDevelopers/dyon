@@ -125,7 +125,9 @@ pub fn call_standard(
         match try!(rt.expression(arg, Side::Right, module)) {
             (x, Flow::Return) => { return Ok((x, Flow::Return)); }
             (Expect::Something, Flow::Continue) => {}
-            _ => panic!("Expected something from argument")
+            _ => return Err(module.error(arg.source_range(),
+                            "Expected something. \
+                            Expression did not return a value."))
         };
     }
     let expect = match &**call.name {

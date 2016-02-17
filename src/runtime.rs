@@ -337,8 +337,10 @@ impl Runtime {
             }
             Some(ref f) => {
                 if call.args.len() != f.args.len() {
-                    panic!("Expected {} arguments but found {}", f.args.len(),
-                        call.args.len());
+                    return Err(module.error(call.source_range,
+                        &format!("Expected {} arguments but found {}",
+                        f.args.len(),
+                        call.args.len())));
                 }
                 // Arguments must be computed.
                 if f.returns {
@@ -352,7 +354,9 @@ impl Runtime {
                     match try!(self.expression(arg, Side::Right, module)) {
                         (x, Flow::Return) => { return Ok((x, Flow::Return)); }
                         (Expect::Something, Flow::Continue) => {}
-                        _ => panic!("Expected something from argument")
+                        _ => return Err(module.error(arg.source_range(),
+                                        "Expected something. \
+                                        Check that expression returns a value."))
                     };
                 }
                 self.push_fn(call.name.clone(), st, lc);
@@ -371,13 +375,19 @@ impl Runtime {
                     (x, flow) => {
                         match flow {
                             Flow::Break(None) =>
-                                panic!("Can not break from function"),
+                                return Err(module.error(call.source_range,
+                                           "Can not break from function")),
                             Flow::ContinueLoop(None) =>
-                                panic!("Can not continue from function"),
+                                return Err(module.error(call.source_range,
+                                           "Can not continue from function")),
                             Flow::Break(Some(ref label)) =>
-                                panic!("There is no loop labeled `{}`", label),
+                                return Err(module.error(call.source_range,
+                                    &format!("There is no loop labeled `{}`",
+                                             label))),
                             Flow::ContinueLoop(Some(ref label)) =>
-                                panic!("There is no loop labeled `{}`", label),
+                                return Err(module.error(call.source_range,
+                                    &format!("There is no loop labeled `{}`",
+                                             label))),
                             _ => {}
                         }
                         self.pop_fn(call.name.clone());
@@ -385,19 +395,25 @@ impl Runtime {
                             (true, Expect::Nothing) => {
                                 match self.stack.last() {
                                     Some(&Variable::Return) =>
-                                        panic!("Function did not return a value"),
+                                        return Err(module.error(
+                                        call.source_range, &format!(
+                                        "Function `{}` did not return a value",
+                                        f.name))),
                                     None =>
                                         panic!("There is no value on the stack"),
-                                    _ =>
-                                        // This can happen when return is only
+                                    _ => {
+                                        // This happens when return is only
                                         // assigned to `return = x`.
                                         return Ok((Expect::Something,
                                                    Flow::Continue))
+                                    }
                                 };
                             }
                             (false, Expect::Something) =>
-                                panic!("Function `{}` should not return a value",
-                                    f.name),
+                                return Err(module.error(call.source_range,
+                                    &format!(
+                                        "Function `{}` should not return a value",
+                                        f.name))),
                             (true, Expect::Something)
                                 if self.stack.len() == 0 =>
                                 panic!("There is no value on the stack"),
@@ -407,8 +423,11 @@ impl Runtime {
                                     _ => false
                                 } =>
                                 // TODO: Could return the last value on the stack.
-                                //       Requires .pop_fn after.
-                                panic!("Function did not return a value"),
+                                //       Requires .pop_fn delayed after.
+                                return Err(module.error(call.source_range,
+                                    &format!(
+                                    "Function `{}` did not return a value. \
+                                    Did you forgot a `return`?", f.name))),
                             (_, b) => {
                                 return Ok((b, Flow::Continue))
                             }

@@ -5,10 +5,10 @@ fn main() {
 }
 */
 
-fn foo() -> {
-    return {a: if false {}}
+fn foo(a) {
+
 }
 
 fn main() {
-    println(foo())
+    println(foo(3))
 }
