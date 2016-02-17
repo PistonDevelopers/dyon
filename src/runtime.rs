@@ -1043,12 +1043,14 @@ impl Runtime {
         match try!(self.expression(&binop.left, side, module)) {
             (_, Flow::Return) => { return Ok(Flow::Return); }
             (Expect::Something, Flow::Continue) => {}
-            _ => panic!("Expected something from left argument")
+            _ => return Err(module.error(binop.source_range,
+                "Expected something from left argument"))
         };
         match try!(self.expression(&binop.right, side, module)) {
             (_, Flow::Return) => { return Ok(Flow::Return); }
             (Expect::Something, Flow::Continue) => {}
-            _ => panic!("Expected something from right argument")
+            _ => return Err(module.error(binop.source_range,
+                "Expected something from right argument"))
         };
         let right = self.stack.pop().expect("Expected right argument");
         let left = self.stack.pop().expect("Expected left argument");
@@ -1070,7 +1072,9 @@ impl Runtime {
                     Sub => a && !b,
                     Mul => a && b,
                     Pow => a ^ b,
-                    _ => panic!("Unknown boolean operator `{:?}`", binop.op)
+                    _ => return Err(module.error(binop.source_range,
+                        &format!("Unknown boolean operator `{:?}`",
+                            binop.op.symbol_bool())))
                 })
             }
             (&Variable::Text(ref a), &Variable::Text(ref b)) => {
@@ -1081,16 +1085,18 @@ impl Runtime {
                         res.push_str(b);
                         Variable::Text(Arc::new(res))
                     }
-                    _ => panic!("This operation can not be used with strings")
+                    _ => return Err(module.error(binop.source_range,
+                        "This operation can not be used with strings"))
                 }
             }
             (&Variable::Text(_), _) =>
                 return Err(module.error(binop.source_range,
-                        "The right argument must be a string. \
-                        Try the `to_string` function")),
-            _ => panic!("Invalid type for binary operator `{:?}`, \
-                         expected numbers, bools or strings",
-                        binop.op)
+                "The right argument must be a string. \
+                Try the `to_string` function")),
+            _ => return Err(module.error(binop.source_range, &format!(
+                "Invalid type for binary operator `{:?}`, \
+                expected numbers, bools or strings",
+                binop.op.symbol())))
         };
         self.stack.push(v);
 

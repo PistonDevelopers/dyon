@@ -659,6 +659,27 @@ pub enum BinOp {
     Pow
 }
 
+impl BinOp {
+    pub fn symbol(self) -> &'static str {
+        match self {
+            BinOp::Add => "+",
+            BinOp::Sub => "-",
+            BinOp::Mul => "*",
+            BinOp::Div => "/",
+            BinOp::Rem => "%",
+            BinOp::Pow => "^",
+        }
+    }
+
+    pub fn symbol_bool(self) -> &'static str {
+        match self {
+            BinOp::Add => "||",
+            BinOp::Mul => "&&",
+            _ => self.symbol()
+        }
+    }
+}
+
 #[derive(Debug, Copy, Clone)]
 pub enum UnOp {
     Neg

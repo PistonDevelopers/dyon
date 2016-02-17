@@ -6,8 +6,5 @@ fn main() {
 */
 
 fn main() {
-    a := {b: 0}
-    b := 3
-    a.b = b
-    println(a.b)
+    a := (if false {}) + 3
 }
