@@ -6,8 +6,7 @@ fn main() {
 */
 
 fn foo() -> {
-    x := 5
-    return [5, 3 + x]
+    return {a: if false {}}
 }
 
 fn main() {

@@ -429,14 +429,16 @@ impl Runtime {
             match try!(self.expression(expr, Side::Right, module)) {
                 (_, Flow::Return) => { return Ok(Flow::Return); }
                 (Expect::Something, Flow::Continue) => {}
-                _ => panic!("Expected something")
+                _ => return Err(module.error(expr.source_range(),
+                                "Expected something"))
             };
             match self.stack.pop() {
                 None => panic!("There is no value on the stack"),
                 Some(x) => {
                     match object.insert(key.clone(), x) {
                         None => {}
-                        Some(_) => panic!("Duplicate key in object `{}`", key)
+                        Some(_) => return Err(module.error(expr.source_range(),
+                            &format!("Duplicate key in object `{}`", key)))
                     }
                 }
             }
