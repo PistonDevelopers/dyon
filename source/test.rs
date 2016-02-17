@@ -6,5 +6,7 @@ fn main() {
 */
 
 fn main() {
-    a := !(if false {})
+    for i := 0; i < 10; i += 1 {
+        println(i)
+    }
 }

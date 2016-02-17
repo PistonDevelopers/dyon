@@ -1,6 +1,7 @@
 use std::sync::Arc;
 use std::collections::HashMap;
 use rand;
+use range::Range;
 
 use ast;
 use intrinsics;
@@ -242,13 +243,14 @@ impl Runtime {
                 // Assign return value and then break the flow.
                 let item = Expression::Item(Item {
                         name: self.ret.clone(),
-                        ids: vec![]
+                        ids: vec![],
+                        source_range: ret.source_range(),
                     });
                 let flow = try!(self.assign_specific(AssignOp::Set,
                     &item, ret, module));
                 Ok((Expect::Something, flow))
             }
-            ReturnVoid => {
+            ReturnVoid(_) => {
                 Ok((Expect::Nothing, Flow::Return))
             }
             Break(ref b) => Ok((Expect::Nothing, Flow::Break(b.label.clone()))),
@@ -282,7 +284,7 @@ impl Runtime {
             If(ref if_expr) => self.if_expr(if_expr, module),
             Compare(ref compare) => Ok((Expect::Something,
                                         try!(self.compare(compare, module)))),
-            Variable(ref var) => {
+            Variable(_, ref var) => {
                 self.stack.push(var.clone());
                 Ok((Expect::Something, Flow::Continue))
             }
@@ -292,7 +294,8 @@ impl Runtime {
     pub fn run(&mut self, module: &Module) -> Result<(), String> {
         let call = ast::Call {
             name: Arc::new("main".into()),
-            args: vec![]
+            args: vec![],
+            source_range: Range::empty(0),
         };
         match module.functions.get(&call.name) {
             Some(f) => {
@@ -913,7 +916,8 @@ impl Runtime {
         match try!(self.expression(&for_expr.init, Side::Right, module)) {
             (_, Flow::Return) => { return Ok(Flow::Return); }
             (Expect::Nothing, Flow::Continue) => {}
-            _ => panic!("Expected nothing from for init")
+            _ => return Err(module.error(for_expr.init.source_range(),
+                "Expected nothing from for init"))
         };
         let st = self.stack.len();
         let lc = self.local_stack.len();
@@ -922,57 +926,52 @@ impl Runtime {
             match try!(self.expression(&for_expr.cond, Side::Right, module)) {
                 (_, Flow::Return) => { return Ok(Flow::Return); }
                 (Expect::Something, Flow::Continue) => {}
-                _ => panic!("Expected bool from for condition")
+                _ => return Err(module.error(for_expr.cond.source_range(),
+                    "Expected bool from for condition"))
             };
             match self.stack.pop() {
                 None => panic!("There is no value on the stack"),
-                Some(x) => match x {
-                    Variable::Bool(val) => {
-                        if val {
-                            match try!(self.block(&for_expr.block, module)) {
-                                (_, Flow::Return) => {
-                                    return Ok(Flow::Return);
-                                }
-                                (_, Flow::Continue) => {}
-                                (_, Flow::Break(x)) => {
-                                    match x {
-                                        Some(label) => {
-                                            let same =
-                                            if let Some(ref for_label) = for_expr.label {
-                                                &label == for_label
-                                            } else { false };
-                                            if !same {
-                                                flow = Flow::Break(Some(label))
-                                            }
-                                        }
-                                        None => {}
+                Some(x) => {
+                    let val = match x {
+                        Variable::Bool(val) => val,
+                        _ => return Err(module.error(
+                            for_expr.cond.source_range(),
+                            "Expected bool"))
+                    };
+                    if !val { break }
+                    match try!(self.block(&for_expr.block, module)) {
+                        (_, Flow::Return) => {
+                            return Ok(Flow::Return);
+                        }
+                        (_, Flow::Continue) => {}
+                        (_, Flow::Break(x)) => {
+                            match x {
+                                Some(label) => {
+                                    let same =
+                                    if let Some(ref for_label) = for_expr.label {
+                                        &label == for_label
+                                    } else { false };
+                                    if !same {
+                                        flow = Flow::Break(Some(label))
                                     }
-                                    break;
                                 }
-                                (_, Flow::ContinueLoop(x)) => {
-                                    match x {
-                                        Some(label) => {
-                                            let same =
-                                            if let Some(ref for_label) = for_expr.label {
-                                                &label == for_label
-                                            } else { false };
-                                            if !same {
-                                                flow = Flow::ContinueLoop(Some(label));
-                                                break;
-                                            }
-                                        }
-                                        None => {}
+                                None => {}
+                            }
+                            break;
+                        }
+                        (_, Flow::ContinueLoop(x)) => {
+                            match x {
+                                Some(label) => {
+                                    let same =
+                                    if let Some(ref for_label) = for_expr.label {
+                                        &label == for_label
+                                    } else { false };
+                                    if !same {
+                                        flow = Flow::ContinueLoop(Some(label));
+                                        break;
                                     }
-                                    match try!(self.expression(
-                                        &for_expr.step, Side::Right, module)) {
-                                            (_, Flow::Return) => {
-                                                return Ok(Flow::Return);
-                                            }
-                                            (Expect::Nothing, Flow::Continue) => {}
-                                            _ => panic!("Expected nothing from for step")
-                                    };
-                                    continue;
                                 }
+                                None => {}
                             }
                             match try!(self.expression(
                                 &for_expr.step, Side::Right, module)) {
@@ -980,13 +979,23 @@ impl Runtime {
                                         return Ok(Flow::Return);
                                     }
                                     (Expect::Nothing, Flow::Continue) => {}
-                                    _ => panic!("Expected nothing from for step")
+                                    _ => return Err(module.error(
+                                        for_expr.step.source_range(),
+                                        "Expected nothing from for step"))
                             };
-                        } else {
-                            break;
+                            continue;
                         }
                     }
-                    _ => panic!("Expected bool")
+                    match try!(self.expression(
+                        &for_expr.step, Side::Right, module)) {
+                            (_, Flow::Return) => {
+                                return Ok(Flow::Return);
+                            }
+                            (Expect::Nothing, Flow::Continue) => {}
+                            _ => return Err(module.error(
+                                for_expr.step.source_range(),
+                                "Expected nothing from for step"))
+                    };
                 }
             };
             self.stack.truncate(st);

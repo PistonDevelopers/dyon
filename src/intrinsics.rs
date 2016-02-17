@@ -468,7 +468,9 @@ pub fn call_standard(
                     let call = ast::Call {
                         name: fn_name.clone(),
                         args: args.into_iter().map(|arg|
-                            ast::Expression::Variable(arg)).collect()
+                            ast::Expression::Variable(
+                                call.source_range, arg)).collect(),
+                        source_range: call.source_range,
                     };
                     // TODO: Figure out what to do expect and flow.
                     try!(rt.call(&call, &m));

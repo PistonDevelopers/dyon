@@ -127,6 +127,7 @@ impl Arg {
 #[derive(Debug, Clone)]
 pub struct Block {
     pub expressions: Vec<Expression>,
+    pub source_range: Range,
 }
 
 impl Block {
@@ -153,7 +154,8 @@ impl Block {
         }
 
         Ok((convert.subtract(start), Block {
-            expressions: expressions
+            expressions: expressions,
+            source_range: convert.source(start).unwrap(),
         }))
     }
 }
@@ -164,7 +166,7 @@ pub enum Expression {
     Array(Box<Array>),
     ArrayFill(Box<ArrayFill>),
     Return(Box<Expression>),
-    ReturnVoid,
+    ReturnVoid(Range),
     Break(Break),
     Continue(Continue),
     Block(Block),
@@ -179,7 +181,7 @@ pub enum Expression {
     If(Box<If>),
     Compare(Box<Compare>),
     UnOp(Box<UnOpExpression>),
-    Variable(Variable),
+    Variable(Range, Variable),
 }
 
 impl Expression {
@@ -215,7 +217,8 @@ impl Expression {
                 result = Some(Expression::Return(Box::new(val)));
             } else if let Ok((range, _)) = convert.meta_bool("return_void") {
                 convert.update(range);
-                result = Some(Expression::ReturnVoid);
+                result = Some(Expression::ReturnVoid(
+                    convert.source(start).unwrap()));
             } else if let Ok((range, val)) = Break::from_meta_data(
                     convert, ignored) {
                 convert.update(range);
@@ -238,13 +241,22 @@ impl Expression {
                 result = Some(Expression::Item(val));
             } else if let Ok((range, val)) = convert.meta_string("text") {
                 convert.update(range);
-                result = Some(Expression::Text(Text { text: val }));
+                result = Some(Expression::Text(Text {
+                    text: val,
+                    source_range: convert.source(start).unwrap(),
+                }));
             } else if let Ok((range, val)) = convert.meta_f64("num") {
                 convert.update(range);
-                result = Some(Expression::Number(Number { num: val }));
+                result = Some(Expression::Number(Number {
+                    num: val,
+                    source_range: convert.source(start).unwrap(),
+                }));
             } else if let Ok((range, val)) = convert.meta_bool("bool") {
                 convert.update(range);
-                result = Some(Expression::Bool(Bool { val: val }));
+                result = Some(Expression::Bool(Bool {
+                    val: val,
+                    source_range: convert.source(start).unwrap(),
+                }));
             } else if let Ok((range, val)) = Call::from_meta_data(
                     convert, ignored) {
                 convert.update(range);
@@ -287,11 +299,39 @@ impl Expression {
         let result = try!(result.ok_or(()));
         Ok((convert.subtract(start), result))
     }
+
+    pub fn source_range(&self) -> Range {
+        use self::Expression::*;
+
+        match *self {
+            Object(ref obj) => obj.source_range,
+            Array(ref arr) => arr.source_range,
+            ArrayFill(ref arr_fill) => arr_fill.source_range,
+            Return(ref expr) => expr.source_range(),
+            ReturnVoid(range) => range,
+            Break(ref br) => br.source_range,
+            Continue(ref c) => c.source_range,
+            Block(ref bl) => bl.source_range,
+            Call(ref call) => call.source_range,
+            Item(ref it) => it.source_range,
+            BinOp(ref binop) => binop.source_range,
+            Assign(ref assign) => assign.source_range,
+            Text(ref text) => text.source_range,
+            Number(ref num) => num.source_range,
+            Bool(ref b) => b.source_range,
+            For(ref for_expr) => for_expr.source_range,
+            If(ref if_expr) => if_expr.source_range,
+            Compare(ref comp) => comp.source_range,
+            UnOp(ref unop) => unop.source_range,
+            Variable(range, _) => range,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
 pub struct Object {
     pub key_values: Vec<(Arc<String>, Expression)>,
+    pub source_range: Range,
 }
 
 impl Object {
@@ -320,7 +360,10 @@ impl Object {
             }
         }
 
-        Ok((convert.subtract(start), Object { key_values: key_values }))
+        Ok((convert.subtract(start), Object {
+            key_values: key_values,
+            source_range: convert.source(start).unwrap(),
+        }))
     }
 
     pub fn key_value_from_meta_data(
@@ -361,6 +404,7 @@ impl Object {
 #[derive(Debug, Clone)]
 pub struct Array {
     pub items: Vec<Expression>,
+    pub source_range: Range,
 }
 
 impl Array {
@@ -389,7 +433,10 @@ impl Array {
             }
         }
 
-        Ok((convert.subtract(start), Array { items: items }))
+        Ok((convert.subtract(start), Array {
+            items: items,
+            source_range: convert.source(start).unwrap(),
+        }))
     }
 }
 
@@ -397,6 +444,7 @@ impl Array {
 pub struct ArrayFill {
     pub fill: Expression,
     pub n: Expression,
+    pub source_range: Range,
 }
 
 impl ArrayFill {
@@ -432,7 +480,11 @@ impl ArrayFill {
 
         let fill = try!(fill.ok_or(()));
         let n = try!(n.ok_or(()));
-        Ok((convert.subtract(start), ArrayFill { fill: fill, n: n }))
+        Ok((convert.subtract(start), ArrayFill {
+            fill: fill,
+            n: n,
+            source_range: convert.source(start).unwrap(),
+        }))
     }
 }
 
@@ -695,7 +747,8 @@ pub enum Id {
 #[derive(Debug, Clone)]
 pub struct Item {
     pub name: Arc<String>,
-    pub ids: Vec<Id>
+    pub ids: Vec<Id>,
+    pub source_range: Range,
 }
 
 impl Item {
@@ -735,7 +788,11 @@ impl Item {
         }
 
         let name = try!(name.ok_or(()));
-        Ok((convert.subtract(start), Item { name: name, ids: ids }))
+        Ok((convert.subtract(start), Item {
+            name: name,
+            ids: ids,
+            source_range: convert.source(start).unwrap(),
+        }))
     }
 }
 
@@ -743,6 +800,7 @@ impl Item {
 pub struct Call {
     pub name: Arc<String>,
     pub args: Vec<Expression>,
+    pub source_range: Range,
 }
 
 impl Call {
@@ -778,7 +836,8 @@ impl Call {
         let name = try!(name.ok_or(()));
         Ok((convert.subtract(start), Call {
             name: name,
-            args: args
+            args: args,
+            source_range: convert.source(start).unwrap(),
         }))
     }
 
@@ -814,7 +873,8 @@ impl Call {
 
         Ok((convert.subtract(start), Call {
             name: Arc::new(name),
-            args: args
+            args: args,
+            source_range: convert.source(start).unwrap(),
         }))
     }
 }
@@ -878,7 +938,8 @@ impl UnOpExpression {
 pub struct Assign {
     pub op: AssignOp,
     pub left: Expression,
-    pub right: Expression
+    pub right: Expression,
+    pub source_range: Range,
 }
 
 impl Assign {
@@ -943,7 +1004,8 @@ impl Assign {
         Ok((convert.subtract(start), Assign {
             op: op,
             left: left,
-            right: right
+            right: right,
+            source_range: convert.source(start).unwrap(),
         }))
     }
 }
@@ -971,16 +1033,19 @@ pub enum AssignOp {
 #[derive(Debug, Clone)]
 pub struct Number {
     pub num: f64,
+    pub source_range: Range,
 }
 
 #[derive(Debug, Clone)]
 pub struct Text {
     pub text: Arc<String>,
+    pub source_range: Range,
 }
 
 #[derive(Debug, Clone)]
 pub struct Bool {
     pub val: bool,
+    pub source_range: Range,
 }
 
 #[derive(Debug, Clone)]
@@ -990,6 +1055,7 @@ pub struct For {
     pub step: Expression,
     pub block: Block,
     pub label: Option<Arc<String>>,
+    pub source_range: Range,
 }
 
 impl For {
@@ -1046,7 +1112,8 @@ impl For {
             cond: cond,
             step: step,
             block: block,
-            label: label
+            label: label,
+            source_range: convert.source(start).unwrap(),
         }))
     }
 }
@@ -1055,6 +1122,7 @@ impl For {
 pub struct Loop {
     pub block: Block,
     pub label: Option<Arc<String>>,
+    pub source_range: Range,
 }
 
 impl Loop {
@@ -1090,17 +1158,29 @@ impl Loop {
         let block = try!(block.ok_or(()));
         Ok((convert.subtract(start), Loop {
             block: block,
-            label: label
+            label: label,
+            source_range: convert.source(start).unwrap(),
         }))
     }
 
     pub fn to_expression(self) -> Expression {
+        let source_range = self.source_range;
         Expression::For(Box::new(For {
             block: self.block,
             label: self.label,
-            init: Expression::Block(Block { expressions: vec![] }),
-            step: Expression::Block(Block { expressions: vec![] }),
-            cond: Expression::Bool(Bool { val: true })
+            init: Expression::Block(Block {
+                expressions: vec![],
+                source_range: source_range,
+            }),
+            step: Expression::Block(Block {
+                expressions: vec![],
+                source_range: source_range,
+            }),
+            cond: Expression::Bool(Bool {
+                val: true,
+                source_range: source_range,
+            }),
+            source_range: source_range,
         }))
     }
 }
@@ -1108,6 +1188,7 @@ impl Loop {
 #[derive(Debug, Clone)]
 pub struct Break {
     pub label: Option<Arc<String>>,
+    pub source_range: Range,
 }
 
 impl Break {
@@ -1136,7 +1217,8 @@ impl Break {
         }
 
         Ok((convert.subtract(start), Break {
-            label: label
+            label: label,
+            source_range: convert.source(start).unwrap(),
         }))
     }
 }
@@ -1144,6 +1226,7 @@ impl Break {
 #[derive(Debug, Clone)]
 pub struct Continue {
     pub label: Option<Arc<String>>,
+    pub source_range: Range,
 }
 
 impl Continue {
@@ -1172,7 +1255,8 @@ impl Continue {
         }
 
         Ok((convert.subtract(start), Continue {
-            label: label
+            label: label,
+            source_range: convert.source(start).unwrap(),
         }))
     }
 }
@@ -1184,6 +1268,7 @@ pub struct If {
     pub else_if_conds: Vec<Expression>,
     pub else_if_blocks: Vec<Block>,
     pub else_block: Option<Block>,
+    pub source_range: Range,
 }
 
 impl If {
@@ -1239,7 +1324,8 @@ impl If {
             true_block: true_block,
             else_if_conds: else_if_conds,
             else_if_blocks: else_if_blocks,
-            else_block: else_block
+            else_block: else_block,
+            source_range: convert.source(start).unwrap(),
         }))
     }
 }
@@ -1249,6 +1335,7 @@ pub struct Compare {
     pub op: CompareOp,
     pub left: Expression,
     pub right: Expression,
+    pub source_range: Range,
 }
 
 impl Compare {
@@ -1307,7 +1394,8 @@ impl Compare {
         Ok((convert.subtract(start), Compare {
             op: op,
             left: left,
-            right: right
+            right: right,
+            source_range: convert.source(start).unwrap(),
         }))
     }
 }
