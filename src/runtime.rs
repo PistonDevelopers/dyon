@@ -803,6 +803,25 @@ impl Runtime {
         }
         return Ok(Flow::Continue);
     }
+
+    pub fn typeof_var(&self, var: &Variable) -> Arc<String> {
+        let v = match var {
+            &Variable::Text(_) => self.text_type.clone(),
+            &Variable::F64(_) => self.f64_type.clone(),
+            &Variable::Return => self.return_type.clone(),
+            &Variable::Bool(_) => self.bool_type.clone(),
+            &Variable::Object(_) => self.object_type.clone(),
+            &Variable::Array(_) => self.array_type.clone(),
+            &Variable::Ref(_) => self.ref_type.clone(),
+            &Variable::UnsafeRef(_) => self.unsafe_ref_type.clone(),
+            &Variable::RustObject(_) => self.rust_object_type.clone(),
+        };
+        match v {
+            Variable::Text(v) => v,
+            _ => panic!("Expected string")
+        }
+    }
+
     fn compare(
         &mut self,
         compare: &ast::Compare,
@@ -811,12 +830,14 @@ impl Runtime {
         match try!(self.expression(&compare.left, Side::Right, module)) {
             (_, Flow::Return) => { return Ok(Flow::Return); }
             (Expect::Something, Flow::Continue) => {}
-            _ => panic!("Expected something from the left argument")
+            _ => return Err(module.error(compare.left.source_range(),
+                "Expected something from the left argument"))
         };
         match try!(self.expression(&compare.right, Side::Right, module)) {
             (_, Flow::Return) => { return Ok(Flow::Return); }
             (Expect::Something, Flow::Continue) => {}
-            _ => panic!("Expected something from the right argument")
+            _ => return Err(module.error(compare.right.source_range(),
+                "Expected something from the right argument"))
         };
         match (self.stack.pop(), self.stack.pop()) {
             (Some(b), Some(a)) => {
@@ -845,15 +866,19 @@ impl Runtime {
                     }
                     (&Variable::Bool(b), &Variable::Bool(a)) => {
                         Variable::Bool(match compare.op {
-                            Less => panic!("`<` can not be used with bools"),
-                            LessOrEqual => panic!("`<=` can not be used with bools"),
-                            Greater => panic!("`>` can not be used with bools"),
-                            GreaterOrEqual => panic!("`>=` can not be used with bools"),
                             Equal => a == b,
-                            NotEqual => a != b
+                            NotEqual => a != b,
+                            x => return Err(module.error(compare.source_range,
+                                &format!("`{}` can not be used with bools",
+                                x.symbol())))
                         })
                     }
-                    (b, a) => panic!("Invalid type `{:?}` `{:?}`", a, b)
+                    (b, a) => return Err(module.error(compare.source_range,
+                        &format!(
+                        "`{}` can not be used with `{}` and `{}`",
+                        compare.op.symbol(),
+                        self.typeof_var(a),
+                        self.typeof_var(b))))
                 };
                 self.stack.push(v)
             }

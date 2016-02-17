@@ -1409,3 +1409,16 @@ pub enum CompareOp {
     Equal,
     NotEqual,
 }
+
+impl CompareOp {
+    pub fn symbol(self) -> &'static str {
+        match self {
+            CompareOp::Less => "<",
+            CompareOp::LessOrEqual => "<=",
+            CompareOp::Greater => ">",
+            CompareOp::GreaterOrEqual => ">=",
+            CompareOp::Equal => "==",
+            CompareOp::NotEqual => "!=",
+        }
+    }
+}

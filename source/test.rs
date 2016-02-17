@@ -6,11 +6,5 @@ fn main() {
 */
 
 fn main() {
-    if true {
-        println("hi")
-    } else if false {
-        println("oh?")
-    } else {
-        println("good bye!")
-    }
+    println((if false {}) != false)
 }
