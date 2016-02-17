@@ -176,7 +176,9 @@ pub fn check(
     // Collect indices to declared locals.
     // Stores assign node, item node.
     let locals: Vec<(usize, usize)> = nodes.iter().enumerate()
-        .filter(|&(_, n)| n.op == Some(Op::Assign))
+        .filter(|&(_, n)| n.op == Some(Op::Assign)
+            && n.children.len() > 0
+            && nodes[n.children[0]].children.len() > 0)
         .map(|(i, n)| {
                 // Left argument.
                 let j = n.children[0];

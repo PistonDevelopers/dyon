@@ -5,6 +5,10 @@ fn main() {
 }
 */
 
+fn foo() -> {
+    a := if false {}
+}
+
 fn main() {
-    println((if false {}) != false)
+    foo()
 }

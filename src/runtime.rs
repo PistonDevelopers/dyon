@@ -516,7 +516,8 @@ impl Runtime {
                     match try!(self.expression(right, Side::Right, module)) {
                         (_, Flow::Return) => { return Ok(Flow::Return); }
                         (Expect::Something, Flow::Continue) => {}
-                        _ => panic!("Expected something from the right side")
+                        _ => return Err(module.error(right.source_range(),
+                                    "Expected something from the right side"))
                     }
                     let v = match self.stack.pop() {
                         None => panic!("There is no value on the stack"),
@@ -529,7 +530,8 @@ impl Runtime {
                                                    module)) {
                             (_, Flow::Return) => { return Ok(Flow::Return); }
                             (Expect::Something, Flow::Continue) => {}
-                            _ => panic!("Expected something from the left side")
+                            _ => return Err(module.error(left.source_range(),
+                                    "Expected something from the left side"))
                         };
                         match self.stack.pop() {
                             Some(Variable::UnsafeRef(r)) => {
@@ -544,7 +546,8 @@ impl Runtime {
                     }
                     Ok(Flow::Continue)
                 }
-                _ => panic!("Expected item")
+                _ => return Err(module.error(left.source_range(),
+                                "Expected item"))
             }
         } else {
             // Evaluate right side before left because the left leaves
@@ -553,12 +556,14 @@ impl Runtime {
             match try!(self.expression(right, Side::Right, module)) {
                 (_, Flow::Return) => { return Ok(Flow::Return); }
                 (Expect::Something, Flow::Continue) => {}
-                _ => panic!("Expected something from the right side")
+                _ => return Err(module.error(right.source_range(),
+                        "Expected something from the right side"))
             };
             match try!(self.expression(left, Side::LeftInsert(false), module)) {
                 (_, Flow::Return) => { return Ok(Flow::Return); }
                 (Expect::Something, Flow::Continue) => {}
-                _ => panic!("Expected something from the left side")
+                _ => return Err(module.error(left.source_range(),
+                        "Expected something from the left side"))
             };
             match (self.stack.pop(), self.stack.pop()) {
                 (Some(a), Some(b)) => {
@@ -599,10 +604,14 @@ impl Runtime {
                                         if let Set = op {
                                             *r = Variable::F64(b)
                                         } else {
-                                            panic!("Return has no value")
+                                            return Err(module.error(
+                                                left.source_range(),
+                                                "Return has no value"))
                                         }
                                     }
-                                    _ => panic!("Expected assigning to a number")
+                                    _ => return Err(module.error(
+                                            left.source_range(),
+                                            "Expected assigning to a number"))
                                 };
                             }
                         }
@@ -619,10 +628,14 @@ impl Runtime {
                                         if let Set = op {
                                             *r = Variable::Bool(b)
                                         } else {
-                                            panic!("Return has no value")
+                                            return Err(module.error(
+                                                left.source_range(),
+                                                "Return has no value"))
                                         }
                                     }
-                                    _ => panic!("Expected assigning to a bool")
+                                    _ => return Err(module.error(
+                                            left.source_range(),
+                                            "Expected assigning to a bool"))
                                 };
                             }
                         }
@@ -640,10 +653,14 @@ impl Runtime {
                                         if let Set = op {
                                             *r = Variable::Text(b.clone())
                                         } else {
-                                            panic!("Return has no value")
+                                            return Err(module.error(
+                                                left.source_range(),
+                                                "Return has no value"))
                                         }
                                     }
-                                    _ => panic!("Expected assigning to text")
+                                    _ => return Err(module.error(
+                                        left.source_range(),
+                                        "Expected assigning to text"))
                                 }
                             }
                         }
@@ -668,10 +685,14 @@ impl Runtime {
                                         if let Set = op {
                                             *r = Variable::Object(obj.clone())
                                         } else {
-                                            panic!("Return has no value")
+                                            return Err(module.error(
+                                                left.source_range(),
+                                                "Return has no value"))
                                         }
                                     }
-                                    _ => panic!("Expected assigning to object")
+                                    _ => return Err(module.error(
+                                        left.source_range(),
+                                        "Expected assigning to object"))
                                 }
                             }
                         }
@@ -696,10 +717,14 @@ impl Runtime {
                                         if let Set = op {
                                             *r = Variable::Array(arr.clone())
                                         } else {
-                                            panic!("Return has no value")
+                                            return Err(module.error(
+                                                left.source_range(),
+                                                "Return has no value"))
                                         }
                                     }
-                                    _ => panic!("Expected assigning to array")
+                                    _ => return Err(module.error(
+                                        left.source_range(),
+                                        "Expected assigning to array"))
                                 }
                             }
                         }
@@ -731,7 +756,8 @@ impl Runtime {
                     return Ok(Flow::Continue);
                 }
             }
-            panic!("Could not find local variable `{}`", name);
+            return Err(module.error(item.source_range, &format!(
+                "Could not find local variable `{}`", name)));
         }
 
         // Pre-evalutate expressions for identity.
@@ -741,7 +767,8 @@ impl Runtime {
                 match try!(self.expression(expr, Side::Right, module)) {
                     (_, Flow::Return) => { return Ok(Flow::Return); }
                     (Expect::Something, Flow::Continue) => {}
-                    _ => panic!("Expected something for index")
+                    _ => return Err(module.error(expr.source_range(),
+                        "Expected something for index"))
                 };
             }
         }
