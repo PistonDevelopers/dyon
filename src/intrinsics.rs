@@ -256,11 +256,16 @@ pub fn call_standard(
             rt.push_fn(call.name.clone(), st + 1, lc);
             let mut input = String::new();
             io::stdout().flush().unwrap();
-            match io::stdin().read_line(&mut input) {
-                Ok(_) => {}
-                Err(error) => panic!("{}", error)
+            let error = match io::stdin().read_line(&mut input) {
+                Ok(_) => None,
+                Err(error) => Some(error)
             };
-            rt.stack.push(Variable::Text(Arc::new(input)));
+            if let Some(error) = error {
+                rt.stack.push(Variable::RustObject(
+                    Arc::new(Mutex::new(error))));
+            } else {
+                rt.stack.push(Variable::Text(Arc::new(input)));
+            }
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
@@ -552,7 +557,7 @@ static READ_NUMBER: Intrinsic = Intrinsic {
 };
 
 static READ_LINE: Intrinsic = Intrinsic {
-    arg_constraints: &[ArgConstraint::Default],
+    arg_constraints: &[],
     returns: true
 };
 

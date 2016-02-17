@@ -6,11 +6,7 @@ fn main() {
 */
 
 fn main() {
-    x := [1, 2]
-    y := 3
-    loop {
-        push(x, y)
-        break
-    }
-    println(x)
+    print("type something: ")
+    x := read_line()
+    print("you typed: " + x)
 }
