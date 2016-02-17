@@ -6,9 +6,10 @@ fn main() {
 */
 
 fn foo() -> {
-    a := if false {}
+    x := 4
+    return [5; x]
 }
 
 fn main() {
-    foo()
+    println(foo())
 }

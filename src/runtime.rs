@@ -474,20 +474,25 @@ impl Runtime {
         match try!(self.expression(&array_fill.fill, Side::Right, module)) {
             (_, Flow::Return) => { return Ok(Flow::Return); }
             (Expect::Something, Flow::Continue) => {}
-            _ => panic!("Expected something")
+            _ => return Err(module.error(array_fill.fill.source_range(),
+                            "Expected something"))
         };
         match try!(self.expression(&array_fill.n, Side::Right, module)) {
             (_, Flow::Return) => { return Ok(Flow::Return); }
             (Expect::Something, Flow::Continue) => {}
-            _ => panic!("Expected something")
+            _ => return Err(module.error(array_fill.n.source_range(),
+                            "Expected something"))
         };
-        match (self.stack.pop(), self.stack.pop()) {
-            (None, _) | (_, None) => panic!("There is no value on the stack"),
-            (Some(Variable::F64(n)), Some(x)) => {
-                self.stack.push(Variable::Array(vec![x; n as usize]));
+        let n: Variable = self.stack.pop().expect("Expected n");
+        let fill: Variable = self.stack.pop().expect("Expected fill");
+        let v = match (self.resolve(&fill), self.resolve(&n)) {
+            (x, &Variable::F64(n)) => {
+                Variable::Array(vec![x.clone(); n as usize])
             }
-            _ => panic!("Expected number for length in `[value; length]`")
-        }
+            _ => return Err(module.error(array_fill.n.source_range(),
+                "Expected number for length in `[value; length]`"))
+        };
+        self.stack.push(v);
         Ok(Flow::Continue)
     }
 

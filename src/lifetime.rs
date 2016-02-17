@@ -721,6 +721,11 @@ impl Node {
                 (_, Kind::Base) => {}
                 (_, Kind::Exp) => {}
                 (_, Kind::Block) => {}
+                (_, Kind::Fill) => {}
+                (_, Kind::N) => {
+                    // The result of array fill does not depend on `n`.
+                    continue
+                }
                 (Kind::Call, Kind::CallArg) => {
                     // If there is no return lifetime on the declared argument,
                     // there is no need to check it, because the computed value
