@@ -538,7 +538,7 @@ static ROUND: Intrinsic = Intrinsic {
 };
 
 static RANDOM: Intrinsic = Intrinsic {
-    arg_constraints: &[ArgConstraint::Default],
+    arg_constraints: &[],
     returns: true
 };
 

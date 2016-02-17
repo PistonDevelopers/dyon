@@ -6,5 +6,5 @@ fn main() {
 */
 
 fn main() {
-    sleep()
+    println(random())
 }
