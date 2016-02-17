@@ -345,6 +345,11 @@ pub fn check(
                         // Copy argument constraints to use when computing
                         // lifetimes.
                         node.arg_constraints = intr.arg_constraints.into();
+                        if node.arg_constraints.len() != n {
+                            return Err(node.source.wrap(
+                                format!("{}: Expected {} arguments, found {}",
+                                name, node.arg_constraints.len(), n)));
+                        }
                         continue;
                     }
                     None => {}

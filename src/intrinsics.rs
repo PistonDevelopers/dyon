@@ -175,7 +175,8 @@ pub fn call_standard(
             rt.push_fn(call.name.clone(), st, lc);
             let v = match rt.stack.pop() {
                 Some(Variable::F64(b)) => b,
-                Some(_) => panic!("Expected number"),
+                Some(_) => return Err(module.error(call.args[0].source_range(),
+                                      "Expected number")),
                 None => panic!("There is no value on the stack")
             };
             let secs = v as u64;
