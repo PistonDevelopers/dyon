@@ -309,10 +309,11 @@ pub fn call_standard(
         }
         "trim_right" => {
             rt.push_fn(call.name.clone(), st + 1, lc);
-            let mut v = match rt.stack.pop() {
-                Some(Variable::Text(t)) => t,
-                Some(_) => panic!("Expected text"),
-                None => panic!("There is no value on the stack")
+            let v = rt.stack.pop().expect("There is no value on the stack");
+            let mut v = match rt.resolve(&v) {
+                &Variable::Text(ref t) => t.clone(),
+                _ => return Err(module.error(call.args[0].source_range(),
+                                "Expected text"))
             };
             {
                 let w = Arc::make_mut(&mut v);
