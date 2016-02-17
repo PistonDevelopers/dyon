@@ -1,10 +1,12 @@
 #![cfg_attr(test, feature(test))]
 extern crate piston_meta;
 extern crate rand;
+extern crate range;
 
 use std::any::Any;
 use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
+use range::Range;
 
 use lifetime::Prelude;
 
@@ -46,6 +48,16 @@ impl Module {
     pub fn register(&mut self, function: Arc<ast::Function>) {
         self.functions.insert(function.name.clone(), function);
     }
+
+    pub fn error(&self, range: Range, msg: &str) -> String {
+        use piston_meta::ParseErrorHandler;
+
+        let mut w: Vec<u8> = vec![];
+        ParseErrorHandler::new(&self.source.as_ref().unwrap())
+            .write_msg(&mut w, range, &format!("{}", msg))
+            .unwrap();
+        String::from_utf8(w).unwrap()
+    }
 }
 
 /// Runs a program using a syntax file and the source file.
@@ -55,7 +67,9 @@ pub fn run(source: &str) {
         panic!("{}", err);
     });
     let mut runtime = runtime::Runtime::new();
-    runtime.run(&module);
+    runtime.run(&module).unwrap_or_else(|err| {
+        println!("{}", err);
+    });
 }
 
 /// Loads a source from file.

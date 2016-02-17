@@ -118,12 +118,12 @@ pub fn call_standard(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Module
-) -> (Expect, Flow) {
+) -> Result<(Expect, Flow), String> {
     let st = rt.stack.len();
     let lc = rt.local_stack.len();
     for arg in &call.args {
-        match rt.expression(arg, Side::Right, module) {
-            (x, Flow::Return) => { return (x, Flow::Return); }
+        match try!(rt.expression(arg, Side::Right, module)) {
+            (x, Flow::Return) => { return Ok((x, Flow::Return)); }
             (Expect::Something, Flow::Continue) => {}
             _ => panic!("Expected something from argument")
         };
@@ -470,7 +470,8 @@ pub fn call_standard(
                         args: args.into_iter().map(|arg|
                             ast::Expression::Variable(arg)).collect()
                     };
-                    rt.call(&call, &m);
+                    // TODO: Figure out what to do expect and flow.
+                    try!(rt.call(&call, &m));
                 }
                 None => panic!("Expected `Vec<ast::Function>`")
             }
@@ -480,7 +481,7 @@ pub fn call_standard(
         }
         _ => panic!("Unknown function `{}`", call.name)
     };
-    (expect, Flow::Continue)
+    Ok((expect, Flow::Continue))
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]

@@ -1,10 +1,7 @@
-extern crate piston_meta;
-extern crate range;
-
 use std::sync::Arc;
-use self::range::Range;
-use self::piston_meta::bootstrap::Convert;
-use self::piston_meta::MetaData;
+use range::Range;
+use piston_meta::bootstrap::Convert;
+use piston_meta::MetaData;
 
 use Variable;
 use Module;
@@ -34,6 +31,7 @@ pub struct Function {
     pub args: Vec<Arg>,
     pub block: Block,
     pub returns: bool,
+    pub source_range: Range,
 }
 
 impl Function {
@@ -79,7 +77,8 @@ impl Function {
             name: name,
             args: args,
             block: block,
-            returns: returns
+            returns: returns,
+            source_range: convert.source(start).unwrap(),
         }))
     }
 }
@@ -441,6 +440,7 @@ impl ArrayFill {
 pub struct Add {
     pub items: Vec<Mul>,
     pub ops: Vec<BinOp>,
+    pub source_range: Range,
 }
 
 impl Add {
@@ -476,7 +476,11 @@ impl Add {
             }
         }
 
-        Ok((convert.subtract(start), Add { items: items, ops: ops }))
+        Ok((convert.subtract(start), Add {
+            items: items,
+            ops: ops,
+            source_range: convert.source(start).unwrap()
+        }))
     }
 
     pub fn to_expression(mut self) -> Expression {
@@ -485,10 +489,12 @@ impl Add {
         } else {
             let op = self.ops.pop().unwrap();
             let last = self.items.pop().unwrap();
+            let source_range = self.source_range;
             Expression::BinOp(Box::new(BinOpExpression {
                 op: op,
                 left: self.to_expression(),
-                right: last.to_expression()
+                right: last.to_expression(),
+                source_range: source_range
             }))
         }
     }
@@ -498,6 +504,7 @@ impl Add {
 pub struct Mul {
     pub items: Vec<MulVar>,
     pub ops: Vec<BinOp>,
+    pub source_range: Range,
 }
 
 impl Mul {
@@ -536,7 +543,11 @@ impl Mul {
             }
         }
 
-        Ok((convert.subtract(start), Mul { items: items, ops: ops }))
+        Ok((convert.subtract(start), Mul {
+            items: items,
+            ops: ops,
+            source_range: convert.source(start).unwrap(),
+        }))
     }
 
     pub fn to_expression(mut self) -> Expression {
@@ -545,10 +556,12 @@ impl Mul {
         } else {
             let op = self.ops.pop().expect("Expected a binary operation");
             let last = self.items.pop().expect("Expected argument");
+            let source_range = self.source_range;
             Expression::BinOp(Box::new(BinOpExpression {
                 op: op,
                 left: self.to_expression(),
-                right: last.to_expression()
+                right: last.to_expression(),
+                source_range: source_range,
             }))
         }
     }
@@ -580,7 +593,8 @@ impl MulVar {
             MulVar::Pow(a) => Expression::BinOp(Box::new(BinOpExpression {
                 op: BinOp::Pow,
                 left: a.base,
-                right: a.exp
+                right: a.exp,
+                source_range: a.source_range,
             })),
             MulVar::Val(a) => a
         }
@@ -590,7 +604,8 @@ impl MulVar {
 #[derive(Debug, Clone)]
 pub struct Pow {
     pub base: Expression,
-    pub exp: Expression
+    pub exp: Expression,
+    pub source_range: Range,
 }
 
 impl Pow {
@@ -626,7 +641,11 @@ impl Pow {
 
         let base = try!(base.ok_or(()));
         let exp = try!(exp.ok_or(()));
-        Ok((convert.subtract(start), Pow { base: base, exp: exp }))
+        Ok((convert.subtract(start), Pow {
+            base: base,
+            exp: exp,
+            source_range: convert.source(start).unwrap()
+        }))
     }
 }
 
@@ -784,6 +803,7 @@ pub struct BinOpExpression {
     pub op: BinOp,
     pub left: Expression,
     pub right: Expression,
+    pub source_range: Range,
 }
 
 #[derive(Debug, Clone)]

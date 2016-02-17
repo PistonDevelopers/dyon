@@ -219,21 +219,21 @@ impl Runtime {
         expr: &ast::Expression,
         side: Side,
         module: &Module
-    ) -> (Expect, Flow) {
+    ) -> Result<(Expect, Flow), String> {
         use ast::Expression::*;
 
         match *expr {
             Object(ref obj) => {
-                self.object(obj, module);
-                (Expect::Something, Flow::Continue)
+                let flow = try!(self.object(obj, module));
+                Ok((Expect::Something, flow))
             }
             Array(ref arr) => {
-                self.array(arr, module);
-                (Expect::Something, Flow::Continue)
+                let flow = try!(self.array(arr, module));
+                Ok((Expect::Something, flow))
             }
             ArrayFill(ref array_fill) => {
-                self.array_fill(array_fill, module);
-                (Expect::Something, Flow::Continue)
+                let flow = try!(self.array_fill(array_fill, module));
+                Ok((Expect::Something, flow))
             }
             Block(ref block) => self.block(block, module),
             Return(ref ret) => {
@@ -244,50 +244,52 @@ impl Runtime {
                         name: self.ret.clone(),
                         ids: vec![]
                     });
-                self.assign_specific(AssignOp::Set, &item, ret, module);
-                (Expect::Something, Flow::Return)
+                let flow = try!(self.assign_specific(AssignOp::Set,
+                    &item, ret, module));
+                Ok((Expect::Something, flow))
             }
             ReturnVoid => {
-                (Expect::Nothing, Flow::Return)
+                Ok((Expect::Nothing, Flow::Return))
             }
-            Break(ref b) => (Expect::Nothing, Flow::Break(b.label.clone())),
-            Continue(ref b) => (Expect::Nothing, Flow::ContinueLoop(b.label.clone())),
+            Break(ref b) => Ok((Expect::Nothing, Flow::Break(b.label.clone()))),
+            Continue(ref b) => Ok((Expect::Nothing,
+                                   Flow::ContinueLoop(b.label.clone()))),
             Call(ref call) => self.call(call, module),
             Item(ref item) => {
-                self.item(item, side, module);
-                (Expect::Something, Flow::Continue)
+                let flow = try!(self.item(item, side, module));
+                Ok((Expect::Something, flow))
             }
-            UnOp(ref unop) => (Expect::Something,
-                               self.unop(unop, side, module)),
-            BinOp(ref binop) => (Expect::Something,
-                                 self.binop(binop, side, module)),
-            Assign(ref assign) => (Expect::Nothing,
-                                   self.assign(assign, module)),
+            UnOp(ref unop) => Ok((Expect::Something,
+                                  try!(self.unop(unop, side, module)))),
+            BinOp(ref binop) => Ok((Expect::Something,
+                                    try!(self.binop(binop, side, module)))),
+            Assign(ref assign) => Ok((Expect::Nothing,
+                                      try!(self.assign(assign, module)))),
             Number(ref num) => {
                 self.number(num);
-                (Expect::Something, Flow::Continue)
+                Ok((Expect::Something, Flow::Continue))
             }
             Text(ref text) => {
                 self.text(text);
-                (Expect::Something, Flow::Continue)
+                Ok((Expect::Something, Flow::Continue))
             }
             Bool(ref b) => {
                 self.bool(b);
-                (Expect::Something, Flow::Continue)
+                Ok((Expect::Something, Flow::Continue))
             }
-            For(ref for_expr) => (Expect::Nothing,
-                                  self.for_expr(for_expr, module)),
+            For(ref for_expr) => Ok((Expect::Nothing,
+                                     try!(self.for_expr(for_expr, module)))),
             If(ref if_expr) => self.if_expr(if_expr, module),
-            Compare(ref compare) => (Expect::Something,
-                                     self.compare(compare, module)),
+            Compare(ref compare) => Ok((Expect::Something,
+                                        try!(self.compare(compare, module)))),
             Variable(ref var) => {
                 self.stack.push(var.clone());
-                (Expect::Something, Flow::Continue)
+                Ok((Expect::Something, Flow::Continue))
             }
         }
     }
 
-    pub fn run(&mut self, module: &Module) {
+    pub fn run(&mut self, module: &Module) -> Result<(), String> {
         let call = ast::Call {
             name: Arc::new("main".into()),
             args: vec![]
@@ -297,26 +299,35 @@ impl Runtime {
                 if f.args.len() != 0 {
                     panic!("`main` should not have arguments");
                 }
-                self.call(&call, &module);
+                try!(self.call(&call, &module));
+                Ok(())
             }
             None => panic!("Could not find function `main`")
         }
     }
 
-    fn block(&mut self, block: &ast::Block, module: &Module) -> (Expect, Flow) {
+    fn block(
+        &mut self,
+        block: &ast::Block,
+        module: &Module
+    ) -> Result<(Expect, Flow), String> {
         let mut expect = Expect::Nothing;
         let lc = self.local_stack.len();
         for e in &block.expressions {
-            expect = match self.expression(e, Side::Right, module) {
+            expect = match try!(self.expression(e, Side::Right, module)) {
                 (x, Flow::Continue) => x,
-                x => { return x; }
+                x => { return Ok(x); }
             }
         }
         self.local_stack.truncate(lc);
-        (expect, Flow::Continue)
+        Ok((expect, Flow::Continue))
     }
 
-    pub fn call(&mut self, call: &ast::Call, module: &Module) -> (Expect, Flow) {
+    pub fn call(
+        &mut self,
+        call: &ast::Call,
+        module: &Module
+    ) -> Result<(Expect, Flow), String> {
         match module.functions.get(&call.name) {
             None => {
                 intrinsics::call_standard(self, call, module)
@@ -335,8 +346,8 @@ impl Runtime {
                 let st = self.stack.len();
                 let lc = self.local_stack.len();
                 for arg in &call.args {
-                    match self.expression(arg, Side::Right, module) {
-                        (x, Flow::Return) => { return (x, Flow::Return); }
+                    match try!(self.expression(arg, Side::Right, module)) {
+                        (x, Flow::Return) => { return Ok((x, Flow::Return)); }
                         (Expect::Something, Flow::Continue) => {}
                         _ => panic!("Expected something from argument")
                     };
@@ -353,7 +364,7 @@ impl Runtime {
                     };
                     self.local_stack.push((arg.name.clone(), j));
                 }
-                match self.block(&f.block, module) {
+                match try!(self.block(&f.block, module)) {
                     (x, flow) => {
                         match flow {
                             Flow::Break(None) =>
@@ -377,7 +388,8 @@ impl Runtime {
                                     _ =>
                                         // This can happen when return is only
                                         // assigned to `return = x`.
-                                        return (Expect::Something, Flow::Continue)
+                                        return Ok((Expect::Something,
+                                                   Flow::Continue))
                                 };
                             }
                             (false, Expect::Something) =>
@@ -395,7 +407,7 @@ impl Runtime {
                                 //       Requires .pop_fn after.
                                 panic!("Function did not return a value"),
                             (_, b) => {
-                                return (b, Flow::Continue)
+                                return Ok((b, Flow::Continue))
                             }
                         }
                     }
@@ -404,10 +416,18 @@ impl Runtime {
         }
     }
 
-    fn object(&mut self, obj: &ast::Object, module: &Module) {
+    fn object(
+        &mut self,
+        obj: &ast::Object,
+        module: &Module
+    ) -> Result<Flow, String> {
         let mut object: Object = HashMap::new();
         for &(ref key, ref expr) in &obj.key_values {
-            self.expression(expr, Side::Right, module);
+            match try!(self.expression(expr, Side::Right, module)) {
+                (_, Flow::Return) => { return Ok(Flow::Return); }
+                (Expect::Something, Flow::Continue) => {}
+                _ => panic!("Expected something")
+            };
             match self.stack.pop() {
                 None => panic!("There is no value on the stack"),
                 Some(x) => {
@@ -419,23 +439,45 @@ impl Runtime {
             }
         }
         self.stack.push(Variable::Object(object));
+        Ok(Flow::Continue)
     }
 
-    fn array(&mut self, arr: &ast::Array, module: &Module) {
+    fn array(
+        &mut self,
+        arr: &ast::Array,
+        module: &Module
+    ) -> Result<Flow, String> {
         let mut array: Array = Vec::new();
         for item in &arr.items {
-            self.expression(item, Side::Right, module);
+            match try!(self.expression(item, Side::Right, module)) {
+                (_, Flow::Return) => { return Ok(Flow::Return); }
+                (Expect::Something, Flow::Continue) => {}
+                _ => panic!("Expected something")
+            };
             match self.stack.pop() {
                 None => panic!("There is no value on the stack"),
                 Some(x) => array.push(x)
             }
         }
         self.stack.push(Variable::Array(array));
+        Ok(Flow::Continue)
     }
 
-    fn array_fill(&mut self, array_fill: &ast::ArrayFill, module: &Module) {
-        self.expression(&array_fill.fill, Side::Right, module);
-        self.expression(&array_fill.n, Side::Right, module);
+    fn array_fill(
+        &mut self,
+        array_fill: &ast::ArrayFill,
+        module: &Module
+    ) -> Result<Flow, String> {
+        match try!(self.expression(&array_fill.fill, Side::Right, module)) {
+            (_, Flow::Return) => { return Ok(Flow::Return); }
+            (Expect::Something, Flow::Continue) => {}
+            _ => panic!("Expected something")
+        };
+        match try!(self.expression(&array_fill.n, Side::Right, module)) {
+            (_, Flow::Return) => { return Ok(Flow::Return); }
+            (Expect::Something, Flow::Continue) => {}
+            _ => panic!("Expected something")
+        };
         match (self.stack.pop(), self.stack.pop()) {
             (None, _) | (_, None) => panic!("There is no value on the stack"),
             (Some(Variable::F64(n)), Some(x)) => {
@@ -443,10 +485,15 @@ impl Runtime {
             }
             _ => panic!("Expected number for length in `[value; length]`")
         }
+        Ok(Flow::Continue)
     }
 
     #[inline(always)]
-    fn assign(&mut self, assign: &ast::Assign, module: &Module) -> Flow {
+    fn assign(
+        &mut self,
+        assign: &ast::Assign,
+        module: &Module
+    ) -> Result<Flow, String> {
         self.assign_specific(assign.op, &assign.left, &assign.right, module)
     }
 
@@ -456,15 +503,15 @@ impl Runtime {
         left: &ast::Expression,
         right: &ast::Expression,
         module: &Module
-    ) -> Flow {
+    ) -> Result<Flow, String> {
         use ast::AssignOp::*;
         use ast::Expression;
 
         if op == Assign {
             match *left {
                 Expression::Item(ref item) => {
-                    match self.expression(right, Side::Right, module) {
-                        (_, Flow::Return) => { return Flow::Return; }
+                    match try!(self.expression(right, Side::Right, module)) {
+                        (_, Flow::Return) => { return Ok(Flow::Return); }
                         (Expect::Something, Flow::Continue) => {}
                         _ => panic!("Expected something from the right side")
                     }
@@ -475,9 +522,9 @@ impl Runtime {
                         Some(x) => x
                     };
                     if item.ids.len() != 0 {
-                        match self.expression(left, Side::LeftInsert(true),
-                                              module) {
-                            (_, Flow::Return) => { return Flow::Return; }
+                        match try!(self.expression(left, Side::LeftInsert(true),
+                                                   module)) {
+                            (_, Flow::Return) => { return Ok(Flow::Return); }
                             (Expect::Something, Flow::Continue) => {}
                             _ => panic!("Expected something from the left side")
                         };
@@ -492,7 +539,7 @@ impl Runtime {
                         self.local_stack.push((item.name.clone(), self.stack.len()));
                         self.stack.push(v);
                     }
-                    Flow::Continue
+                    Ok(Flow::Continue)
                 }
                 _ => panic!("Expected item")
             }
@@ -500,13 +547,13 @@ impl Runtime {
             // Evaluate right side before left because the left leaves
             // an raw pointer on the stack which might point to wrong place
             // if there are side effects of the right side affecting it.
-            match self.expression(right, Side::Right, module) {
-                (_, Flow::Return) => { return Flow::Return; }
+            match try!(self.expression(right, Side::Right, module)) {
+                (_, Flow::Return) => { return Ok(Flow::Return); }
                 (Expect::Something, Flow::Continue) => {}
                 _ => panic!("Expected something from the right side")
             };
-            match self.expression(left, Side::LeftInsert(false), module) {
-                (_, Flow::Return) => { return Flow::Return; }
+            match try!(self.expression(left, Side::LeftInsert(false), module)) {
+                (_, Flow::Return) => { return Ok(Flow::Return); }
                 (Expect::Something, Flow::Continue) => {}
                 _ => panic!("Expected something from the left side")
             };
@@ -655,7 +702,7 @@ impl Runtime {
                         }
                         _ => unimplemented!()
                     };
-                    Flow::Continue
+                    Ok(Flow::Continue)
                 }
                 _ => panic!("Expected two variables on the stack")
             }
@@ -664,7 +711,12 @@ impl Runtime {
     // `insert` is true for `:=` and false for `=`.
     // This works only on objects, but does not have to check since it is
     // ignored for arrays.
-    fn item(&mut self, item: &ast::Item, side: Side, module: &Module) {
+    fn item(
+        &mut self,
+        item: &ast::Item,
+        side: Side,
+        module: &Module
+    ) -> Result<Flow, String> {
         use ast::Id;
 
         if item.ids.len() == 0 {
@@ -673,7 +725,7 @@ impl Runtime {
             for &(ref n, id) in self.local_stack.iter().rev().take(locals) {
                 if &**n == name {
                     self.stack.push(Variable::Ref(id));
-                    return;
+                    return Ok(Flow::Continue);
                 }
             }
             panic!("Could not find local variable `{}`", name);
@@ -683,7 +735,11 @@ impl Runtime {
         let start_stack_len = self.stack.len();
         for id in &item.ids {
             if let &Id::Expression(ref expr) = id {
-                self.expression(expr, Side::Right, module);
+                match try!(self.expression(expr, Side::Right, module)) {
+                    (_, Flow::Return) => { return Ok(Flow::Return); }
+                    (Expect::Something, Flow::Continue) => {}
+                    _ => panic!("Expected something for index")
+                };
             }
         }
         let &mut Runtime {
@@ -740,17 +796,22 @@ impl Runtime {
             };
             stack.truncate(start_stack_len);
             stack.push(v);
-            return;
+            break;
         }
+        return Ok(Flow::Continue);
     }
-    fn compare(&mut self, compare: &ast::Compare, module: &Module) -> Flow {
-        match self.expression(&compare.left, Side::Right, module) {
-            (_, Flow::Return) => { return Flow::Return; }
+    fn compare(
+        &mut self,
+        compare: &ast::Compare,
+        module: &Module
+    ) -> Result<Flow, String> {
+        match try!(self.expression(&compare.left, Side::Right, module)) {
+            (_, Flow::Return) => { return Ok(Flow::Return); }
             (Expect::Something, Flow::Continue) => {}
             _ => panic!("Expected something from the left argument")
         };
-        match self.expression(&compare.right, Side::Right, module) {
-            (_, Flow::Return) => { return Flow::Return; }
+        match try!(self.expression(&compare.right, Side::Right, module)) {
+            (_, Flow::Return) => { return Ok(Flow::Return); }
             (Expect::Something, Flow::Continue) => {}
             _ => panic!("Expected something from the right argument")
         };
@@ -795,11 +856,15 @@ impl Runtime {
             }
             _ => panic!("Expected two variables on the stack")
         }
-        Flow::Continue
+        Ok(Flow::Continue)
     }
-    fn if_expr(&mut self, if_expr: &ast::If, module: &Module) -> (Expect, Flow) {
-        match self.expression(&if_expr.cond, Side::Right, module) {
-            (x, Flow::Return) => { return (x, Flow::Return); }
+    fn if_expr(
+        &mut self,
+        if_expr: &ast::If,
+        module: &Module
+    ) -> Result<(Expect, Flow), String> {
+        match try!(self.expression(&if_expr.cond, Side::Right, module)) {
+            (x, Flow::Return) => { return Ok((x, Flow::Return)); }
             (Expect::Something, Flow::Continue) => {}
             _ => panic!("Expected bool from if condition")
         };
@@ -812,8 +877,10 @@ impl Runtime {
                     }
                     for (cond, body) in if_expr.else_if_conds.iter()
                         .zip(if_expr.else_if_blocks.iter()) {
-                        match self.expression(cond, Side::Right, module) {
-                            (x, Flow::Return) => { return (x, Flow::Return); }
+                        match try!(self.expression(cond, Side::Right, module)) {
+                            (x, Flow::Return) => {
+                                return Ok((x, Flow::Return));
+                            }
                             (Expect::Something, Flow::Continue) => {}
                             _ => panic!("Expected bool from else if condition")
                         };
@@ -829,29 +896,43 @@ impl Runtime {
                     if let Some(ref block) = if_expr.else_block {
                         self.block(block, module)
                     } else {
-                        (Expect::Nothing, Flow::Continue)
+                        Ok((Expect::Nothing, Flow::Continue))
                     }
                 }
                 _ => panic!("Expected bool")
             }
         }
     }
-    fn for_expr(&mut self, for_expr: &ast::For, module: &Module) -> Flow {
+    fn for_expr(
+        &mut self,
+        for_expr: &ast::For,
+        module: &Module
+    ) -> Result<Flow, String> {
         let prev_st = self.stack.len();
         let prev_lc = self.local_stack.len();
-        self.expression(&for_expr.init, Side::Right, module);
+        match try!(self.expression(&for_expr.init, Side::Right, module)) {
+            (_, Flow::Return) => { return Ok(Flow::Return); }
+            (Expect::Nothing, Flow::Continue) => {}
+            _ => panic!("Expected nothing from for init")
+        };
         let st = self.stack.len();
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
         loop {
-            self.expression(&for_expr.cond, Side::Right, module);
+            match try!(self.expression(&for_expr.cond, Side::Right, module)) {
+                (_, Flow::Return) => { return Ok(Flow::Return); }
+                (Expect::Something, Flow::Continue) => {}
+                _ => panic!("Expected bool from for condition")
+            };
             match self.stack.pop() {
                 None => panic!("There is no value on the stack"),
                 Some(x) => match x {
                     Variable::Bool(val) => {
                         if val {
-                            match self.block(&for_expr.block, module) {
-                                (_, Flow::Return) => { return Flow::Return; }
+                            match try!(self.block(&for_expr.block, module)) {
+                                (_, Flow::Return) => {
+                                    return Ok(Flow::Return);
+                                }
                                 (_, Flow::Continue) => {}
                                 (_, Flow::Break(x)) => {
                                     match x {
@@ -882,13 +963,25 @@ impl Runtime {
                                         }
                                         None => {}
                                     }
-                                    self.expression(&for_expr.step, Side::Right,
-                                                    module);
+                                    match try!(self.expression(
+                                        &for_expr.step, Side::Right, module)) {
+                                            (_, Flow::Return) => {
+                                                return Ok(Flow::Return);
+                                            }
+                                            (Expect::Nothing, Flow::Continue) => {}
+                                            _ => panic!("Expected nothing from for step")
+                                    };
                                     continue;
                                 }
                             }
-                            self.expression(&for_expr.step, Side::Right,
-                                            module);
+                            match try!(self.expression(
+                                &for_expr.step, Side::Right, module)) {
+                                    (_, Flow::Return) => {
+                                        return Ok(Flow::Return);
+                                    }
+                                    (Expect::Nothing, Flow::Continue) => {}
+                                    _ => panic!("Expected nothing from for step")
+                            };
                         } else {
                             break;
                         }
@@ -901,7 +994,7 @@ impl Runtime {
         };
         self.stack.truncate(prev_st);
         self.local_stack.truncate(prev_lc);
-        flow
+        Ok(flow)
     }
     #[inline(always)]
     fn text(&mut self, text: &ast::Text) {
@@ -920,9 +1013,9 @@ impl Runtime {
         unop: &ast::UnOpExpression,
         side: Side,
         module: &Module
-    ) -> Flow {
-        match self.expression(&unop.expr, side, module) {
-            (_, Flow::Return) => { return Flow::Return; }
+    ) -> Result<Flow, String> {
+        match try!(self.expression(&unop.expr, side, module)) {
+            (_, Flow::Return) => { return Ok(Flow::Return); }
             (Expect::Something, Flow::Continue) => {}
             _ => panic!("Expected something from unary argument")
         };
@@ -937,23 +1030,23 @@ impl Runtime {
             _ => panic!("Invalid type, expected bool")
         };
         self.stack.push(v);
-        Flow::Continue
+        Ok(Flow::Continue)
     }
     fn binop(
         &mut self,
         binop: &ast::BinOpExpression,
         side: Side,
         module: &Module
-    ) -> Flow {
+    ) -> Result<Flow, String> {
         use ast::BinOp::*;
 
-        match self.expression(&binop.left, side, module) {
-            (_, Flow::Return) => { return Flow::Return; }
+        match try!(self.expression(&binop.left, side, module)) {
+            (_, Flow::Return) => { return Ok(Flow::Return); }
             (Expect::Something, Flow::Continue) => {}
             _ => panic!("Expected something from left argument")
         };
-        match self.expression(&binop.right, side, module) {
-            (_, Flow::Return) => { return Flow::Return; }
+        match try!(self.expression(&binop.right, side, module)) {
+            (_, Flow::Return) => { return Ok(Flow::Return); }
             (Expect::Something, Flow::Continue) => {}
             _ => panic!("Expected something from right argument")
         };
@@ -992,14 +1085,15 @@ impl Runtime {
                 }
             }
             (&Variable::Text(_), _) =>
-                panic!("The right argument must be a string. \
-                        Try the `to_string` function"),
+                return Err(module.error(binop.source_range,
+                        "The right argument must be a string. \
+                        Try the `to_string` function")),
             _ => panic!("Invalid type for binary operator `{:?}`, \
                          expected numbers, bools or strings",
                         binop.op)
         };
         self.stack.push(v);
 
-        Flow::Continue
+        Ok(Flow::Continue)
     }
 }
