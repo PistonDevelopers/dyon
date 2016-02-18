@@ -79,7 +79,8 @@ pub fn load(source: &str, module: &mut Module) -> Result<(), String> {
     let syntax = include_str!("../assets/syntax.txt");
     let syntax_rules = try!(syntax_errstr(syntax));
 
-    let mut data_file = File::open(source).unwrap();
+    let mut data_file = try!(File::open(source).map_err(|err|
+        format!("Could not open `{}`, {}", source, err)));
     let mut d = String::new();
     data_file.read_to_string(&mut d).unwrap();
     module.source = Some(d.clone());

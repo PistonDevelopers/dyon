@@ -327,10 +327,7 @@ pub fn call_standard(
         }
         "to_string" => {
             rt.push_fn(call.name.clone(), st + 1, lc);
-            let v = match rt.stack.pop() {
-                Some(v) => v,
-                None => panic!("There is no value on the stack")
-            };
+            let v = rt.stack.pop().expect("There is no value on the stack");
             let v = match rt.resolve(&v) {
                 &Variable::Text(ref t) => Variable::Text(t.clone()),
                 &Variable::F64(v) => {
@@ -344,10 +341,7 @@ pub fn call_standard(
         }
         "typeof" => {
             rt.push_fn(call.name.clone(), st + 1, lc);
-            let v = match rt.stack.pop() {
-                Some(v) => v,
-                None => panic!("There is no value on the stack")
-            };
+            let v = rt.stack.pop().expect("There is no value on the stack");
             let v = match rt.resolve(&v) {
                 &Variable::Text(_) => rt.text_type.clone(),
                 &Variable::F64(_) => rt.f64_type.clone(),
@@ -380,20 +374,17 @@ pub fn call_standard(
             use load;
 
             rt.push_fn(call.name.clone(), st + 1, lc);
-            let v = match rt.stack.pop() {
-                Some(v) => v,
-                None => panic!("There is no value on the stack")
-            };
+            let v = rt.stack.pop().expect("There is no value on the stack");
             let v = match rt.resolve(&v) {
                 &Variable::Text(ref text) => {
-                    let mut module = Module::new();
-                    load(text, &mut module).unwrap_or_else(|err| {
-                        panic!("{}", err);
-                    });
-                    Variable::RustObject(Arc::new(Mutex::new(
-                        module)))
+                    let mut m = Module::new();
+                    try!(load(text, &mut m).map_err(|err| {
+                            module.error(call.args[0].source_range(), &err)
+                        }));
+                    Variable::RustObject(Arc::new(Mutex::new(m)))
                 }
-                _ => panic!("Expected text argument")
+                _ => return Err(module.error(call.args[0].source_range(),
+                                "Expected string"))
             };
             rt.stack.push(v);
             rt.pop_fn(call.name.clone());
