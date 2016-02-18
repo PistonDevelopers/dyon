@@ -443,29 +443,23 @@ pub fn call_standard(
         }
         "call" => {
             rt.push_fn(call.name.clone(), st, lc);
-            let args = match rt.stack.pop() {
-                Some(v) => v,
-                None => panic!("There is no value on the stack")
-            };
-            let fn_name = match rt.stack.pop() {
-                Some(v) => v,
-                None => panic!("There is no value on the stack")
-            };
-            let module = match rt.stack.pop() {
-                Some(v) => v,
-                None => panic!("There is no value on the stack")
-            };
+            let args = rt.stack.pop().expect("There is no value on the stack");
+            let fn_name = rt.stack.pop().expect("There is no value on the stack");
+            let call_module = rt.stack.pop().expect("There is no value on the stack");
             let fn_name = match rt.resolve(&fn_name) {
                 &Variable::Text(ref text) => text.clone(),
-                _ => panic!("Expected text argument")
+                _ => return Err(module.error(call.args[1].source_range(),
+                                "Expected text"))
             };
             let args = match rt.resolve(&args) {
                 &Variable::Array(ref arr) => arr.clone(),
-                _ => panic!("Expected array argument")
+                _ => return Err(module.error(call.args[2].source_range(),
+                                "Expected array"))
             };
-            let obj = match rt.resolve(&module) {
+            let obj = match rt.resolve(&call_module) {
                 &Variable::RustObject(ref obj) => obj.clone(),
-                _ => panic!("Expected rust object")
+                _ => return Err(module.error(call.args[0].source_range(),
+                                "Expected `Module`"))
             };
 
             match obj.lock().unwrap()
@@ -474,11 +468,18 @@ pub fn call_standard(
                     match m.functions.get(&fn_name) {
                         Some(ref f) => {
                             if f.args.len() != args.len() {
-                                panic!("Expected `{}` arguments, found `{}`",
-                                    f.args.len(), args.len())
+                                return Err(module.error(
+                                    call.args[2].source_range(),
+                                    &format!(
+                                        "Expected `{}` arguments, found `{}`",
+                                        f.args.len(), args.len())))
                             }
                         }
-                        None => panic!("Could not find function `{}`", fn_name)
+                        None => return Err(module.error(
+                                    call.args[1].source_range(),
+                                    &format!(
+                                        "Could not find function `{}`",
+                                        fn_name)))
                     }
                     let call = ast::Call {
                         name: fn_name.clone(),
@@ -490,7 +491,8 @@ pub fn call_standard(
                     // TODO: Figure out what to do expect and flow.
                     try!(rt.call(&call, &m));
                 }
-                None => panic!("Expected `Vec<ast::Function>`")
+                None => return Err(module.error(call.args[0].source_range(),
+                            "Expected `Module`"))
             }
 
             rt.pop_fn(call.name.clone());
