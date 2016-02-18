@@ -67,7 +67,10 @@ impl Prelude {
     }
 }
 
-pub fn check(data: &[Range<MetaData>], prelude: &Prelude) -> Result<(), String> {
+pub fn check(
+    data: &[Range<MetaData>],
+    prelude: &Prelude
+) -> Result<(), Range<String>> {
     let mut nodes: Vec<Node> = vec![];
     let mut parents: Vec<usize> = vec![];
     for (i, d) in data.iter().enumerate() {
@@ -173,7 +176,9 @@ pub fn check(data: &[Range<MetaData>], prelude: &Prelude) -> Result<(), String> 
     // Collect indices to declared locals.
     // Stores assign node, item node.
     let locals: Vec<(usize, usize)> = nodes.iter().enumerate()
-        .filter(|&(_, n)| n.op == Some(Op::Assign))
+        .filter(|&(_, n)| n.op == Some(Op::Assign)
+            && n.children.len() > 0
+            && nodes[n.children[0]].children.len() > 0)
         .map(|(i, n)| {
                 // Left argument.
                 let j = n.children[0];
@@ -271,8 +276,9 @@ pub fn check(data: &[Range<MetaData>], prelude: &Prelude) -> Result<(), String> 
                         nodes[i].declaration = Some(j);
                     }
                     None => {
-                        return Err(format!("Could not find declaration of `{}`",
-                            nodes[i].name.as_ref().expect("Expected name")));
+                        return Err(nodes[i].source.wrap(
+                            format!("Could not find declaration of `{}`",
+                            nodes[i].name.as_ref().expect("Expected name"))));
                     }
                 }
             }
@@ -290,7 +296,8 @@ pub fn check(data: &[Range<MetaData>], prelude: &Prelude) -> Result<(), String> 
         for &i in nodes[f].children.iter().filter(|&&i| nodes[i].kind == Kind::Arg) {
             let name = nodes[i].name.as_ref().expect("Expected name");
             if arg_names.contains(name) {
-                return Err(format!("Duplicate argument `{}`", name));
+                return Err(nodes[i].source.wrap(
+                    format!("Duplicate argument `{}`", name)));
             } else {
                 arg_names.insert(name.clone());
             }
@@ -304,7 +311,8 @@ pub fn check(data: &[Range<MetaData>], prelude: &Prelude) -> Result<(), String> 
     for (i, &f) in functions.iter().enumerate() {
         let name = nodes[f].name.as_ref().expect("Expected name");
         if function_lookup.contains_key(name) {
-            return Err(format!("Duplicate function `{}`", name));
+            return Err(nodes[f].source.wrap(
+                format!("Duplicate function `{}`", name)));
         } else {
             function_lookup.insert(name.clone(), i);
         }
@@ -337,17 +345,24 @@ pub fn check(data: &[Range<MetaData>], prelude: &Prelude) -> Result<(), String> 
                         // Copy argument constraints to use when computing
                         // lifetimes.
                         node.arg_constraints = intr.arg_constraints.into();
+                        if node.arg_constraints.len() != n {
+                            return Err(node.source.wrap(
+                                format!("{}: Expected {} arguments, found {}",
+                                name, node.arg_constraints.len(), n)));
+                        }
                         continue;
                     }
                     None => {}
                 }
-                return Err(format!("Could not find function `{}`", name));
+                return Err(node.source.wrap(
+                    format!("Could not find function `{}`", name)));
             }
         };
         // Check that number of arguments is the same as in declaration.
         if function_args[i] != n {
-            return Err(format!("{}: Expected {} arguments, found {}",
-                name, function_args[i], n));
+            return Err(node.source.wrap(
+                format!("{}: Expected {} arguments, found {}",
+                name, function_args[i], n)));
         }
         node.declaration = Some(functions[i]);
     }
@@ -368,7 +383,8 @@ pub fn check(data: &[Range<MetaData>], prelude: &Prelude) -> Result<(), String> 
             if let Some(ref lt) = nodes[c].lifetime {
                 if &**lt == "return" { continue; }
                 if !arg_names.contains_key(&(f, lt.clone())) {
-                    return Err(format!("Could not find argument `{}`", lt));
+                    return Err(nodes[c].source.wrap(
+                        format!("Could not find argument `{}`", lt)));
                 }
             }
         }
@@ -387,7 +403,8 @@ pub fn check(data: &[Range<MetaData>], prelude: &Prelude) -> Result<(), String> 
                     .expect("Expected argument index");
                 loop {
                     if visited[ind] {
-                        return Err(format!("Cyclic lifetime for `{}`", lt));
+                        return Err(nodes[arg].source.wrap(
+                                format!("Cyclic lifetime for `{}`", lt)));
                     }
                     visited[ind] = true;
 
@@ -411,19 +428,41 @@ pub fn check(data: &[Range<MetaData>], prelude: &Prelude) -> Result<(), String> 
         let right = nodes[a].children[1];
         let lifetime_left = nodes[i].lifetime(&nodes, &arg_names);
         let lifetime_right = nodes[right].lifetime(&nodes, &arg_names);
-        try!(compare_lifetimes(lifetime_left, lifetime_right, &nodes));
+        try!(compare_lifetimes(lifetime_left, lifetime_right, &nodes)
+                .map_err(|err| nodes[right].source.wrap(err)));
     }
 
     // Check the lifetime of returned values.
     for &i in &returns {
         let right = nodes[i].children[0];
         let lifetime_right = nodes[right].lifetime(&nodes, &arg_names);
-        try!(compare_lifetimes(Some(Lifetime::Return(vec![])), lifetime_right, &nodes));
+        try!(compare_lifetimes(
+            Some(Lifetime::Return(vec![])), lifetime_right, &nodes)
+                .map_err(|err| nodes[right].source.wrap(err))
+        );
     }
 
     // Check that calls satisfy the lifetime constraints of arguments.
     for &c in &calls {
         let call = &nodes[c];
+        let is_reference = |i: usize| {
+            let mut n: usize = call.children[i];
+            let mut can_be_item = true;
+            // Item is 4 levels down inside arg/add/mul/val
+            for _ in 0..4 {
+                let node: &Node = &nodes[n];
+                if node.children.len() == 0 {
+                    can_be_item = false;
+                    break;
+                }
+                n = node.children[0];
+            }
+            if can_be_item && nodes[n].kind != Kind::Item {
+                can_be_item = false;
+            }
+            can_be_item
+        };
+
         if let Some(declaration) = call.declaration {
             let function = &nodes[declaration];
             for (i, &a) in function.children.iter()
@@ -435,22 +474,9 @@ pub fn check(data: &[Range<MetaData>], prelude: &Prelude) -> Result<(), String> 
                     // make sure they are referenced.
                     let arg_lifetime = arg_lifetime(a, arg, &nodes, &arg_names);
                     if let Some(Lifetime::Return(_)) = arg_lifetime {
-                        let mut n = call.children[i];
-                        let mut can_be_item = true;
-                        // Item is 4 levels down inside arg/add/mul/val
-                        for _ in 0..4 {
-                            let node = &nodes[n];
-                            if node.children.len() == 0 {
-                                can_be_item = false;
-                                break;
-                            }
-                            n = nodes[n].children[0];
-                        }
-                        if can_be_item && nodes[n].kind != Kind::Item {
-                            can_be_item = false;
-                        }
-                        if !can_be_item {
-                            return Err(format!("Requires reference to variable"));
+                        if !is_reference(i) {
+                            return Err(arg.source.wrap(
+                                format!("Requires reference to variable")));
                         }
                     }
 
@@ -462,7 +488,37 @@ pub fn check(data: &[Range<MetaData>], prelude: &Prelude) -> Result<(), String> 
                         let right = call.children[i];
                         let lifetime_left = nodes[left].lifetime(&nodes, &arg_names);
                         let lifetime_right = nodes[right].lifetime(&nodes, &arg_names);
-                        try!(compare_lifetimes(lifetime_left, lifetime_right, &nodes));
+                        try!(compare_lifetimes(
+                            lifetime_left, lifetime_right, &nodes)
+                                .map_err(|err| arg.source.wrap(err))
+                        );
+                    }
+                }
+            }
+        } else {
+            // Check that call to intrinsic satisfy the declared constraints.
+            for ((i, &arg_constraint), &call_arg) in
+            call.arg_constraints.iter().enumerate()
+                .zip(call.children.iter()
+                .filter(|&&n| nodes[n].kind == Kind::CallArg)) {
+                let arg = &nodes[call_arg];
+                match arg_constraint {
+                    ArgConstraint::Default => {}
+                    ArgConstraint::Return => {
+                        if !is_reference(i) {
+                            return Err(arg.source.wrap(
+                                format!("Requires reference to variable")));
+                        }
+                    }
+                    ArgConstraint::Arg(ind) => {
+                        let left = call.children[ind];
+                        let right = call.children[i];
+                        let lifetime_left = nodes[left].lifetime(&nodes, &arg_names);
+                        let lifetime_right = nodes[right].lifetime(&nodes, &arg_names);
+                        try!(compare_lifetimes(
+                            lifetime_left, lifetime_right, &nodes)
+                                .map_err(|err| arg.source.wrap(err))
+                        );
                     }
                 }
             }
@@ -693,7 +749,18 @@ impl Node {
                 (_, Kind::Mul) => {}
                 (_, Kind::Call) => {}
                 (_, Kind::Item) => {}
-                (_, Kind::UnOp) => {}
+                (_, Kind::UnOp) => {
+                    // The result of all unary operators does not depend
+                    // on the lifetime of the argument.
+                    continue
+                }
+                (_, Kind::Compare) => {
+                    // The result of all compare operators does not depend
+                    // on the lifetime of the arguments.
+                    continue
+                }
+                (_, Kind::Left) => {}
+                (_, Kind::Right) => {}
                 (_, Kind::Expr) => {}
                 (_, Kind::Array) => {}
                 (_, Kind::ArrayItem) => {}
@@ -701,6 +768,25 @@ impl Node {
                 (_, Kind::Base) => {}
                 (_, Kind::Exp) => {}
                 (_, Kind::Block) => {}
+                (_, Kind::If) => {}
+                (_, Kind::TrueBlock) => {}
+                (_, Kind::ElseIfBlock) => {}
+                (_, Kind::ElseBlock) => {}
+                (_, Kind::Cond) => {
+                    // A condition controls the flow, but the result does not
+                    // depend on its lifetime.
+                    continue
+                }
+                (_, Kind::ElseIfCond) => {
+                    // A condition controls the flow, but the result does not
+                    // depend on its lifetime.
+                    continue
+                }
+                (_, Kind::Fill) => {}
+                (_, Kind::N) => {
+                    // The result of array fill does not depend on `n`.
+                    continue
+                }
                 (Kind::Call, Kind::CallArg) => {
                     // If there is no return lifetime on the declared argument,
                     // there is no need to check it, because the computed value

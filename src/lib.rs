@@ -1,10 +1,12 @@
 #![cfg_attr(test, feature(test))]
 extern crate piston_meta;
 extern crate rand;
+extern crate range;
 
 use std::any::Any;
 use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
+use range::Range;
 
 use lifetime::Prelude;
 
@@ -31,12 +33,14 @@ pub enum Variable {
 
 #[derive(Debug)]
 pub struct Module {
+    pub source: Option<String>,
     pub functions: HashMap<Arc<String>, Arc<ast::Function>>,
 }
 
 impl Module {
     pub fn new() -> Module {
         Module {
+            source: None,
             functions: HashMap::new(),
         }
     }
@@ -44,16 +48,25 @@ impl Module {
     pub fn register(&mut self, function: Arc<ast::Function>) {
         self.functions.insert(function.name.clone(), function);
     }
+
+    pub fn error(&self, range: Range, msg: &str) -> String {
+        use piston_meta::ParseErrorHandler;
+
+        let mut w: Vec<u8> = vec![];
+        ParseErrorHandler::new(&self.source.as_ref().unwrap())
+            .write_msg(&mut w, range, &format!("{}", msg))
+            .unwrap();
+        String::from_utf8(w).unwrap()
+    }
 }
 
 /// Runs a program using a syntax file and the source file.
-pub fn run(source: &str) {
+pub fn run(source: &str) -> Result<(), String> {
     let mut module = Module::new();
-    load(source, &mut module).unwrap_or_else(|err| {
-        panic!("{}", err);
-    });
+    try!(load(source, &mut module));
     let mut runtime = runtime::Runtime::new();
-    runtime.run(&module);
+    try!(runtime.run(&module));
+    Ok(())
 }
 
 /// Loads a source from file.
@@ -66,9 +79,11 @@ pub fn load(source: &str, module: &mut Module) -> Result<(), String> {
     let syntax = include_str!("../assets/syntax.txt");
     let syntax_rules = try!(syntax_errstr(syntax));
 
-    let mut data_file = File::open(source).unwrap();
+    let mut data_file = try!(File::open(source).map_err(|err|
+        format!("Could not open `{}`, {}", source, err)));
     let mut d = String::new();
     data_file.read_to_string(&mut d).unwrap();
+    module.source = Some(d.clone());
 
     let mut data = vec![];
     try!(parse_errstr(&syntax_rules, &d, &mut data));
@@ -89,7 +104,10 @@ pub fn load(source: &str, module: &mut Module) -> Result<(), String> {
     // Check that lifetime checking succeeded.
     match handle.join().unwrap() {
         Ok(()) => {}
-        Err(msg) => return Err(msg)
+        Err(err_msg) => {
+            let (range, msg) = err_msg.decouple();
+            return Err(format!("In `{}`:\n{}", source, module.error(range, &msg)))
+        }
     }
 
     if ignored.len() > 0 {
