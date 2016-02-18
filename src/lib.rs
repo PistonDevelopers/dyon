@@ -106,7 +106,7 @@ pub fn load(source: &str, module: &mut Module) -> Result<(), String> {
         Ok(()) => {}
         Err(err_msg) => {
             let (range, msg) = err_msg.decouple();
-            return Err(module.error(range, &msg))
+            return Err(format!("In `{}`:\n{}", source, module.error(range, &msg)))
         }
     }
 

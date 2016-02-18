@@ -379,7 +379,9 @@ pub fn call_standard(
                 &Variable::Text(ref text) => {
                     let mut m = Module::new();
                     try!(load(text, &mut m).map_err(|err| {
-                            module.error(call.args[0].source_range(), &err)
+                            format!("{}\n{}", err,
+                                module.error(call.args[0].source_range(),
+                                "When attempting to load module:"))
                         }));
                     Variable::RustObject(Arc::new(Mutex::new(m)))
                 }
@@ -394,15 +396,9 @@ pub fn call_standard(
             use load;
 
             rt.push_fn(call.name.clone(), st + 1, lc);
-            let modules = match rt.stack.pop() {
-                Some(v) => v,
-                None => panic!("There is no value on the stack")
-            };
-            let source = match rt.stack.pop() {
-                Some(v) => v,
-                None => panic!("There is no value on the stack")
-            };
-            let mut module = Module::new();
+            let modules = rt.stack.pop().expect("There is no value on the stack");
+            let source = rt.stack.pop().expect("There is no value on the stack");
+            let mut new_module = Module::new();
             match rt.resolve(&modules) {
                 &Variable::Array(ref array) => {
                     for it in array {
@@ -411,27 +407,35 @@ pub fn call_standard(
                                 match obj.lock().unwrap().downcast_ref::<Module>() {
                                     Some(m) => {
                                         for f in m.functions.values() {
-                                            module.register(f.clone())
+                                            new_module.register(f.clone())
                                         }
                                     }
-                                    None => panic!("Expected `Module`")
+                                    None => return Err(module.error(
+                                        call.args[1].source_range(),
+                                        "Expected `Module`"))
                                 }
                             }
-                            _ => panic!("Expected Rust object")
+                            _ => return Err(module.error(
+                                call.args[1].source_range(),
+                                "Expected `Module`"))
                         }
                     }
                 }
-                _ => panic!("Expected array argument")
+                _ => return Err(module.error(call.args[1].source_range(),
+                    "Expected array of `Module`"))
             }
             let v = match rt.resolve(&source) {
                 &Variable::Text(ref text) => {
-                    load(text, &mut module).unwrap_or_else(|err| {
-                        panic!("{}", err);
-                    });
+                    try!(load(text, &mut new_module).map_err(|err| {
+                            format!("{}\n{}", err,
+                                module.error(call.args[0].source_range(),
+                                "When attempting to load module:"))
+                        }));
                     Variable::RustObject(
-                        Arc::new(Mutex::new(module)))
+                        Arc::new(Mutex::new(new_module)))
                 }
-                _ => panic!("Expected text argument")
+                _ => return Err(module.error(call.args[0].source_range(),
+                    "Expected array of `Module`"))
             };
             rt.stack.push(v);
             rt.pop_fn(call.name.clone());

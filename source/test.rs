@@ -6,6 +6,6 @@ fn main() {
 */
 
 fn main() {
-    m := load("source/context/n_body_context.rs")
+    m := load(source: "source/context/n_body_context.rs", imports: [])
     call(m, "start", ["source/context/n_body_test.rs"])
 }
