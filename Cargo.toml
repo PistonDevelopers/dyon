@@ -1,5 +1,5 @@
 [package]
-name = "dynamo"
+name = "dyon"
 version = "0.1.0"
 authors = ["Sven Nilsen <bvssvni@gmail.com>"]
 keywords = ["script", "scripting", "game", "language", "piston"]
