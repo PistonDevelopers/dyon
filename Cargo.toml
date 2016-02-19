@@ -6,8 +6,8 @@ keywords = ["script", "scripting", "game", "language", "piston"]
 description = "A rusty dynamically typed scripting language"
 license = "MIT"
 readme = "README.md"
-repository = "https://github.com/pistondevelopers/dynamo.git"
-homepage = "https://github.com/pistondevelopers/dynamo"
+repository = "https://github.com/pistondevelopers/dyon.git"
+homepage = "https://github.com/pistondevelopers/dyon"
 
 [dependencies]
 piston_meta = "0.26.1"
