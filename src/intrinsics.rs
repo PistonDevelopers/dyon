@@ -4,125 +4,126 @@ use rand::Rng;
 
 use runtime::{Expect, Flow, Runtime, Side};
 use ast;
+use prelude::{ArgConstraint, PreludeFunction};
 
 use Variable;
 use Module;
 
-pub fn standard() -> HashMap<Arc<String>, Intrinsic> {
-    let mut i: HashMap<Arc<String>, Intrinsic> = HashMap::new();
-    i.insert(Arc::new("println".into()), Intrinsic {
+pub fn standard() -> HashMap<Arc<String>, PreludeFunction> {
+    let mut i: HashMap<Arc<String>, PreludeFunction> = HashMap::new();
+    i.insert(Arc::new("println".into()), PreludeFunction {
         arg_constraints: vec![ArgConstraint::Default],
         returns: false
     });
-    i.insert(Arc::new("print".into()), Intrinsic {
+    i.insert(Arc::new("print".into()), PreludeFunction {
         arg_constraints: vec![ArgConstraint::Default],
         returns: false
     });
-    i.insert(Arc::new("clone".into()), Intrinsic {
+    i.insert(Arc::new("clone".into()), PreludeFunction {
         arg_constraints: vec![ArgConstraint::Default],
         returns: false
     });
-    i.insert(Arc::new("debug".into()), Intrinsic {
+    i.insert(Arc::new("debug".into()), PreludeFunction {
         arg_constraints: vec![],
         returns: false
     });
-    i.insert(Arc::new("backtrace".into()), Intrinsic {
+    i.insert(Arc::new("backtrace".into()), PreludeFunction {
         arg_constraints: vec![],
         returns: false
     });
-    i.insert(Arc::new("sleep".into()), Intrinsic {
+    i.insert(Arc::new("sleep".into()), PreludeFunction {
         arg_constraints: vec![ArgConstraint::Default],
         returns: false
     });
-    i.insert(Arc::new("round".into()), Intrinsic {
+    i.insert(Arc::new("round".into()), PreludeFunction {
         arg_constraints: vec![ArgConstraint::Default],
         returns: true
     });
-    i.insert(Arc::new("random".into()), Intrinsic {
+    i.insert(Arc::new("random".into()), PreludeFunction {
         arg_constraints: vec![],
         returns: true
     });
-    i.insert(Arc::new("read_number".into()), Intrinsic {
+    i.insert(Arc::new("read_number".into()), PreludeFunction {
         arg_constraints: vec![ArgConstraint::Default],
         returns: true
     });
-    i.insert(Arc::new("read_line".into()), Intrinsic {
+    i.insert(Arc::new("read_line".into()), PreludeFunction {
         arg_constraints: vec![],
         returns: true
     });
-    i.insert(Arc::new("len".into()), Intrinsic {
+    i.insert(Arc::new("len".into()), PreludeFunction {
         arg_constraints: vec![ArgConstraint::Default],
         returns: true
     });
-    i.insert(Arc::new("push".into()), Intrinsic {
+    i.insert(Arc::new("push".into()), PreludeFunction {
         arg_constraints: vec![ArgConstraint::Default, ArgConstraint::Arg(0)],
         returns: false
     });
-    i.insert(Arc::new("trim_right".into()), Intrinsic {
+    i.insert(Arc::new("trim_right".into()), PreludeFunction {
         arg_constraints: vec![ArgConstraint::Default],
         returns: true
     });
-    i.insert(Arc::new("to_string".into()), Intrinsic {
+    i.insert(Arc::new("to_string".into()), PreludeFunction {
         arg_constraints: vec![ArgConstraint::Default],
         returns: true
     });
-    i.insert(Arc::new("typeof".into()), Intrinsic {
+    i.insert(Arc::new("typeof".into()), PreludeFunction {
         arg_constraints: vec![ArgConstraint::Default],
         returns: true
     });
-    i.insert(Arc::new("sqrt".into()), Intrinsic {
+    i.insert(Arc::new("sqrt".into()), PreludeFunction {
         arg_constraints: vec![ArgConstraint::Default],
         returns: true
     });
-    i.insert(Arc::new("sin".into()), Intrinsic {
+    i.insert(Arc::new("sin".into()), PreludeFunction {
         arg_constraints: vec![ArgConstraint::Default],
         returns: true
     });
-    i.insert(Arc::new("asin".into()), Intrinsic {
+    i.insert(Arc::new("asin".into()), PreludeFunction {
         arg_constraints: vec![ArgConstraint::Default],
         returns: true
     });
-    i.insert(Arc::new("cos".into()), Intrinsic {
+    i.insert(Arc::new("cos".into()), PreludeFunction {
         arg_constraints: vec![ArgConstraint::Default],
         returns: true
     });
-    i.insert(Arc::new("acos".into()), Intrinsic {
+    i.insert(Arc::new("acos".into()), PreludeFunction {
         arg_constraints: vec![ArgConstraint::Default],
         returns: true
     });
-    i.insert(Arc::new("tan".into()), Intrinsic {
+    i.insert(Arc::new("tan".into()), PreludeFunction {
         arg_constraints: vec![ArgConstraint::Default],
         returns: true
     });
-    i.insert(Arc::new("atan".into()), Intrinsic {
+    i.insert(Arc::new("atan".into()), PreludeFunction {
         arg_constraints: vec![ArgConstraint::Default],
         returns: true
     });
-    i.insert(Arc::new("exp".into()), Intrinsic {
+    i.insert(Arc::new("exp".into()), PreludeFunction {
         arg_constraints: vec![ArgConstraint::Default],
         returns: true
     });
-    i.insert(Arc::new("ln".into()), Intrinsic {
+    i.insert(Arc::new("ln".into()), PreludeFunction {
         arg_constraints: vec![ArgConstraint::Default],
         returns: true
     });
-    i.insert(Arc::new("log2".into()), Intrinsic {
+    i.insert(Arc::new("log2".into()), PreludeFunction {
         arg_constraints: vec![ArgConstraint::Default],
         returns: true
     });
-    i.insert(Arc::new("log10".into()), Intrinsic {
+    i.insert(Arc::new("log10".into()), PreludeFunction {
         arg_constraints: vec![ArgConstraint::Default],
         returns: true
     });
-    i.insert(Arc::new("load".into()), Intrinsic {
+    i.insert(Arc::new("load".into()), PreludeFunction {
         arg_constraints: vec![ArgConstraint::Default],
         returns: true
     });
-    i.insert(Arc::new("load_source_imports".into()), Intrinsic {
+    i.insert(Arc::new("load_source_imports".into()), PreludeFunction {
         arg_constraints: vec![ArgConstraint::Default; 2],
         returns: true
     });
-    i.insert(Arc::new("call".into()), Intrinsic {
+    i.insert(Arc::new("call".into()), PreludeFunction {
         arg_constraints: vec![ArgConstraint::Default; 3],
         returns: true
     });
@@ -587,17 +588,4 @@ pub fn call_standard(
         _ => panic!("Unknown function `{}`", call.name)
     };
     Ok((expect, Flow::Continue))
-}
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum ArgConstraint {
-    Arg(usize),
-    Return,
-    Default,
-}
-
-#[derive(Debug, Clone)]
-pub struct Intrinsic {
-    pub arg_constraints: Vec<ArgConstraint>,
-    pub returns: bool,
 }

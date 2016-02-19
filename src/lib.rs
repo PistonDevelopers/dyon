@@ -8,12 +8,14 @@ use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 use range::Range;
 
-use lifetime::Prelude;
-
 pub mod ast;
 pub mod runtime;
 pub mod lifetime;
 pub mod intrinsics;
+pub mod prelude;
+
+pub use runtime::Runtime;
+pub use prelude::{ArgConstraint, Prelude, PreludeFunction};
 
 pub type Object = HashMap<Arc<String>, Variable>;
 pub type Array = Vec<Variable>;
@@ -124,6 +126,19 @@ pub fn load(source: &str, module: &mut Module) -> Result<(), String> {
     }
 
     Ok(())
+}
+
+/// Reports and error to standard output.
+pub fn error(res: Result<(), String>) -> bool {
+    match res {
+        Err(err) => {
+            println!("");
+            println!(" --- ERROR --- ");
+            println!("{}", err);
+            true
+        }
+        Ok(()) => false
+    }
 }
 
 #[cfg(test)]
