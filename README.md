@@ -1,4 +1,4 @@
-# dynamo
+# dyon
 A rusty dynamically typed scripting language
 
 ## License
