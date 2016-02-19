@@ -33,6 +33,23 @@ pub enum Variable {
     RustObject(Arc<Mutex<Any>>),
 }
 
+impl PartialEq for Variable {
+    fn eq(&self, other: &Variable) -> bool {
+        match (self, other) {
+            (&Variable::Return, _) => false,
+            (&Variable::Bool(a), &Variable::Bool(b)) => a == b,
+            (&Variable::F64(a), &Variable::F64(b)) => a == b,
+            (&Variable::Text(ref a), &Variable::Text(ref b)) => a == b,
+            (&Variable::Object(ref a), &Variable::Object(ref b)) => a == b,
+            (&Variable::Array(ref a), &Variable::Array(ref b)) => a == b,
+            (&Variable::Ref(_), _) => false,
+            (&Variable::UnsafeRef(_), _) => false,
+            (&Variable::RustObject(_), _) => false,
+            _ => false,
+        }
+    }
+}
+
 pub struct Module {
     pub source: Option<String>,
     pub functions: HashMap<Arc<String>, Arc<ast::Function>>,

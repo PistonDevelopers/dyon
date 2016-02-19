@@ -1,11 +1,13 @@
 extern crate dyon;
 extern crate piston_window;
 extern crate current;
+extern crate timer_controller;
 
 use std::sync::Arc;
 use piston_window::*;
 use current::{Current, CurrentGuard};
 use dyon::{error, load, ArgConstraint, Module, PreludeFunction, Runtime, Variable};
+use timer_controller::Timer;
 
 fn main() {
     let window: PistonWindow =
@@ -14,31 +16,61 @@ fn main() {
         .samples(4)
         .build()
         .unwrap();
-    let mut dyon_module = Module::new();
-    dyon_module.add(Arc::new("render".into()), dyon_render, PreludeFunction {
-        arg_constraints: vec![],
-        returns: true
-    });
-    dyon_module.add(Arc::new("clear".into()), dyon_clear, PreludeFunction {
-        arg_constraints: vec![ArgConstraint::Default],
-        returns: false
-    });
-    dyon_module.add(Arc::new("rectangle_color_rect".into()),
-        dyon_rectangle_color_rect, PreludeFunction {
-            arg_constraints: vec![ArgConstraint::Default; 2],
-            returns: false
-        });
-    if error(load("source/piston_window/square.rs", &mut dyon_module)) {
-        return;
-    }
+    let mut dyon_module = match load_module() {
+        None => return,
+        Some(m) => m
+    };
     let mut dyon_runtime = Runtime::new();
 
+    let mut timer = Timer::new(0.25);
+    let mut got_error = false;
+
     for mut e in window {
+        timer.event(&e, || {
+            if !got_error {
+                dyon_module = match load_module() {
+                    None => {
+                        println!(" ~~~ Hit F1 to reload ~~~ ");
+                        got_error = true;
+                        return;
+                    }
+                    Some(m) => {
+                        m
+                    }
+                };
+            }
+        });
+        if let Some(Button::Keyboard(Key::F1)) = e.press_args() {
+            println!(" ~~~ Reloading ~~~ ");
+            got_error = false;
+        }
         let e_guard = CurrentGuard::new(&mut e);
         if error(dyon_runtime.run(&dyon_module)) {
             break;
         }
         drop(e_guard);
+    }
+}
+
+fn load_module() -> Option<Module> {
+    let mut module = Module::new();
+    module.add(Arc::new("render".into()), dyon_render, PreludeFunction {
+        arg_constraints: vec![],
+        returns: true
+    });
+    module.add(Arc::new("clear".into()), dyon_clear, PreludeFunction {
+        arg_constraints: vec![ArgConstraint::Default],
+        returns: false
+    });
+    module.add(Arc::new("rectangle_color_rect".into()),
+        dyon_rectangle_color_rect, PreludeFunction {
+            arg_constraints: vec![ArgConstraint::Default; 2],
+            returns: false
+        });
+    if error(load("source/piston_window/square.rs", &mut module)) {
+        None
+    } else {
+        Some(module)
     }
 }
 

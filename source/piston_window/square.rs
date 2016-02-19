@@ -3,6 +3,14 @@ fn main() {
 
     if render() {
         clear(background_color)
-        rectangle(color: [1, 0, 0, 1], rect: [0, 0, 100, 100])
+        square(100, 100)
+    }
+}
+
+fn square(x, y) {
+    s := 20
+    for i := 0; i < 10; i += 1 {
+        rectangle(color: [0.7 * random(), 0.5 * random(), 1 * random(), 0.1],
+            rect: [i * s + x - 50, i * s + y - 50, 100, 100])
     }
 }
