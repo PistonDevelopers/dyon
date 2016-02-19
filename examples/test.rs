@@ -1,12 +1,7 @@
 extern crate dyon;
 
+use dyon::{error, run};
+
 fn main() {
-    match dyon::run("source/test.rs") {
-        Err(err) => {
-            println!("");
-            println!(" --- ERROR --- ");
-            println!("{}", err);
-        }
-        Ok(()) => {}
-    }
+    error(run("source/test.rs"));
 }

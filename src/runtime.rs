@@ -353,6 +353,15 @@ impl Runtime {
                         intrinsics::call_standard(self, call, module)
                     }
                     Some(&(ref f, ref pr)) => {
+                        for arg in &call.args {
+                            match try!(self.expression(arg, Side::Right, module)) {
+                                (x, Flow::Return) => { return Ok((x, Flow::Return)); }
+                                (Expect::Something, Flow::Continue) => {}
+                                _ => return Err(module.error(arg.source_range(),
+                                                "Expected something. \
+                                                Expression did not return a value."))
+                            };
+                        }
                         try!(f(self).map_err(|err|
                             module.error(call.source_range, &err)));
                         if pr.returns {
