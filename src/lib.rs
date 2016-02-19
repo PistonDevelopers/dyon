@@ -8,12 +8,14 @@ use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 use range::Range;
 
-use lifetime::Prelude;
-
 pub mod ast;
 pub mod runtime;
 pub mod lifetime;
 pub mod intrinsics;
+pub mod prelude;
+
+pub use runtime::Runtime;
+pub use prelude::{ArgConstraint, Prelude, PreludeFunction};
 
 pub type Object = HashMap<Arc<String>, Variable>;
 pub type Array = Vec<Variable>;
@@ -31,10 +33,11 @@ pub enum Variable {
     RustObject(Arc<Mutex<Any>>),
 }
 
-#[derive(Debug)]
 pub struct Module {
     pub source: Option<String>,
     pub functions: HashMap<Arc<String>, Arc<ast::Function>>,
+    pub ext_prelude: HashMap<Arc<String>,
+        (fn(&mut Runtime) -> Result<(), String>, PreludeFunction)>,
 }
 
 impl Module {
@@ -42,6 +45,7 @@ impl Module {
         Module {
             source: None,
             functions: HashMap::new(),
+            ext_prelude: HashMap::new(),
         }
     }
 
@@ -57,6 +61,16 @@ impl Module {
             .write_msg(&mut w, range, &format!("{}", msg))
             .unwrap();
         String::from_utf8(w).unwrap()
+    }
+
+    /// Adds a new extended prelude function.
+    pub fn add(
+        &mut self,
+        name: Arc<String>,
+        f: fn(&mut Runtime) -> Result<(), String>,
+        prelude_function: PreludeFunction
+    ) {
+        self.ext_prelude.insert(name.clone(), (f, prelude_function));
     }
 }
 
@@ -124,6 +138,19 @@ pub fn load(source: &str, module: &mut Module) -> Result<(), String> {
     }
 
     Ok(())
+}
+
+/// Reports and error to standard output.
+pub fn error(res: Result<(), String>) -> bool {
+    match res {
+        Err(err) => {
+            println!("");
+            println!(" --- ERROR --- ");
+            println!("{}", err);
+            true
+        }
+        Ok(()) => false
+    }
 }
 
 #[cfg(test)]
