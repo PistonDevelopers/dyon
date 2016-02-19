@@ -966,6 +966,24 @@ impl Runtime {
                                 x.symbol())))
                         })
                     }
+                    (&Variable::Object(ref b), &Variable::Object(ref a)) => {
+                        Variable::Bool(match compare.op {
+                            Equal => a == b,
+                            NotEqual => a != b,
+                            x => return Err(module.error(compare.source_range,
+                                &format!("`{}` can not be used with objects",
+                                x.symbol())))
+                        })
+                    }
+                    (&Variable::Array(ref b), &Variable::Array(ref a)) => {
+                        Variable::Bool(match compare.op {
+                            Equal => a == b,
+                            NotEqual => a != b,
+                            x => return Err(module.error(compare.source_range,
+                                &format!("`{}` can not be used with arrays",
+                                x.symbol())))
+                        })
+                    }
                     (b, a) => return Err(module.error(compare.source_range,
                         &format!(
                         "`{}` can not be used with `{}` and `{}`",

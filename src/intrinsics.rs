@@ -463,6 +463,9 @@ pub fn call_standard(
             let v = match rt.resolve(&v) {
                 &Variable::Text(ref text) => {
                     let mut m = Module::new();
+                    for (key, &(ref f, ref ext)) in &module.ext_prelude {
+                        m.add(key.clone(), *f, ext.clone());
+                    }
                     try!(load(text, &mut m).map_err(|err| {
                             format!("{}\n{}", err,
                                 module.error(call.args[0].source_range(),
@@ -484,6 +487,9 @@ pub fn call_standard(
             let modules = rt.stack.pop().expect("There is no value on the stack");
             let source = rt.stack.pop().expect("There is no value on the stack");
             let mut new_module = Module::new();
+            for (key, &(ref f, ref ext)) in &module.ext_prelude {
+                new_module.add(key.clone(), *f, ext.clone());
+            }
             match rt.resolve(&modules) {
                 &Variable::Array(ref array) => {
                     for it in array {
