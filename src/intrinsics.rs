@@ -9,125 +9,123 @@ use prelude::{ArgConstraint, PreludeFunction};
 use Variable;
 use Module;
 
-pub fn standard() -> HashMap<Arc<String>, PreludeFunction> {
-    let mut i: HashMap<Arc<String>, PreludeFunction> = HashMap::new();
-    i.insert(Arc::new("println".into()), PreludeFunction {
+pub fn standard(f: &mut HashMap<Arc<String>, PreludeFunction>) {
+    f.insert(Arc::new("println".into()), PreludeFunction {
         arg_constraints: vec![ArgConstraint::Default],
         returns: false
     });
-    i.insert(Arc::new("print".into()), PreludeFunction {
+    f.insert(Arc::new("print".into()), PreludeFunction {
         arg_constraints: vec![ArgConstraint::Default],
         returns: false
     });
-    i.insert(Arc::new("clone".into()), PreludeFunction {
+    f.insert(Arc::new("clone".into()), PreludeFunction {
         arg_constraints: vec![ArgConstraint::Default],
         returns: false
     });
-    i.insert(Arc::new("debug".into()), PreludeFunction {
+    f.insert(Arc::new("debug".into()), PreludeFunction {
         arg_constraints: vec![],
         returns: false
     });
-    i.insert(Arc::new("backtrace".into()), PreludeFunction {
+    f.insert(Arc::new("backtrace".into()), PreludeFunction {
         arg_constraints: vec![],
         returns: false
     });
-    i.insert(Arc::new("sleep".into()), PreludeFunction {
+    f.insert(Arc::new("sleep".into()), PreludeFunction {
         arg_constraints: vec![ArgConstraint::Default],
         returns: false
     });
-    i.insert(Arc::new("round".into()), PreludeFunction {
+    f.insert(Arc::new("round".into()), PreludeFunction {
         arg_constraints: vec![ArgConstraint::Default],
         returns: true
     });
-    i.insert(Arc::new("random".into()), PreludeFunction {
+    f.insert(Arc::new("random".into()), PreludeFunction {
         arg_constraints: vec![],
         returns: true
     });
-    i.insert(Arc::new("read_number".into()), PreludeFunction {
+    f.insert(Arc::new("read_number".into()), PreludeFunction {
         arg_constraints: vec![ArgConstraint::Default],
         returns: true
     });
-    i.insert(Arc::new("read_line".into()), PreludeFunction {
+    f.insert(Arc::new("read_line".into()), PreludeFunction {
         arg_constraints: vec![],
         returns: true
     });
-    i.insert(Arc::new("len".into()), PreludeFunction {
+    f.insert(Arc::new("len".into()), PreludeFunction {
         arg_constraints: vec![ArgConstraint::Default],
         returns: true
     });
-    i.insert(Arc::new("push".into()), PreludeFunction {
+    f.insert(Arc::new("push".into()), PreludeFunction {
         arg_constraints: vec![ArgConstraint::Default, ArgConstraint::Arg(0)],
         returns: false
     });
-    i.insert(Arc::new("trim_right".into()), PreludeFunction {
+    f.insert(Arc::new("trim_right".into()), PreludeFunction {
         arg_constraints: vec![ArgConstraint::Default],
         returns: true
     });
-    i.insert(Arc::new("to_string".into()), PreludeFunction {
+    f.insert(Arc::new("to_string".into()), PreludeFunction {
         arg_constraints: vec![ArgConstraint::Default],
         returns: true
     });
-    i.insert(Arc::new("typeof".into()), PreludeFunction {
+    f.insert(Arc::new("typeof".into()), PreludeFunction {
         arg_constraints: vec![ArgConstraint::Default],
         returns: true
     });
-    i.insert(Arc::new("sqrt".into()), PreludeFunction {
+    f.insert(Arc::new("sqrt".into()), PreludeFunction {
         arg_constraints: vec![ArgConstraint::Default],
         returns: true
     });
-    i.insert(Arc::new("sin".into()), PreludeFunction {
+    f.insert(Arc::new("sin".into()), PreludeFunction {
         arg_constraints: vec![ArgConstraint::Default],
         returns: true
     });
-    i.insert(Arc::new("asin".into()), PreludeFunction {
+    f.insert(Arc::new("asin".into()), PreludeFunction {
         arg_constraints: vec![ArgConstraint::Default],
         returns: true
     });
-    i.insert(Arc::new("cos".into()), PreludeFunction {
+    f.insert(Arc::new("cos".into()), PreludeFunction {
         arg_constraints: vec![ArgConstraint::Default],
         returns: true
     });
-    i.insert(Arc::new("acos".into()), PreludeFunction {
+    f.insert(Arc::new("acos".into()), PreludeFunction {
         arg_constraints: vec![ArgConstraint::Default],
         returns: true
     });
-    i.insert(Arc::new("tan".into()), PreludeFunction {
+    f.insert(Arc::new("tan".into()), PreludeFunction {
         arg_constraints: vec![ArgConstraint::Default],
         returns: true
     });
-    i.insert(Arc::new("atan".into()), PreludeFunction {
+    f.insert(Arc::new("atan".into()), PreludeFunction {
         arg_constraints: vec![ArgConstraint::Default],
         returns: true
     });
-    i.insert(Arc::new("exp".into()), PreludeFunction {
+    f.insert(Arc::new("exp".into()), PreludeFunction {
         arg_constraints: vec![ArgConstraint::Default],
         returns: true
     });
-    i.insert(Arc::new("ln".into()), PreludeFunction {
+    f.insert(Arc::new("ln".into()), PreludeFunction {
         arg_constraints: vec![ArgConstraint::Default],
         returns: true
     });
-    i.insert(Arc::new("log2".into()), PreludeFunction {
+    f.insert(Arc::new("log2".into()), PreludeFunction {
         arg_constraints: vec![ArgConstraint::Default],
         returns: true
     });
-    i.insert(Arc::new("log10".into()), PreludeFunction {
+    f.insert(Arc::new("log10".into()), PreludeFunction {
         arg_constraints: vec![ArgConstraint::Default],
         returns: true
     });
-    i.insert(Arc::new("load".into()), PreludeFunction {
+    f.insert(Arc::new("load".into()), PreludeFunction {
         arg_constraints: vec![ArgConstraint::Default],
         returns: true
     });
-    i.insert(Arc::new("load_source_imports".into()), PreludeFunction {
+    f.insert(Arc::new("load_source_imports".into()), PreludeFunction {
         arg_constraints: vec![ArgConstraint::Default; 2],
         returns: true
     });
-    i.insert(Arc::new("call".into()), PreludeFunction {
+    f.insert(Arc::new("call".into()), PreludeFunction {
         arg_constraints: vec![ArgConstraint::Default; 3],
         returns: true
     });
-    i
 }
 
 fn deep_clone(v: &Variable, stack: &Vec<Variable>) -> Variable {

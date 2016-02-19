@@ -348,7 +348,20 @@ impl Runtime {
     ) -> Result<(Expect, Flow), String> {
         match module.functions.get(&call.name) {
             None => {
-                intrinsics::call_standard(self, call, module)
+                match module.ext_prelude.get(&call.name) {
+                    None => {
+                        intrinsics::call_standard(self, call, module)
+                    }
+                    Some(&(ref f, ref pr)) => {
+                        try!(f(self).map_err(|err|
+                            module.error(call.source_range, &err)));
+                        if pr.returns {
+                            return Ok((Expect::Something, Flow::Continue));
+                        } else {
+                            return Ok((Expect::Nothing, Flow::Continue));
+                        }
+                    }
+                }
             }
             Some(ref f) => {
                 if call.args.len() != f.args.len() {

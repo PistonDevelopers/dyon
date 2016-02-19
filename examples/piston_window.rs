@@ -5,7 +5,7 @@ extern crate current;
 use std::sync::Arc;
 use piston_window::*;
 use current::{Current, CurrentGuard};
-use dyon::{error, intrinsics, load, Module, PreludeFunction, Runtime, Variable};
+use dyon::{error, load, ArgConstraint, Module, PreludeFunction, Runtime, Variable};
 
 fn main() {
     let window: PistonWindow =
@@ -15,10 +15,13 @@ fn main() {
         .build()
         .unwrap();
     let mut dyon_module = Module::new();
-    let mut intrinsics = intrinsics::standard();
-    intrinsics.insert(Arc::new("render".into()), PreludeFunction {
+    dyon_module.add(Arc::new("render".into()), dyon_render, PreludeFunction {
         arg_constraints: vec![],
         returns: true
+    });
+    dyon_module.add(Arc::new("clear".into()), dyon_clear, PreludeFunction {
+        arg_constraints: vec![ArgConstraint::Default],
+        returns: false
     });
     if error(load("source/piston_window/square.rs", &mut dyon_module)) {
         return;
@@ -34,7 +37,47 @@ fn main() {
     }
 }
 
-fn render(_args: &[Variable]) -> Variable {
+fn dyon_render(rt: &mut Runtime) -> Result<(), String> {
     let e = unsafe { &*Current::<PistonWindow>::new() };
-    Variable::Bool(e.render_args().is_some())
+    push_bool(rt, e.render_args().is_some());
+    Ok(())
+}
+
+fn push_bool(rt: &mut Runtime, val: bool) {
+    rt.stack.push(Variable::Bool(val))
+}
+
+fn pop_color(rt: &mut Runtime) -> Result<[f32; 4], String> {
+    let color = rt.stack.pop().expect("Expected color");
+    match rt.resolve(&color) {
+        &Variable::Array(ref arr) => {
+            let r = match arr[0] {
+                Variable::F64(r) => r,
+                _ => return Err("Expected number".into())
+            };
+            let g = match arr[1] {
+                Variable::F64(r) => r,
+                _ => return Err("Expected number".into())
+            };
+            let b = match arr[2] {
+                Variable::F64(r) => r,
+                _ => return Err("Expected number".into())
+            };
+            let a = match arr[3] {
+                Variable::F64(r) => r,
+                _ => return Err("Expected number".into())
+            };
+            Ok([r as f32, g as f32, b as f32, a as f32])
+        }
+        _ => panic!("Expected array")
+    }
+}
+
+fn dyon_clear(rt: &mut Runtime) -> Result<(), String> {
+    let e = unsafe { &mut *Current::<PistonWindow>::new() };
+    let color = try!(pop_color(rt));
+    e.draw_2d(|_c, g| {
+        clear(color, g);
+    });
+    Ok(())
 }

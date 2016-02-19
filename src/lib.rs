@@ -33,10 +33,11 @@ pub enum Variable {
     RustObject(Arc<Mutex<Any>>),
 }
 
-#[derive(Debug)]
 pub struct Module {
     pub source: Option<String>,
     pub functions: HashMap<Arc<String>, Arc<ast::Function>>,
+    pub ext_prelude: HashMap<Arc<String>,
+        (fn(&mut Runtime) -> Result<(), String>, PreludeFunction)>,
 }
 
 impl Module {
@@ -44,6 +45,7 @@ impl Module {
         Module {
             source: None,
             functions: HashMap::new(),
+            ext_prelude: HashMap::new(),
         }
     }
 
@@ -59,6 +61,16 @@ impl Module {
             .write_msg(&mut w, range, &format!("{}", msg))
             .unwrap();
         String::from_utf8(w).unwrap()
+    }
+
+    /// Adds a new extended prelude function.
+    pub fn add(
+        &mut self,
+        name: Arc<String>,
+        f: fn(&mut Runtime) -> Result<(), String>,
+        prelude_function: PreludeFunction
+    ) {
+        self.ext_prelude.insert(name.clone(), (f, prelude_function));
     }
 }
 

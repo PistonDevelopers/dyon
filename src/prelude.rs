@@ -2,6 +2,7 @@ use std::sync::Arc;
 use std::collections::HashMap;
 
 use ast;
+use intrinsics;
 use Module;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -13,6 +14,7 @@ pub enum ArgConstraint {
 
 /// Stores preloaded function constraints.
 /// These are already checked.
+#[derive(Clone)]
 pub struct PreludeFunction {
     pub arg_constraints: Vec<ArgConstraint>,
     pub returns: bool,
@@ -50,14 +52,12 @@ pub struct Prelude {
 }
 
 impl Prelude {
-    pub fn new() -> Prelude {
-        Prelude {
-            functions: HashMap::new()
-        }
-    }
-
     pub fn from_module(module: &Module) -> Prelude {
         let mut functions = HashMap::new();
+        intrinsics::standard(&mut functions);
+        for (key, &(_, ref val)) in &module.ext_prelude {
+            functions.insert(key.clone(), val.clone());
+        }
         for f in module.functions.values() {
             functions.insert(f.name.clone(), PreludeFunction::new(f));
         }

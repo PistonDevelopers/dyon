@@ -7,7 +7,6 @@ use std::cmp::{PartialOrd, Ordering};
 use self::piston_meta::MetaData;
 use self::range::Range;
 
-use intrinsics;
 use prelude::{ArgConstraint, Prelude};
 
 pub fn check(
@@ -228,9 +227,6 @@ pub fn check(
         }
     }
 
-    // List all intrinsic functions.
-    let intrinsics = intrinsics::standard();
-
     // Check for duplicate function arguments.
     let mut arg_names: HashSet<Arc<String>> = HashSet::new();
     for &f in &functions {
@@ -278,16 +274,6 @@ pub fn check(
                 match prelude.functions.get(name) {
                     Some(pf) => {
                         node.arg_constraints = pf.arg_constraints.clone();
-                        continue;
-                    }
-                    None => {}
-                }
-                // Check whether it is an intrinsic operation.
-                match intrinsics.get(name) {
-                    Some(intr) => {
-                        // Copy argument constraints to use when computing
-                        // lifetimes.
-                        node.arg_constraints = intr.arg_constraints.clone();
                         if node.arg_constraints.len() != n {
                             return Err(node.source.wrap(
                                 format!("{}: Expected {} arguments, found {}",
