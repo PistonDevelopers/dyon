@@ -1,7 +1,7 @@
-extern crate dynamo;
+extern crate dyon;
 
 fn main() {
-    match dynamo::run("source/test.rs") {
+    match dyon::run("source/test.rs") {
         Err(err) => {
             println!("");
             println!(" --- ERROR --- ");
