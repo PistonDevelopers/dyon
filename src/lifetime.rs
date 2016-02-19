@@ -340,11 +340,11 @@ pub fn check(
                     None => {}
                 }
                 // Check whether it is an intrinsic operation.
-                match intrinsics.get(&***name) {
+                match intrinsics.get(name) {
                     Some(intr) => {
                         // Copy argument constraints to use when computing
                         // lifetimes.
-                        node.arg_constraints = intr.arg_constraints.into();
+                        node.arg_constraints = intr.arg_constraints.clone();
                         if node.arg_constraints.len() != n {
                             return Err(node.source.wrap(
                                 format!("{}: Expected {} arguments, found {}",

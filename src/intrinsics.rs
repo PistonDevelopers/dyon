@@ -8,38 +8,124 @@ use ast;
 use Variable;
 use Module;
 
-pub fn standard() -> HashMap<&'static str, Intrinsic> {
-    let mut i: HashMap<&'static str, Intrinsic> = HashMap::new();
-    i.insert("println", PRINTLN);
-    i.insert("print", PRINT);
-    i.insert("clone", CLONE);
-    i.insert("debug", DEBUG);
-    i.insert("backtrace", BACKTRACE);
-    i.insert("sleep", SLEEP);
-    i.insert("round", ROUND);
-    i.insert("random", RANDOM);
-    i.insert("read_number", READ_NUMBER);
-    i.insert("read_line", READ_LINE);
-    i.insert("len", LEN);
-    i.insert("push", PUSH);
-    i.insert("trim_right", TRIM_RIGHT);
-    i.insert("to_string", TO_STRING);
-    i.insert("typeof", TYPEOF);
-    i.insert("sqrt", SQRT);
-    i.insert("sin", SIN);
-    i.insert("asin", ASIN);
-    i.insert("cos", COS);
-    i.insert("acos", ACOS);
-    i.insert("tan", TAN);
-    i.insert("atan", ATAN);
-    i.insert("exp", EXP);
-    i.insert("ln", LN);
-    i.insert("log2", LOG2);
-    i.insert("log10", LOG10);
-    i.insert("random", RANDOM);
-    i.insert("load", LOAD);
-    i.insert("load_source_imports", LOAD_SOURCE_IMPORTS);
-    i.insert("call", CALL);
+pub fn standard() -> HashMap<Arc<String>, Intrinsic> {
+    let mut i: HashMap<Arc<String>, Intrinsic> = HashMap::new();
+    i.insert(Arc::new("println".into()), Intrinsic {
+        arg_constraints: vec![ArgConstraint::Default],
+        returns: false
+    });
+    i.insert(Arc::new("print".into()), Intrinsic {
+        arg_constraints: vec![ArgConstraint::Default],
+        returns: false
+    });
+    i.insert(Arc::new("clone".into()), Intrinsic {
+        arg_constraints: vec![ArgConstraint::Default],
+        returns: false
+    });
+    i.insert(Arc::new("debug".into()), Intrinsic {
+        arg_constraints: vec![],
+        returns: false
+    });
+    i.insert(Arc::new("backtrace".into()), Intrinsic {
+        arg_constraints: vec![],
+        returns: false
+    });
+    i.insert(Arc::new("sleep".into()), Intrinsic {
+        arg_constraints: vec![ArgConstraint::Default],
+        returns: false
+    });
+    i.insert(Arc::new("round".into()), Intrinsic {
+        arg_constraints: vec![ArgConstraint::Default],
+        returns: true
+    });
+    i.insert(Arc::new("random".into()), Intrinsic {
+        arg_constraints: vec![],
+        returns: true
+    });
+    i.insert(Arc::new("read_number".into()), Intrinsic {
+        arg_constraints: vec![ArgConstraint::Default],
+        returns: true
+    });
+    i.insert(Arc::new("read_line".into()), Intrinsic {
+        arg_constraints: vec![],
+        returns: true
+    });
+    i.insert(Arc::new("len".into()), Intrinsic {
+        arg_constraints: vec![ArgConstraint::Default],
+        returns: true
+    });
+    i.insert(Arc::new("push".into()), Intrinsic {
+        arg_constraints: vec![ArgConstraint::Default, ArgConstraint::Arg(0)],
+        returns: false
+    });
+    i.insert(Arc::new("trim_right".into()), Intrinsic {
+        arg_constraints: vec![ArgConstraint::Default],
+        returns: true
+    });
+    i.insert(Arc::new("to_string".into()), Intrinsic {
+        arg_constraints: vec![ArgConstraint::Default],
+        returns: true
+    });
+    i.insert(Arc::new("typeof".into()), Intrinsic {
+        arg_constraints: vec![ArgConstraint::Default],
+        returns: true
+    });
+    i.insert(Arc::new("sqrt".into()), Intrinsic {
+        arg_constraints: vec![ArgConstraint::Default],
+        returns: true
+    });
+    i.insert(Arc::new("sin".into()), Intrinsic {
+        arg_constraints: vec![ArgConstraint::Default],
+        returns: true
+    });
+    i.insert(Arc::new("asin".into()), Intrinsic {
+        arg_constraints: vec![ArgConstraint::Default],
+        returns: true
+    });
+    i.insert(Arc::new("cos".into()), Intrinsic {
+        arg_constraints: vec![ArgConstraint::Default],
+        returns: true
+    });
+    i.insert(Arc::new("acos".into()), Intrinsic {
+        arg_constraints: vec![ArgConstraint::Default],
+        returns: true
+    });
+    i.insert(Arc::new("tan".into()), Intrinsic {
+        arg_constraints: vec![ArgConstraint::Default],
+        returns: true
+    });
+    i.insert(Arc::new("atan".into()), Intrinsic {
+        arg_constraints: vec![ArgConstraint::Default],
+        returns: true
+    });
+    i.insert(Arc::new("exp".into()), Intrinsic {
+        arg_constraints: vec![ArgConstraint::Default],
+        returns: true
+    });
+    i.insert(Arc::new("ln".into()), Intrinsic {
+        arg_constraints: vec![ArgConstraint::Default],
+        returns: true
+    });
+    i.insert(Arc::new("log2".into()), Intrinsic {
+        arg_constraints: vec![ArgConstraint::Default],
+        returns: true
+    });
+    i.insert(Arc::new("log10".into()), Intrinsic {
+        arg_constraints: vec![ArgConstraint::Default],
+        returns: true
+    });
+    i.insert(Arc::new("load".into()), Intrinsic {
+        arg_constraints: vec![ArgConstraint::Default],
+        returns: true
+    });
+    i.insert(Arc::new("load_source_imports".into()), Intrinsic {
+        arg_constraints: vec![ArgConstraint::Default; 2],
+        returns: true
+    });
+    i.insert(Arc::new("call".into()), Intrinsic {
+        arg_constraints: vec![ArgConstraint::Default; 3],
+        returns: true
+    });
     i
 }
 
@@ -510,153 +596,8 @@ pub enum ArgConstraint {
     Default,
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Clone)]
 pub struct Intrinsic {
-    pub arg_constraints: &'static [ArgConstraint],
+    pub arg_constraints: Vec<ArgConstraint>,
     pub returns: bool,
 }
-
-static PRINTLN: Intrinsic = Intrinsic {
-    arg_constraints: &[ArgConstraint::Default],
-    returns: false
-};
-
-static PRINT: Intrinsic = Intrinsic {
-    arg_constraints: &[ArgConstraint::Default],
-    returns: false
-};
-
-static CLONE: Intrinsic = Intrinsic {
-    arg_constraints: &[ArgConstraint::Default],
-    returns: false
-};
-
-static DEBUG: Intrinsic = Intrinsic {
-    arg_constraints: &[],
-    returns: false
-};
-
-static BACKTRACE: Intrinsic = Intrinsic {
-    arg_constraints: &[],
-    returns: false
-};
-
-static SLEEP: Intrinsic = Intrinsic {
-    arg_constraints: &[ArgConstraint::Default],
-    returns: false
-};
-
-static ROUND: Intrinsic = Intrinsic {
-    arg_constraints: &[ArgConstraint::Default],
-    returns: true
-};
-
-static RANDOM: Intrinsic = Intrinsic {
-    arg_constraints: &[],
-    returns: true
-};
-
-static READ_NUMBER: Intrinsic = Intrinsic {
-    arg_constraints: &[ArgConstraint::Default],
-    returns: true
-};
-
-static READ_LINE: Intrinsic = Intrinsic {
-    arg_constraints: &[],
-    returns: true
-};
-
-static TRIM_RIGHT: Intrinsic = Intrinsic {
-    arg_constraints: &[ArgConstraint::Default],
-    returns: true
-};
-
-static LEN: Intrinsic = Intrinsic {
-    arg_constraints: &[ArgConstraint::Default],
-    returns: true
-};
-
-static PUSH: Intrinsic = Intrinsic {
-    arg_constraints: &[ArgConstraint::Default, ArgConstraint::Arg(0)],
-    returns: false
-};
-
-static SQRT: Intrinsic = Intrinsic {
-    arg_constraints: &[ArgConstraint::Default],
-    returns: true
-};
-
-static ASIN: Intrinsic = Intrinsic {
-    arg_constraints: &[ArgConstraint::Default],
-    returns: true
-};
-
-static SIN: Intrinsic = Intrinsic {
-    arg_constraints: &[ArgConstraint::Default],
-    returns: true
-};
-
-static COS: Intrinsic = Intrinsic {
-    arg_constraints: &[ArgConstraint::Default],
-    returns: true
-};
-
-static ACOS: Intrinsic = Intrinsic {
-    arg_constraints: &[ArgConstraint::Default],
-    returns: true
-};
-
-static TAN: Intrinsic = Intrinsic {
-    arg_constraints: &[ArgConstraint::Default],
-    returns: true
-};
-
-static ATAN: Intrinsic = Intrinsic {
-    arg_constraints: &[ArgConstraint::Default],
-    returns: true
-};
-
-static EXP: Intrinsic = Intrinsic {
-    arg_constraints: &[ArgConstraint::Default],
-    returns: true
-};
-
-static LN: Intrinsic = Intrinsic {
-    arg_constraints: &[ArgConstraint::Default],
-    returns: true
-};
-
-static LOG2: Intrinsic = Intrinsic {
-    arg_constraints: &[ArgConstraint::Default],
-    returns: true
-};
-
-static LOG10: Intrinsic = Intrinsic {
-    arg_constraints: &[ArgConstraint::Default],
-    returns: true
-};
-
-static TO_STRING: Intrinsic = Intrinsic {
-    arg_constraints: &[ArgConstraint::Default],
-    returns: true
-};
-
-static TYPEOF: Intrinsic = Intrinsic {
-    arg_constraints: &[ArgConstraint::Default],
-    returns: true
-};
-
-static LOAD: Intrinsic = Intrinsic {
-    arg_constraints: &[ArgConstraint::Default],
-    returns: true
-};
-
-static LOAD_SOURCE_IMPORTS: Intrinsic = Intrinsic {
-    arg_constraints: &[ArgConstraint::Default; 2],
-    returns: true
-};
-
-static CALL: Intrinsic = Intrinsic {
-    arg_constraints: &[ArgConstraint::Default; 3],
-    returns: true
-};
