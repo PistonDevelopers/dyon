@@ -3,5 +3,6 @@ fn main() {
 
     if render() {
         clear(background_color)
+        rectangle(color: [1, 0, 0, 1], rect: [0, 0, 100, 100])
     }
 }

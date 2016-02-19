@@ -23,6 +23,11 @@ fn main() {
         arg_constraints: vec![ArgConstraint::Default],
         returns: false
     });
+    dyon_module.add(Arc::new("rectangle_color_rect".into()),
+        dyon_rectangle_color_rect, PreludeFunction {
+            arg_constraints: vec![ArgConstraint::Default; 2],
+            returns: false
+        });
     if error(load("source/piston_window/square.rs", &mut dyon_module)) {
         return;
     }
@@ -51,25 +56,51 @@ fn pop_color(rt: &mut Runtime) -> Result<[f32; 4], String> {
     let color = rt.stack.pop().expect("Expected color");
     match rt.resolve(&color) {
         &Variable::Array(ref arr) => {
-            let r = match arr[0] {
-                Variable::F64(r) => r,
+            let r = match rt.resolve(&arr[0]) {
+                &Variable::F64(r) => r,
                 _ => return Err("Expected number".into())
             };
-            let g = match arr[1] {
-                Variable::F64(r) => r,
+            let g = match rt.resolve(&arr[1]) {
+                &Variable::F64(r) => r,
                 _ => return Err("Expected number".into())
             };
-            let b = match arr[2] {
-                Variable::F64(r) => r,
+            let b = match rt.resolve(&arr[2]) {
+                &Variable::F64(r) => r,
                 _ => return Err("Expected number".into())
             };
-            let a = match arr[3] {
-                Variable::F64(r) => r,
+            let a = match rt.resolve(&arr[3]) {
+                &Variable::F64(r) => r,
                 _ => return Err("Expected number".into())
             };
             Ok([r as f32, g as f32, b as f32, a as f32])
         }
-        _ => panic!("Expected array")
+        _ => return Err("Expected color".into())
+    }
+}
+
+fn pop_rect(rt: &mut Runtime) -> Result<[f64; 4], String> {
+    let v = rt.stack.pop().expect("Expected rect");
+    match rt.resolve(&v) {
+        &Variable::Array(ref arr) => {
+            let x = match rt.resolve(&arr[0]) {
+                &Variable::F64(x) => x,
+                _ => return Err("Expected number".into())
+            };
+            let y = match rt.resolve(&arr[1]) {
+                &Variable::F64(y) => y,
+                _ => return Err("Expected number".into())
+            };
+            let w = match rt.resolve(&arr[2]) {
+                &Variable::F64(w) => w,
+                _ => return Err("Expected number".into())
+            };
+            let h = match rt.resolve(&arr[3]) {
+                &Variable::F64(h) => h,
+                _ => return Err("Expected number".into())
+            };
+            Ok([x, y, w, h])
+        }
+        _ => return Err("Expected rect".into())
     }
 }
 
@@ -78,6 +109,16 @@ fn dyon_clear(rt: &mut Runtime) -> Result<(), String> {
     let color = try!(pop_color(rt));
     e.draw_2d(|_c, g| {
         clear(color, g);
+    });
+    Ok(())
+}
+
+fn dyon_rectangle_color_rect(rt: &mut Runtime) -> Result<(), String> {
+    let e = unsafe { &mut *Current::<PistonWindow>::new() };
+    let rect = try!(pop_rect(rt));
+    let color = try!(pop_color(rt));
+    e.draw_2d(|c, g| {
+        rectangle(color, rect, c.transform, g);
     });
     Ok(())
 }
