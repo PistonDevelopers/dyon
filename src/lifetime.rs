@@ -419,7 +419,7 @@ pub fn check(
                         let lifetime_right = nodes[right].lifetime(&nodes, &arg_names);
                         try!(compare_lifetimes(
                             lifetime_left, lifetime_right, &nodes)
-                                .map_err(|err| arg.source.wrap(err))
+                                .map_err(|err| nodes[right].source.wrap(err))
                         );
                     }
                 }
@@ -446,7 +446,7 @@ pub fn check(
                         let lifetime_right = nodes[right].lifetime(&nodes, &arg_names);
                         try!(compare_lifetimes(
                             lifetime_left, lifetime_right, &nodes)
-                                .map_err(|err| arg.source.wrap(err))
+                                .map_err(|err| nodes[right].source.wrap(err))
                         );
                     }
                 }
