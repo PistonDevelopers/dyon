@@ -29,11 +29,11 @@ _seps: "(){}[],.:;=<>*+-/%^"
     compare:"compare"
     ["return":"return_void"]
     add:"add"
-    named_call:"named_call"
     ["(" ?w expr ?w ")"]
     unop:"unop"
-    call:"call"
     text
+    call:"call"
+    named_call:"named_call"
     num
     bool
     item:"item"
@@ -47,11 +47,11 @@ _seps: "(){}[],.:;=<>*+-/%^"
     block:"block"
     compare:"compare"
     add:"add"
-    named_call:"named_call"
     ["(" ?w expr ?w ")"]
     unop:"unop"
-    call:"call"
     text
+    call:"call"
+    named_call:"named_call"
     num
     bool
     item:"item"
@@ -61,11 +61,11 @@ _seps: "(){}[],.:;=<>*+-/%^"
     array:"array"
     array_fill:"array_fill"
     block:"block"
-    named_call:"named_call"
     ["(" ?w expr ?w ")"]
     unop:"unop"
-    call:"call"
     text
+    call:"call"
+    named_call:"named_call"
     num
     bool
     item:"item"
