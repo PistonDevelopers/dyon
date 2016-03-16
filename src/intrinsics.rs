@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use rand::Rng;
+use piston_meta::json;
 
 use runtime::{Expect, Flow, Runtime, Side};
 use ast;
@@ -164,10 +165,24 @@ fn deep_clone(v: &Variable, stack: &Vec<Variable>) -> Variable {
     }
 }
 
-fn print_variable(rt: &Runtime, v: &Variable) {
+enum EscapeString {
+    Json,
+    None
+}
+
+fn print_variable(rt: &Runtime, v: &Variable, escape_string: EscapeString) {
     match *rt.resolve(v) {
         Variable::Text(ref t) => {
-            print!("{}", t);
+            match escape_string {
+                EscapeString::Json => {
+                    let mut w: Vec<u8> = vec![];
+                    json::write_string(&mut w, t).unwrap();
+                    print!("{}", String::from_utf8(w).unwrap());
+                }
+                EscapeString::None => {
+                    print!("{}", t)
+                }
+            }
         }
         Variable::F64(x) => {
             print!("{}", x);
@@ -176,14 +191,14 @@ fn print_variable(rt: &Runtime, v: &Variable) {
             print!("{}", x);
         }
         Variable::Ref(ind) => {
-            print_variable(rt, &rt.stack[ind]);
+            print_variable(rt, &rt.stack[ind], escape_string);
         }
         Variable::Object(ref obj) => {
             print!("{{");
             let n = obj.len();
             for (i, (k, v)) in obj.iter().enumerate() {
                 print!("{}: ", k);
-                print_variable(rt, v);
+                print_variable(rt, v, EscapeString::Json);
                 if i + 1 < n {
                     print!(", ");
                 }
@@ -194,7 +209,7 @@ fn print_variable(rt: &Runtime, v: &Variable) {
             print!("[");
             let n = arr.len();
             for (i, v) in arr.iter().enumerate() {
-                print_variable(rt, v);
+                print_variable(rt, v, EscapeString::Json);
                 if i + 1 < n {
                     print!(", ");
                 }
@@ -208,7 +223,7 @@ fn print_variable(rt: &Runtime, v: &Variable) {
                 }
                 &Some(ref v) => {
                     print!("some(");
-                    print_variable(rt, v);
+                    print_variable(rt, v, EscapeString::Json);
                     print!(")");
                 }
             }
@@ -247,7 +262,7 @@ pub fn call_standard(
             rt.push_fn(call.name.clone(), st, lc);
             let x = rt.stack.pop()
                 .expect("There is no value on the stack");
-            print_variable(rt, &x);
+            print_variable(rt, &x, EscapeString::None);
             println!("");
             rt.pop_fn(call.name.clone());
             Expect::Nothing
@@ -256,7 +271,7 @@ pub fn call_standard(
             rt.push_fn(call.name.clone(), st, lc);
             let x = rt.stack.pop()
                 .expect("There is no value on the stack");
-            print_variable(rt, &x);
+            print_variable(rt, &x, EscapeString::None);
             rt.pop_fn(call.name.clone());
             Expect::Nothing
         }
