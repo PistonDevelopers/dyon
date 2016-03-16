@@ -1,3 +1,27 @@
+fn print_function(f) {
+    print(f.name)
+    print("(")
+    n := len(f.arguments)
+    for i := 0; i < n; i += 1 {
+        print(f.arguments[i].name)
+        if (i + 1) < n {
+            print(", ")
+        }
+    }
+    print(")")
+    if f.returns {
+        print(" ->")
+    }
+    println("")
+}
+
+fn foo() -> {}
+
 fn main() {
-    println(":")
+    fs := functions()
+    n := len(fs)
+    for i := 0; i < n; i += 1 {
+        print(function: fs[i])
+    }
+    println(fs)
 }

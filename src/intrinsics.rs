@@ -126,6 +126,10 @@ pub fn standard(f: &mut HashMap<Arc<String>, PreludeFunction>) {
         arg_constraints: vec![ArgConstraint::Default; 3],
         returns: true
     });
+    f.insert(Arc::new("functions".into()), PreludeFunction {
+        arg_constraints: vec![],
+        returns: true
+    });
 }
 
 fn deep_clone(v: &Variable, stack: &Vec<Variable>) -> Variable {
@@ -588,6 +592,32 @@ pub fn call_standard(
 
             rt.pop_fn(call.name.clone());
             Expect::Nothing
+        }
+        "functions" => {
+            // List available functions in scope.
+            rt.push_fn(call.name.clone(), st + 1, lc);
+            let mut functions = vec![];
+            let name: Arc<String> = Arc::new("name".into());
+            let arguments: Arc<String> = Arc::new("arguments".into());
+            let returns: Arc<String> = Arc::new("returns".into());
+            for f in module.functions.values() {
+                let mut obj = HashMap::new();
+                obj.insert(name.clone(), Variable::Text(f.name.clone()));
+                obj.insert(returns.clone(), Variable::Bool(f.returns));
+                let mut args = vec![];
+                for arg in &f.args {
+                    let mut obj_arg = HashMap::new();
+                    obj_arg.insert(name.clone(),
+                        Variable::Text(arg.name.clone()));
+                    args.push(Variable::Object(obj_arg));
+                }
+                obj.insert(arguments.clone(), Variable::Array(args));
+                functions.push(Variable::Object(obj));
+            }
+            let v = Variable::Array(functions);
+            rt.stack.push(v);
+            rt.pop_fn(call.name.clone());
+            Expect::Something
         }
         _ => panic!("Unknown function `{}`", call.name)
     };
