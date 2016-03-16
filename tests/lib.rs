@@ -152,3 +152,8 @@ fn test_println_colon() {
 fn test_print_functions() {
     test_src("source/print_functions.rs");
 }
+
+#[test]
+fn test_some() {
+    test_src("source/some.rs");
+}
