@@ -201,6 +201,18 @@ fn print_variable(rt: &Runtime, v: &Variable) {
             }
             print!("]");
         }
+        Variable::Option(ref opt) => {
+            match opt {
+                &None => {
+                    print!("none()")
+                }
+                &Some(ref v) => {
+                    print!("some(");
+                    print_variable(rt, v);
+                    print!(")");
+                }
+            }
+        }
         ref x => panic!("Could not print out `{:?}`", x)
     }
 }
@@ -603,6 +615,7 @@ pub fn call_standard(
             let name: Arc<String> = Arc::new("name".into());
             let arguments: Arc<String> = Arc::new("arguments".into());
             let returns: Arc<String> = Arc::new("returns".into());
+            let lifetime: Arc<String> = Arc::new("lifetime".into());
             for f in module.functions.values() {
                 let mut obj = HashMap::new();
                 obj.insert(name.clone(), Variable::Text(f.name.clone()));
@@ -612,6 +625,14 @@ pub fn call_standard(
                     let mut obj_arg = HashMap::new();
                     obj_arg.insert(name.clone(),
                         Variable::Text(arg.name.clone()));
+                    obj_arg.insert(lifetime.clone(),
+                        match arg.lifetime {
+                            None => Variable::Option(None),
+                            Some(ref lt) => Variable::Option(Some(Box::new(
+                                    Variable::Text(lt.clone())
+                                )))
+                        }
+                    );
                     args.push(Variable::Object(obj_arg));
                 }
                 obj.insert(arguments.clone(), Variable::Array(args));

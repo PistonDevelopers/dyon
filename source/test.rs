@@ -15,7 +15,7 @@ fn print_function(f) {
     println("")
 }
 
-fn foo() -> {}
+fn foo(a: 'b, b) -> {}
 
 fn main() {
     fs := functions()
