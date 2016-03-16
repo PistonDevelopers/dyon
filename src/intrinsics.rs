@@ -131,6 +131,10 @@ pub fn standard(f: &mut HashMap<Arc<String>, PreludeFunction>) {
         arg_constraints: vec![],
         returns: true
     });
+    f.insert(Arc::new("none".into()), PreludeFunction {
+        arg_constraints: vec![],
+        returns: true
+    });
 }
 
 fn deep_clone(v: &Variable, stack: &Vec<Variable>) -> Variable {
@@ -670,6 +674,10 @@ pub fn call_standard(
             let v = Variable::Array(functions);
             rt.stack.push(v);
             rt.pop_fn(call.name.clone());
+            Expect::Something
+        }
+        "none" => {
+            rt.stack.push(Variable::Option(None));
             Expect::Something
         }
         _ => panic!("Unknown function `{}`", call.name)

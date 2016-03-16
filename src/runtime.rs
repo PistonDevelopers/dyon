@@ -923,6 +923,103 @@ impl Runtime {
         compare: &ast::Compare,
         module: &Module
     ) -> Result<Flow, String> {
+        fn sub_compare(
+            rt: &Runtime,
+            compare: &ast::Compare,
+            module: &Module,
+            a: &Variable,
+            b: &Variable
+        ) -> Result<bool, String> {
+            use ast::CompareOp::*;
+
+            match (rt.resolve(&b), rt.resolve(&a)) {
+                (&Variable::F64(b), &Variable::F64(a)) => {
+                    Ok(match compare.op {
+                        Less => a < b,
+                        LessOrEqual => a <= b,
+                        Greater => a > b,
+                        GreaterOrEqual => a >= b,
+                        Equal => a == b,
+                        NotEqual => a != b
+                    })
+                }
+                (&Variable::Text(ref b), &Variable::Text(ref a)) => {
+                    Ok(match compare.op {
+                        Less => a < b,
+                        LessOrEqual => a <= b,
+                        Greater => a > b,
+                        GreaterOrEqual => a >= b,
+                        Equal => a == b,
+                        NotEqual => a != b
+                    })
+                }
+                (&Variable::Bool(b), &Variable::Bool(a)) => {
+                    Ok(match compare.op {
+                        Equal => a == b,
+                        NotEqual => a != b,
+                        x => return Err(module.error(compare.source_range,
+                            &format!("`{}` can not be used with bools",
+                            x.symbol())))
+                    })
+                }
+                (&Variable::Object(ref b), &Variable::Object(ref a)) => {
+                    Ok(match compare.op {
+                        Equal => a == b,
+                        NotEqual => a != b,
+                        x => return Err(module.error(compare.source_range,
+                            &format!("`{}` can not be used with objects",
+                            x.symbol())))
+                    })
+                }
+                (&Variable::Array(ref b), &Variable::Array(ref a)) => {
+                    Ok(match compare.op {
+                        Equal => a == b,
+                        NotEqual => a != b,
+                        x => return Err(module.error(compare.source_range,
+                            &format!("`{}` can not be used with arrays",
+                            x.symbol())))
+                    })
+                }
+                (&Variable::Option(None), &Variable::Option(None)) => {
+                    Ok(match compare.op {
+                        Equal => true,
+                        NotEqual => false,
+                        x => return Err(module.error(compare.source_range,
+                            &format!("`{}` can not be used with options",
+                            x.symbol())))
+                    })
+                }
+                (&Variable::Option(None), &Variable::Option(_)) => {
+                    Ok(match compare.op {
+                        Equal => false,
+                        NotEqual => true,
+                        x => return Err(module.error(compare.source_range,
+                            &format!("`{}` can not be used with options",
+                            x.symbol())))
+                    })
+                }
+                (&Variable::Option(_), &Variable::Option(None)) => {
+                    Ok(match compare.op {
+                        Equal => false,
+                        NotEqual => true,
+                        x => return Err(module.error(compare.source_range,
+                            &format!("`{}` can not be used with options",
+                            x.symbol())))
+                    })
+                }
+                (&Variable::Option(Some(ref b)),
+                 &Variable::Option(Some(ref a))) => {
+                    sub_compare(rt, compare, module, a, b)
+                }
+                (b, a) => return Err(module.error(compare.source_range,
+                    &format!(
+                    "`{}` can not be used with `{}` and `{}`",
+                    compare.op.symbol(),
+                    rt.typeof_var(a),
+                    rt.typeof_var(b))))
+            }
+        }
+
         match try!(self.expression(&compare.left, Side::Right, module)) {
             (_, Flow::Return) => { return Ok(Flow::Return); }
             (Expect::Something, Flow::Continue) => {}
@@ -937,64 +1034,8 @@ impl Runtime {
         };
         match (self.stack.pop(), self.stack.pop()) {
             (Some(b), Some(a)) => {
-                use ast::CompareOp::*;
-
-                let v = match (self.resolve(&b), self.resolve(&a)) {
-                    (&Variable::F64(b), &Variable::F64(a)) => {
-                        Variable::Bool(match compare.op {
-                            Less => a < b,
-                            LessOrEqual => a <= b,
-                            Greater => a > b,
-                            GreaterOrEqual => a >= b,
-                            Equal => a == b,
-                            NotEqual => a != b
-                        })
-                    }
-                    (&Variable::Text(ref b), &Variable::Text(ref a)) => {
-                        Variable::Bool(match compare.op {
-                            Less => a < b,
-                            LessOrEqual => a <= b,
-                            Greater => a > b,
-                            GreaterOrEqual => a >= b,
-                            Equal => a == b,
-                            NotEqual => a != b
-                        })
-                    }
-                    (&Variable::Bool(b), &Variable::Bool(a)) => {
-                        Variable::Bool(match compare.op {
-                            Equal => a == b,
-                            NotEqual => a != b,
-                            x => return Err(module.error(compare.source_range,
-                                &format!("`{}` can not be used with bools",
-                                x.symbol())))
-                        })
-                    }
-                    (&Variable::Object(ref b), &Variable::Object(ref a)) => {
-                        Variable::Bool(match compare.op {
-                            Equal => a == b,
-                            NotEqual => a != b,
-                            x => return Err(module.error(compare.source_range,
-                                &format!("`{}` can not be used with objects",
-                                x.symbol())))
-                        })
-                    }
-                    (&Variable::Array(ref b), &Variable::Array(ref a)) => {
-                        Variable::Bool(match compare.op {
-                            Equal => a == b,
-                            NotEqual => a != b,
-                            x => return Err(module.error(compare.source_range,
-                                &format!("`{}` can not be used with arrays",
-                                x.symbol())))
-                        })
-                    }
-                    (b, a) => return Err(module.error(compare.source_range,
-                        &format!(
-                        "`{}` can not be used with `{}` and `{}`",
-                        compare.op.symbol(),
-                        self.typeof_var(a),
-                        self.typeof_var(b))))
-                };
-                self.stack.push(v)
+                let v = try!(sub_compare(self, compare, module, &a, &b));
+                self.stack.push(Variable::Bool(v))
             }
             _ => panic!("Expected two variables on the stack")
         }
