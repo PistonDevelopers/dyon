@@ -1,7 +1,7 @@
 extern crate piston_meta;
-extern crate dynamo;
+extern crate dyon;
 
-use dynamo::*;
+use dyon::*;
 
 pub fn test_src(source: &str) {
     let mut module = Module::new();
@@ -15,7 +15,7 @@ pub fn debug_src(source: &str) {
     load(source, &mut module).unwrap_or_else(|err| {
         panic!("{}", err);
     });
-    panic!("{:?}", module);
+    panic!("{:?}", module.functions);
 }
 
 #[test]
@@ -141,4 +141,9 @@ fn test_typeof() {
 #[test]
 fn test_load_module() {
     test_src("source/load_module.rs");
+}
+
+#[test]
+fn test_println_colon() {
+    test_src("source/println_colon.rs");
 }
