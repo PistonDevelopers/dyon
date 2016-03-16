@@ -53,6 +53,7 @@ pub struct Runtime {
     pub ref_type: Variable,
     pub unsafe_ref_type: Variable,
     pub rust_object_type: Variable,
+    pub option_type: Variable,
 }
 
 fn resolve<'a>(stack: &'a Vec<Variable>, var: &'a Variable) -> &'a Variable {
@@ -186,6 +187,7 @@ impl Runtime {
             ref_type: Variable::Text(Arc::new("ref".into())),
             unsafe_ref_type: Variable::Text(Arc::new("unsafe_ref".into())),
             rust_object_type: Variable::Text(Arc::new("rust_object".into())),
+            option_type: Variable::Text(Arc::new("option".into())),
         }
     }
 
@@ -908,6 +910,7 @@ impl Runtime {
             &Variable::Ref(_) => self.ref_type.clone(),
             &Variable::UnsafeRef(_) => self.unsafe_ref_type.clone(),
             &Variable::RustObject(_) => self.rust_object_type.clone(),
+            &Variable::Option(_) => self.option_type.clone(),
         };
         match v {
             Variable::Text(v) => v,

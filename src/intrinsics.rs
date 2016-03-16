@@ -158,7 +158,9 @@ fn deep_clone(v: &Variable, stack: &Vec<Variable>) -> Variable {
             deep_clone(&stack[ind], stack)
         }
         UnsafeRef(_) => panic!("Unsafe reference can not be cloned"),
-        RustObject(_) => v.clone()
+        RustObject(_) => v.clone(),
+        Option(None) => Variable::Option(None),
+        Option(Some(ref v)) => deep_clone(v, stack)
     }
 }
 
@@ -441,6 +443,7 @@ pub fn call_standard(
                 &Variable::Ref(_) => rt.ref_type.clone(),
                 &Variable::UnsafeRef(_) => rt.unsafe_ref_type.clone(),
                 &Variable::RustObject(_) => rt.rust_object_type.clone(),
+                &Variable::Option(_) => rt.option_type.clone(),
             };
             rt.stack.push(v);
             rt.pop_fn(call.name.clone());

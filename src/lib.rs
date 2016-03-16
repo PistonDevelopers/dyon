@@ -31,6 +31,7 @@ pub enum Variable {
     Ref(usize),
     UnsafeRef(*mut Variable),
     RustObject(Arc<Mutex<Any>>),
+    Option(Option<Box<Variable>>),
 }
 
 impl PartialEq for Variable {
