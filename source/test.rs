@@ -5,8 +5,7 @@ fn print_function(f) {
     for i := 0; i < n; i += 1 {
         print(f.arguments[i].name)
         if f.arguments[i].lifetime != none() {
-            print(":")
-            // print(": '" + unwrap(f.arguments[i].lifetime))
+            print(": '" + unwrap(f.arguments[i].lifetime))
         }
         if (i + 1) < n {
             print(", ")
@@ -28,6 +27,4 @@ fn main() {
         print(function: fs[i])
     }
     println(fs)
-
-    println(none())
 }
