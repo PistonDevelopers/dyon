@@ -147,3 +147,8 @@ fn test_load_module() {
 fn test_println_colon() {
     test_src("source/println_colon.rs");
 }
+
+#[test]
+fn test_print_functions() {
+    test_src("source/print_functions.rs");
+}
