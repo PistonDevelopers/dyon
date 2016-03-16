@@ -646,6 +646,7 @@ pub fn call_standard(
             let ret_lifetime: Arc<String> = Arc::new("return".into());
             let ty: Arc<String> = Arc::new("type".into());
             let intrinsic: Arc<String> = Arc::new("intrinsic".into());
+            let external: Arc<String> = Arc::new("external".into());
             let loaded: Arc<String> = Arc::new("loaded".into());
             let mut intrinsics = HashMap::new();
             standard(&mut intrinsics);
@@ -654,6 +655,32 @@ pub fn call_standard(
                 obj.insert(name.clone(), Variable::Text(f_name.clone()));
                 obj.insert(returns.clone(), Variable::Bool(f.returns));
                 obj.insert(ty.clone(), Variable::Text(intrinsic.clone()));
+                let mut args = vec![];
+                for (i, arg_constraint) in f.arg_constraints.iter().enumerate() {
+                    let mut obj_arg = HashMap::new();
+                    obj_arg.insert(name.clone(),
+                        Variable::Text(Arc::new(format!("arg{}", i).into())));
+                    obj_arg.insert(lifetime.clone(), match *arg_constraint {
+                        ArgConstraint::Default => Variable::Option(None),
+                        ArgConstraint::Arg(ind) => Variable::Option(Some(
+                                Box::new(Variable::Text(
+                                    Arc::new(format!("arg{}", ind).into())
+                                ))
+                            )),
+                        ArgConstraint::Return => Variable::Option(Some(
+                                Box::new(Variable::Text(ret_lifetime.clone()))
+                            )),
+                    });
+                    args.push(Variable::Object(obj_arg));
+                }
+                obj.insert(arguments.clone(), Variable::Array(args));
+                functions.push(Variable::Object(obj));
+            }
+            for (f_name, &(_, ref f)) in &module.ext_prelude {
+                let mut obj = HashMap::new();
+                obj.insert(name.clone(), Variable::Text(f_name.clone()));
+                obj.insert(returns.clone(), Variable::Bool(f.returns));
+                obj.insert(ty.clone(), Variable::Text(external.clone()));
                 let mut args = vec![];
                 for (i, arg_constraint) in f.arg_constraints.iter().enumerate() {
                     let mut obj_arg = HashMap::new();

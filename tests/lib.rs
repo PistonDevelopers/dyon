@@ -150,7 +150,7 @@ fn test_println_colon() {
 
 #[test]
 fn test_print_functions() {
-    test_src("source/print_functions.rs");
+    test_src("source/functions/print_functions.rs");
 }
 
 #[test]
