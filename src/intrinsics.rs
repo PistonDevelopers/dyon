@@ -617,6 +617,20 @@ pub fn call_standard(
                 obj.insert(arguments.clone(), Variable::Array(args));
                 functions.push(Variable::Object(obj));
             }
+            // Sort by function names.
+            functions.sort_by(|a, b|
+                match (a, b) {
+                    (&Variable::Object(ref a), &Variable::Object(ref b)) => {
+                        match (&a[&name], &b[&name]) {
+                            (&Variable::Text(ref a), &Variable::Text(ref b)) => {
+                                a.cmp(b)
+                            }
+                            _ => panic!("Expected two strings")
+                        }
+                    }
+                    _ => panic!("Expected two objects")
+                }
+            );
             let v = Variable::Array(functions);
             rt.stack.push(v);
             rt.pop_fn(call.name.clone());
