@@ -137,7 +137,7 @@ pub fn standard(f: &mut HashMap<Arc<String>, PreludeFunction>) {
         returns: true
     });
     f.insert(Arc::new("unwrap".into()), PreludeFunction {
-        arg_constraints: vec![ArgConstraint::Return],
+        arg_constraints: vec![ArgConstraint::Default],
         returns: true
     });
     f.insert(Arc::new("some".into()), PreludeFunction {
@@ -803,6 +803,8 @@ pub fn call_standard(
             Expect::Something
         }
         "unwrap" => {
+            // Return value does not depend on lifetime of argument since
+            // `ok(x)` and `some(x)` perform a deep clone.
             rt.push_fn(call.name.clone(), st + 1, lc);
             let v = rt.stack.pop().expect("There is no value on the stack");
             let v = match rt.resolve(&v) {

@@ -1,7 +1,8 @@
+fn foo() -> {
+    return unwrap(ok(none()))
+}
+
 fn main() {
-    x := err("hi")
-    // x = ok({first_name: "Sven", last_name: "Nilsen"})
+    x := foo()
     println(x)
-    x := unwrap(x)
-    println(x.first_name)
 }
