@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
+use std::io;
 use rand::Rng;
 use piston_meta::json;
 
@@ -196,80 +197,92 @@ enum EscapeString {
     None
 }
 
-fn print_variable(rt: &Runtime, v: &Variable, escape_string: EscapeString) {
+
+fn write_variable<W>(
+    w: &mut W,
+    rt: &Runtime,
+    v: &Variable,
+    escape_string: EscapeString
+) -> Result<(), io::Error>
+    where W: io::Write
+{
     match *rt.resolve(v) {
         Variable::Text(ref t) => {
             match escape_string {
                 EscapeString::Json => {
-                    let mut w: Vec<u8> = vec![];
-                    json::write_string(&mut w, t).unwrap();
-                    print!("{}", String::from_utf8(w).unwrap());
+                    try!(json::write_string(w, t));
                 }
                 EscapeString::None => {
-                    print!("{}", t)
+                    try!(write!(w, "{}", t))
                 }
             }
         }
         Variable::F64(x) => {
-            print!("{}", x);
+            try!(write!(w, "{}", x));
         }
         Variable::Bool(x) => {
-            print!("{}", x);
+            try!(write!(w, "{}", x));
         }
         Variable::Ref(ind) => {
             print_variable(rt, &rt.stack[ind], escape_string);
         }
         Variable::Object(ref obj) => {
-            print!("{{");
+            try!(write!(w, "{{"));
             let n = obj.len();
             for (i, (k, v)) in obj.iter().enumerate() {
-                print!("{}: ", k);
-                print_variable(rt, v, EscapeString::Json);
+                try!(write!(w, "{}: ", k));
+                try!(write_variable(w, rt, v, EscapeString::Json));
                 if i + 1 < n {
-                    print!(", ");
+                    try!(write!(w, ", "));
                 }
             }
-            print!("}}");
+            try!(write!(w, "}}"));
         }
         Variable::Array(ref arr) => {
-            print!("[");
+            try!(write!(w, "["));
             let n = arr.len();
             for (i, v) in arr.iter().enumerate() {
-                print_variable(rt, v, EscapeString::Json);
+                try!(write_variable(w, rt, v, EscapeString::Json));
                 if i + 1 < n {
-                    print!(", ");
+                    try!(write!(w, ", "));
                 }
             }
-            print!("]");
+            try!(write!(w, "]"));
         }
         Variable::Option(ref opt) => {
             match opt {
                 &None => {
-                    print!("none()")
+                    try!(write!(w, "none()"))
                 }
                 &Some(ref v) => {
-                    print!("some(");
-                    print_variable(rt, v, EscapeString::Json);
-                    print!(")");
+                    try!(write!(w, "some("));
+                    try!(write_variable(w, rt, v, EscapeString::Json));
+                    try!(write!(w, ")"));
                 }
             }
         }
         Variable::Result(ref res) => {
             match res {
                 &Err(ref err) => {
-                    print!("err(");
-                    print_variable(rt, &err.message, EscapeString::Json);
-                    print!(")");
+                    try!(write!(w, "err("));
+                    try!(write_variable(w, rt, &err.message,
+                                        EscapeString::Json));
+                    try!(write!(w, ")"));
                 }
                 &Ok(ref ok) => {
-                    print!("ok(");
-                    print_variable(rt, ok, EscapeString::Json);
-                    print!(")");
+                    try!(write!(w, "ok("));
+                    try!(write_variable(w, rt, ok, EscapeString::Json));
+                    try!(write!(w, ")"));
                 }
             }
         }
         ref x => panic!("Could not print out `{:?}`", x)
     }
+    Ok(())
+}
+
+fn print_variable(rt: &Runtime, v: &Variable, escape_string: EscapeString) {
+    write_variable(&mut io::stdout(), rt, v, escape_string).unwrap();
 }
 
 pub fn call_standard(
@@ -814,10 +827,15 @@ pub fn call_standard(
                                             "Expected `some(_)`"));
                 }
                 &Variable::Result(Ok(ref ok)) => (**ok).clone(),
-                &Variable::Result(Err(ref _err)) => {
-                    // TODO: Print out error message.
+                &Variable::Result(Err(ref err)) => {
+                    use std::str::from_utf8;
+
+                    // Print out error message.
+                    let mut w: Vec<u8> = vec![];
+                    write_variable(&mut w, rt, &err.message,
+                                   EscapeString::None).unwrap();
                     return Err(module.error(call.args[0].source_range(),
-                                            "ERROR"));
+                                            from_utf8(&w).unwrap()));
                 }
                 _ => {
                     return Err(module.error(call.args[0].source_range(),

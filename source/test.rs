@@ -1,6 +1,6 @@
 fn foo_val(a) -> {
-    // return err("hi")
-    return ok(a + 3)
+    return err("hi")
+    // return ok(a + 3)
 }
 
 fn bar_val(a) -> {
@@ -9,6 +9,6 @@ fn bar_val(a) -> {
 }
 
 fn main() {
-    x := bar(val: 0)
+    x := unwrap(bar(val: 1))
     println(x)
 }
