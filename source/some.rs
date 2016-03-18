@@ -1,6 +1,6 @@
 fn foo() -> {
     x := [5]
-    return clone(some(x))
+    return some(x)
 }
 
 fn main() {

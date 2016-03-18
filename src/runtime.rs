@@ -794,6 +794,37 @@ impl Runtime {
                                 }
                             }
                         }
+                        &Variable::Option(ref opt) => {
+                            unsafe {
+                                match *r {
+                                    Variable::Option(ref mut n) => {
+                                        if let Set = op {
+                                            // Check address to avoid unsafe
+                                            // reading and writing to same memory.
+                                            let n_addr = n as *const _ as usize;
+                                            let obj_addr = opt as *const _ as usize;
+                                            if n_addr != obj_addr {
+                                                *r = b.clone()
+                                            }
+                                        } else {
+                                            unimplemented!()
+                                        }
+                                    }
+                                    Variable::Return => {
+                                        if let Set = op {
+                                            *r = Variable::Option(opt.clone())
+                                        } else {
+                                            return Err(module.error(
+                                                left.source_range(),
+                                                "Return has no value"))
+                                        }
+                                    }
+                                    _ => return Err(module.error(
+                                        left.source_range(),
+                                        "Expected assigning to option"))
+                                }
+                            }
+                        }
                         _ => unimplemented!()
                     };
                     Ok(Flow::Continue)

@@ -140,7 +140,7 @@ pub fn standard(f: &mut HashMap<Arc<String>, PreludeFunction>) {
         returns: true
     });
     f.insert(Arc::new("some".into()), PreludeFunction {
-        arg_constraints: vec![ArgConstraint::Return],
+        arg_constraints: vec![ArgConstraint::Default],
         returns: true
     });
 }
@@ -173,7 +173,7 @@ fn deep_clone(v: &Variable, stack: &Vec<Variable>) -> Variable {
         UnsafeRef(_) => panic!("Unsafe reference can not be cloned"),
         RustObject(_) => v.clone(),
         Option(None) => Variable::Option(None),
-        Option(Some(ref v)) => deep_clone(v, stack)
+        Option(Some(ref v)) => Option(Some(Box::new(deep_clone(v, stack))))
     }
 }
 
@@ -751,6 +751,7 @@ pub fn call_standard(
         "some" => {
             rt.push_fn(call.name.clone(), st + 1, lc);
             let v = rt.stack.pop().expect("There is no value on the stack");
+            let v = deep_clone(rt.resolve(&v), &rt.stack);
             rt.stack.push(Variable::Option(Some(Box::new(v))));
             rt.pop_fn(call.name.clone());
             Expect::Something
