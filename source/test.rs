@@ -1,16 +1,12 @@
-fn bar() -> {
-    return err(3)
-}
-
-fn foo(x) {
-    y := bar()?
-    println(y)
+fn div(x, y) -> {
+    if y == 0 {
+        return err("division by zero")
+    } else {
+        return ok(x / y)
+    }
 }
 
 fn main() {
-    // x := err(5)?
-    x := {a: ok([err(2)])}
-    y := x.a?[0]?
-    println(y)
-    // foo({a: err(5)})
+    println(div(3, 0))
+    println(div(2, 3))
 }

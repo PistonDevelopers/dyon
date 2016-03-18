@@ -39,7 +39,7 @@ _seps: "(){}[],.:;=<>*+-/%^?"
     item:"item"
 } ?[?w "?":"try"]]
 // Interprets "return" as variable, does not expect loops or assignment.
-5 arg_expr = {
+5 arg_expr = [{
     object:"object"
     array:"array"
     array_fill:"array_fill"
@@ -55,8 +55,8 @@ _seps: "(){}[],.:;=<>*+-/%^?"
     num
     bool
     item:"item"
-}
-6 lexpr = {
+} ?[?w "?":"try"]]
+6 lexpr = [{
     object:"object"
     array:"array"
     array_fill:"array_fill"
@@ -69,7 +69,7 @@ _seps: "(){}[],.:;=<>*+-/%^?"
     num
     bool
     item:"item"
-}
+} ?[?w "?":"try"]]
 7 object = ["{" ?w .s?.([?w "," ?w] key_value:"key_value") ?w "}"]
 8 array = ["[" ?w .s?.([?w "," ?w] expr:"array_item") ?w "]"]
 9 array_fill = ["[" ?w [expr:"fill" ?w ";" ?w expr:"n"] ?w "]"]

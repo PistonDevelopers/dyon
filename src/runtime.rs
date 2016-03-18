@@ -980,8 +980,14 @@ impl Runtime {
                     }
                 }
             }
-            return Err(module.error(item.source_range, &format!(
-                "Could not find local variable `{}`", name)));
+            if name == "return" {
+                return Err(module.error(item.source_range, &format!(
+                    "Requires `->` on function `{}`",
+                    &self.call_stack.last().unwrap().0)));
+            } else {
+                return Err(module.error(item.source_range, &format!(
+                    "Could not find local variable `{}`", name)));
+            }
         }
 
         // Pre-evalutate expressions for identity.
