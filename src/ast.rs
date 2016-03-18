@@ -184,6 +184,7 @@ pub enum Expression {
     Compare(Box<Compare>),
     UnOp(Box<UnOpExpression>),
     Variable(Range, Variable),
+    Try(Box<Expression>),
 }
 
 impl Expression {
@@ -291,6 +292,9 @@ impl Expression {
                     convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::UnOp(Box::new(val)));
+            } else if let Ok((range, _)) = convert.meta_bool("try") {
+                convert.update(range);
+                result = Some(Expression::Try(Box::new(result.unwrap())));
             } else {
                 let range = convert.ignore();
                 convert.update(range);
@@ -326,6 +330,7 @@ impl Expression {
             Compare(ref comp) => comp.source_range,
             UnOp(ref unop) => unop.source_range,
             Variable(range, _) => range,
+            Try(ref expr) => expr.source_range(),
         }
     }
 }

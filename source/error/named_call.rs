@@ -4,11 +4,11 @@ fn foo_val(a) -> {
 }
 
 fn bar_val(a) -> {
-    x := if a == 0 { ok(1) } else { foo(val: a) }?
+    x := foo(val: a)?
     return ok(x + 2)
 }
 
 fn main() {
-    x := bar(val: 0)
+    x := bar(val: 5)
     println(x)
 }

@@ -14,7 +14,7 @@ _seps: "(){}[],.:;=<>*+-/%^?"
 2 arg = [.._seps!:"name" ?[?w ":" ?w "'" ?w .._seps!:"lifetime"]]
 // Support both multi-line expressions and single line.
 3 block = ["{" ?w {.l([?w expr:"expr" ?w]) [?w expr:"expr"]} ?w "}"]
-4 expr = {
+4 expr = [{
     object:"object"
     array:"array"
     array_fill:"array_fill"
@@ -37,7 +37,7 @@ _seps: "(){}[],.:;=<>*+-/%^?"
     num
     bool
     item:"item"
-}
+} ?[?w "?":"try"]]
 // Interprets "return" as variable, does not expect loops or assignment.
 5 arg_expr = {
     object:"object"

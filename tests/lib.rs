@@ -162,3 +162,18 @@ fn test_some() {
 fn test_error_propagate() {
     test_src("source/error/propagate.rs");
 }
+
+#[test]
+fn test_error_call() {
+    test_src("source/error/call.rs");
+}
+
+#[test]
+fn test_error_named_call() {
+    test_src("source/error/named_call.rs");
+}
+
+#[test]
+fn test_error_if() {
+    test_src("source/error/if.rs");
+}

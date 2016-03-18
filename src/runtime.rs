@@ -307,6 +307,49 @@ impl Runtime {
                 self.stack.push(var.clone());
                 Ok((Expect::Something, Flow::Continue))
             }
+            Try(ref expr) => {
+                self.try(expr, side, module)
+            }
+        }
+    }
+
+    pub fn try(
+        &mut self,
+        expr: &ast::Expression,
+        side: Side,
+        module: &Module
+    ) -> Result<(Expect, Flow), String> {
+        match self.expression(expr, side, module) {
+            Ok((x, Flow::Return)) => { return Ok((x, Flow::Return)); }
+            Ok((Expect::Something, Flow::Continue)) => {}
+            _ => return Err(module.error(expr.source_range(),
+                            "Expected something"))
+        };
+        let v = self.stack.pop()
+            .expect("There is no value on the stack");
+        let v = match self.resolve(&v) {
+            &Variable::Result(ref res) => res.clone(),
+            _ => {
+                return Err(module.error(expr.source_range(),
+                    &format!("Expected `ok(_)` or `err(_)`")));
+            }
+        };
+        let locals = self.local_stack.len() - self.call_stack.last().unwrap().2;
+        match v {
+            Ok(ref ok) => {
+                self.stack.push((**ok).clone());
+                Ok((Expect::Something, Flow::Continue))
+            }
+            Err(ref err) => {
+                let ind = self.stack.len() - locals;
+                if let Variable::Return = self.stack[ind] {}
+                else {
+                    return Err(module.error(expr.source_range(),
+                        &format!("Requires `->` on function")));
+                }
+                self.stack[ind] = Variable::Result(Err(err.clone()));
+                Ok((Expect::Something, Flow::Return))
+            }
         }
     }
 
