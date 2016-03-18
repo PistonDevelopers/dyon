@@ -342,10 +342,16 @@ impl Runtime {
             }
             Err(ref err) => {
                 let ind = self.stack.len() - locals;
+                if locals == 0 {
+                    return Err(module.error(expr.source_range(),
+                        &format!("Requires `->` on function `{}`",
+                        &self.call_stack.last().unwrap().0)));
+                }
                 if let Variable::Return = self.stack[ind] {}
                 else {
                     return Err(module.error(expr.source_range(),
-                        &format!("Requires `->` on function")));
+                        &format!("Requires `->` on function `{}`",
+                        &self.call_stack.last().unwrap().0)));
                 }
                 self.stack[ind] = Variable::Result(Err(err.clone()));
                 Ok((Expect::Something, Flow::Return))
@@ -925,6 +931,7 @@ impl Runtime {
         #[inline(always)]
         fn try(
             stack: &mut Vec<Variable>,
+            call_stack: &Vec<(Arc<String>, usize, usize)>,
             v: Result<Box<Variable>, Box<Error>>,
             locals: usize,
             source_range: Range,
@@ -940,7 +947,8 @@ impl Runtime {
                     if let Variable::Return = stack[ind] {}
                     else {
                         return Err(module.error(source_range,
-                            &format!("Requires `->` on function")));
+                            &format!("Requires `->` on function `{}`",
+                            &call_stack.last().unwrap().0)));
                     }
                     stack[ind] = Variable::Result(Err(err.clone()));
                     Ok(Flow::Return)
@@ -964,7 +972,7 @@ impl Runtime {
                                     &format!("Expected `ok(_)` or `err(_)`")));
                             }
                         };
-                        return try(&mut self.stack, v, locals,
+                        return try(&mut self.stack, &self.call_stack, v, locals,
                                    item.source_range, module);
                     } else {
                         self.stack.push(Variable::Ref(id));
@@ -1043,7 +1051,8 @@ impl Runtime {
                             else {
                                 return Err(module.error(
                                     item.ids[0].source_range(),
-                                    &format!("Requires `->` on function")));
+                                    &format!("Requires `->` on function `{}`",
+                                    &call_stack.last().unwrap().0)));
                             }
                             stack[ind] = Variable::Result(Err(err.clone()));
                             return Ok(Flow::Return);
@@ -1085,7 +1094,8 @@ impl Runtime {
                                 else {
                                     return Err(module.error(
                                         prop.source_range(),
-                                        &format!("Requires `->` on function")));
+                                        &format!("Requires `->` on function `{}`",
+                                        &call_stack.last().unwrap().0)));
                                 }
                                 stack[ind] = Variable::Result(Err(err.clone()));
                                 return Ok(Flow::Return);

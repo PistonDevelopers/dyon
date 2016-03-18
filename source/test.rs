@@ -1,14 +1,16 @@
-fn foo_val(a) -> {
-    return err("hi")
-    // return ok(a + 3)
+fn bar() -> {
+    return err(3)
 }
 
-fn bar_val(a) -> {
-    x := if a == 0 { ok(1) } else { foo(val: a) }?
-    return ok(x + 2)
+fn foo(x) {
+    y := bar()?
+    println(y)
 }
 
 fn main() {
-    x := unwrap(bar(val: 1))
-    println(x)
+    // x := err(5)?
+    x := {a: ok([err(2)])}
+    y := x.a?[0]?
+    println(y)
+    // foo({a: err(5)})
 }
