@@ -54,6 +54,7 @@ pub struct Runtime {
     pub unsafe_ref_type: Variable,
     pub rust_object_type: Variable,
     pub option_type: Variable,
+    pub result_type: Variable,
 }
 
 fn resolve<'a>(stack: &'a Vec<Variable>, var: &'a Variable) -> &'a Variable {
@@ -188,6 +189,7 @@ impl Runtime {
             unsafe_ref_type: Variable::Text(Arc::new("unsafe_ref".into())),
             rust_object_type: Variable::Text(Arc::new("rust_object".into())),
             option_type: Variable::Text(Arc::new("option".into())),
+            result_type: Variable::Text(Arc::new("result".into())),
         }
     }
 
@@ -825,6 +827,37 @@ impl Runtime {
                                 }
                             }
                         }
+                        &Variable::Result(ref res) => {
+                            unsafe {
+                                match *r {
+                                    Variable::Result(ref mut n) => {
+                                        if let Set = op {
+                                            // Check address to avoid unsafe
+                                            // reading and writing to same memory.
+                                            let n_addr = n as *const _ as usize;
+                                            let obj_addr = res as *const _ as usize;
+                                            if n_addr != obj_addr {
+                                                *r = b.clone()
+                                            }
+                                        } else {
+                                            unimplemented!()
+                                        }
+                                    }
+                                    Variable::Return => {
+                                        if let Set = op {
+                                            *r = Variable::Result(res.clone())
+                                        } else {
+                                            return Err(module.error(
+                                                left.source_range(),
+                                                "Return has no value"))
+                                        }
+                                    }
+                                    _ => return Err(module.error(
+                                        left.source_range(),
+                                        "Expected assigning to option"))
+                                }
+                            }
+                        }
                         _ => unimplemented!()
                     };
                     Ok(Flow::Continue)
@@ -942,6 +975,7 @@ impl Runtime {
             &Variable::UnsafeRef(_) => self.unsafe_ref_type.clone(),
             &Variable::RustObject(_) => self.rust_object_type.clone(),
             &Variable::Option(_) => self.option_type.clone(),
+            &Variable::Result(_) => self.result_type.clone(),
         };
         match v {
             Variable::Text(v) => v,

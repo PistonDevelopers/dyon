@@ -9,6 +9,7 @@ use prelude::{ArgConstraint, PreludeFunction};
 
 use Variable;
 use Module;
+use Error;
 
 pub fn standard(f: &mut HashMap<Arc<String>, PreludeFunction>) {
     f.insert(Arc::new("println".into()), PreludeFunction {
@@ -143,6 +144,14 @@ pub fn standard(f: &mut HashMap<Arc<String>, PreludeFunction>) {
         arg_constraints: vec![ArgConstraint::Default],
         returns: true
     });
+    f.insert(Arc::new("ok".into()), PreludeFunction {
+        arg_constraints: vec![ArgConstraint::Default],
+        returns: true
+    });
+    f.insert(Arc::new("err".into()), PreludeFunction {
+        arg_constraints: vec![ArgConstraint::Default],
+        returns: true
+    });
 }
 
 fn deep_clone(v: &Variable, stack: &Vec<Variable>) -> Variable {
@@ -173,7 +182,12 @@ fn deep_clone(v: &Variable, stack: &Vec<Variable>) -> Variable {
         UnsafeRef(_) => panic!("Unsafe reference can not be cloned"),
         RustObject(_) => v.clone(),
         Option(None) => Variable::Option(None),
-        Option(Some(ref v)) => Option(Some(Box::new(deep_clone(v, stack))))
+        // `some(x)` always uses deep clone, so it does not contain references.
+        Option(Some(ref v)) => Option(Some(v.clone())),
+        // `ok(x)` always uses deep clone, so it does not contain references.
+        Result(Ok(ref ok)) => Result(Ok(ok.clone())),
+        // `err(x)` always uses deep clone, so it does not contain references.
+        Result(Err(ref err)) => Result(Err(err.clone())),
     }
 }
 
@@ -236,6 +250,20 @@ fn print_variable(rt: &Runtime, v: &Variable, escape_string: EscapeString) {
                 &Some(ref v) => {
                     print!("some(");
                     print_variable(rt, v, EscapeString::Json);
+                    print!(")");
+                }
+            }
+        }
+        Variable::Result(ref res) => {
+            match res {
+                &Err(ref err) => {
+                    print!("err(");
+                    print_variable(rt, &err.message, EscapeString::Json);
+                    print!(")");
+                }
+                &Ok(ref ok) => {
+                    print!("ok(");
+                    print_variable(rt, ok, EscapeString::Json);
                     print!(")");
                 }
             }
@@ -483,6 +511,7 @@ pub fn call_standard(
                 &Variable::UnsafeRef(_) => rt.unsafe_ref_type.clone(),
                 &Variable::RustObject(_) => rt.rust_object_type.clone(),
                 &Variable::Option(_) => rt.option_type.clone(),
+                &Variable::Result(_) => rt.result_type.clone(),
             };
             rt.stack.push(v);
             rt.pop_fn(call.name.clone());
@@ -756,14 +785,41 @@ pub fn call_standard(
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
+        "ok" => {
+            rt.push_fn(call.name.clone(), st + 1, lc);
+            let v = rt.stack.pop().expect("There is no value on the stack");
+            let v = deep_clone(rt.resolve(&v), &rt.stack);
+            rt.stack.push(Variable::Result(Ok(Box::new(v))));
+            rt.pop_fn(call.name.clone());
+            Expect::Something
+        }
+        "err" => {
+            rt.push_fn(call.name.clone(), st + 1, lc);
+            let v = rt.stack.pop().expect("There is no value on the stack");
+            let v = deep_clone(rt.resolve(&v), &rt.stack);
+            rt.stack.push(Variable::Result(Err(Box::new(
+                Error { message: v }))));
+            rt.pop_fn(call.name.clone());
+            Expect::Something
+        }
         "unwrap" => {
             rt.push_fn(call.name.clone(), st + 1, lc);
             let v = rt.stack.pop().expect("There is no value on the stack");
             let v = match rt.resolve(&v) {
                 &Variable::Option(Some(ref v)) => (**v).clone(),
-                _ => {
+                &Variable::Option(None) => {
                     return Err(module.error(call.args[0].source_range(),
                                             "Expected `some(_)`"));
+                }
+                &Variable::Result(Ok(ref ok)) => (**ok).clone(),
+                &Variable::Result(Err(ref _err)) => {
+                    // TODO: Print out error message.
+                    return Err(module.error(call.args[0].source_range(),
+                                            "ERROR"));
+                }
+                _ => {
+                    return Err(module.error(call.args[0].source_range(),
+                                            "Expected `some(_)` or `ok(_)`"));
                 }
             };
             rt.stack.push(v);
