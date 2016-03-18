@@ -1,4 +1,4 @@
-_seps: "(){}[],.:;=<>*+-/%^"
+_seps: "(){}[],.:;=<>*+-/%^?"
 
 200 multi_line_comment = ["/*" ..."*/"? .r?({
     [!"*/" "*" ..."*/"?]
@@ -78,10 +78,10 @@ _seps: "(){}[],.:;=<>*+-/%^"
 12 text = .t?:"text"
 13 bool = {"true":"bool" "false":!"bool"}
 14 unop = ["!":"!" ?w lexpr:"expr"]
-15 item = [.._seps!:"name" .r?({
+15 item = [.._seps!:"name" ?[?w "?":"try_item"] .r?([{
     [?w "[" ?w {.t?:"id" .$_:"id" expr:"id"} ?w "]"]
     [?w "." ?w .._seps!:"id"]
-})]
+} ?[?w "?":"try_id"]])]
 16 for = [?["'" .._seps!:"label" ?w ":" ?w] "for" .w!
     expr:"init" ?w ";" ?w
     expr:"cond" ?w ";" ?w

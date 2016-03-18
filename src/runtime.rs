@@ -260,7 +260,9 @@ impl Runtime {
                 // Assign return value and then break the flow.
                 let item = Expression::Item(Item {
                         name: self.ret.clone(),
+                        try: false,
                         ids: vec![],
+                        try_ids: vec![],
                         source_range: ret.source_range(),
                     });
                 let flow = try!(self.assign_specific(AssignOp::Set,
@@ -875,6 +877,34 @@ impl Runtime {
         side: Side,
         module: &Module
     ) -> Result<Flow, String> {
+        use Error;
+
+        #[inline(always)]
+        fn try(
+            stack: &mut Vec<Variable>,
+            v: Result<Box<Variable>, Box<Error>>,
+            locals: usize,
+            source_range: Range,
+            module: &Module
+        ) -> Result<Flow, String> {
+            match v {
+                Ok(ref ok) => {
+                    stack.push((**ok).clone());
+                    Ok(Flow::Continue)
+                }
+                Err(ref err) => {
+                    let ind = stack.len() - locals;
+                    if let Variable::Return = stack[ind] {}
+                    else {
+                        return Err(module.error(source_range,
+                            &format!("Requires `->` on function")));
+                    }
+                    stack[ind] = Variable::Result(Err(err.clone()));
+                    Ok(Flow::Return)
+                }
+            }
+        }
+
         use ast::Id;
 
         if item.ids.len() == 0 {
@@ -882,8 +912,21 @@ impl Runtime {
             let locals = self.local_stack.len() - self.call_stack.last().unwrap().2;
             for &(ref n, id) in self.local_stack.iter().rev().take(locals) {
                 if &**n == name {
-                    self.stack.push(Variable::Ref(id));
-                    return Ok(Flow::Continue);
+                    if item.try {
+                        // Check for `err(_)` or unwrap when `?` follows item.
+                        let v = match self.resolve(&self.stack[id]) {
+                            &Variable::Result(ref res) => res.clone(),
+                            _ => {
+                                return Err(module.error(item.source_range,
+                                    &format!("Expected `ok(_)` or `err(_)`")));
+                            }
+                        };
+                        return try(&mut self.stack, v, locals,
+                                   item.source_range, module);
+                    } else {
+                        self.stack.push(Variable::Ref(id));
+                        return Ok(Flow::Continue);
+                    }
                 }
             }
             return Err(module.error(item.source_range, &format!(
@@ -936,6 +979,34 @@ impl Runtime {
                     insert,
                     item_len == 1
                 ));
+                let mut try_id_ind = 0;
+                if item.try_ids.len() > 0 && item.try_ids[try_id_ind] == 0 {
+                    // Check for error on `?` for first id.
+                    let v = unsafe {match *var {
+                        Variable::Result(ref res) => res.clone(),
+                        _ => {
+                            return Err(module.error(item.ids[0].source_range(),
+                                &format!("Expected `ok(_)` or `err(_)`")));
+                        }
+                    }};
+                    match v {
+                        Ok(ref ok) => unsafe {
+                            *var = (**ok).clone();
+                            try_id_ind += 1;
+                        },
+                        Err(ref err) => {
+                            let ind = stack.len() - locals;
+                            if let Variable::Return = stack[ind] {}
+                            else {
+                                return Err(module.error(
+                                    item.ids[0].source_range(),
+                                    &format!("Requires `->` on function")));
+                            }
+                            stack[ind] = Variable::Result(Err(err.clone()));
+                            return Ok(Flow::Return);
+                        }
+                    }
+                }
                 // Get the rest of the variables.
                 for (i, prop) in item.ids[1..].iter().enumerate() {
                     var = try!(item_lookup(
@@ -949,6 +1020,35 @@ impl Runtime {
                         // `i` skips first index.
                         i + 2 == item_len
                     ));
+
+                    if item.try_ids.len() > try_id_ind &&
+                       item.try_ids[try_id_ind] == i + 1 {
+                        // Check for error on `?` for rest of ids.
+                        let v = unsafe {match *var {
+                            Variable::Result(ref res) => res.clone(),
+                            _ => {
+                                return Err(module.error(prop.source_range(),
+                                    &format!("Expected `ok(_)` or `err(_)`")));
+                            }
+                        }};
+                        match v {
+                            Ok(ref ok) => unsafe {
+                                *var = (**ok).clone();
+                                try_id_ind += 1;
+                            },
+                            Err(ref err) => {
+                                let ind = stack.len() - locals;
+                                if let Variable::Return = stack[ind] {}
+                                else {
+                                    return Err(module.error(
+                                        prop.source_range(),
+                                        &format!("Requires `->` on function")));
+                                }
+                                stack[ind] = Variable::Result(Err(err.clone()));
+                                return Ok(Flow::Return);
+                            }
+                        }
+                    }
                 }
 
                 match side {

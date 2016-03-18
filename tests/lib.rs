@@ -157,3 +157,8 @@ fn test_print_functions() {
 fn test_some() {
     test_src("source/some.rs");
 }
+
+#[test]
+fn test_error_propagate() {
+    test_src("source/error/propagate.rs");
+}
