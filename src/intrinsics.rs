@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use rand::Rng;
+use piston_meta::json;
 
 use runtime::{Expect, Flow, Runtime, Side};
 use ast;
@@ -126,6 +127,22 @@ pub fn standard(f: &mut HashMap<Arc<String>, PreludeFunction>) {
         arg_constraints: vec![ArgConstraint::Default; 3],
         returns: true
     });
+    f.insert(Arc::new("functions".into()), PreludeFunction {
+        arg_constraints: vec![],
+        returns: true
+    });
+    f.insert(Arc::new("none".into()), PreludeFunction {
+        arg_constraints: vec![],
+        returns: true
+    });
+    f.insert(Arc::new("unwrap".into()), PreludeFunction {
+        arg_constraints: vec![ArgConstraint::Return],
+        returns: true
+    });
+    f.insert(Arc::new("some".into()), PreludeFunction {
+        arg_constraints: vec![ArgConstraint::Default],
+        returns: true
+    });
 }
 
 fn deep_clone(v: &Variable, stack: &Vec<Variable>) -> Variable {
@@ -154,14 +171,30 @@ fn deep_clone(v: &Variable, stack: &Vec<Variable>) -> Variable {
             deep_clone(&stack[ind], stack)
         }
         UnsafeRef(_) => panic!("Unsafe reference can not be cloned"),
-        RustObject(_) => v.clone()
+        RustObject(_) => v.clone(),
+        Option(None) => Variable::Option(None),
+        Option(Some(ref v)) => Option(Some(Box::new(deep_clone(v, stack))))
     }
 }
 
-fn print_variable(rt: &Runtime, v: &Variable) {
+enum EscapeString {
+    Json,
+    None
+}
+
+fn print_variable(rt: &Runtime, v: &Variable, escape_string: EscapeString) {
     match *rt.resolve(v) {
         Variable::Text(ref t) => {
-            print!("{}", t);
+            match escape_string {
+                EscapeString::Json => {
+                    let mut w: Vec<u8> = vec![];
+                    json::write_string(&mut w, t).unwrap();
+                    print!("{}", String::from_utf8(w).unwrap());
+                }
+                EscapeString::None => {
+                    print!("{}", t)
+                }
+            }
         }
         Variable::F64(x) => {
             print!("{}", x);
@@ -170,14 +203,14 @@ fn print_variable(rt: &Runtime, v: &Variable) {
             print!("{}", x);
         }
         Variable::Ref(ind) => {
-            print_variable(rt, &rt.stack[ind]);
+            print_variable(rt, &rt.stack[ind], escape_string);
         }
         Variable::Object(ref obj) => {
             print!("{{");
             let n = obj.len();
             for (i, (k, v)) in obj.iter().enumerate() {
                 print!("{}: ", k);
-                print_variable(rt, v);
+                print_variable(rt, v, EscapeString::Json);
                 if i + 1 < n {
                     print!(", ");
                 }
@@ -188,12 +221,24 @@ fn print_variable(rt: &Runtime, v: &Variable) {
             print!("[");
             let n = arr.len();
             for (i, v) in arr.iter().enumerate() {
-                print_variable(rt, v);
+                print_variable(rt, v, EscapeString::Json);
                 if i + 1 < n {
                     print!(", ");
                 }
             }
             print!("]");
+        }
+        Variable::Option(ref opt) => {
+            match opt {
+                &None => {
+                    print!("none()")
+                }
+                &Some(ref v) => {
+                    print!("some(");
+                    print_variable(rt, v, EscapeString::Json);
+                    print!(")");
+                }
+            }
         }
         ref x => panic!("Could not print out `{:?}`", x)
     }
@@ -229,7 +274,7 @@ pub fn call_standard(
             rt.push_fn(call.name.clone(), st, lc);
             let x = rt.stack.pop()
                 .expect("There is no value on the stack");
-            print_variable(rt, &x);
+            print_variable(rt, &x, EscapeString::None);
             println!("");
             rt.pop_fn(call.name.clone());
             Expect::Nothing
@@ -238,7 +283,7 @@ pub fn call_standard(
             rt.push_fn(call.name.clone(), st, lc);
             let x = rt.stack.pop()
                 .expect("There is no value on the stack");
-            print_variable(rt, &x);
+            print_variable(rt, &x, EscapeString::None);
             rt.pop_fn(call.name.clone());
             Expect::Nothing
         }
@@ -437,6 +482,7 @@ pub fn call_standard(
                 &Variable::Ref(_) => rt.ref_type.clone(),
                 &Variable::UnsafeRef(_) => rt.unsafe_ref_type.clone(),
                 &Variable::RustObject(_) => rt.rust_object_type.clone(),
+                &Variable::Option(_) => rt.option_type.clone(),
             };
             rt.stack.push(v);
             rt.pop_fn(call.name.clone());
@@ -588,6 +634,141 @@ pub fn call_standard(
 
             rt.pop_fn(call.name.clone());
             Expect::Nothing
+        }
+        "functions" => {
+            // List available functions in scope.
+            rt.push_fn(call.name.clone(), st + 1, lc);
+            let mut functions = vec![];
+            let name: Arc<String> = Arc::new("name".into());
+            let arguments: Arc<String> = Arc::new("arguments".into());
+            let returns: Arc<String> = Arc::new("returns".into());
+            let lifetime: Arc<String> = Arc::new("lifetime".into());
+            let ret_lifetime: Arc<String> = Arc::new("return".into());
+            let ty: Arc<String> = Arc::new("type".into());
+            let intrinsic: Arc<String> = Arc::new("intrinsic".into());
+            let external: Arc<String> = Arc::new("external".into());
+            let loaded: Arc<String> = Arc::new("loaded".into());
+            let mut intrinsics = HashMap::new();
+            standard(&mut intrinsics);
+            for (f_name, f) in &intrinsics {
+                let mut obj = HashMap::new();
+                obj.insert(name.clone(), Variable::Text(f_name.clone()));
+                obj.insert(returns.clone(), Variable::Bool(f.returns));
+                obj.insert(ty.clone(), Variable::Text(intrinsic.clone()));
+                let mut args = vec![];
+                for (i, arg_constraint) in f.arg_constraints.iter().enumerate() {
+                    let mut obj_arg = HashMap::new();
+                    obj_arg.insert(name.clone(),
+                        Variable::Text(Arc::new(format!("arg{}", i).into())));
+                    obj_arg.insert(lifetime.clone(), match *arg_constraint {
+                        ArgConstraint::Default => Variable::Option(None),
+                        ArgConstraint::Arg(ind) => Variable::Option(Some(
+                                Box::new(Variable::Text(
+                                    Arc::new(format!("arg{}", ind).into())
+                                ))
+                            )),
+                        ArgConstraint::Return => Variable::Option(Some(
+                                Box::new(Variable::Text(ret_lifetime.clone()))
+                            )),
+                    });
+                    args.push(Variable::Object(obj_arg));
+                }
+                obj.insert(arguments.clone(), Variable::Array(args));
+                functions.push(Variable::Object(obj));
+            }
+            for (f_name, &(_, ref f)) in &module.ext_prelude {
+                let mut obj = HashMap::new();
+                obj.insert(name.clone(), Variable::Text(f_name.clone()));
+                obj.insert(returns.clone(), Variable::Bool(f.returns));
+                obj.insert(ty.clone(), Variable::Text(external.clone()));
+                let mut args = vec![];
+                for (i, arg_constraint) in f.arg_constraints.iter().enumerate() {
+                    let mut obj_arg = HashMap::new();
+                    obj_arg.insert(name.clone(),
+                        Variable::Text(Arc::new(format!("arg{}", i).into())));
+                    obj_arg.insert(lifetime.clone(), match *arg_constraint {
+                        ArgConstraint::Default => Variable::Option(None),
+                        ArgConstraint::Arg(ind) => Variable::Option(Some(
+                                Box::new(Variable::Text(
+                                    Arc::new(format!("arg{}", ind).into())
+                                ))
+                            )),
+                        ArgConstraint::Return => Variable::Option(Some(
+                                Box::new(Variable::Text(ret_lifetime.clone()))
+                            )),
+                    });
+                    args.push(Variable::Object(obj_arg));
+                }
+                obj.insert(arguments.clone(), Variable::Array(args));
+                functions.push(Variable::Object(obj));
+            }
+            for f in module.functions.values() {
+                let mut obj = HashMap::new();
+                obj.insert(name.clone(), Variable::Text(f.name.clone()));
+                obj.insert(returns.clone(), Variable::Bool(f.returns));
+                obj.insert(ty.clone(), Variable::Text(loaded.clone()));
+                let mut args = vec![];
+                for arg in &f.args {
+                    let mut obj_arg = HashMap::new();
+                    obj_arg.insert(name.clone(),
+                        Variable::Text(arg.name.clone()));
+                    obj_arg.insert(lifetime.clone(),
+                        match arg.lifetime {
+                            None => Variable::Option(None),
+                            Some(ref lt) => Variable::Option(Some(Box::new(
+                                    Variable::Text(lt.clone())
+                                )))
+                        }
+                    );
+                    args.push(Variable::Object(obj_arg));
+                }
+                obj.insert(arguments.clone(), Variable::Array(args));
+                functions.push(Variable::Object(obj));
+            }
+            // Sort by function names.
+            functions.sort_by(|a, b|
+                match (a, b) {
+                    (&Variable::Object(ref a), &Variable::Object(ref b)) => {
+                        match (&a[&name], &b[&name]) {
+                            (&Variable::Text(ref a), &Variable::Text(ref b)) => {
+                                a.cmp(b)
+                            }
+                            _ => panic!("Expected two strings")
+                        }
+                    }
+                    _ => panic!("Expected two objects")
+                }
+            );
+            let v = Variable::Array(functions);
+            rt.stack.push(v);
+            rt.pop_fn(call.name.clone());
+            Expect::Something
+        }
+        "none" => {
+            rt.stack.push(Variable::Option(None));
+            Expect::Something
+        }
+        "some" => {
+            rt.push_fn(call.name.clone(), st + 1, lc);
+            let v = rt.stack.pop().expect("There is no value on the stack");
+            let v = deep_clone(rt.resolve(&v), &rt.stack);
+            rt.stack.push(Variable::Option(Some(Box::new(v))));
+            rt.pop_fn(call.name.clone());
+            Expect::Something
+        }
+        "unwrap" => {
+            rt.push_fn(call.name.clone(), st + 1, lc);
+            let v = rt.stack.pop().expect("There is no value on the stack");
+            let v = match rt.resolve(&v) {
+                &Variable::Option(Some(ref v)) => (**v).clone(),
+                _ => {
+                    return Err(module.error(call.args[0].source_range(),
+                                            "Expected `some(_)`"));
+                }
+            };
+            rt.stack.push(v);
+            rt.pop_fn(call.name.clone());
+            Expect::Something
         }
         _ => panic!("Unknown function `{}`", call.name)
     };

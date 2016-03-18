@@ -53,6 +53,7 @@ pub struct Runtime {
     pub ref_type: Variable,
     pub unsafe_ref_type: Variable,
     pub rust_object_type: Variable,
+    pub option_type: Variable,
 }
 
 fn resolve<'a>(stack: &'a Vec<Variable>, var: &'a Variable) -> &'a Variable {
@@ -186,6 +187,7 @@ impl Runtime {
             ref_type: Variable::Text(Arc::new("ref".into())),
             unsafe_ref_type: Variable::Text(Arc::new("unsafe_ref".into())),
             rust_object_type: Variable::Text(Arc::new("rust_object".into())),
+            option_type: Variable::Text(Arc::new("option".into())),
         }
     }
 
@@ -792,6 +794,37 @@ impl Runtime {
                                 }
                             }
                         }
+                        &Variable::Option(ref opt) => {
+                            unsafe {
+                                match *r {
+                                    Variable::Option(ref mut n) => {
+                                        if let Set = op {
+                                            // Check address to avoid unsafe
+                                            // reading and writing to same memory.
+                                            let n_addr = n as *const _ as usize;
+                                            let obj_addr = opt as *const _ as usize;
+                                            if n_addr != obj_addr {
+                                                *r = b.clone()
+                                            }
+                                        } else {
+                                            unimplemented!()
+                                        }
+                                    }
+                                    Variable::Return => {
+                                        if let Set = op {
+                                            *r = Variable::Option(opt.clone())
+                                        } else {
+                                            return Err(module.error(
+                                                left.source_range(),
+                                                "Return has no value"))
+                                        }
+                                    }
+                                    _ => return Err(module.error(
+                                        left.source_range(),
+                                        "Expected assigning to option"))
+                                }
+                            }
+                        }
                         _ => unimplemented!()
                     };
                     Ok(Flow::Continue)
@@ -908,6 +941,7 @@ impl Runtime {
             &Variable::Ref(_) => self.ref_type.clone(),
             &Variable::UnsafeRef(_) => self.unsafe_ref_type.clone(),
             &Variable::RustObject(_) => self.rust_object_type.clone(),
+            &Variable::Option(_) => self.option_type.clone(),
         };
         match v {
             Variable::Text(v) => v,
@@ -920,6 +954,103 @@ impl Runtime {
         compare: &ast::Compare,
         module: &Module
     ) -> Result<Flow, String> {
+        fn sub_compare(
+            rt: &Runtime,
+            compare: &ast::Compare,
+            module: &Module,
+            a: &Variable,
+            b: &Variable
+        ) -> Result<bool, String> {
+            use ast::CompareOp::*;
+
+            match (rt.resolve(&b), rt.resolve(&a)) {
+                (&Variable::F64(b), &Variable::F64(a)) => {
+                    Ok(match compare.op {
+                        Less => a < b,
+                        LessOrEqual => a <= b,
+                        Greater => a > b,
+                        GreaterOrEqual => a >= b,
+                        Equal => a == b,
+                        NotEqual => a != b
+                    })
+                }
+                (&Variable::Text(ref b), &Variable::Text(ref a)) => {
+                    Ok(match compare.op {
+                        Less => a < b,
+                        LessOrEqual => a <= b,
+                        Greater => a > b,
+                        GreaterOrEqual => a >= b,
+                        Equal => a == b,
+                        NotEqual => a != b
+                    })
+                }
+                (&Variable::Bool(b), &Variable::Bool(a)) => {
+                    Ok(match compare.op {
+                        Equal => a == b,
+                        NotEqual => a != b,
+                        x => return Err(module.error(compare.source_range,
+                            &format!("`{}` can not be used with bools",
+                            x.symbol())))
+                    })
+                }
+                (&Variable::Object(ref b), &Variable::Object(ref a)) => {
+                    Ok(match compare.op {
+                        Equal => a == b,
+                        NotEqual => a != b,
+                        x => return Err(module.error(compare.source_range,
+                            &format!("`{}` can not be used with objects",
+                            x.symbol())))
+                    })
+                }
+                (&Variable::Array(ref b), &Variable::Array(ref a)) => {
+                    Ok(match compare.op {
+                        Equal => a == b,
+                        NotEqual => a != b,
+                        x => return Err(module.error(compare.source_range,
+                            &format!("`{}` can not be used with arrays",
+                            x.symbol())))
+                    })
+                }
+                (&Variable::Option(None), &Variable::Option(None)) => {
+                    Ok(match compare.op {
+                        Equal => true,
+                        NotEqual => false,
+                        x => return Err(module.error(compare.source_range,
+                            &format!("`{}` can not be used with options",
+                            x.symbol())))
+                    })
+                }
+                (&Variable::Option(None), &Variable::Option(_)) => {
+                    Ok(match compare.op {
+                        Equal => false,
+                        NotEqual => true,
+                        x => return Err(module.error(compare.source_range,
+                            &format!("`{}` can not be used with options",
+                            x.symbol())))
+                    })
+                }
+                (&Variable::Option(_), &Variable::Option(None)) => {
+                    Ok(match compare.op {
+                        Equal => false,
+                        NotEqual => true,
+                        x => return Err(module.error(compare.source_range,
+                            &format!("`{}` can not be used with options",
+                            x.symbol())))
+                    })
+                }
+                (&Variable::Option(Some(ref b)),
+                 &Variable::Option(Some(ref a))) => {
+                    sub_compare(rt, compare, module, a, b)
+                }
+                (b, a) => return Err(module.error(compare.source_range,
+                    &format!(
+                    "`{}` can not be used with `{}` and `{}`",
+                    compare.op.symbol(),
+                    rt.typeof_var(a),
+                    rt.typeof_var(b))))
+            }
+        }
+
         match try!(self.expression(&compare.left, Side::Right, module)) {
             (_, Flow::Return) => { return Ok(Flow::Return); }
             (Expect::Something, Flow::Continue) => {}
@@ -934,64 +1065,8 @@ impl Runtime {
         };
         match (self.stack.pop(), self.stack.pop()) {
             (Some(b), Some(a)) => {
-                use ast::CompareOp::*;
-
-                let v = match (self.resolve(&b), self.resolve(&a)) {
-                    (&Variable::F64(b), &Variable::F64(a)) => {
-                        Variable::Bool(match compare.op {
-                            Less => a < b,
-                            LessOrEqual => a <= b,
-                            Greater => a > b,
-                            GreaterOrEqual => a >= b,
-                            Equal => a == b,
-                            NotEqual => a != b
-                        })
-                    }
-                    (&Variable::Text(ref b), &Variable::Text(ref a)) => {
-                        Variable::Bool(match compare.op {
-                            Less => a < b,
-                            LessOrEqual => a <= b,
-                            Greater => a > b,
-                            GreaterOrEqual => a >= b,
-                            Equal => a == b,
-                            NotEqual => a != b
-                        })
-                    }
-                    (&Variable::Bool(b), &Variable::Bool(a)) => {
-                        Variable::Bool(match compare.op {
-                            Equal => a == b,
-                            NotEqual => a != b,
-                            x => return Err(module.error(compare.source_range,
-                                &format!("`{}` can not be used with bools",
-                                x.symbol())))
-                        })
-                    }
-                    (&Variable::Object(ref b), &Variable::Object(ref a)) => {
-                        Variable::Bool(match compare.op {
-                            Equal => a == b,
-                            NotEqual => a != b,
-                            x => return Err(module.error(compare.source_range,
-                                &format!("`{}` can not be used with objects",
-                                x.symbol())))
-                        })
-                    }
-                    (&Variable::Array(ref b), &Variable::Array(ref a)) => {
-                        Variable::Bool(match compare.op {
-                            Equal => a == b,
-                            NotEqual => a != b,
-                            x => return Err(module.error(compare.source_range,
-                                &format!("`{}` can not be used with arrays",
-                                x.symbol())))
-                        })
-                    }
-                    (b, a) => return Err(module.error(compare.source_range,
-                        &format!(
-                        "`{}` can not be used with `{}` and `{}`",
-                        compare.op.symbol(),
-                        self.typeof_var(a),
-                        self.typeof_var(b))))
-                };
-                self.stack.push(v)
+                let v = try!(sub_compare(self, compare, module, &a, &b));
+                self.stack.push(Variable::Bool(v))
             }
             _ => panic!("Expected two variables on the stack")
         }

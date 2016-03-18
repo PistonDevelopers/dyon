@@ -1,5 +1,5 @@
 fn foo() -> {
-    x := [10]
+    x := [5]
     return some(x)
 }
 
