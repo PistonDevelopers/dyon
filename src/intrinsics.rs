@@ -811,7 +811,7 @@ pub fn call_standard(
             let v = rt.stack.pop().expect("There is no value on the stack");
             let v = deep_clone(rt.resolve(&v), &rt.stack);
             rt.stack.push(Variable::Result(Err(Box::new(
-                Error { message: v }))));
+                Error { message: v, trace: vec![] }))));
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
@@ -834,6 +834,10 @@ pub fn call_standard(
                     let mut w: Vec<u8> = vec![];
                     write_variable(&mut w, rt, &err.message,
                                    EscapeString::None).unwrap();
+                    for t in &err.trace {
+                        w.extend_from_slice("\n".as_bytes());
+                        w.extend_from_slice(t.as_bytes());
+                    }
                     return Err(module.error(call.args[0].source_range(),
                                             from_utf8(&w).unwrap()));
                 }

@@ -353,7 +353,11 @@ impl Runtime {
                         &format!("Requires `->` on function `{}`",
                         &self.call_stack.last().unwrap().0)));
                 }
-                self.stack[ind] = Variable::Result(Err(err.clone()));
+                let mut err = err.clone();
+                err.trace.push(module.error(expr.source_range(),
+                    &format!("In function `{}`",
+                    &self.call_stack.last().unwrap().0)));
+                self.stack[ind] = Variable::Result(Err(err));
                 Ok((Expect::Something, Flow::Return))
             }
         }
@@ -950,7 +954,12 @@ impl Runtime {
                             &format!("Requires `->` on function `{}`",
                             &call_stack.last().unwrap().0)));
                     }
-                    stack[ind] = Variable::Result(Err(err.clone()));
+                    let mut err = err.clone();
+                    err.trace.push(module.error(
+                        source_range,
+                        &format!("In function `{}`",
+                        &call_stack.last().unwrap().0)));
+                    stack[ind] = Variable::Result(Err(err));
                     Ok(Flow::Return)
                 }
             }
@@ -1060,7 +1069,12 @@ impl Runtime {
                                     &format!("Requires `->` on function `{}`",
                                     &call_stack.last().unwrap().0)));
                             }
-                            stack[ind] = Variable::Result(Err(err.clone()));
+                            let mut err = err.clone();
+                            err.trace.push(module.error(
+                                item.ids[0].source_range(),
+                                &format!("In function `{}`",
+                                &call_stack.last().unwrap().0)));
+                            stack[ind] = Variable::Result(Err(err));
                             return Ok(Flow::Return);
                         }
                     }
@@ -1103,7 +1117,12 @@ impl Runtime {
                                         &format!("Requires `->` on function `{}`",
                                         &call_stack.last().unwrap().0)));
                                 }
-                                stack[ind] = Variable::Result(Err(err.clone()));
+                                let mut err = err.clone();
+                                err.trace.push(module.error(
+                                    prop.source_range(),
+                                    &format!("In function `{}`",
+                                    &call_stack.last().unwrap().0)));
+                                stack[ind] = Variable::Result(Err(err));
                                 return Ok(Flow::Return);
                             }
                         }

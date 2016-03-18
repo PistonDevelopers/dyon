@@ -23,6 +23,9 @@ pub type Array = Vec<Variable>;
 #[derive(Debug, Clone)]
 pub struct Error {
     message: Variable,
+    // Extra information to help debug error.
+    // Stores error messages for all `?` operators.
+    trace: Vec<String>,
 }
 
 #[derive(Debug, Clone)]

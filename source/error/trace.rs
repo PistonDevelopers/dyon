@@ -3,8 +3,7 @@ fn foo() -> {
 }
 
 fn bar() -> {
-    x := foo()
-    x := x?
+    x := foo()?
     return ok(x + 1)
 }
 

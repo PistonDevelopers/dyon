@@ -177,3 +177,8 @@ fn test_error_named_call() {
 fn test_error_if() {
     test_src("source/error/if.rs");
 }
+
+#[test]
+fn test_error_trace() {
+    test_src("source/error/trace.rs");
+}
