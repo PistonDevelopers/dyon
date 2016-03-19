@@ -141,6 +141,10 @@ pub fn standard(f: &mut HashMap<Arc<String>, PreludeFunction>) {
         arg_constraints: vec![ArgConstraint::Default],
         returns: true
     });
+    f.insert(Arc::new("unwrap_err".into()), PreludeFunction {
+        arg_constraints: vec![ArgConstraint::Default],
+        returns: true
+    });
     f.insert(Arc::new("some".into()), PreludeFunction {
         arg_constraints: vec![ArgConstraint::Default],
         returns: true
@@ -150,6 +154,10 @@ pub fn standard(f: &mut HashMap<Arc<String>, PreludeFunction>) {
         returns: true
     });
     f.insert(Arc::new("err".into()), PreludeFunction {
+        arg_constraints: vec![ArgConstraint::Default],
+        returns: true
+    });
+    f.insert(Arc::new("is_err".into()), PreludeFunction {
         arg_constraints: vec![ArgConstraint::Default],
         returns: true
     });
@@ -815,6 +823,21 @@ pub fn call_standard(
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
+        "is_err" => {
+            rt.push_fn(call.name.clone(), st + 1, lc);
+            let v = rt.stack.pop().expect("There is no value on the stack");
+            let v = match rt.resolve(&v) {
+                &Variable::Result(Err(_)) => Variable::Bool(true),
+                &Variable::Result(Ok(_)) => Variable::Bool(false),
+                _ => {
+                    return Err(module.error(call.args[0].source_range(),
+                                            "Expected option"));
+                }
+            };
+            rt.stack.push(v);
+            rt.pop_fn(call.name.clone());
+            Expect::Something
+        }
         "unwrap" => {
             // Return value does not depend on lifetime of argument since
             // `ok(x)` and `some(x)` perform a deep clone.
@@ -844,6 +867,20 @@ pub fn call_standard(
                 _ => {
                     return Err(module.error(call.args[0].source_range(),
                                             "Expected `some(_)` or `ok(_)`"));
+                }
+            };
+            rt.stack.push(v);
+            rt.pop_fn(call.name.clone());
+            Expect::Something
+        }
+        "unwrap_err" => {
+            rt.push_fn(call.name.clone(), st + 1, lc);
+            let v = rt.stack.pop().expect("There is no value on the stack");
+            let v = match rt.resolve(&v) {
+                &Variable::Result(Err(ref err)) => err.message.clone(),
+                _ => {
+                    return Err(module.error(call.args[0].source_range(),
+                                            "Expected `err(_)`"));
                 }
             };
             rt.stack.push(v);

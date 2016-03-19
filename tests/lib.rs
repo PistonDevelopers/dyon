@@ -182,3 +182,8 @@ fn test_error_if() {
 fn test_error_trace() {
     test_src("source/error/trace.rs");
 }
+
+#[test]
+fn test_error_unwrap_err() {
+    test_src("source/error/unwrap_err.rs");
+}
