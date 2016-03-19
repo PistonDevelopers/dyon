@@ -1,4 +1,4 @@
-_seps: "(){}[],.:;=<>*+-/%^"
+_seps: "(){}[],.:;=<>*+-/%^?"
 
 200 multi_line_comment = ["/*" ..."*/"? .r?({
     [!"*/" "*" ..."*/"?]
@@ -14,7 +14,7 @@ _seps: "(){}[],.:;=<>*+-/%^"
 2 arg = [.._seps!:"name" ?[?w ":" ?w "'" ?w .._seps!:"lifetime"]]
 // Support both multi-line expressions and single line.
 3 block = ["{" ?w {.l([?w expr:"expr" ?w]) [?w expr:"expr"]} ?w "}"]
-4 expr = {
+4 expr = [{
     object:"object"
     array:"array"
     array_fill:"array_fill"
@@ -37,9 +37,9 @@ _seps: "(){}[],.:;=<>*+-/%^"
     num
     bool
     item:"item"
-}
+} ?[?w "?":"try"]]
 // Interprets "return" as variable, does not expect loops or assignment.
-5 arg_expr = {
+5 arg_expr = [{
     object:"object"
     array:"array"
     array_fill:"array_fill"
@@ -55,8 +55,8 @@ _seps: "(){}[],.:;=<>*+-/%^"
     num
     bool
     item:"item"
-}
-6 lexpr = {
+} ?[?w "?":"try"]]
+6 lexpr = [{
     object:"object"
     array:"array"
     array_fill:"array_fill"
@@ -69,7 +69,7 @@ _seps: "(){}[],.:;=<>*+-/%^"
     num
     bool
     item:"item"
-}
+} ?[?w "?":"try"]]
 7 object = ["{" ?w .s?.([?w "," ?w] key_value:"key_value") ?w "}"]
 8 array = ["[" ?w .s?.([?w "," ?w] expr:"array_item") ?w "]"]
 9 array_fill = ["[" ?w [expr:"fill" ?w ";" ?w expr:"n"] ?w "]"]
@@ -78,10 +78,10 @@ _seps: "(){}[],.:;=<>*+-/%^"
 12 text = .t?:"text"
 13 bool = {"true":"bool" "false":!"bool"}
 14 unop = ["!":"!" ?w lexpr:"expr"]
-15 item = [.._seps!:"name" .r?({
+15 item = [.._seps!:"name" ?[?w "?":"try_item"] .r?([{
     [?w "[" ?w {.t?:"id" .$_:"id" expr:"id"} ?w "]"]
     [?w "." ?w .._seps!:"id"]
-})]
+} ?[?w "?":"try_id"]])]
 16 for = [?["'" .._seps!:"label" ?w ":" ?w] "for" .w!
     expr:"init" ?w ";" ?w
     expr:"cond" ?w ";" ?w

@@ -184,6 +184,7 @@ pub enum Expression {
     Compare(Box<Compare>),
     UnOp(Box<UnOpExpression>),
     Variable(Range, Variable),
+    Try(Box<Expression>),
 }
 
 impl Expression {
@@ -291,6 +292,9 @@ impl Expression {
                     convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::UnOp(Box::new(val)));
+            } else if let Ok((range, _)) = convert.meta_bool("try") {
+                convert.update(range);
+                result = Some(Expression::Try(Box::new(result.unwrap())));
             } else {
                 let range = convert.ignore();
                 convert.update(range);
@@ -326,6 +330,7 @@ impl Expression {
             Compare(ref comp) => comp.source_range,
             UnOp(ref unop) => unop.source_range,
             Variable(range, _) => range,
+            Try(ref expr) => expr.source_range(),
         }
     }
 }
@@ -759,7 +764,10 @@ impl Id {
 #[derive(Debug, Clone)]
 pub struct Item {
     pub name: Arc<String>,
+    pub try: bool,
     pub ids: Vec<Id>,
+    // Stores indices of ids that should propagate errors.
+    pub try_ids: Vec<usize>,
     pub source_range: Range,
 }
 
@@ -775,6 +783,8 @@ impl Item {
 
         let mut name: Option<Arc<String>> = None;
         let mut ids = vec![];
+        let mut try_ids = vec![];
+        let mut try = false;
         loop {
             if let Ok(range) = convert.end_node(node) {
                 convert.update(range);
@@ -782,6 +792,9 @@ impl Item {
             } else if let Ok((range, val)) = convert.meta_string("name") {
                 convert.update(range);
                 name = Some(val);
+            } else if let Ok((range, _)) = convert.meta_bool("try_item") {
+                convert.update(range);
+                try = true;
             } else if let Ok((range, val)) = convert.meta_string("id") {
                 let start_id = convert;
                 convert.update(range);
@@ -794,6 +807,10 @@ impl Item {
                 "id", convert, ignored) {
                 convert.update(range);
                 ids.push(Id::Expression(val));
+            } else if let Ok((range, _)) = convert.meta_bool("try_id") {
+                convert.update(range);
+                // id is pushed before the `?` operator, therefore subtract 1.
+                try_ids.push(ids.len() - 1);
             } else {
                 let range = convert.ignore();
                 convert.update(range);
@@ -804,7 +821,9 @@ impl Item {
         let name = try!(name.ok_or(()));
         Ok((convert.subtract(start), Item {
             name: name,
+            try: try,
             ids: ids,
+            try_ids: try_ids,
             source_range: convert.source(start).unwrap(),
         }))
     }

@@ -21,6 +21,14 @@ pub type Object = HashMap<Arc<String>, Variable>;
 pub type Array = Vec<Variable>;
 
 #[derive(Debug, Clone)]
+pub struct Error {
+    message: Variable,
+    // Extra information to help debug error.
+    // Stores error messages for all `?` operators.
+    trace: Vec<String>,
+}
+
+#[derive(Debug, Clone)]
 pub enum Variable {
     Return,
     Bool(bool),
@@ -32,6 +40,7 @@ pub enum Variable {
     UnsafeRef(*mut Variable),
     RustObject(Arc<Mutex<Any>>),
     Option(Option<Box<Variable>>),
+    Result(Result<Box<Variable>, Box<Error>>),
 }
 
 impl PartialEq for Variable {

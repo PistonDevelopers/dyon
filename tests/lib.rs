@@ -157,3 +157,38 @@ fn test_print_functions() {
 fn test_some() {
     test_src("source/some.rs");
 }
+
+#[test]
+fn test_error_propagate() {
+    test_src("source/error/propagate.rs");
+}
+
+#[test]
+fn test_error_call() {
+    test_src("source/error/call.rs");
+}
+
+#[test]
+fn test_error_named_call() {
+    test_src("source/error/named_call.rs");
+}
+
+#[test]
+fn test_error_if() {
+    test_src("source/error/if.rs");
+}
+
+#[test]
+fn test_error_trace() {
+    test_src("source/error/trace.rs");
+}
+
+#[test]
+fn test_error_unwrap_err() {
+    test_src("source/error/unwrap_err.rs");
+}
+
+#[test]
+fn test_error_option() {
+    test_src("source/error/option.rs");
+}
