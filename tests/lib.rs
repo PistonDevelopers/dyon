@@ -187,3 +187,8 @@ fn test_error_trace() {
 fn test_error_unwrap_err() {
     test_src("source/error/unwrap_err.rs");
 }
+
+#[test]
+fn test_error_option() {
+    test_src("source/error/option.rs");
+}

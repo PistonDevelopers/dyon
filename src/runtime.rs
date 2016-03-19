@@ -319,6 +319,8 @@ impl Runtime {
         side: Side,
         module: &Module
     ) -> Result<(Expect, Flow), String> {
+        use Error;
+
         match self.expression(expr, side, module) {
             Ok((x, Flow::Return)) => { return Ok((x, Flow::Return)); }
             Ok((Expect::Something, Flow::Continue)) => {}
@@ -329,6 +331,17 @@ impl Runtime {
             .expect("There is no value on the stack");
         let v = match self.resolve(&v) {
             &Variable::Result(ref res) => res.clone(),
+            &Variable::Option(ref opt) => {
+                match opt {
+                    &Some(ref some) => Ok(some.clone()),
+                    &None => Err(Box::new(Error {
+                        message: Variable::Text(Arc::new(
+                            "Expected `some(_)`, found `none()`"
+                            .into())),
+                        trace: vec![]
+                    }))
+                }
+            }
             _ => {
                 return Err(module.error(expr.source_range(),
                     &format!("Expected `ok(_)` or `err(_)`")));
@@ -976,6 +989,17 @@ impl Runtime {
                         // Check for `err(_)` or unwrap when `?` follows item.
                         let v = match self.resolve(&self.stack[id]) {
                             &Variable::Result(ref res) => res.clone(),
+                            &Variable::Option(ref opt) => {
+                                match opt {
+                                    &Some(ref some) => Ok(some.clone()),
+                                    &None => Err(Box::new(Error {
+                                        message: Variable::Text(Arc::new(
+                                            "Expected `some(_)`, found `none()`"
+                                            .into())),
+                                        trace: vec![]
+                                    }))
+                                }
+                            }
                             _ => {
                                 return Err(module.error(item.source_range,
                                     &format!("Expected `ok(_)` or `err(_)`")));
@@ -1050,6 +1074,17 @@ impl Runtime {
                     // Check for error on `?` for first id.
                     let v = unsafe {match *var {
                         Variable::Result(ref res) => res.clone(),
+                        Variable::Option(ref opt) => {
+                            match opt {
+                                &Some(ref some) => Ok(some.clone()),
+                                &None => Err(Box::new(Error {
+                                    message: Variable::Text(Arc::new(
+                                        "Expected `some(_)`, found `none()`"
+                                        .into())),
+                                    trace: vec![]
+                                }))
+                            }
+                        }
                         _ => {
                             return Err(module.error(item.ids[0].source_range(),
                                 &format!("Expected `ok(_)` or `err(_)`")));
@@ -1098,6 +1133,17 @@ impl Runtime {
                         // Check for error on `?` for rest of ids.
                         let v = unsafe {match *var {
                             Variable::Result(ref res) => res.clone(),
+                            Variable::Option(ref opt) => {
+                                match opt {
+                                    &Some(ref some) => Ok(some.clone()),
+                                    &None => Err(Box::new(Error {
+                                        message: Variable::Text(Arc::new(
+                                            "Expected `some(_)`, found `none()`"
+                                            .into())),
+                                        trace: vec![]
+                                    }))
+                                }
+                            }
                             _ => {
                                 return Err(module.error(prop.source_range(),
                                     &format!("Expected `ok(_)` or `err(_)`")));
