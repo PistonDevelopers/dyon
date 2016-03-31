@@ -8,5 +8,7 @@ fn main() {
             clear(background_color)
             draw(color: [1, 0, 0, 1], rect: [0, 0, 50, 50])
         }
+        if update() {
+        }
     }
 }

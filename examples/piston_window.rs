@@ -66,6 +66,10 @@ fn load_module() -> Option<Module> {
         arg_constraints: vec![],
         returns: true
     });
+    module.add(Arc::new("update".into()), dyon_update, PreludeFunction {
+        arg_constraints: vec![],
+        returns: true
+    });
     module.add(Arc::new("clear".into()), dyon_clear, PreludeFunction {
         arg_constraints: vec![ArgConstraint::Default],
         returns: false
@@ -95,6 +99,12 @@ fn load_module() -> Option<Module> {
 fn dyon_render(rt: &mut Runtime) -> Result<(), String> {
     let e = unsafe { &*Current::<PistonWindow>::new() };
     push_bool(rt, e.render_args().is_some());
+    Ok(())
+}
+
+fn dyon_update(rt: &mut Runtime) -> Result<(), String> {
+    let e = unsafe { &*Current::<PistonWindow>::new() };
+    push_bool(rt, e.update_args().is_some());
     Ok(())
 }
 
