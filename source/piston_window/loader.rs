@@ -36,5 +36,8 @@ fn main() {
         if press() {
             println("Pressed something")
         }
+        if release() {
+            println("Released something")
+        }
     }
 }
