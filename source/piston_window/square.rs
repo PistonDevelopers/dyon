@@ -1,6 +1,19 @@
 fn main() {
     background_color := [1; 4]
 
+    loop {
+        if !next_event() { break }
+        if render() {
+            clear(background_color)
+        }
+    }
+}
+
+
+/*
+fn main() {
+    background_color := [1; 4]
+
     if render() {
         clear(background_color)
         square(100, 100)
@@ -14,3 +27,4 @@ fn square(x, y) {
             rect: [i * s + x - 50, i * s + y - 50, 100, 100])
     }
 }
+*/

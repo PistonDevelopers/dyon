@@ -10,7 +10,7 @@ use dyon::{error, load, ArgConstraint, Module, PreludeFunction, Runtime, Variabl
 use timer_controller::Timer;
 
 fn main() {
-    let window: PistonWindow =
+    let mut window: PistonWindow =
         WindowSettings::new("dyon: piston_window", [512; 2])
         .exit_on_esc(true)
         .samples(4)
@@ -25,6 +25,13 @@ fn main() {
     let mut timer = Timer::new(0.25);
     let mut got_error = false;
 
+    let window_guard = CurrentGuard::new(&mut window);
+    if error(dyon_runtime.run(&dyon_module)) {
+        return;
+    }
+    drop(window_guard);
+
+    /*
     for mut e in window {
         timer.event(&e, || {
             if !got_error {
@@ -50,6 +57,7 @@ fn main() {
         }
         drop(e_guard);
     }
+    */
 }
 
 fn load_module() -> Option<Module> {
@@ -66,6 +74,11 @@ fn load_module() -> Option<Module> {
         dyon_rectangle_color_rect, PreludeFunction {
             arg_constraints: vec![ArgConstraint::Default; 2],
             returns: false
+        });
+    module.add(Arc::new("next_event".into()),
+        dyon_next_event, PreludeFunction {
+            arg_constraints: vec![],
+            returns: true
         });
     if error(load("source/piston_window/square.rs", &mut module)) {
         None
@@ -152,5 +165,16 @@ fn dyon_rectangle_color_rect(rt: &mut Runtime) -> Result<(), String> {
     e.draw_2d(|c, g| {
         rectangle(color, rect, c.transform, g);
     });
+    Ok(())
+}
+
+fn dyon_next_event(rt: &mut Runtime) -> Result<(), String> {
+    let e = unsafe { &mut *Current::<PistonWindow>::new() };
+    if let Some(new_e) = e.next() {
+        *e = new_e;
+        push_bool(rt, true);
+    } else {
+        push_bool(rt, false);
+    }
     Ok(())
 }
