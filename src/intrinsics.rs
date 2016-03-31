@@ -562,12 +562,18 @@ pub fn call_standard(
                     for (key, &(ref f, ref ext)) in &module.ext_prelude {
                         m.add(key.clone(), *f, ext.clone());
                     }
-                    try!(load(text, &mut m).map_err(|err| {
-                            format!("{}\n{}", err,
-                                module.error(call.args[0].source_range(),
-                                "When attempting to load module:"))
-                        }));
-                    Variable::RustObject(Arc::new(Mutex::new(m)))
+                    if let Err(err) = load(text, &mut m) {
+                        Variable::Result(Err(Box::new(Error {
+                            message: Variable::Text(Arc::new(
+                                format!("{}\n{}", err,
+                                    module.error(call.args[0].source_range(),
+                                    "When attempting to load module:")))),
+                            trace: vec![]
+                        })))
+                    } else {
+                        Variable::Result(Ok(Box::new(
+                            Variable::RustObject(Arc::new(Mutex::new(m))))))
+                    }
                 }
                 _ => return Err(module.error(call.args[0].source_range(),
                                 "Expected string"))
@@ -613,13 +619,19 @@ pub fn call_standard(
             }
             let v = match rt.resolve(&source) {
                 &Variable::Text(ref text) => {
-                    try!(load(text, &mut new_module).map_err(|err| {
-                            format!("{}\n{}", err,
-                                module.error(call.args[0].source_range(),
-                                "When attempting to load module:"))
-                        }));
-                    Variable::RustObject(
-                        Arc::new(Mutex::new(new_module)))
+                    if let Err(err) = load(text, &mut new_module) {
+                        Variable::Result(Err(Box::new(Error {
+                            message: Variable::Text(Arc::new(
+                                format!("{}\n{}", err,
+                                    module.error(call.args[0].source_range(),
+                                    "When attempting to load module:")))),
+                            trace: vec![]
+                        })))
+                    } else {
+                        Variable::Result(Ok(Box::new(
+                            Variable::RustObject(Arc::new(
+                                Mutex::new(new_module))))))
+                    }
                 }
                 _ => return Err(module.error(call.args[0].source_range(),
                     "Expected array of `Module`"))
