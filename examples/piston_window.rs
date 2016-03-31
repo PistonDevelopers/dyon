@@ -70,6 +70,10 @@ fn load_module() -> Option<Module> {
         arg_constraints: vec![],
         returns: true
     });
+    module.add(Arc::new("press".into()), dyon_press, PreludeFunction {
+        arg_constraints: vec![],
+        returns: true
+    });
     module.add(Arc::new("clear".into()), dyon_clear, PreludeFunction {
         arg_constraints: vec![ArgConstraint::Default],
         returns: false
@@ -110,6 +114,12 @@ fn dyon_render(rt: &mut Runtime) -> Result<(), String> {
 fn dyon_update(rt: &mut Runtime) -> Result<(), String> {
     let e = unsafe { &*Current::<PistonWindow>::new() };
     push_bool(rt, e.update_args().is_some());
+    Ok(())
+}
+
+fn dyon_press(rt: &mut Runtime) -> Result<(), String> {
+    let e = unsafe { &*Current::<PistonWindow>::new() };
+    push_bool(rt, e.press_args().is_some());
     Ok(())
 }
 

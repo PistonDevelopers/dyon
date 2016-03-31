@@ -33,5 +33,8 @@ fn main() {
                 }
             }
         }
+        if press() {
+            println("Pressed something")
+        }
     }
 }
