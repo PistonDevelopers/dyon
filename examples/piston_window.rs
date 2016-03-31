@@ -70,8 +70,8 @@ fn load_module() -> Option<Module> {
         arg_constraints: vec![ArgConstraint::Default],
         returns: false
     });
-    module.add(Arc::new("rectangle_color_rect".into()),
-        dyon_rectangle_color_rect, PreludeFunction {
+    module.add(Arc::new("draw_color_rect".into()),
+        dyon_draw_color_rect, PreludeFunction {
             arg_constraints: vec![ArgConstraint::Default; 2],
             returns: false
         });
@@ -158,7 +158,7 @@ fn dyon_clear(rt: &mut Runtime) -> Result<(), String> {
     Ok(())
 }
 
-fn dyon_rectangle_color_rect(rt: &mut Runtime) -> Result<(), String> {
+fn dyon_draw_color_rect(rt: &mut Runtime) -> Result<(), String> {
     let e = unsafe { &mut *Current::<PistonWindow>::new() };
     let rect = try!(pop_rect(rt));
     let color = try!(pop_color(rt));
