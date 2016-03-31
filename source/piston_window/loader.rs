@@ -1,6 +1,7 @@
 fn main() {
     settings := {
-        background_color: [1; 4]
+        background_color: [1; 4],
+        reload_key: 1073741882, // F1
     }
     source := "source/piston_window/square.rs"
     m := unwrap(load(source))
@@ -34,10 +35,11 @@ fn main() {
             }
         }
         if press() {
-            println("Pressed something")
-        }
-        if release() {
-            println("Released something")
+            key := press_keyboard_key()
+            if key == some(settings.reload_key) {
+                println(" ~~~ Reloading ~~~ ")
+                got_error = false
+            }
         }
     }
 }

@@ -102,6 +102,16 @@ fn load_module() -> Option<Module> {
             arg_constraints: vec![],
             returns: true
         });
+    module.add(Arc::new("press_keyboard_key".into()),
+        dyon_press_keyboard_key, PreludeFunction {
+            arg_constraints: vec![],
+            returns: true
+        });
+    module.add(Arc::new("release_keyboard_key".into()),
+        dyon_release_keyboard_key, PreludeFunction {
+            arg_constraints: vec![],
+            returns: true
+        });
     if error(load("source/piston_window/loader.rs", &mut module)) {
         None
     } else {
@@ -248,5 +258,25 @@ fn dyon_set_title(rt: &mut Runtime) -> Result<(), String> {
 fn dyon_update_dt(rt: &mut Runtime) -> Result<(), String> {
     let e = unsafe { &mut *Current::<PistonWindow>::new() };
     push_opt_num(rt, e.update_args().map(|args| args.dt));
+    Ok(())
+}
+
+fn dyon_press_keyboard_key(rt: &mut Runtime) -> Result<(), String> {
+    let e = unsafe { &mut *Current::<PistonWindow>::new() };
+    if let Some(Button::Keyboard(key)) = e.press_args() {
+        push_opt_num(rt, Some(key as u64 as f64));
+    } else {
+        push_opt_num(rt, None);
+    }
+    Ok(())
+}
+
+fn dyon_release_keyboard_key(rt: &mut Runtime) -> Result<(), String> {
+    let e = unsafe { &mut *Current::<PistonWindow>::new() };
+    if let Some(Button::Keyboard(key)) = e.release_args() {
+        push_opt_num(rt, Some(key as u64 as f64));
+    } else {
+        push_opt_num(rt, None);
+    }
     Ok(())
 }
