@@ -25,8 +25,8 @@ Notice: This is very early stage in development. Breaking changes will happen!
 - Labeled break `'a: loop { break 'a }`
 - Labeled continue `'a: loop { continue 'a }`
 - Use `return` as a variable without exiting `return = 8`
-- Dynamic modules `m := load("script.dyon")` then `call(m, "main", [])`
-- Dynamic imports part of module prelude `m := load(source: "script.dyon", imports: [window, graphics])`
+- Dynamic modules `m := unwrap(load("script.dyon"))` then `call(m, "main", [])`
+- Dynamic imports part of module prelude `m := unwrap(load(source: "script.dyon", imports: [window, graphics]))`
 - Add a custom Rust function using `Module::add`
 
 ### Why the name Dyon?
