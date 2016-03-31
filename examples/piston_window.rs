@@ -10,7 +10,7 @@ use dyon::{error, load, ArgConstraint, Module, PreludeFunction, Runtime, Variabl
 use timer_controller::Timer;
 
 fn main() {
-    let window: PistonWindow =
+    let mut window: PistonWindow =
         WindowSettings::new("dyon: piston_window", [512; 2])
         .exit_on_esc(true)
         .samples(4)
@@ -25,6 +25,13 @@ fn main() {
     let mut timer = Timer::new(0.25);
     let mut got_error = false;
 
+    let window_guard = CurrentGuard::new(&mut window);
+    if error(dyon_runtime.run(&dyon_module)) {
+        return;
+    }
+    drop(window_guard);
+
+    /*
     for mut e in window {
         timer.event(&e, || {
             if !got_error {
@@ -50,6 +57,7 @@ fn main() {
         }
         drop(e_guard);
     }
+    */
 }
 
 fn load_module() -> Option<Module> {
@@ -58,16 +66,35 @@ fn load_module() -> Option<Module> {
         arg_constraints: vec![],
         returns: true
     });
+    module.add(Arc::new("update".into()), dyon_update, PreludeFunction {
+        arg_constraints: vec![],
+        returns: true
+    });
     module.add(Arc::new("clear".into()), dyon_clear, PreludeFunction {
         arg_constraints: vec![ArgConstraint::Default],
         returns: false
     });
-    module.add(Arc::new("rectangle_color_rect".into()),
-        dyon_rectangle_color_rect, PreludeFunction {
+    module.add(Arc::new("draw_color_rect".into()),
+        dyon_draw_color_rect, PreludeFunction {
             arg_constraints: vec![ArgConstraint::Default; 2],
             returns: false
         });
-    if error(load("source/piston_window/square.rs", &mut module)) {
+    module.add(Arc::new("next_event".into()),
+        dyon_next_event, PreludeFunction {
+            arg_constraints: vec![],
+            returns: true
+        });
+    module.add(Arc::new("set_title".into()),
+        dyon_set_title, PreludeFunction {
+            arg_constraints: vec![ArgConstraint::Default],
+            returns: false
+        });
+    module.add(Arc::new("update_dt".into()),
+        dyon_update_dt, PreludeFunction {
+            arg_constraints: vec![],
+            returns: true
+        });
+    if error(load("source/piston_window/loader.rs", &mut module)) {
         None
     } else {
         Some(module)
@@ -80,8 +107,25 @@ fn dyon_render(rt: &mut Runtime) -> Result<(), String> {
     Ok(())
 }
 
+fn dyon_update(rt: &mut Runtime) -> Result<(), String> {
+    let e = unsafe { &*Current::<PistonWindow>::new() };
+    push_bool(rt, e.update_args().is_some());
+    Ok(())
+}
+
 fn push_bool(rt: &mut Runtime, val: bool) {
     rt.stack.push(Variable::Bool(val))
+}
+
+fn push_opt_num(rt: &mut Runtime, val: Option<f64>) {
+    match val {
+        None => {
+            rt.stack.push(Variable::Option(None))
+        }
+        Some(n) => {
+            rt.stack.push(Variable::Option(Some(Box::new(Variable::F64(n)))))
+        }
+    }
 }
 
 fn pop_color(rt: &mut Runtime) -> Result<[f32; 4], String> {
@@ -136,6 +180,14 @@ fn pop_rect(rt: &mut Runtime) -> Result<[f64; 4], String> {
     }
 }
 
+fn pop_string(rt: &mut Runtime) -> Result<Arc<String>, String> {
+    let v = rt.stack.pop().expect("Expected string");
+    match rt.resolve(&v) {
+        &Variable::Text(ref s) => Ok(s.clone()),
+        _ => Err("Expected string".into())
+    }
+}
+
 fn dyon_clear(rt: &mut Runtime) -> Result<(), String> {
     let e = unsafe { &mut *Current::<PistonWindow>::new() };
     let color = try!(pop_color(rt));
@@ -145,12 +197,36 @@ fn dyon_clear(rt: &mut Runtime) -> Result<(), String> {
     Ok(())
 }
 
-fn dyon_rectangle_color_rect(rt: &mut Runtime) -> Result<(), String> {
+fn dyon_draw_color_rect(rt: &mut Runtime) -> Result<(), String> {
     let e = unsafe { &mut *Current::<PistonWindow>::new() };
     let rect = try!(pop_rect(rt));
     let color = try!(pop_color(rt));
     e.draw_2d(|c, g| {
         rectangle(color, rect, c.transform, g);
     });
+    Ok(())
+}
+
+fn dyon_next_event(rt: &mut Runtime) -> Result<(), String> {
+    let e = unsafe { &mut *Current::<PistonWindow>::new() };
+    if let Some(new_e) = e.next() {
+        *e = new_e;
+        push_bool(rt, true);
+    } else {
+        push_bool(rt, false);
+    }
+    Ok(())
+}
+
+fn dyon_set_title(rt: &mut Runtime) -> Result<(), String> {
+    let e = unsafe { &mut *Current::<PistonWindow>::new() };
+    let title = try!(pop_string(rt));
+    e.set_title((*title).clone());
+    Ok(())
+}
+
+fn dyon_update_dt(rt: &mut Runtime) -> Result<(), String> {
+    let e = unsafe { &mut *Current::<PistonWindow>::new() };
+    push_opt_num(rt, e.update_args().map(|args| args.dt));
     Ok(())
 }
