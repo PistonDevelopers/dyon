@@ -89,6 +89,11 @@ fn load_module() -> Option<Module> {
             arg_constraints: vec![ArgConstraint::Default],
             returns: false
         });
+    module.add(Arc::new("update_dt".into()),
+        dyon_update_dt, PreludeFunction {
+            arg_constraints: vec![],
+            returns: true
+        });
     if error(load("source/piston_window/square.rs", &mut module)) {
         None
     } else {
@@ -110,6 +115,17 @@ fn dyon_update(rt: &mut Runtime) -> Result<(), String> {
 
 fn push_bool(rt: &mut Runtime, val: bool) {
     rt.stack.push(Variable::Bool(val))
+}
+
+fn push_opt_num(rt: &mut Runtime, val: Option<f64>) {
+    match val {
+        None => {
+            rt.stack.push(Variable::Option(None))
+        }
+        Some(n) => {
+            rt.stack.push(Variable::Option(Some(Box::new(Variable::F64(n)))))
+        }
+    }
 }
 
 fn pop_color(rt: &mut Runtime) -> Result<[f32; 4], String> {
@@ -206,5 +222,11 @@ fn dyon_set_title(rt: &mut Runtime) -> Result<(), String> {
     let e = unsafe { &mut *Current::<PistonWindow>::new() };
     let title = try!(pop_string(rt));
     e.set_title((*title).clone());
+    Ok(())
+}
+
+fn dyon_update_dt(rt: &mut Runtime) -> Result<(), String> {
+    let e = unsafe { &mut *Current::<PistonWindow>::new() };
+    push_opt_num(rt, e.update_args().map(|args| args.dt));
     Ok(())
 }
