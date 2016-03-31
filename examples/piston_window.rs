@@ -94,7 +94,7 @@ fn load_module() -> Option<Module> {
             arg_constraints: vec![],
             returns: true
         });
-    if error(load("source/piston_window/square.rs", &mut module)) {
+    if error(load("source/piston_window/loader.rs", &mut module)) {
         None
     } else {
         Some(module)

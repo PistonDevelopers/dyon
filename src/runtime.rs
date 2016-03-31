@@ -926,6 +926,37 @@ impl Runtime {
                                 }
                             }
                         }
+                        &Variable::RustObject(ref robj) => {
+                            unsafe {
+                                match *r {
+                                    Variable::RustObject(ref mut n) => {
+                                        if let Set = op {
+                                            // Check address to avoid unsafe
+                                            // reading and writing to same memory.
+                                            let n_addr = n as *const _ as usize;
+                                            let obj_addr = robj as *const _ as usize;
+                                            if n_addr != obj_addr {
+                                                *r = b.clone()
+                                            }
+                                        } else {
+                                            unimplemented!()
+                                        }
+                                    }
+                                    Variable::Return => {
+                                        if let Set = op {
+                                            *r = Variable::RustObject(robj.clone())
+                                        } else {
+                                            return Err(module.error(
+                                                left.source_range(),
+                                                "Return has no value"))
+                                        }
+                                    }
+                                    _ => return Err(module.error(
+                                        left.source_range(),
+                                        "Expected assigning to rust_object"))
+                                }
+                            }
+                        }
                         _ => unimplemented!()
                     };
                     Ok(Flow::Continue)
