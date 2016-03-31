@@ -80,6 +80,11 @@ fn load_module() -> Option<Module> {
             arg_constraints: vec![],
             returns: true
         });
+    module.add(Arc::new("set_title".into()),
+        dyon_set_title, PreludeFunction {
+            arg_constraints: vec![ArgConstraint::Default],
+            returns: false
+        });
     if error(load("source/piston_window/square.rs", &mut module)) {
         None
     } else {
@@ -149,6 +154,14 @@ fn pop_rect(rt: &mut Runtime) -> Result<[f64; 4], String> {
     }
 }
 
+fn pop_string(rt: &mut Runtime) -> Result<Arc<String>, String> {
+    let v = rt.stack.pop().expect("Expected string");
+    match rt.resolve(&v) {
+        &Variable::Text(ref s) => Ok(s.clone()),
+        _ => Err("Expected string".into())
+    }
+}
+
 fn dyon_clear(rt: &mut Runtime) -> Result<(), String> {
     let e = unsafe { &mut *Current::<PistonWindow>::new() };
     let color = try!(pop_color(rt));
@@ -176,5 +189,12 @@ fn dyon_next_event(rt: &mut Runtime) -> Result<(), String> {
     } else {
         push_bool(rt, false);
     }
+    Ok(())
+}
+
+fn dyon_set_title(rt: &mut Runtime) -> Result<(), String> {
+    let e = unsafe { &mut *Current::<PistonWindow>::new() };
+    let title = try!(pop_string(rt));
+    e.set_title((*title).clone());
     Ok(())
 }

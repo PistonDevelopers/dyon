@@ -1,6 +1,7 @@
 fn main() {
     background_color := [1; 4]
 
+    set(title: "Square!")
     loop {
         if !next_event() { break }
         if render() {
