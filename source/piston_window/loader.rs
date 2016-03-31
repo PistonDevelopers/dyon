@@ -6,7 +6,7 @@ fn main() {
     source := "source/piston_window/square.rs"
     m := unwrap(load(source))
 
-    set(title: "Square!")
+    set(title: call_ret(m, "title", []))
 
     time := 0
     last_reload := 0
