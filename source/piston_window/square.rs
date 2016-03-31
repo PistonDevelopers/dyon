@@ -1,3 +1,5 @@
+fn title() -> { return "Square!" }
+
 fn render(settings) {
     clear(settings.background_color)
     size := 50
