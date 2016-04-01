@@ -671,6 +671,7 @@ impl Node {
         let mut call_arg_ind = 0;
         for &c in &self.children {
             match (self.kind, nodes[c].kind) {
+                (_, Kind::Assign) => {}
                 (_, Kind::Object) => {}
                 (_, Kind::KeyValue) => {}
                 (_, Kind::Val) => {}
@@ -693,6 +694,7 @@ impl Node {
                 (_, Kind::Expr) => {}
                 (_, Kind::Array) => {}
                 (_, Kind::ArrayItem) => {}
+                (_, Kind::ArrayFill) => {}
                 (_, Kind::Pow) => {}
                 (_, Kind::Base) => {}
                 (_, Kind::Exp) => {}
