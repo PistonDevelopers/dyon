@@ -6,12 +6,10 @@ fn settings() -> {
         reload_interval: 0.25,
         reload_key: 1073741882, // F1
         reset_key: 114, // R
-        snake_parts: 60,
+        snake_parts: 300,
         snake_parts_size: 5,
         turn_left: 97, // A
         turn_right: 100, // D,
-        pressing_left: false,
-        pressing_right: false,
         turn_speed: 3,
         speed: 50
     }
@@ -27,13 +25,22 @@ fn render(settings, data) {
         draw(color: [.2, .2, 0, 1], rect: [
             pos[0] - 0.5 * size, pos[1] - 0.5 * size, size, size])
     }
+    if n > 0 {
+        dir_len := 20
+        pos := data.snake_body[0]
+        pos2 := [
+            pos[0] + cos(data.snake_angle) * dir_len,
+            pos[1] + sin(data.snake_angle) * dir_len
+        ]
+        draw(color: [0, 0, 1, 1], radius: 1, line: [pos[0], pos[1], pos2[0], pos2[1]])
+    }
 }
 
 fn update(data, settings, dt) {
-    if settings.pressing_left {
+    if data.pressing_left {
         data.snake_angle -= settings.turn_speed * dt
     }
-    if settings.pressing_right {
+    if data.pressing_right {
         data.snake_angle += settings.turn_speed * dt
     }
     // Update snake body.

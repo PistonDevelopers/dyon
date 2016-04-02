@@ -16,21 +16,25 @@ fn main() {
         }
         event(loader: loader, source: source, settings: settings, module: m)
         key := press_keyboard_key()
-        if key == some(settings.reset_key) {
-            data = init_data(settings)
-        } else if key == some(settings.turn_left) {
-            settings.pressing_left = true
-        } else if key == some(settings.turn_right) {
-            settings.pressing_right = true
-        } else if key != none() {
-            // println("Pressed " + to_string(unwrap(key)))
+        if key != none() {
+            key := unwrap(key)
+            if key == settings.reset_key {
+                data = init_data(settings)
+            } else if key == settings.turn_left {
+                data.pressing_left = true
+            } else if key == settings.turn_right {
+                data.pressing_right = true
+            }
         }
 
         key := release_keyboard_key()
-        if key == some(settings.turn_left) {
-            settings.pressing_left = false
-        } else if key == some(settings.turn_right) {
-            settings.pressing_right = false
+        if key != none() {
+            key := unwrap(key)
+            if key == settings.turn_left {
+                data.pressing_left = false
+            } else if key == settings.turn_right {
+                data.pressing_right = false
+            }
         }
     }
 }
@@ -41,7 +45,9 @@ fn init_data(settings) -> {
             parts: settings.snake_parts,
             size: settings.snake_parts_size
         ),
-        snake_angle: 0
+        snake_angle: 0,
+        pressing_left: false,
+        pressing_right: false,
     }
     data.next_snake_body := data.snake_body
     return clone(data)
@@ -49,7 +55,8 @@ fn init_data(settings) -> {
 
 fn init_snake_body_parts_size(parts, size) -> {
     body := []
-    end := [(parts - 1) * size, (parts - 1) * size]
+    // end := [(parts - 1) * size, (parts - 1) * size]
+    end := [0, 0]
     for i := 0; i < parts; i += 1 {
         push(body, [end[0] - i * size, end[1] - i * size])
     }
