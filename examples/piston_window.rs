@@ -54,6 +54,11 @@ fn load_module() -> Option<Module> {
             arg_constraints: vec![ArgConstraint::Default; 2],
             returns: false
         });
+    module.add(Arc::new("draw_color_radius_line".into()),
+        dyon_draw_color_radius_line, PreludeFunction {
+            arg_constraints: vec![ArgConstraint::Default; 3],
+            returns: false
+        });
     module.add(Arc::new("next_event".into()),
         dyon_next_event, PreludeFunction {
             arg_constraints: vec![],
@@ -122,6 +127,14 @@ fn push_opt_num(rt: &mut Runtime, val: Option<f64>) {
         Some(n) => {
             rt.stack.push(Variable::Option(Some(Box::new(Variable::F64(n)))))
         }
+    }
+}
+
+fn pop_num(rt: &mut Runtime) -> Result<f64, String> {
+    let num = rt.stack.pop().expect("Expected number");
+    match rt.resolve(&num) {
+        &Variable::F64(n) => Ok(n),
+        _ => Err("Expected number".into())
     }
 }
 
@@ -200,6 +213,17 @@ fn dyon_draw_color_rect(rt: &mut Runtime) -> Result<(), String> {
     let color = try!(pop_color(rt));
     e.draw_2d(|c, g| {
         rectangle(color, rect, c.transform, g);
+    });
+    Ok(())
+}
+
+fn dyon_draw_color_radius_line(rt: &mut Runtime) -> Result<(), String> {
+    let e = unsafe { &mut *Current::<PistonWindow>::new() };
+    let rect = try!(pop_rect(rt));
+    let radius = try!(pop_num(rt));
+    let color = try!(pop_color(rt));
+    e.draw_2d(|c, g| {
+        line(color, radius, rect, c.transform, g);
     });
     Ok(())
 }
