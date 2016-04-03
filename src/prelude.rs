@@ -5,8 +5,9 @@ use ast;
 use intrinsics;
 use Module;
 
+/// Argument lifetime constraint.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum ArgConstraint {
+pub enum Lt {
     Arg(usize),
     Return,
     Default,
@@ -16,32 +17,32 @@ pub enum ArgConstraint {
 /// These are already checked.
 #[derive(Clone)]
 pub struct PreludeFunction {
-    pub arg_constraints: Vec<ArgConstraint>,
+    pub lts: Vec<Lt>,
     pub returns: bool,
 }
 
 impl PreludeFunction {
     pub fn new(f: &ast::Function) -> PreludeFunction {
-        let mut arg_constraints: Vec<ArgConstraint> = vec![];
+        let mut lts: Vec<Lt> = vec![];
         'next_arg: for arg in &f.args {
             if let Some(ref lt) = arg.lifetime {
                 if **lt == "return" {
-                    arg_constraints.push(ArgConstraint::Return);
+                    lts.push(Lt::Return);
                     continue 'next_arg;
                 }
                 for (i, arg2) in f.args.iter().enumerate() {
                     if **arg2.name == **lt {
-                        arg_constraints.push(ArgConstraint::Arg(i));
+                        lts.push(Lt::Arg(i));
                         continue 'next_arg;
                     }
                 }
                 panic!("Could not find argument `{}`", lt);
             } else {
-                arg_constraints.push(ArgConstraint::Default);
+                lts.push(Lt::Default);
             }
         }
         PreludeFunction {
-            arg_constraints: arg_constraints,
+            lts: lts,
             returns: f.returns,
         }
     }

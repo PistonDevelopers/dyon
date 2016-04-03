@@ -5,7 +5,7 @@ extern crate current;
 use std::sync::Arc;
 use piston_window::*;
 use current::{Current, CurrentGuard};
-use dyon::{error, load, ArgConstraint, Module, PreludeFunction, Runtime, Variable};
+use dyon::{error, load, Lt, Module, PreludeFunction, Runtime, Variable};
 
 fn main() {
     let mut window: PistonWindow =
@@ -30,58 +30,58 @@ fn main() {
 fn load_module() -> Option<Module> {
     let mut module = Module::new();
     module.add(Arc::new("render".into()), dyon_render, PreludeFunction {
-        arg_constraints: vec![],
+        lts: vec![],
         returns: true
     });
     module.add(Arc::new("update".into()), dyon_update, PreludeFunction {
-        arg_constraints: vec![],
+        lts: vec![],
         returns: true
     });
     module.add(Arc::new("press".into()), dyon_press, PreludeFunction {
-        arg_constraints: vec![],
+        lts: vec![],
         returns: true
     });
     module.add(Arc::new("release".into()), dyon_release, PreludeFunction {
-        arg_constraints: vec![],
+        lts: vec![],
         returns: true
     });
     module.add(Arc::new("clear".into()), dyon_clear, PreludeFunction {
-        arg_constraints: vec![ArgConstraint::Default],
+        lts: vec![Lt::Default],
         returns: false
     });
     module.add(Arc::new("draw_color_rect".into()),
         dyon_draw_color_rect, PreludeFunction {
-            arg_constraints: vec![ArgConstraint::Default; 2],
+            lts: vec![Lt::Default; 2],
             returns: false
         });
     module.add(Arc::new("draw_color_radius_line".into()),
         dyon_draw_color_radius_line, PreludeFunction {
-            arg_constraints: vec![ArgConstraint::Default; 3],
+            lts: vec![Lt::Default; 3],
             returns: false
         });
     module.add(Arc::new("next_event".into()),
         dyon_next_event, PreludeFunction {
-            arg_constraints: vec![],
+            lts: vec![],
             returns: true
         });
     module.add(Arc::new("set_title".into()),
         dyon_set_title, PreludeFunction {
-            arg_constraints: vec![ArgConstraint::Default],
+            lts: vec![Lt::Default],
             returns: false
         });
     module.add(Arc::new("update_dt".into()),
         dyon_update_dt, PreludeFunction {
-            arg_constraints: vec![],
+            lts: vec![],
             returns: true
         });
     module.add(Arc::new("press_keyboard_key".into()),
         dyon_press_keyboard_key, PreludeFunction {
-            arg_constraints: vec![],
+            lts: vec![],
             returns: true
         });
     module.add(Arc::new("release_keyboard_key".into()),
         dyon_release_keyboard_key, PreludeFunction {
-            arg_constraints: vec![],
+            lts: vec![],
             returns: true
         });
     if error(load("source/piston_window/loader.rs", &mut module)) {

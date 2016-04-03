@@ -14,7 +14,7 @@ fn main() {
 fn load_module() -> Option<Module> {
     let mut module = Module::new();
     module.add(Arc::new("say_hello".into()), dyon_say_hello, PreludeFunction {
-        arg_constraints: vec![],
+        lts: vec![],
         returns: false
     });
     if error(load("source/functions/loader.rs", &mut module)) {

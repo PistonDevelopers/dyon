@@ -7,7 +7,7 @@ use std::cmp::{PartialOrd, Ordering};
 use self::piston_meta::MetaData;
 use self::range::Range;
 
-use prelude::{ArgConstraint, Prelude};
+use prelude::{Lt, Prelude};
 
 pub fn check(
     data: &[Range<MetaData>],
@@ -37,7 +37,7 @@ pub fn check(
                     declaration: None,
                     op: None,
                     ids: 0,
-                    arg_constraints: vec![]
+                    lts: vec![]
                 });
             }
             MetaData::EndNode(_) => {
@@ -273,11 +273,11 @@ pub fn check(
                 // Check whether it is a prelude function.
                 match prelude.functions.get(name) {
                     Some(pf) => {
-                        node.arg_constraints = pf.arg_constraints.clone();
-                        if node.arg_constraints.len() != n {
+                        node.lts = pf.lts.clone();
+                        if node.lts.len() != n {
                             return Err(node.source.wrap(
                                 format!("{}: Expected {} arguments, found {}",
-                                name, node.arg_constraints.len(), n)));
+                                name, node.lts.len(), n)));
                         }
                         continue;
                     }
@@ -426,20 +426,20 @@ pub fn check(
             }
         } else {
             // Check that call to intrinsic satisfy the declared constraints.
-            for ((i, &arg_constraint), &call_arg) in
-            call.arg_constraints.iter().enumerate()
+            for ((i, &lt), &call_arg) in
+            call.lts.iter().enumerate()
                 .zip(call.children.iter()
                 .filter(|&&n| nodes[n].kind == Kind::CallArg)) {
                 let arg = &nodes[call_arg];
-                match arg_constraint {
-                    ArgConstraint::Default => {}
-                    ArgConstraint::Return => {
+                match lt {
+                    Lt::Default => {}
+                    Lt::Return => {
                         if !is_reference(i) {
                             return Err(arg.source.wrap(
                                 format!("Requires reference to variable")));
                         }
                     }
-                    ArgConstraint::Arg(ind) => {
+                    Lt::Arg(ind) => {
                         let left = call.children[ind];
                         let right = call.children[i];
                         let lifetime_left = nodes[left].lifetime(&nodes, &arg_names);
@@ -556,9 +556,9 @@ pub struct Node {
     /// Number of ids.
     /// Used to determine declaration of locals.
     pub ids: u32,
-    /// The argument constraints, one for each argument to a function.
+    /// The argument lifetime constraints, one for each argument to a function.
     /// Just using an empty vector for nodes that are not functions.
-    pub arg_constraints: Vec<ArgConstraint>,
+    pub lts: Vec<Lt>,
 }
 
 /// Gets the lifetime of a function argument.
@@ -633,23 +633,23 @@ impl Node {
             }
         } else {
             // Intrinsic functions copies argument constraints to the call.
-            if self.kind == Kind::Call && self.arg_constraints.len() > 0 {
+            if self.kind == Kind::Call && self.lts.len() > 0 {
                 let mut returns_static = true;
-                'args: for (_, arg) in self.children.iter().map(|&i| &nodes[i])
+                'args: for (_, lt) in self.children.iter().map(|&i| &nodes[i])
                         .filter(|&n| n.kind == Kind::CallArg)
-                        .zip(self.arg_constraints.iter()) {
-                    let mut arg = *arg;
+                        .zip(self.lts.iter()) {
+                    let mut lt = *lt;
                     loop {
-                        match arg {
-                            ArgConstraint::Default => {
+                        match lt {
+                            Lt::Default => {
                                 continue 'args;
                             }
-                            ArgConstraint::Return => {
+                            Lt::Return => {
                                 returns_static = false;
                                 break 'args;
                             }
                             x => {
-                                arg = x;
+                                lt = x;
                                 continue;
                             }
                         }
