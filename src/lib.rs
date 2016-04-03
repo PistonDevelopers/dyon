@@ -15,7 +15,7 @@ pub mod intrinsics;
 pub mod prelude;
 
 pub use runtime::Runtime;
-pub use prelude::{ArgConstraint, Prelude, PreludeFunction};
+pub use prelude::{Lt, Prelude, PreludeFunction};
 
 pub type Object = HashMap<Arc<String>, Variable>;
 pub type Array = Vec<Variable>;
