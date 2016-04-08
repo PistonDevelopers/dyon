@@ -309,13 +309,14 @@ pub fn call_standard(
             (x, Flow::Return) => { return Ok((x, Flow::Return)); }
             (Expect::Something, Flow::Continue) => {}
             _ => return Err(module.error(arg.source_range(),
-                            "Expected something. \
-                            Expression did not return a value."))
+                    &format!("{}\nExpected something. \
+                    Expression did not return a value.",
+                    rt.stack_trace())))
         };
     }
     let expect = match &**call.name {
         "clone" => {
-            rt.push_fn(call.name.clone(), st + 1, lc);
+            rt.push_fn(call.name.clone(), None, st + 1, lc);
             let v = rt.stack.pop()
                 .expect("There is no value on the stack");
             let v = deep_clone(rt.resolve(&v), &rt.stack);
@@ -324,7 +325,7 @@ pub fn call_standard(
             Expect::Something
         }
         "println" => {
-            rt.push_fn(call.name.clone(), st, lc);
+            rt.push_fn(call.name.clone(), None, st, lc);
             let x = rt.stack.pop()
                 .expect("There is no value on the stack");
             print_variable(rt, &x, EscapeString::None);
@@ -333,7 +334,7 @@ pub fn call_standard(
             Expect::Nothing
         }
         "print" => {
-            rt.push_fn(call.name.clone(), st, lc);
+            rt.push_fn(call.name.clone(), None, st, lc);
             let x = rt.stack.pop()
                 .expect("There is no value on the stack");
             print_variable(rt, &x, EscapeString::None);
@@ -355,11 +356,11 @@ pub fn call_standard(
             use std::thread::sleep;
             use std::time::Duration;
 
-            rt.push_fn(call.name.clone(), st, lc);
+            rt.push_fn(call.name.clone(), None, st, lc);
             let v = match rt.stack.pop() {
                 Some(Variable::F64(b)) => b,
                 Some(_) => return Err(module.error(call.args[0].source_range(),
-                                      "Expected number")),
+                                &format!("{}\nExpected number", rt.stack_trace()))),
                 None => panic!("There is no value on the stack")
             };
             let secs = v as u64;
@@ -369,18 +370,18 @@ pub fn call_standard(
             Expect::Nothing
         }
         "random" => {
-            rt.push_fn(call.name.clone(), st + 1, lc);
+            rt.push_fn(call.name.clone(), None, st + 1, lc);
             let v = Variable::F64(rt.rng.gen());
             rt.stack.push(v);
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
         "round" => {
-            rt.push_fn(call.name.clone(), st + 1, lc);
+            rt.push_fn(call.name.clone(), None, st + 1, lc);
             let v = match rt.stack.pop() {
                 Some(Variable::F64(b)) => b,
                 Some(_) => return Err(module.error(call.args[0].source_range(),
-                                      "Expected number")),
+                                &format!("{}\nExpected number", rt.stack_trace()))),
                 None => panic!("There is no value on the stack")
             };
             let v = Variable::F64(v.round());
@@ -389,7 +390,7 @@ pub fn call_standard(
             Expect::Something
         }
         "len" => {
-            rt.push_fn(call.name.clone(), st + 1, lc);
+            rt.push_fn(call.name.clone(), None, st + 1, lc);
             let v = match rt.stack.pop() {
                 Some(v) => v,
                 None => panic!("There is no value on the stack")
@@ -399,7 +400,7 @@ pub fn call_standard(
                 let arr = match rt.resolve(&v) {
                     &Variable::Array(ref arr) => arr,
                     _ => return Err(module.error(call.args[0].source_range(),
-                                    "Expected array"))
+                            &format!("{}\nExpected array", rt.stack_trace())))
                 };
                 Variable::F64(arr.len() as f64)
             };
@@ -408,7 +409,7 @@ pub fn call_standard(
             Expect::Something
         }
         "push" => {
-            rt.push_fn(call.name.clone(), st + 1, lc);
+            rt.push_fn(call.name.clone(), None, st + 1, lc);
             let item = match rt.stack.pop() {
                 Some(item) => item,
                 None => panic!("There is no value on the stack")
@@ -419,16 +420,21 @@ pub fn call_standard(
             };
 
             if let Variable::Ref(ind) = v {
-                if let Variable::Array(ref mut arr) =
-                rt.stack[ind] {
+                let ok = if let Variable::Array(ref mut arr) = rt.stack[ind] {
                     arr.push(item);
+                    true
                 } else {
+                    false
+                };
+                if !ok {
                     return Err(module.error(call.args[0].source_range(),
-                               "Expected reference to array"));
+                        &format!("{}\nExpected reference to array",
+                            rt.stack_trace())));
                 }
             } else {
                 return Err(module.error(call.args[0].source_range(),
-                           "Expected reference to array"));
+                    &format!("{}\nExpected reference to array",
+                        rt.stack_trace())));
             }
             rt.pop_fn(call.name.clone());
             Expect::Nothing
@@ -436,7 +442,7 @@ pub fn call_standard(
         "read_line" => {
             use std::io::{self, Write};
 
-            rt.push_fn(call.name.clone(), st + 1, lc);
+            rt.push_fn(call.name.clone(), None, st + 1, lc);
             let mut input = String::new();
             io::stdout().flush().unwrap();
             let error = match io::stdin().read_line(&mut input) {
@@ -455,13 +461,13 @@ pub fn call_standard(
         "read_number" => {
             use std::io::{self, Write};
 
-            rt.push_fn(call.name.clone(), st + 1, lc);
+            rt.push_fn(call.name.clone(), None, st + 1, lc);
             let err = rt.stack.pop()
                     .expect("There is no value on the stack");
             let err = match rt.resolve(&err) {
                 &Variable::Text(ref t) => t.clone(),
                 _ => return Err(module.error(call.args[0].source_range(),
-                                "Expected text"))
+                        &format!("{}\nExpected text", rt.stack_trace())))
             };
             let stdin = io::stdin();
             let mut stdout = io::stdout();
@@ -491,12 +497,12 @@ pub fn call_standard(
             Expect::Something
         }
         "trim_right" => {
-            rt.push_fn(call.name.clone(), st + 1, lc);
+            rt.push_fn(call.name.clone(), None, st + 1, lc);
             let v = rt.stack.pop().expect("There is no value on the stack");
             let mut v = match rt.resolve(&v) {
                 &Variable::Text(ref t) => t.clone(),
                 _ => return Err(module.error(call.args[0].source_range(),
-                                "Expected text"))
+                        &format!("{}\nExpected text", rt.stack_trace())))
             };
             {
                 let w = Arc::make_mut(&mut v);
@@ -509,7 +515,7 @@ pub fn call_standard(
             Expect::Something
         }
         "to_string" => {
-            rt.push_fn(call.name.clone(), st + 1, lc);
+            rt.push_fn(call.name.clone(), None, st + 1, lc);
             let v = rt.stack.pop().expect("There is no value on the stack");
             let v = match rt.resolve(&v) {
                 &Variable::Text(ref t) => Variable::Text(t.clone()),
@@ -523,7 +529,7 @@ pub fn call_standard(
             Expect::Something
         }
         "typeof" => {
-            rt.push_fn(call.name.clone(), st + 1, lc);
+            rt.push_fn(call.name.clone(), None, st + 1, lc);
             let v = rt.stack.pop().expect("There is no value on the stack");
             let v = match rt.resolve(&v) {
                 &Variable::Text(_) => rt.text_type.clone(),
@@ -543,14 +549,14 @@ pub fn call_standard(
             Expect::Something
         }
         "debug" => {
-            rt.push_fn(call.name.clone(), st, lc);
+            rt.push_fn(call.name.clone(), None, st, lc);
             println!("Stack {:#?}", rt.stack);
             println!("Locals {:#?}", rt.local_stack);
             rt.pop_fn(call.name.clone());
             Expect::Nothing
         }
         "backtrace" => {
-            rt.push_fn(call.name.clone(), st, lc);
+            rt.push_fn(call.name.clone(), None, st, lc);
             println!("{:#?}", rt.call_stack);
             rt.pop_fn(call.name.clone());
             Expect::Nothing
@@ -558,7 +564,7 @@ pub fn call_standard(
         "load" => {
             use load;
 
-            rt.push_fn(call.name.clone(), st + 1, lc);
+            rt.push_fn(call.name.clone(), None, st + 1, lc);
             let v = rt.stack.pop().expect("There is no value on the stack");
             let v = match rt.resolve(&v) {
                 &Variable::Text(ref text) => {
@@ -569,7 +575,7 @@ pub fn call_standard(
                     if let Err(err) = load(text, &mut m) {
                         Variable::Result(Err(Box::new(Error {
                             message: Variable::Text(Arc::new(
-                                format!("{}\n{}", err,
+                                format!("{}\n{}\n{}", rt.stack_trace(), err,
                                     module.error(call.args[0].source_range(),
                                     "When attempting to load module:")))),
                             trace: vec![]
@@ -580,7 +586,7 @@ pub fn call_standard(
                     }
                 }
                 _ => return Err(module.error(call.args[0].source_range(),
-                                "Expected string"))
+                        &format!("{}\nExpected string", rt.stack_trace())))
             };
             rt.stack.push(v);
             rt.pop_fn(call.name.clone());
@@ -589,7 +595,7 @@ pub fn call_standard(
         "load_source_imports" => {
             use load;
 
-            rt.push_fn(call.name.clone(), st + 1, lc);
+            rt.push_fn(call.name.clone(), None, st + 1, lc);
             let modules = rt.stack.pop().expect("There is no value on the stack");
             let source = rt.stack.pop().expect("There is no value on the stack");
             let mut new_module = Module::new();
@@ -609,24 +615,27 @@ pub fn call_standard(
                                     }
                                     None => return Err(module.error(
                                         call.args[1].source_range(),
-                                        "Expected `Module`"))
+                                        &format!("{}\nExpected `Module`",
+                                            rt.stack_trace())))
                                 }
                             }
                             _ => return Err(module.error(
                                 call.args[1].source_range(),
-                                "Expected `Module`"))
+                                &format!("{}\nExpected `Module`",
+                                    rt.stack_trace())))
                         }
                     }
                 }
                 _ => return Err(module.error(call.args[1].source_range(),
-                    "Expected array of `Module`"))
+                        &format!("{}\nExpected array of `Module`",
+                            rt.stack_trace())))
             }
             let v = match rt.resolve(&source) {
                 &Variable::Text(ref text) => {
                     if let Err(err) = load(text, &mut new_module) {
                         Variable::Result(Err(Box::new(Error {
                             message: Variable::Text(Arc::new(
-                                format!("{}\n{}", err,
+                                format!("{}\n{}\n{}", rt.stack_trace(), err,
                                     module.error(call.args[0].source_range(),
                                     "When attempting to load module:")))),
                             trace: vec![]
@@ -638,31 +647,32 @@ pub fn call_standard(
                     }
                 }
                 _ => return Err(module.error(call.args[0].source_range(),
-                    "Expected array of `Module`"))
+                        &format!("{}\nExpected array of `Module`",
+                            rt.stack_trace())))
             };
             rt.stack.push(v);
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
         "call" => {
-            rt.push_fn(call.name.clone(), st, lc);
+            rt.push_fn(call.name.clone(), None, st, lc);
             let args = rt.stack.pop().expect("There is no value on the stack");
             let fn_name = rt.stack.pop().expect("There is no value on the stack");
             let call_module = rt.stack.pop().expect("There is no value on the stack");
             let fn_name = match rt.resolve(&fn_name) {
                 &Variable::Text(ref text) => text.clone(),
                 _ => return Err(module.error(call.args[1].source_range(),
-                                "Expected text"))
+                        &format!("{}\nExpected text", rt.stack_trace())))
             };
             let args = match rt.resolve(&args) {
                 &Variable::Array(ref arr) => arr.clone(),
                 _ => return Err(module.error(call.args[2].source_range(),
-                                "Expected array"))
+                        &format!("{}\nExpected array", rt.stack_trace())))
             };
             let obj = match rt.resolve(&call_module) {
                 &Variable::RustObject(ref obj) => obj.clone(),
                 _ => return Err(module.error(call.args[0].source_range(),
-                                "Expected `Module`"))
+                        &format!("{}\nExpected `Module`", rt.stack_trace())))
             };
 
             match obj.lock().unwrap()
@@ -674,14 +684,16 @@ pub fn call_standard(
                                 return Err(module.error(
                                     call.args[2].source_range(),
                                     &format!(
-                                        "Expected `{}` arguments, found `{}`",
+                                        "{}\nExpected `{}` arguments, found `{}`",
+                                        rt.stack_trace(),
                                         f.args.len(), args.len())))
                             }
                         }
                         None => return Err(module.error(
                                     call.args[1].source_range(),
                                     &format!(
-                                        "Could not find function `{}`",
+                                        "{}\nCould not find function `{}`",
+                                        rt.stack_trace(),
                                         fn_name)))
                     }
                     let call = ast::Call {
@@ -695,31 +707,32 @@ pub fn call_standard(
                     try!(rt.call(&call, &m));
                 }
                 None => return Err(module.error(call.args[0].source_range(),
-                            "Expected `Module`"))
+                            &format!("{}\nExpected `Module`",
+                                rt.stack_trace())))
             }
 
             rt.pop_fn(call.name.clone());
             Expect::Nothing
         }
         "call_ret" => {
-            rt.push_fn(call.name.clone(), st + 1, lc);
+            rt.push_fn(call.name.clone(), None, st + 1, lc);
             let args = rt.stack.pop().expect("There is no value on the stack");
             let fn_name = rt.stack.pop().expect("There is no value on the stack");
             let call_module = rt.stack.pop().expect("There is no value on the stack");
             let fn_name = match rt.resolve(&fn_name) {
                 &Variable::Text(ref text) => text.clone(),
                 _ => return Err(module.error(call.args[1].source_range(),
-                                "Expected text"))
+                        &format!("{}\nExpected text", rt.stack_trace())))
             };
             let args = match rt.resolve(&args) {
                 &Variable::Array(ref arr) => arr.clone(),
                 _ => return Err(module.error(call.args[2].source_range(),
-                                "Expected array"))
+                        &format!("{}\nExpected array", rt.stack_trace())))
             };
             let obj = match rt.resolve(&call_module) {
                 &Variable::RustObject(ref obj) => obj.clone(),
                 _ => return Err(module.error(call.args[0].source_range(),
-                                "Expected `Module`"))
+                    &format!("{}\nExpected `Module`", rt.stack_trace())))
             };
 
             match obj.lock().unwrap()
@@ -731,14 +744,16 @@ pub fn call_standard(
                                 return Err(module.error(
                                     call.args[2].source_range(),
                                     &format!(
-                                        "Expected `{}` arguments, found `{}`",
+                                        "{}\nExpected `{}` arguments, found `{}`",
+                                        rt.stack_trace(),
                                         f.args.len(), args.len())))
                             }
                         }
                         None => return Err(module.error(
                                     call.args[1].source_range(),
                                     &format!(
-                                        "Could not find function `{}`",
+                                        "{}\nCould not find function `{}`",
+                                        rt.stack_trace(),
                                         fn_name)))
                     }
                     let call = ast::Call {
@@ -752,7 +767,7 @@ pub fn call_standard(
                     try!(rt.call(&call, &m));
                 }
                 None => return Err(module.error(call.args[0].source_range(),
-                            "Expected `Module`"))
+                    &format!("{}\nExpected `Module`", rt.stack_trace())))
             }
 
             rt.pop_fn(call.name.clone());
@@ -760,7 +775,7 @@ pub fn call_standard(
         }
         "functions" => {
             // List available functions in scope.
-            rt.push_fn(call.name.clone(), st + 1, lc);
+            rt.push_fn(call.name.clone(), None, st + 1, lc);
             let mut functions = vec![];
             let name: Arc<String> = Arc::new("name".into());
             let arguments: Arc<String> = Arc::new("arguments".into());
@@ -872,7 +887,7 @@ pub fn call_standard(
             Expect::Something
         }
         "some" => {
-            rt.push_fn(call.name.clone(), st + 1, lc);
+            rt.push_fn(call.name.clone(), None, st + 1, lc);
             let v = rt.stack.pop().expect("There is no value on the stack");
             let v = deep_clone(rt.resolve(&v), &rt.stack);
             rt.stack.push(Variable::Option(Some(Box::new(v))));
@@ -880,7 +895,7 @@ pub fn call_standard(
             Expect::Something
         }
         "ok" => {
-            rt.push_fn(call.name.clone(), st + 1, lc);
+            rt.push_fn(call.name.clone(), None, st + 1, lc);
             let v = rt.stack.pop().expect("There is no value on the stack");
             let v = deep_clone(rt.resolve(&v), &rt.stack);
             rt.stack.push(Variable::Result(Ok(Box::new(v))));
@@ -888,7 +903,7 @@ pub fn call_standard(
             Expect::Something
         }
         "err" => {
-            rt.push_fn(call.name.clone(), st + 1, lc);
+            rt.push_fn(call.name.clone(), None, st + 1, lc);
             let v = rt.stack.pop().expect("There is no value on the stack");
             let v = deep_clone(rt.resolve(&v), &rt.stack);
             rt.stack.push(Variable::Result(Err(Box::new(
@@ -897,14 +912,15 @@ pub fn call_standard(
             Expect::Something
         }
         "is_err" => {
-            rt.push_fn(call.name.clone(), st + 1, lc);
+            rt.push_fn(call.name.clone(), None, st + 1, lc);
             let v = rt.stack.pop().expect("There is no value on the stack");
             let v = match rt.resolve(&v) {
                 &Variable::Result(Err(_)) => Variable::Bool(true),
                 &Variable::Result(Ok(_)) => Variable::Bool(false),
                 _ => {
                     return Err(module.error(call.args[0].source_range(),
-                                            "Expected option"));
+                        &format!("{}\nExpected option",
+                            rt.stack_trace())));
                 }
             };
             rt.stack.push(v);
@@ -914,13 +930,14 @@ pub fn call_standard(
         "unwrap" => {
             // Return value does not depend on lifetime of argument since
             // `ok(x)` and `some(x)` perform a deep clone.
-            rt.push_fn(call.name.clone(), st + 1, lc);
+            rt.push_fn(call.name.clone(), None, st + 1, lc);
             let v = rt.stack.pop().expect("There is no value on the stack");
             let v = match rt.resolve(&v) {
                 &Variable::Option(Some(ref v)) => (**v).clone(),
                 &Variable::Option(None) => {
                     return Err(module.error(call.args[0].source_range(),
-                                            "Expected `some(_)`"));
+                        &format!("{}\nExpected `some(_)`",
+                            rt.stack_trace())));
                 }
                 &Variable::Result(Ok(ref ok)) => (**ok).clone(),
                 &Variable::Result(Err(ref err)) => {
@@ -928,6 +945,8 @@ pub fn call_standard(
 
                     // Print out error message.
                     let mut w: Vec<u8> = vec![];
+                    w.extend_from_slice(rt.stack_trace().as_bytes());
+                    w.extend_from_slice("\n".as_bytes());
                     write_variable(&mut w, rt, &err.message,
                                    EscapeString::None).unwrap();
                     for t in &err.trace {
@@ -947,13 +966,13 @@ pub fn call_standard(
             Expect::Something
         }
         "unwrap_err" => {
-            rt.push_fn(call.name.clone(), st + 1, lc);
+            rt.push_fn(call.name.clone(), None, st + 1, lc);
             let v = rt.stack.pop().expect("There is no value on the stack");
             let v = match rt.resolve(&v) {
                 &Variable::Result(Err(ref err)) => err.message.clone(),
                 _ => {
                     return Err(module.error(call.args[0].source_range(),
-                                            "Expected `err(_)`"));
+                        &format!("{}\nExpected `err(_)`", rt.stack_trace())));
                 }
             };
             rt.stack.push(v);
