@@ -1,4 +1,8 @@
 fn main() {
+    println(" ~~~ SNAKE ~~~ ")
+    println("Press A and D to steer.")
+    println("Reset with R.")
+    println("You can modify \"source/piston_window/snake.rs\" while running.")
     source := "source/piston_window/snake.rs"
     m := unwrap(load(source))
 
@@ -12,7 +16,10 @@ fn main() {
             call(m, "render", [settings, data])
         }
         if update() {
-            call(m, "update", [data, settings, unwrap(update_dt())])
+            dt := unwrap(update_dt())
+            // Slow down when window is unfocused.
+            dt *= if data.focused { settings.focus_speed } else { settings.unfocus_speed }
+            call(m, "update", [data, settings, dt])
         }
         event(loader: loader, source: source, settings: settings, module: m)
         key := press_keyboard_key()
@@ -36,6 +43,10 @@ fn main() {
                 data.pressing_right = false
             }
         }
+
+        if focus() {
+            data.focused = focus_arg() == some(true)
+        }
     }
 }
 
@@ -45,9 +56,10 @@ fn init_data(settings) -> {
             parts: settings.snake_parts,
             size: settings.snake_parts_size
         ),
-        snake_angle: 0,
+        snake_angle: 1,
         pressing_left: false,
         pressing_right: false,
+        focused: true,
     }
     data.next_snake_body := data.snake_body
     return clone(data)
