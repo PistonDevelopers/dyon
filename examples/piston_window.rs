@@ -45,6 +45,14 @@ fn load_module() -> Option<Module> {
         lts: vec![],
         returns: true
     });
+    module.add(Arc::new("focus".into()), dyon_focus, PreludeFunction {
+        lts: vec![],
+        returns: true,
+    });
+    module.add(Arc::new("focus_arg".into()), dyon_focus_arg, PreludeFunction {
+        lts: vec![],
+        returns: true,
+    });
     module.add(Arc::new("clear".into()), dyon_clear, PreludeFunction {
         lts: vec![Lt::Default],
         returns: false
@@ -113,6 +121,29 @@ fn dyon_release(rt: &mut Runtime) -> Result<(), String> {
     let e = unsafe { &*Current::<PistonWindow>::new() };
     push_bool(rt, e.release_args().is_some());
     Ok(())
+}
+
+fn dyon_focus(rt: &mut Runtime) -> Result<(), String> {
+    let e = unsafe { &*Current::<PistonWindow>::new() };
+    push_bool(rt, e.focus_args().is_some());
+    Ok(())
+}
+
+fn dyon_focus_arg(rt: &mut Runtime) -> Result<(), String> {
+    let e = unsafe { &*Current::<PistonWindow>::new() };
+    push_opt_bool(rt, e.focus_args());
+    Ok(())
+}
+
+fn push_opt_bool(rt: &mut Runtime, val: Option<bool>) {
+    match val {
+        None => {
+            rt.stack.push(Variable::Option(None))
+        }
+        Some(b) => {
+            rt.stack.push(Variable::Option(Some(Box::new(Variable::Bool(b)))))
+        }
+    }
 }
 
 fn push_bool(rt: &mut Runtime, val: bool) {
