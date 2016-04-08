@@ -7,13 +7,15 @@ use Variable;
 use Module;
 
 pub fn convert(
+    file: Arc<String>,
     data: &[Range<MetaData>],
     ignored: &mut Vec<Range>,
     module: &mut Module
 ) -> Result<(), ()> {
     let mut convert = Convert::new(data);
     loop {
-        if let Ok((range, function)) = Function::from_meta_data(convert, ignored) {
+        if let Ok((range, function)) =
+        Function::from_meta_data(file.clone(), convert, ignored) {
             convert.update(range);
             module.register(Arc::new(function));
         } else if convert.remaining_data_len() > 0 {
@@ -28,6 +30,7 @@ pub fn convert(
 #[derive(Debug, Clone)]
 pub struct Function {
     pub name: Arc<String>,
+    pub file: Arc<String>,
     pub args: Vec<Arg>,
     pub block: Block,
     pub returns: bool,
@@ -35,8 +38,11 @@ pub struct Function {
 }
 
 impl Function {
-    pub fn from_meta_data(mut convert: Convert, ignored: &mut Vec<Range>)
-    -> Result<(Range, Function), ()> {
+    pub fn from_meta_data(
+        file: Arc<String>,
+        mut convert: Convert,
+        ignored: &mut Vec<Range>
+    ) -> Result<(Range, Function), ()> {
         let start = convert.clone();
         let node = "fn";
         let start_range = try!(convert.start_node(node));
@@ -75,6 +81,7 @@ impl Function {
         let block = try!(block.ok_or(()));
         Ok((convert.subtract(start), Function {
             name: name,
+            file: file,
             args: args,
             block: block,
             returns: returns,

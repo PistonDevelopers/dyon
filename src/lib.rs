@@ -140,7 +140,7 @@ pub fn load(source: &str, module: &mut Module) -> Result<(), String> {
 
     // Convert to AST.
     let mut ignored = vec![];
-    ast::convert(&data, &mut ignored, module).unwrap();
+    ast::convert(Arc::new(source.into()), &data, &mut ignored, module).unwrap();
 
     // Check that lifetime checking succeeded.
     match handle.join().unwrap() {

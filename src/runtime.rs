@@ -37,10 +37,21 @@ pub enum Flow {
     ContinueLoop(Option<Arc<String>>),
 }
 
+#[derive(Debug)]
+pub struct Call {
+    // was .0
+    pub fn_name: Arc<String>,
+    pub file: Option<Arc<String>>,
+    // was .1
+    pub stack_len: usize,
+    // was .2
+    pub local_len: usize,
+}
+
 pub struct Runtime {
     pub stack: Vec<Variable>,
-    /// name, stack_len, local_len, returns.
-    pub call_stack: Vec<(Arc<String>, usize, usize)>,
+    /// name, file, stack_len, local_len.
+    pub call_stack: Vec<Call>,
     pub local_stack: Vec<(Arc<String>, usize)>,
     pub ret: Arc<String>,
     pub rng: rand::ThreadRng,
@@ -69,6 +80,7 @@ fn item_lookup(
     module: &Module,
     var: *mut Variable,
     stack: &mut [Variable],
+    call_stack: &[Call],
     prop: &ast::Id,
     start_stack_len: usize,
     expr_j: &mut usize,
@@ -97,11 +109,13 @@ fn item_lookup(
                                 id.clone()
                             }
                             _ => return Err(module.error(prop.source_range(),
-                                            "Expected string"))
+                                &format!("{}\nExpected string",
+                                    stack_trace(call_stack))))
                         }
                     }
                     &Id::F64(range, _) => return Err(module.error(range,
-                                                     "Expected string"))
+                        &format!("{}\nExpected string",
+                            stack_trace(call_stack))))
                 };
                 let v = match obj.entry(id.clone()) {
                     Entry::Vacant(vac) => {
@@ -110,7 +124,8 @@ fn item_lookup(
                             vac.insert(Variable::Return)
                         } else {
                             return Err(module.error(prop.source_range(),
-                                &format!("Object has no key `{}`", id)));
+                                &format!("{}\nObject has no key `{}`",
+                                    stack_trace(call_stack), id)));
                         }
                     }
                     Entry::Occupied(v) => v.into_mut()
@@ -145,11 +160,13 @@ fn item_lookup(
                                 id
                             }
                             _ => return Err(module.error(prop.source_range(),
-                                            "Expected number"))
+                                            &format!("{}\nExpected number",
+                                                stack_trace(call_stack))))
                         }
                     }
                     &Id::String(range, _) => return Err(module.error(range,
-                                                        "Expected number"))
+                        &format!("{}\nExpected number",
+                            stack_trace(call_stack))))
                 };
                 let v = &mut arr[id as usize];
                 // Resolve reference.
@@ -166,7 +183,8 @@ fn item_lookup(
                 }
             }
             _ => return Err(module.error(prop.source_range(),
-                            "Look up requires object or array"))
+                            &format!("{}\nLook up requires object or array",
+                            stack_trace(call_stack))))
         }
     }
 }
@@ -210,19 +228,30 @@ impl Runtime {
                 self.stack.push(Variable::F64(f(a)));
             }
             _ => return Err(module.error(call.args[0].source_range(),
-                                         "Expected number"))
+                    &format!("{}\nExpected number", self.stack_trace())))
         }
         Ok(Expect::Something)
     }
 
     #[inline(always)]
-    pub fn push_fn(&mut self, name: Arc<String>, st: usize, lc: usize) {
-        self.call_stack.push((name, st, lc));
+    pub fn push_fn(
+        &mut self,
+        name: Arc<String>,
+        file: Option<Arc<String>>,
+        st: usize,
+        lc: usize
+    ) {
+        self.call_stack.push(Call {
+            fn_name: name,
+            file: file,
+            stack_len: st,
+            local_len: lc
+        });
     }
     pub fn pop_fn(&mut self, name: Arc<String>) {
         match self.call_stack.pop() {
             None => panic!("Did not call `{}`", name),
-            Some((fn_name, st, lc)) => {
+            Some(Call { fn_name, stack_len: st, local_len: lc, .. }) => {
                 if name != fn_name {
                     panic!("Calling `{}`, did not call `{}`", fn_name, name);
                 }
@@ -325,7 +354,8 @@ impl Runtime {
             Ok((x, Flow::Return)) => { return Ok((x, Flow::Return)); }
             Ok((Expect::Something, Flow::Continue)) => {}
             _ => return Err(module.error(expr.source_range(),
-                            "Expected something"))
+                            &format!("{}\nExpected something",
+                                self.stack_trace())))
         };
         let v = self.stack.pop()
             .expect("There is no value on the stack");
@@ -344,10 +374,11 @@ impl Runtime {
             }
             _ => {
                 return Err(module.error(expr.source_range(),
-                    &format!("Expected `ok(_)` or `err(_)`")));
+                    &format!("{}\nExpected `ok(_)` or `err(_)`",
+                        self.stack_trace())));
             }
         };
-        let locals = self.local_stack.len() - self.call_stack.last().unwrap().2;
+        let locals = self.local_stack.len() - self.call_stack.last().unwrap().local_len;
         match v {
             Ok(ref ok) => {
                 self.stack.push((**ok).clone());
@@ -357,19 +388,26 @@ impl Runtime {
                 let ind = self.stack.len() - locals;
                 if locals == 0 {
                     return Err(module.error(expr.source_range(),
-                        &format!("Requires `->` on function `{}`",
-                        &self.call_stack.last().unwrap().0)));
+                        &format!("{}\nRequires `->` on function `{}`",
+                        self.stack_trace(),
+                        &self.call_stack.last().unwrap().fn_name)));
                 }
                 if let Variable::Return = self.stack[ind] {}
                 else {
                     return Err(module.error(expr.source_range(),
-                        &format!("Requires `->` on function `{}`",
-                        &self.call_stack.last().unwrap().0)));
+                        &format!("{}\nRequires `->` on function `{}`",
+                        self.stack_trace(),
+                        &self.call_stack.last().unwrap().fn_name)));
                 }
                 let mut err = err.clone();
+                let call = self.call_stack.last().unwrap();
+                let file = match call.file {
+                    None => "".into(),
+                    Some(ref f) => format!(" ({})", f)
+                };
                 err.trace.push(module.error(expr.source_range(),
-                    &format!("In function `{}`",
-                    &self.call_stack.last().unwrap().0)));
+                    &format!("In function `{}`{}",
+                    &call.fn_name, file)));
                 self.stack[ind] = Variable::Result(Err(err));
                 Ok((Expect::Something, Flow::Return))
             }
@@ -430,8 +468,9 @@ impl Runtime {
                                 (x, Flow::Return) => { return Ok((x, Flow::Return)); }
                                 (Expect::Something, Flow::Continue) => {}
                                 _ => return Err(module.error(arg.source_range(),
-                                                "Expected something. \
-                                                Expression did not return a value."))
+                                                &format!("{}\nExpected something. \
+                                                Expression did not return a value.",
+                                                self.stack_trace())))
                             };
                         }
                         try!(f(self).map_err(|err|
@@ -447,7 +486,8 @@ impl Runtime {
             Some(ref f) => {
                 if call.args.len() != f.args.len() {
                     return Err(module.error(call.source_range,
-                        &format!("Expected {} arguments but found {}",
+                        &format!("{}\nExpected {} arguments but found {}",
+                        self.stack_trace(),
                         f.args.len(),
                         call.args.len())));
                 }
@@ -464,11 +504,12 @@ impl Runtime {
                         (x, Flow::Return) => { return Ok((x, Flow::Return)); }
                         (Expect::Something, Flow::Continue) => {}
                         _ => return Err(module.error(arg.source_range(),
-                                        "Expected something. \
-                                        Check that expression returns a value."))
+                                        &format!("{}\nExpected something. \
+                                        Check that expression returns a value.",
+                                        self.stack_trace())))
                     };
                 }
-                self.push_fn(call.name.clone(), st, lc);
+                self.push_fn(call.name.clone(), Some(f.file.clone()), st, lc);
                 if f.returns {
                     self.local_stack.push((self.ret.clone(), st - 1));
                 }
@@ -485,18 +526,20 @@ impl Runtime {
                         match flow {
                             Flow::Break(None) =>
                                 return Err(module.error(call.source_range,
-                                           "Can not break from function")),
+                                           &format!("{}\nCan not break from function",
+                                                self.stack_trace()))),
                             Flow::ContinueLoop(None) =>
                                 return Err(module.error(call.source_range,
-                                           "Can not continue from function")),
+                                           &format!("{}\nCan not continue from function",
+                                                self.stack_trace()))),
                             Flow::Break(Some(ref label)) =>
                                 return Err(module.error(call.source_range,
-                                    &format!("There is no loop labeled `{}`",
-                                             label))),
+                                    &format!("{}\nThere is no loop labeled `{}`",
+                                             self.stack_trace(), label))),
                             Flow::ContinueLoop(Some(ref label)) =>
                                 return Err(module.error(call.source_range,
-                                    &format!("There is no loop labeled `{}`",
-                                             label))),
+                                    &format!("{}\nThere is no loop labeled `{}`",
+                                            self.stack_trace(), label))),
                             _ => {}
                         }
                         self.pop_fn(call.name.clone());
@@ -506,7 +549,8 @@ impl Runtime {
                                     Some(&Variable::Return) =>
                                         return Err(module.error(
                                         call.source_range, &format!(
-                                        "Function `{}` did not return a value",
+                                        "{}\nFunction `{}` did not return a value",
+                                        self.stack_trace(),
                                         f.name))),
                                     None =>
                                         panic!("There is no value on the stack"),
@@ -521,7 +565,8 @@ impl Runtime {
                             (false, Expect::Something) =>
                                 return Err(module.error(call.source_range,
                                     &format!(
-                                        "Function `{}` should not return a value",
+                                        "{}\nFunction `{}` should not return a value",
+                                        self.stack_trace(),
                                         f.name))),
                             (true, Expect::Something)
                                 if self.stack.len() == 0 =>
@@ -535,8 +580,10 @@ impl Runtime {
                                 //       Requires .pop_fn delayed after.
                                 return Err(module.error(call.source_range,
                                     &format!(
-                                    "Function `{}` did not return a value. \
-                                    Did you forgot a `return`?", f.name))),
+                                    "{}\nFunction `{}` did not return a value. \
+                                    Did you forgot a `return`?",
+                                        self.stack_trace(),
+                                        f.name))),
                             (_, b) => {
                                 return Ok((b, Flow::Continue))
                             }
@@ -558,7 +605,8 @@ impl Runtime {
                 (_, Flow::Return) => { return Ok(Flow::Return); }
                 (Expect::Something, Flow::Continue) => {}
                 _ => return Err(module.error(expr.source_range(),
-                                "Expected something"))
+                                &format!("{}\nExpected something",
+                                    self.stack_trace())))
             };
             match self.stack.pop() {
                 None => panic!("There is no value on the stack"),
@@ -566,7 +614,8 @@ impl Runtime {
                     match object.insert(key.clone(), x) {
                         None => {}
                         Some(_) => return Err(module.error(expr.source_range(),
-                            &format!("Duplicate key in object `{}`", key)))
+                            &format!("{}\nDuplicate key in object `{}`",
+                                self.stack_trace(), key)))
                     }
                 }
             }
@@ -586,7 +635,8 @@ impl Runtime {
                 (_, Flow::Return) => { return Ok(Flow::Return); }
                 (Expect::Something, Flow::Continue) => {}
                 _ => return Err(module.error(item.source_range(),
-                    "Expected something"))
+                    &format!("{}\nExpected something",
+                        self.stack_trace())))
             };
             match self.stack.pop() {
                 None => panic!("There is no value on the stack"),
@@ -606,13 +656,15 @@ impl Runtime {
             (_, Flow::Return) => { return Ok(Flow::Return); }
             (Expect::Something, Flow::Continue) => {}
             _ => return Err(module.error(array_fill.fill.source_range(),
-                            "Expected something"))
+                            &format!("{}\nExpected something",
+                                self.stack_trace())))
         };
         match try!(self.expression(&array_fill.n, Side::Right, module)) {
             (_, Flow::Return) => { return Ok(Flow::Return); }
             (Expect::Something, Flow::Continue) => {}
             _ => return Err(module.error(array_fill.n.source_range(),
-                            "Expected something"))
+                            &format!("{}\nExpected something",
+                                self.stack_trace())))
         };
         let n: Variable = self.stack.pop().expect("Expected n");
         let fill: Variable = self.stack.pop().expect("Expected fill");
@@ -621,7 +673,8 @@ impl Runtime {
                 Variable::Array(vec![x.clone(); n as usize])
             }
             _ => return Err(module.error(array_fill.n.source_range(),
-                "Expected number for length in `[value; length]`"))
+                &format!("{}\nExpected number for length in `[value; length]`",
+                    self.stack_trace())))
         };
         self.stack.push(v);
         Ok(Flow::Continue)
@@ -653,7 +706,8 @@ impl Runtime {
                         (_, Flow::Return) => { return Ok(Flow::Return); }
                         (Expect::Something, Flow::Continue) => {}
                         _ => return Err(module.error(right.source_range(),
-                                    "Expected something from the right side"))
+                                    &format!("{}\nExpected something from the right side",
+                                        self.stack_trace())))
                     }
                     let v = match self.stack.pop() {
                         None => panic!("There is no value on the stack"),
@@ -667,7 +721,8 @@ impl Runtime {
                             (_, Flow::Return) => { return Ok(Flow::Return); }
                             (Expect::Something, Flow::Continue) => {}
                             _ => return Err(module.error(left.source_range(),
-                                    "Expected something from the left side"))
+                                    &format!("{}\nExpected something from the left side",
+                                        self.stack_trace())))
                         };
                         match self.stack.pop() {
                             Some(Variable::UnsafeRef(r)) => {
@@ -683,7 +738,8 @@ impl Runtime {
                     Ok(Flow::Continue)
                 }
                 _ => return Err(module.error(left.source_range(),
-                                "Expected item"))
+                                &format!("{}\nExpected item",
+                                    self.stack_trace())))
             }
         } else {
             // Evaluate right side before left because the left leaves
@@ -693,13 +749,15 @@ impl Runtime {
                 (_, Flow::Return) => { return Ok(Flow::Return); }
                 (Expect::Something, Flow::Continue) => {}
                 _ => return Err(module.error(right.source_range(),
-                        "Expected something from the right side"))
+                        &format!("{}\nExpected something from the right side",
+                            self.stack_trace())))
             };
             match try!(self.expression(left, Side::LeftInsert(false), module)) {
                 (_, Flow::Return) => { return Ok(Flow::Return); }
                 (Expect::Something, Flow::Continue) => {}
                 _ => return Err(module.error(left.source_range(),
-                        "Expected something from the left side"))
+                        &format!("{}\nExpected something from the left side",
+                            self.stack_trace())))
             };
             match (self.stack.pop(), self.stack.pop()) {
                 (Some(a), Some(b)) => {
@@ -742,12 +800,14 @@ impl Runtime {
                                         } else {
                                             return Err(module.error(
                                                 left.source_range(),
-                                                "Return has no value"))
+                                                &format!("{}\nReturn has no value",
+                                                    self.stack_trace())))
                                         }
                                     }
                                     _ => return Err(module.error(
                                             left.source_range(),
-                                            "Expected assigning to a number"))
+                                            &format!("{}\nExpected assigning to a number",
+                                                self.stack_trace())))
                                 };
                             }
                         }
@@ -766,12 +826,14 @@ impl Runtime {
                                         } else {
                                             return Err(module.error(
                                                 left.source_range(),
-                                                "Return has no value"))
+                                                &format!("{}\nReturn has no value",
+                                                    self.stack_trace())))
                                         }
                                     }
                                     _ => return Err(module.error(
                                             left.source_range(),
-                                            "Expected assigning to a bool"))
+                                            &format!("{}\nExpected assigning to a bool",
+                                                self.stack_trace())))
                                 };
                             }
                         }
@@ -791,12 +853,14 @@ impl Runtime {
                                         } else {
                                             return Err(module.error(
                                                 left.source_range(),
-                                                "Return has no value"))
+                                                &format!("{}\nReturn has no value",
+                                                    self.stack_trace())))
                                         }
                                     }
                                     _ => return Err(module.error(
                                         left.source_range(),
-                                        "Expected assigning to text"))
+                                        &format!("{}\nExpected assigning to text",
+                                            self.stack_trace())))
                                 }
                             }
                         }
@@ -823,12 +887,14 @@ impl Runtime {
                                         } else {
                                             return Err(module.error(
                                                 left.source_range(),
-                                                "Return has no value"))
+                                                &format!("{}\nReturn has no value",
+                                                    self.stack_trace())))
                                         }
                                     }
                                     _ => return Err(module.error(
                                         left.source_range(),
-                                        "Expected assigning to object"))
+                                        &format!("{}\nExpected assigning to object",
+                                            self.stack_trace())))
                                 }
                             }
                         }
@@ -855,12 +921,14 @@ impl Runtime {
                                         } else {
                                             return Err(module.error(
                                                 left.source_range(),
-                                                "Return has no value"))
+                                                &format!("{}\nReturn has no value",
+                                                    self.stack_trace())))
                                         }
                                     }
                                     _ => return Err(module.error(
                                         left.source_range(),
-                                        "Expected assigning to array"))
+                                        &format!("{}\nExpected assigning to array",
+                                            self.stack_trace())))
                                 }
                             }
                         }
@@ -886,12 +954,14 @@ impl Runtime {
                                         } else {
                                             return Err(module.error(
                                                 left.source_range(),
-                                                "Return has no value"))
+                                                &format!("{}\nReturn has no value",
+                                                    self.stack_trace())))
                                         }
                                     }
                                     _ => return Err(module.error(
                                         left.source_range(),
-                                        "Expected assigning to option"))
+                                        &format!("{}\nExpected assigning to option",
+                                            self.stack_trace())))
                                 }
                             }
                         }
@@ -917,12 +987,14 @@ impl Runtime {
                                         } else {
                                             return Err(module.error(
                                                 left.source_range(),
-                                                "Return has no value"))
+                                                &format!("{}\nReturn has no value",
+                                                    self.stack_trace())))
                                         }
                                     }
                                     _ => return Err(module.error(
                                         left.source_range(),
-                                        "Expected assigning to option"))
+                                        &format!("{}\nExpected assigning to result",
+                                            self.stack_trace())))
                                 }
                             }
                         }
@@ -948,12 +1020,15 @@ impl Runtime {
                                         } else {
                                             return Err(module.error(
                                                 left.source_range(),
-                                                "Return has no value"))
+                                                &format!("{}\nReturn has no value",
+                                                    self.stack_trace())))
                                         }
                                     }
                                     _ => return Err(module.error(
                                         left.source_range(),
-                                        "Expected assigning to rust_object"))
+                                        &format!(
+                                            "{}\nExpected assigning to rust_object",
+                                            self.stack_trace())))
                                 }
                             }
                         }
@@ -979,7 +1054,7 @@ impl Runtime {
         #[inline(always)]
         fn try(
             stack: &mut Vec<Variable>,
-            call_stack: &Vec<(Arc<String>, usize, usize)>,
+            call_stack: &Vec<Call>,
             v: Result<Box<Variable>, Box<Error>>,
             locals: usize,
             source_range: Range,
@@ -995,14 +1070,19 @@ impl Runtime {
                     if let Variable::Return = stack[ind] {}
                     else {
                         return Err(module.error(source_range,
-                            &format!("Requires `->` on function `{}`",
-                            &call_stack.last().unwrap().0)));
+                            &format!("{}\nRequires `->` on function `{}`",
+                            stack_trace(call_stack),
+                            &call_stack.last().unwrap().fn_name)));
                     }
                     let mut err = err.clone();
+                    let call = call_stack.last().unwrap();
+                    let file = match call.file {
+                        None => "".into(),
+                        Some(ref f) => format!(" ({})", f)
+                    };
                     err.trace.push(module.error(
                         source_range,
-                        &format!("In function `{}`",
-                        &call_stack.last().unwrap().0)));
+                        &format!("In function `{}`{}", call.fn_name, file)));
                     stack[ind] = Variable::Result(Err(err));
                     Ok(Flow::Return)
                 }
@@ -1013,7 +1093,7 @@ impl Runtime {
 
         if item.ids.len() == 0 {
             let name: &str = &**item.name;
-            let locals = self.local_stack.len() - self.call_stack.last().unwrap().2;
+            let locals = self.local_stack.len() - self.call_stack.last().unwrap().local_len;
             for &(ref n, id) in self.local_stack.iter().rev().take(locals) {
                 if &**n == name {
                     if item.try {
@@ -1033,7 +1113,8 @@ impl Runtime {
                             }
                             _ => {
                                 return Err(module.error(item.source_range,
-                                    &format!("Expected `ok(_)` or `err(_)`")));
+                                    &format!("{}\nExpected `ok(_)` or `err(_)`",
+                                        self.stack_trace())));
                             }
                         };
                         return try(&mut self.stack, &self.call_stack, v, locals,
@@ -1046,11 +1127,13 @@ impl Runtime {
             }
             if name == "return" {
                 return Err(module.error(item.source_range, &format!(
-                    "Requires `->` on function `{}`",
-                    &self.call_stack.last().unwrap().0)));
+                    "{}\nRequires `->` on function `{}`",
+                    self.stack_trace(),
+                    &self.call_stack.last().unwrap().fn_name)));
             } else {
                 return Err(module.error(item.source_range, &format!(
-                    "Could not find local variable `{}`", name)));
+                    "{}\nCould not find local variable `{}`",
+                        self.stack_trace(), name)));
             }
         }
 
@@ -1062,7 +1145,8 @@ impl Runtime {
                     (_, Flow::Return) => { return Ok(Flow::Return); }
                     (Expect::Something, Flow::Continue) => {}
                     _ => return Err(module.error(expr.source_range(),
-                        "Expected something for index"))
+                        &format!("{}\nExpected something for index",
+                            self.stack_trace())))
                 };
             }
         }
@@ -1072,7 +1156,7 @@ impl Runtime {
             ref mut call_stack,
             ..
         } = self;
-        let locals = local_stack.len() - call_stack.last().unwrap().2;
+        let locals = local_stack.len() - call_stack.last().unwrap().local_len;
         let mut expr_j = 0;
         let name = &**item.name;
         let insert = match side {
@@ -1094,6 +1178,7 @@ impl Runtime {
                     module,
                     &mut stack[id],
                     stack,
+                    call_stack,
                     &item.ids[0],
                     start_stack_len,
                     &mut expr_j,
@@ -1118,7 +1203,8 @@ impl Runtime {
                         }
                         _ => {
                             return Err(module.error(item.ids[0].source_range(),
-                                &format!("Expected `ok(_)` or `err(_)`")));
+                                &format!("{}\nExpected `ok(_)` or `err(_)`",
+                                    stack_trace(call_stack))));
                         }
                     }};
                     match v {
@@ -1132,14 +1218,20 @@ impl Runtime {
                             else {
                                 return Err(module.error(
                                     item.ids[0].source_range(),
-                                    &format!("Requires `->` on function `{}`",
-                                    &call_stack.last().unwrap().0)));
+                                    &format!("{}\nRequires `->` on function `{}`",
+                                    stack_trace(call_stack),
+                                    &call_stack.last().unwrap().fn_name)));
                             }
                             let mut err = err.clone();
+                            let call = call_stack.last().unwrap();
+                            let file = match call.file.as_ref() {
+                                None => "".into(),
+                                Some(f) => format!(" ({})", f)
+                            };
                             err.trace.push(module.error(
                                 item.ids[0].source_range(),
-                                &format!("In function `{}`",
-                                &call_stack.last().unwrap().0)));
+                                &format!("In function `{}`{}",
+                                    &call.fn_name, file)));
                             stack[ind] = Variable::Result(Err(err));
                             return Ok(Flow::Return);
                         }
@@ -1151,6 +1243,7 @@ impl Runtime {
                         module,
                         unsafe { &mut *var },
                         stack,
+                        call_stack,
                         prop,
                         start_stack_len,
                         &mut expr_j,
@@ -1177,7 +1270,8 @@ impl Runtime {
                             }
                             _ => {
                                 return Err(module.error(prop.source_range(),
-                                    &format!("Expected `ok(_)` or `err(_)`")));
+                                    &format!("{}\nExpected `ok(_)` or `err(_)`",
+                                        stack_trace(call_stack))));
                             }
                         }};
                         match v {
@@ -1191,14 +1285,20 @@ impl Runtime {
                                 else {
                                     return Err(module.error(
                                         prop.source_range(),
-                                        &format!("Requires `->` on function `{}`",
-                                        &call_stack.last().unwrap().0)));
+                                        &format!("{}\nRequires `->` on function `{}`",
+                                            stack_trace(call_stack),
+                                            &call_stack.last().unwrap().fn_name)));
                                 }
                                 let mut err = err.clone();
+                                let call = call_stack.last().unwrap();
+                                let file = match call.file.as_ref() {
+                                    None => "".into(),
+                                    Some(f) => format!(" ({})", f)
+                                };
                                 err.trace.push(module.error(
                                     prop.source_range(),
-                                    &format!("In function `{}`",
-                                    &call_stack.last().unwrap().0)));
+                                    &format!("In function `{}`{}",
+                                        &call.fn_name, file)));
                                 stack[ind] = Variable::Result(Err(err));
                                 return Ok(Flow::Return);
                             }
@@ -1278,8 +1378,9 @@ impl Runtime {
                         Equal => a == b,
                         NotEqual => a != b,
                         x => return Err(module.error(compare.source_range,
-                            &format!("`{}` can not be used with bools",
-                            x.symbol())))
+                            &format!("{}\n`{}` can not be used with bools",
+                                rt.stack_trace(),
+                                x.symbol())))
                     })
                 }
                 (&Variable::Object(ref b), &Variable::Object(ref a)) => {
@@ -1287,8 +1388,9 @@ impl Runtime {
                         Equal => a == b,
                         NotEqual => a != b,
                         x => return Err(module.error(compare.source_range,
-                            &format!("`{}` can not be used with objects",
-                            x.symbol())))
+                            &format!("{}\n`{}` can not be used with objects",
+                                rt.stack_trace(),
+                                x.symbol())))
                     })
                 }
                 (&Variable::Array(ref b), &Variable::Array(ref a)) => {
@@ -1296,8 +1398,9 @@ impl Runtime {
                         Equal => a == b,
                         NotEqual => a != b,
                         x => return Err(module.error(compare.source_range,
-                            &format!("`{}` can not be used with arrays",
-                            x.symbol())))
+                            &format!("{}\n`{}` can not be used with arrays",
+                                rt.stack_trace(),
+                                x.symbol())))
                     })
                 }
                 (&Variable::Option(None), &Variable::Option(None)) => {
@@ -1305,8 +1408,9 @@ impl Runtime {
                         Equal => true,
                         NotEqual => false,
                         x => return Err(module.error(compare.source_range,
-                            &format!("`{}` can not be used with options",
-                            x.symbol())))
+                            &format!("{}\n`{}` can not be used with options",
+                                rt.stack_trace(),
+                                x.symbol())))
                     })
                 }
                 (&Variable::Option(None), &Variable::Option(_)) => {
@@ -1314,8 +1418,9 @@ impl Runtime {
                         Equal => false,
                         NotEqual => true,
                         x => return Err(module.error(compare.source_range,
-                            &format!("`{}` can not be used with options",
-                            x.symbol())))
+                            &format!("{}\n`{}` can not be used with options",
+                                rt.stack_trace(),
+                                x.symbol())))
                     })
                 }
                 (&Variable::Option(_), &Variable::Option(None)) => {
@@ -1323,8 +1428,9 @@ impl Runtime {
                         Equal => false,
                         NotEqual => true,
                         x => return Err(module.error(compare.source_range,
-                            &format!("`{}` can not be used with options",
-                            x.symbol())))
+                            &format!("{}\n`{}` can not be used with options",
+                                rt.stack_trace(),
+                                x.symbol())))
                     })
                 }
                 (&Variable::Option(Some(ref b)),
@@ -1333,7 +1439,8 @@ impl Runtime {
                 }
                 (b, a) => return Err(module.error(compare.source_range,
                     &format!(
-                    "`{}` can not be used with `{}` and `{}`",
+                    "{}\n`{}` can not be used with `{}` and `{}`",
+                    rt.stack_trace(),
                     compare.op.symbol(),
                     rt.typeof_var(a),
                     rt.typeof_var(b))))
@@ -1344,13 +1451,15 @@ impl Runtime {
             (_, Flow::Return) => { return Ok(Flow::Return); }
             (Expect::Something, Flow::Continue) => {}
             _ => return Err(module.error(compare.left.source_range(),
-                "Expected something from the left argument"))
+                &format!("{}\nExpected something from the left argument",
+                    self.stack_trace())))
         };
         match try!(self.expression(&compare.right, Side::Right, module)) {
             (_, Flow::Return) => { return Ok(Flow::Return); }
             (Expect::Something, Flow::Continue) => {}
             _ => return Err(module.error(compare.right.source_range(),
-                "Expected something from the right argument"))
+                &format!("{}\nExpected something from the right argument",
+                    self.stack_trace())))
         };
         match (self.stack.pop(), self.stack.pop()) {
             (Some(b), Some(a)) => {
@@ -1370,13 +1479,15 @@ impl Runtime {
             (x, Flow::Return) => { return Ok((x, Flow::Return)); }
             (Expect::Something, Flow::Continue) => {}
             _ => return Err(module.error(if_expr.cond.source_range(),
-                "Expected bool from if condition"))
+                &format!("{}\nExpected bool from if condition",
+                    self.stack_trace())))
         };
         let cond = self.stack.pop().expect("Expected bool");
         let val = match self.resolve(&cond) {
             &Variable::Bool(val) => val,
             _ => return Err(module.error(if_expr.cond.source_range(),
-                "Expected bool from if condition"))
+                &format!("{}\nExpected bool from if condition",
+                    self.stack_trace())))
         };
         if val {
             return self.block(&if_expr.true_block, module);
@@ -1389,7 +1500,8 @@ impl Runtime {
                 }
                 (Expect::Something, Flow::Continue) => {}
                 _ => return Err(module.error(cond.source_range(),
-                    "Expected bool from else if condition"))
+                    &format!("{}\nExpected bool from else if condition",
+                        self.stack_trace())))
             };
             let else_if_cond = self.stack.pop().expect("Expected bool");
             match self.resolve(&else_if_cond) {
@@ -1398,7 +1510,8 @@ impl Runtime {
                     return self.block(body, module);
                 }
                 _ => return Err(module.error(cond.source_range(),
-                    "Expected bool from else if condition"))
+                    &format!("{}\nExpected bool from else if condition",
+                        self.stack_trace())))
             }
         }
         if let Some(ref block) = if_expr.else_block {
@@ -1418,7 +1531,8 @@ impl Runtime {
             (_, Flow::Return) => { return Ok(Flow::Return); }
             (Expect::Nothing, Flow::Continue) => {}
             _ => return Err(module.error(for_expr.init.source_range(),
-                "Expected nothing from for init"))
+                &format!("{}\nExpected nothing from for init",
+                    self.stack_trace())))
         };
         let st = self.stack.len();
         let lc = self.local_stack.len();
@@ -1428,7 +1542,8 @@ impl Runtime {
                 (_, Flow::Return) => { return Ok(Flow::Return); }
                 (Expect::Something, Flow::Continue) => {}
                 _ => return Err(module.error(for_expr.cond.source_range(),
-                    "Expected bool from for condition"))
+                    &format!("{}\nExpected bool from for condition",
+                        self.stack_trace())))
             };
             match self.stack.pop() {
                 None => panic!("There is no value on the stack"),
@@ -1437,7 +1552,7 @@ impl Runtime {
                         Variable::Bool(val) => val,
                         _ => return Err(module.error(
                             for_expr.cond.source_range(),
-                            "Expected bool"))
+                            &format!("{}\nExpected bool", self.stack_trace())))
                     };
                     if !val { break }
                     match try!(self.block(&for_expr.block, module)) {
@@ -1482,7 +1597,8 @@ impl Runtime {
                                     (Expect::Nothing, Flow::Continue) => {}
                                     _ => return Err(module.error(
                                         for_expr.step.source_range(),
-                                        "Expected nothing from for step"))
+                                        &format!("{}\nExpected nothing from for step",
+                                            self.stack_trace())))
                             };
                             continue;
                         }
@@ -1495,7 +1611,8 @@ impl Runtime {
                             (Expect::Nothing, Flow::Continue) => {}
                             _ => return Err(module.error(
                                 for_expr.step.source_range(),
-                                "Expected nothing from for step"))
+                                &format!("{}\nExpected nothing from for step",
+                                    self.stack_trace())))
                     };
                 }
             };
@@ -1528,7 +1645,8 @@ impl Runtime {
             (_, Flow::Return) => { return Ok(Flow::Return); }
             (Expect::Something, Flow::Continue) => {}
             _ => return Err(module.error(unop.source_range,
-                "Expected something from unary argument"))
+                &format!("{}\nExpected something from unary argument",
+                    self.stack_trace())))
         };
         let val = self.stack.pop().expect("Expected unary argument");
         let v = match self.resolve(&val) {
@@ -1539,7 +1657,7 @@ impl Runtime {
                 })
             }
             _ => return Err(module.error(unop.source_range,
-                "Invalid type, expected bool"))
+                &format!("{}\nInvalid type, expected bool", self.stack_trace())))
         };
         self.stack.push(v);
         Ok(Flow::Continue)
@@ -1556,13 +1674,15 @@ impl Runtime {
             (_, Flow::Return) => { return Ok(Flow::Return); }
             (Expect::Something, Flow::Continue) => {}
             _ => return Err(module.error(binop.source_range,
-                "Expected something from left argument"))
+                &format!("{}\nExpected something from left argument",
+                    self.stack_trace())))
         };
         match try!(self.expression(&binop.right, side, module)) {
             (_, Flow::Return) => { return Ok(Flow::Return); }
             (Expect::Something, Flow::Continue) => {}
             _ => return Err(module.error(binop.source_range,
-                "Expected something from right argument"))
+                &format!("{}\nExpected something from right argument",
+                    self.stack_trace())))
         };
         let right = self.stack.pop().expect("Expected right argument");
         let left = self.stack.pop().expect("Expected left argument");
@@ -1585,7 +1705,8 @@ impl Runtime {
                     Mul => a && b,
                     Pow => a ^ b,
                     _ => return Err(module.error(binop.source_range,
-                        &format!("Unknown boolean operator `{:?}`",
+                        &format!("{}\nUnknown boolean operator `{:?}`",
+                            self.stack_trace(),
                             binop.op.symbol_bool())))
                 })
             }
@@ -1598,20 +1719,39 @@ impl Runtime {
                         Variable::Text(Arc::new(res))
                     }
                     _ => return Err(module.error(binop.source_range,
-                        "This operation can not be used with strings"))
+                        &format!("{}\nThis operation can not be used with strings",
+                            self.stack_trace())))
                 }
             }
             (&Variable::Text(_), _) =>
                 return Err(module.error(binop.source_range,
-                "The right argument must be a string. \
-                Try the `to_string` function")),
+                &format!("{}\nThe right argument must be a string. \
+                Try the `to_string` function", self.stack_trace()))),
             _ => return Err(module.error(binop.source_range, &format!(
-                "Invalid type for binary operator `{:?}`, \
+                "{}\nInvalid type for binary operator `{:?}`, \
                 expected numbers, bools or strings",
+                self.stack_trace(),
                 binop.op.symbol())))
         };
         self.stack.push(v);
 
         Ok(Flow::Continue)
     }
+    pub fn stack_trace(&self) -> String {
+        stack_trace(&self.call_stack)
+    }
+}
+
+fn stack_trace(call_stack: &[Call]) -> String {
+    let mut s = String::new();
+    for call in call_stack.iter() {
+        s.push_str(&call.fn_name);
+        if let Some(ref file) = call.file {
+            s.push_str(" (");
+            s.push_str(file);
+            s.push(')');
+        }
+        s.push('\n')
+    }
+    s
 }
