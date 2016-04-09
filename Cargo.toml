@@ -8,6 +8,7 @@ license = "MIT"
 readme = "README.md"
 repository = "https://github.com/pistondevelopers/dyon.git"
 homepage = "https://github.com/pistondevelopers/dyon"
+exclude = ["images/*"]
 
 [dependencies]
 piston_meta = "0.26.1"

@@ -3,6 +3,17 @@ A rusty dynamically typed scripting language
 
 Notice: This is very early stage in development. Breaking changes will happen!
 
+![snake](./images/snake.png)
+
+To run snake demo for interactive coding:
+
+1. [Install Rust](https://www.rust-lang.org/) (Rust 1.8 beta or newer)
+2. Fork the repo to your local hard drive
+3. In Terminal, type `cargo run --release --example piston_window`
+4. Edit "source/piston_window/snake.rs" while running the demo
+
+Dyon uses ".rs" to get Rust syntax coloring.
+
 ### List of features
 
 - Array `arr := [a, b, c]`
