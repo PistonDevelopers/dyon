@@ -28,6 +28,11 @@ Notice: This is very early stage in development. Breaking changes will happen!
 - Dynamic modules `m := unwrap(load("script.dyon"))` then `call(m, "main", [])`
 - Dynamic imports part of module prelude `m := unwrap(load(source: "script.dyon", imports: [window, graphics]))`
 - Add a custom Rust function using `Module::add`
+- Option values with `none()` or `some(x)`
+- Result values with `ok(x)` or `err(x)`
+- `?` operator to propagate errors, e.g. `x := foo()?`, maps option to result automatically
+- `unwrap(x)` prints trace of propagated error
+- `functions()` returns sorted list of all available functions in a module
 
 ### Why the name Dyon?
 
