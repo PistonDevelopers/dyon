@@ -60,12 +60,19 @@ The idea was to make a simple, but convenient scripting language that integrated
 
 - During the first week of coding, it was discovered a way to make a lifetime checking on arguments
 - Dynamic modules with imported prelude were added to explore a different approach to organizing code
+- For nice error handling, added option, result and `?` operator
+- To test the design of the language, created a demo for interactive coding
 
 Main goals:
 
 - Integrate well with Rust
 - Flexible way of organizing code
-- Performance of the cycle: coding -> parsing -> running -> debugging -> coding
+
+Performance will be optimized for the cycle:
+
+```
+coding -> parsing -> running -> debugging -> coding
+```
 
 Sub goals:
 
