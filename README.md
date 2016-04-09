@@ -3,6 +3,17 @@ A rusty dynamically typed scripting language
 
 Notice: This is very early stage in development. Breaking changes will happen!
 
+![snake](./images/snake.png)
+
+To run snake demo for interactive coding:
+
+1. [Install Rust](https://www.rust-lang.org/) (Rust 1.8 beta or newer)
+2. Fork the repo to your local hard drive
+3. In Terminal, type `cargo run --release --example piston_window`
+4. Edit "source/piston_window/snake.rs" while running the demo
+
+Dyon uses ".rs" to get Rust syntax coloring.
+
 ### List of features
 
 - Array `arr := [a, b, c]`
@@ -49,12 +60,19 @@ The idea was to make a simple, but convenient scripting language that integrated
 
 - During the first week of coding, it was discovered a way to make a lifetime checking on arguments
 - Dynamic modules with imported prelude were added to explore a different approach to organizing code
+- For nice error handling, added option, result and `?` operator
+- To test the design of the language, created a demo for interactive coding
 
 Main goals:
 
 - Integrate well with Rust
 - Flexible way of organizing code
-- Performance of the cycle: coding -> parsing -> running -> debugging -> coding
+
+Performance will be optimized for the cycle:
+
+```
+coding -> parsing -> running -> debugging -> coding
+```
 
 Sub goals:
 
