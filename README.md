@@ -26,7 +26,7 @@ Notice: This is very early stage in development. Breaking changes will happen!
 - Labeled continue `'a: loop { continue 'a }`
 - Use `return` as a variable without exiting `return = 8`
 - Dynamic modules `m := unwrap(load("script.dyon"))` then `call(m, "main", [])`
-- Dynamic imports part of module prelude `m := unwrap(load(source: "script.dyon", imports: [window, graphics]))`
+- Import to module prelude `m := unwrap(load(source: "script.dyon", imports: [window, graphics]))`
 - Add a custom Rust function using `Module::add`
 - Option values with `none()` or `some(x)`
 - Result values with `ok(x)` or `err(x)`
