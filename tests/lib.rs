@@ -159,6 +159,11 @@ fn test_some() {
 }
 
 #[test]
+fn test_pop() {
+    test_src("source/pop.rs");
+}
+
+#[test]
 fn test_error_propagate() {
     test_src("source/error/propagate.rs");
 }

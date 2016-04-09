@@ -61,6 +61,10 @@ pub fn standard(f: &mut HashMap<Arc<String>, PreludeFunction>) {
         lts: vec![Lt::Default, Lt::Arg(0)],
         returns: false
     });
+    f.insert(Arc::new("pop".into()), PreludeFunction {
+        lts: vec![Lt::Return],
+        returns: true
+    });
     f.insert(Arc::new("trim_right".into()), PreludeFunction {
         lts: vec![Lt::Default],
         returns: true
@@ -410,14 +414,8 @@ pub fn call_standard(
         }
         "push" => {
             rt.push_fn(call.name.clone(), None, st + 1, lc);
-            let item = match rt.stack.pop() {
-                Some(item) => item,
-                None => panic!("There is no value on the stack")
-            };
-            let v = match rt.stack.pop() {
-                Some(v) => v,
-                None => panic!("There is no value on the stack")
-            };
+            let item = rt.stack.pop().expect("There is no value on the stack");
+            let v = rt.stack.pop().expect("There is no value on the stack");
 
             if let Variable::Ref(ind) = v {
                 let ok = if let Variable::Array(ref mut arr) = rt.stack[ind] {
@@ -438,6 +436,38 @@ pub fn call_standard(
             }
             rt.pop_fn(call.name.clone());
             Expect::Nothing
+        }
+        "pop" => {
+            rt.push_fn(call.name.clone(), None, st + 1, lc);
+            let arr = rt.stack.pop().expect("There is no value on the stack");
+            let mut v: Option<Variable> = None;
+            if let Variable::Ref(ind) = arr {
+                let ok = if let Variable::Array(ref mut arr) = rt.stack[ind] {
+                    v = arr.pop();
+                    true
+                } else {
+                    false
+                };
+                if !ok {
+                    return Err(module.error(call.args[0].source_range(),
+                        &format!("{}\nExpected reference to array",
+                            rt.stack_trace())));
+                }
+            } else {
+                return Err(module.error(call.args[0].source_range(),
+                    &format!("{}\nExpected reference to array",
+                        rt.stack_trace())));
+            }
+            match v {
+                None => return Err(module.error(call.args[0].source_range(),
+                    &format!("{}\nExpected non-empty array",
+                        rt.stack_trace()))),
+                Some(val) => {
+                    rt.stack.push(val);
+                }
+            }
+            rt.pop_fn(call.name.clone());
+            Expect::Something
         }
         "read_line" => {
             use std::io::{self, Write};
