@@ -211,6 +211,11 @@ impl Runtime {
         }
     }
 
+    pub fn expected(&self, var: &Variable, ty: &str) -> String {
+        let found_ty = self.typeof_var(var);
+        format!("{}\nExpected `{}`, found `{}`", self.stack_trace(), ty, found_ty)
+    }
+
     #[inline(always)]
     pub fn resolve<'a>(&'a self, var: &'a Variable) -> &'a Variable {
         resolve(&self.stack, var)

@@ -1,8 +1,9 @@
-fn main() {
-    println(foo())
-}
 
-fn foo() -> {
-    x := [1, 2, 3]
-    return clone(pop(x))
+fn main() {
+    println("1")
+    sleep(1)
+    println("2")
+    sleep(2)
+    println("3")
+    sleep(3)
 }
