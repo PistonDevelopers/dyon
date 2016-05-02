@@ -59,9 +59,19 @@ fn load_module() -> Option<Module> {
         lts: vec![Lt::Default],
         returns: false
     });
-    module.add(Arc::new("draw_color_rect".into()),
-        draw_color_rect, PreludeFunction {
+    module.add(Arc::new("draw_color_rectangle".into()),
+        draw_color_rectangle, PreludeFunction {
             lts: vec![Lt::Default; 2],
+            returns: false
+        });
+    module.add(Arc::new("draw_color_ellipse".into()),
+        draw_color_ellipse, PreludeFunction {
+            lts: vec![Lt::Default; 2],
+            returns: false
+        });
+    module.add(Arc::new("draw_color_ellipse_resolution".into()),
+        draw_color_ellipse_resolution, PreludeFunction {
+            lts: vec![Lt::Default; 3],
             returns: false
         });
     module.add(Arc::new("draw_color_radius_line".into()),
@@ -135,7 +145,7 @@ mod stack {
         let num = rt.stack.pop().expect("Expected number");
         match rt.resolve(&num) {
             &Variable::F64(n) => Ok(n),
-            _ => Err("Expected number".into())
+            x => Err(rt.expected(x, "number"))
         }
     }
 
@@ -145,23 +155,23 @@ mod stack {
             &Variable::Array(ref arr) => {
                 let r = match rt.resolve(&arr[0]) {
                     &Variable::F64(r) => r,
-                    _ => return Err("Expected number".into())
+                    x => return Err(rt.expected(x, "number"))
                 };
                 let g = match rt.resolve(&arr[1]) {
                     &Variable::F64(r) => r,
-                    _ => return Err("Expected number".into())
+                    x => return Err(rt.expected(x, "number"))
                 };
                 let b = match rt.resolve(&arr[2]) {
                     &Variable::F64(r) => r,
-                    _ => return Err("Expected number".into())
+                    x => return Err(rt.expected(x, "number"))
                 };
                 let a = match rt.resolve(&arr[3]) {
                     &Variable::F64(r) => r,
-                    _ => return Err("Expected number".into())
+                    x => return Err(rt.expected(x, "number"))
                 };
                 Ok([r as f32, g as f32, b as f32, a as f32])
             }
-            _ => return Err("Expected color".into())
+            x => return Err(rt.expected(x, "color"))
         }
     }
 
@@ -171,23 +181,23 @@ mod stack {
             &Variable::Array(ref arr) => {
                 let x = match rt.resolve(&arr[0]) {
                     &Variable::F64(x) => x,
-                    _ => return Err("Expected number".into())
+                    x => return Err(rt.expected(x, "number"))
                 };
                 let y = match rt.resolve(&arr[1]) {
                     &Variable::F64(y) => y,
-                    _ => return Err("Expected number".into())
+                    x => return Err(rt.expected(x, "number"))
                 };
                 let w = match rt.resolve(&arr[2]) {
                     &Variable::F64(w) => w,
-                    _ => return Err("Expected number".into())
+                    x => return Err(rt.expected(x, "number"))
                 };
                 let h = match rt.resolve(&arr[3]) {
                     &Variable::F64(h) => h,
-                    _ => return Err("Expected number".into())
+                    x => return Err(rt.expected(x, "number"))
                 };
                 Ok([x, y, w, h])
             }
-            _ => return Err("Expected rect".into())
+            x => return Err(rt.expected(x, "rect"))
         }
     }
 
@@ -195,7 +205,7 @@ mod stack {
         let v = rt.stack.pop().expect("Expected string");
         match rt.resolve(&v) {
             &Variable::Text(ref s) => Ok(s.clone()),
-            _ => Err("Expected string".into())
+            x => Err(rt.expected(x, "string"))
         }
     }
 }
@@ -264,7 +274,7 @@ mod dyon_functions {
         Ok(())
     }
 
-    pub fn draw_color_rect(rt: &mut Runtime) -> Result<(), String> {
+    pub fn draw_color_rectangle(rt: &mut Runtime) -> Result<(), String> {
         use piston_window::*;
 
         let e = unsafe { &mut *Current::<PistonWindow>::new() };
@@ -272,6 +282,34 @@ mod dyon_functions {
         let color = try!(pop_color(rt));
         e.draw_2d(|c, g| {
             rectangle(color, rect, c.transform, g);
+        });
+        Ok(())
+    }
+
+    pub fn draw_color_ellipse(rt: &mut Runtime) -> Result<(), String> {
+        use piston_window::*;
+
+        let e = unsafe { &mut *Current::<PistonWindow>::new() };
+        let rect = try!(pop_rect(rt));
+        let color = try!(pop_color(rt));
+        e.draw_2d(|c, g| {
+            ellipse(color, rect, c.transform, g);
+        });
+        Ok(())
+    }
+
+    pub fn draw_color_ellipse_resolution(rt: &mut Runtime) -> Result<(), String> {
+        use piston_window::*;
+
+        let e = unsafe { &mut *Current::<PistonWindow>::new() };
+
+        let resolution = try!(pop_num(rt));
+        let rect = try!(pop_rect(rt));
+        let color = try!(pop_color(rt));
+        e.draw_2d(|c, g| {
+            Ellipse::new(color)
+                .resolution(resolution as u32)
+                .draw(rect, &c.draw_state, c.transform, g);
         });
         Ok(())
     }

@@ -3,6 +3,16 @@ fn main() {
     println("Press A and D to steer.")
     println("Reset with R.")
     println("You can modify \"source/piston_window/snake.rs\" while running.")
+
+    {
+        println("External functions:")
+        println("===================")
+        functions := unwrap(load("source/piston_window/functions.rs"))
+        list := functions()
+        call(functions, "print_functions", [list])
+        println("===================")
+    }
+
     source := "source/piston_window/snake.rs"
     m := unwrap(load(source))
 

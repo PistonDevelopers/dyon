@@ -31,7 +31,7 @@ fn render(settings, data) {
     }
     for i := 0; i < n; i += 1 {
         pos := data.snake_body[i]
-        draw(color: [.2, .2, 0, 1], rect: [
+        draw(color: [.2, .2, 0, 1], rectangle: [
             pos[0] - 0.5 * size, pos[1] - 0.5 * size, size, size])
     }
     if n > 0 {
