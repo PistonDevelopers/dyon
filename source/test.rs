@@ -3,15 +3,12 @@ fn foo(mut a, b) {
     a[0] = clone(b)
 }
 
-fn foo(mut x) {
-    x = 3
+fn bar(a, b) {
+    foo(mut a, b)
 }
 
 fn main() {
     a := [4]
     b := 5
-    foo(mut a, b)
-    println(a)
-    foo(mut b)
-    println(b)
+    bar(a, b)
 }

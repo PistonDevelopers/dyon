@@ -498,6 +498,37 @@ pub fn check(
         }
     }
 
+    // Check that calling mutable argument are not immutable.
+    for &c in &calls {
+        let call = &nodes[c];
+        let reference = |i: usize| {
+            let mut n: usize = i;
+            // Item is 2 levels down inside call_arg/item
+            for _ in 0..2 {
+                let node: &Node = &nodes[n];
+                if node.kind == Kind::Item { return Some(n); }
+                if node.children.len() == 0 { break; }
+                n = node.children[0];
+            }
+            None
+        };
+
+        for &arg in call.children.iter()
+            .filter(|&&n| nodes[n].kind == Kind::CallArg
+                          && nodes[n].mutable)
+        {
+            if let Some(n) = reference(arg) {
+                if let Some(decl) = nodes[n].declaration {
+                   if nodes[decl].kind == Kind::Arg && !nodes[decl].mutable {
+                       return Err(nodes[n].source.wrap(
+                           format!("Requires `mut {}`", nodes[n].name.as_ref().unwrap())
+                       ));
+                   }
+               }
+            }
+        }
+    }
+
     Ok(())
 }
 
