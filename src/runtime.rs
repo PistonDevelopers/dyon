@@ -1661,8 +1661,18 @@ impl Runtime {
         let v = match self.resolve(&val) {
             &Variable::Bool(b) => {
                 Variable::Bool(match unop.op {
-                    ast::UnOp::Neg => !b,
-                    // _ => panic!("Unknown boolean unary operator `{:?}`", unop.op)
+                    ast::UnOp::Not => !b,
+                    _ => return Err(module.error(unop.source_range,
+                                    &format!("{}\nUnknown boolean unary operator",
+                                             self.stack_trace())))
+                })
+            }
+            &Variable::F64(v) => {
+                Variable::F64(match unop.op {
+                    ast::UnOp::Neg => -v,
+                    _ => return Err(module.error(unop.source_range,
+                                    &format!("{}\nUnknown number unary operator",
+                                             self.stack_trace())))
                 })
             }
             _ => return Err(module.error(unop.source_range,
