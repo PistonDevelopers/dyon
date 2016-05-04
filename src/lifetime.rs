@@ -28,6 +28,7 @@ pub fn check(
                 nodes.push(Node {
                     kind: kind,
                     name: None,
+                    mutable: false,
                     source: Range::empty(0),
                     parent: parent,
                     children: vec![],
@@ -93,10 +94,35 @@ pub fn check(
                         let i = *parents.last().unwrap();
                         nodes[i].op = Some(Op::Set);
                     }
+                    "mut" => {
+                        let i = *parents.last().unwrap();
+                        nodes[i].mutable = _val;
+                    }
                     _ => {}
                 }
             }
             _ => {}
+        }
+    }
+
+    // Add mutability information to function names.
+    for i in 0..nodes.len() {
+        match nodes[i].kind {
+            Kind::Fn | Kind::Call => {}
+            _ => continue
+        };
+        let mutable_args = nodes[i].children.iter().any(|&arg| nodes[arg].mutable);
+        if mutable_args {
+            let mut name_plus_args = String::from(&***nodes[i].name.as_ref().unwrap());
+            name_plus_args.push('(');
+            for &arg in nodes[i].children.iter()
+                .filter(|&&n| match nodes[n].kind {
+                    Kind::Arg | Kind::CallArg => true, _ => false
+                }) {
+                name_plus_args.push_str(if nodes[arg].mutable { "mut," } else { "_," });
+            }
+            name_plus_args.push(')');
+            nodes[i].name = Some(Arc::new(name_plus_args));
         }
     }
 
@@ -537,6 +563,8 @@ pub struct Node {
     pub kind: Kind,
     /// The name.
     pub name: Option<Arc<String>>,
+    /// Whether the argument or call argument is mutable.
+    pub mutable: bool,
     /// The range in source.
     pub source: Range,
     /// The parent index.

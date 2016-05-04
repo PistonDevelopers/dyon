@@ -11,7 +11,7 @@ _seps: "(){}[],.:;=<>*+-/%^?"
 
 0 fn = ["fn" .w! .."("!:"name" ?w "(" args ")" ?w ?"->":"returns" ?w block:"block"]
 1 args = .s?.([?w "," ?w] arg:"arg")
-2 arg = [?"mut" ?w .._seps!:"name" ?[?w ":" ?w "'" ?w .._seps!:"lifetime"]]
+2 arg = [?"mut":"mut" ?w .._seps!:"name" ?[?w ":" ?w "'" ?w .._seps!:"lifetime"]]
 // Support both multi-line expressions and single line.
 3 block = ["{" ?w {.l([?w expr:"expr" ?w]) [?w expr:"expr"]} ?w "}"]
 4 expr = [{
@@ -39,23 +39,26 @@ _seps: "(){}[],.:;=<>*+-/%^?"
     item:"item"
 } ?[?w "?":"try"]]
 // Interprets "return" as variable, does not expect loops or assignment.
-5 arg_expr = [?"mut" ?w {
-    object:"object"
-    array:"array"
-    array_fill:"array_fill"
-    if:"if"
-    block:"block"
-    compare:"compare"
-    add:"add"
-    ["(" ?w expr ?w ")"]
-    unop:"unop"
-    text
-    call:"call"
-    named_call:"named_call"
-    num
-    bool
-    item:"item"
-} ?[?w "?":"try"]]
+5 arg_expr = {
+    ["mut":"mut" ?w item:"item"]
+    [{
+        object:"object"
+        array:"array"
+        array_fill:"array_fill"
+        if:"if"
+        block:"block"
+        compare:"compare"
+        add:"add"
+        ["(" ?w expr ?w ")"]
+        unop:"unop"
+        text
+        call:"call"
+        named_call:"named_call"
+        num
+        bool
+        item:"item"
+    } ?[?w "?":"try"]]
+}
 6 lexpr = [{
     object:"object"
     array:"array"
