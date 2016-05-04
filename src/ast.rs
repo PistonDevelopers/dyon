@@ -906,6 +906,8 @@ impl Call {
         }
 
         let mut name = try!(name.ok_or(()));
+
+        // Append mutability information to function name.
         if mutable.iter().any(|&arg| arg) {
             let mut name_plus_args = String::from(&**name);
             name_plus_args.push('(');
@@ -918,6 +920,7 @@ impl Call {
             name_plus_args.push(')');
             name = Arc::new(name_plus_args);
         }
+
         Ok((convert.subtract(start), Call {
             name: name,
             args: args,
@@ -936,6 +939,7 @@ impl Call {
 
         let mut name = String::new();
         let mut args = vec![];
+        let mut mutable: Vec<bool> = vec![];
         loop {
             if let Ok(range) = convert.end_node(node) {
                 convert.update(range);
@@ -946,6 +950,14 @@ impl Call {
                 name.push_str(&val);
             } else if let Ok((range, val)) = Expression::from_meta_data(
                 "call_arg", convert, ignored) {
+                let mut peek = convert.clone();
+                mutable.push(match peek.start_node("call_arg") {
+                    Ok(r) => {
+                        peek.update(r);
+                        peek.meta_bool("mut").is_ok()
+                    }
+                    _ => unreachable!()
+                });
                 convert.update(range);
                 args.push(val);
             } else {
@@ -953,6 +965,18 @@ impl Call {
                 convert.update(range);
                 ignored.push(range);
             }
+        }
+
+        // Append mutability information to function name.
+        if mutable.iter().any(|&arg| arg) {
+            name.push('(');
+            let mut first = true;
+            for &arg in &mutable {
+                if !first { name.push(','); }
+                name.push_str(if arg { "mut" } else { "_" });
+                first = false;
+            }
+            name.push(')');
         }
 
         Ok((convert.subtract(start), Call {

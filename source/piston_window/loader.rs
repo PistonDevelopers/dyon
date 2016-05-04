@@ -29,9 +29,9 @@ fn main() {
             dt := unwrap(update_dt())
             // Slow down when window is unfocused.
             dt *= if data.focused { settings.focus_speed } else { settings.unfocus_speed }
-            call(m, "update", [data, settings, dt])
+            call(m, "update(mut,_,_)", [data, settings, dt])
         }
-        event(loader: loader, source: source, settings: settings, module: m)
+        event(loader: mut loader, source: source, settings: mut settings, module: mut m)
         key := press_keyboard_key()
         if key != none() {
             key := unwrap(key)
@@ -99,7 +99,7 @@ fn should_reload(loader) -> {
         && ((loader.last_reload + loader.reload_interval) < loader.time)
 }
 
-fn event_loader_source_settings_module(loader, source, settings, m) {
+fn event_loader_source_settings_module(mut loader, source, mut settings, mut m) {
     if update() {
         dt := unwrap(update_dt())
         loader.time += dt

@@ -999,7 +999,8 @@ pub fn call_standard(
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
-        _ => panic!("Unknown function `{}`", call.name)
+        _ => return Err(module.error(call.source_range,
+            &format!("{}\nUnknown function `{}`", rt.stack_trace(), call.name)))
     };
     Ok((expect, Flow::Continue))
 }

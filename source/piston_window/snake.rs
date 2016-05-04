@@ -45,7 +45,7 @@ fn render(settings, data) {
     }
 }
 
-fn update(data, settings, dt) {
+fn update(mut data, settings, dt) {
     if data.pressing_left {
         data.snake_angle -= settings.turn_speed * dt
     }
