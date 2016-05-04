@@ -545,13 +545,9 @@ pub fn call_standard(
         "to_string" => {
             rt.push_fn(call.name.clone(), None, st + 1, lc);
             let v = rt.stack.pop().expect(TINVOTS);
-            let v = match rt.resolve(&v) {
-                &Variable::Text(ref t) => Variable::Text(t.clone()),
-                &Variable::F64(v) => {
-                    Variable::Text(Arc::new(format!("{}", v)))
-                }
-                _ => unimplemented!(),
-            };
+            let mut buf: Vec<u8> = vec![];
+            write_variable(&mut buf, rt, rt.resolve(&v), EscapeString::None).unwrap();
+            let v = Variable::Text(Arc::new(String::from_utf8(buf).unwrap()));
             rt.stack.push(v);
             rt.pop_fn(call.name.clone());
             Expect::Something

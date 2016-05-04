@@ -1,9 +1,5 @@
 
-fn foo() -> {
-    x := 2
-    return exp(-x)
-}
-
 fn main() {
-    println(foo())
+    x := to_string({x: 0, y: 1})
+    println(x)
 }
