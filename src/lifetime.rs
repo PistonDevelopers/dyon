@@ -480,6 +480,19 @@ pub fn check(
         }
     }
 
+    // Check that mutable locals are not immutable arguments.
+    for &(_, i) in &mutated_locals {
+        if let Some(decl) = nodes[i].declaration {
+            if nodes[decl].kind == Kind::Arg {
+                if !nodes[decl].mutable {
+                    return Err(nodes[i].source.wrap(
+                        format!("Requires `mut {}`", nodes[i].name.as_ref().unwrap())
+                    ));
+                }
+            }
+        }
+    }
+
     Ok(())
 }
 
