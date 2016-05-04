@@ -3,8 +3,8 @@ fn foo(mut a, b) {
     a[0] = clone(b)
 }
 
-fn foo(mut x) {
-    x = 3
+fn foo(x, y) {
+    println(x)
 }
 
 fn main() {

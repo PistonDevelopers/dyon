@@ -309,15 +309,17 @@ pub fn check(
                     }
                     None => {}
                 }
+                let suggestions = suggestions(&**name, &function_lookup);
                 return Err(node.source.wrap(
-                    format!("Could not find function `{}`", name)));
+                    format!("Could not find function `{}`{}", name, suggestions)));
             }
         };
         // Check that number of arguments is the same as in declaration.
         if function_args[i] != n {
+        let suggestions = suggestions(&**name, &function_lookup);
             return Err(node.source.wrap(
-                format!("{}: Expected {} arguments, found {}",
-                name, function_args[i], n)));
+                format!("{}: Expected {} arguments, found {}{}",
+                name, function_args[i], n, suggestions)));
         }
         node.declaration = Some(functions[i]);
     }
@@ -494,6 +496,35 @@ pub fn check(
     }
 
     Ok(())
+}
+
+// Search for suggestions using matching function signature.
+// Meant to be put last in error message.
+fn suggestions(
+    name: &str,
+    function_lookup: &HashMap<Arc<String>, usize>
+) -> String {
+    let search_name = if let Some((mut_pos, _)) = name.chars().enumerate()
+        .find(|&(_, c)| c == '(') {
+        &name[..mut_pos - 1]
+    } else {
+        name
+    };
+    let mut found_suggestions = false;
+    let mut suggestions = String::from("\n\nDid you mean:\n");
+    for f in function_lookup.keys() {
+        if (&***f).starts_with(search_name) {
+            suggestions.push_str("- ");
+            suggestions.push_str(f);
+            suggestions.push('\n');
+            found_suggestions = true;
+        }
+    }
+    if found_suggestions {
+        suggestions
+    } else {
+        String::from("")
+    }
 }
 
 fn compare_lifetimes(
