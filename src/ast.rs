@@ -748,6 +748,7 @@ impl BinOp {
 
 #[derive(Debug, Copy, Clone)]
 pub enum UnOp {
+    Not,
     Neg
 }
 
@@ -951,6 +952,9 @@ impl UnOpExpression {
                 convert.update(range);
                 break;
             } else if let Ok((range, _)) = convert.meta_bool("!") {
+                convert.update(range);
+                unop = Some(UnOp::Not);
+            } else if let Ok((range, _)) = convert.meta_bool("-") {
                 convert.update(range);
                 unop = Some(UnOp::Neg);
             } else if let Ok((range, val)) = Expression::from_meta_data(

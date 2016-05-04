@@ -149,6 +149,11 @@ fn test_println_colon() {
 }
 
 #[test]
+fn test_neg() {
+    test_src("source/neg.rs");
+}
+
+#[test]
 fn test_print_functions() {
     test_src("source/functions/print_functions.rs");
 }

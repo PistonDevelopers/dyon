@@ -77,7 +77,10 @@ _seps: "(){}[],.:;=<>*+-/%^?"
 11 num = .$_:"num"
 12 text = .t?:"text"
 13 bool = {"true":"bool" "false":!"bool"}
-14 unop = ["!":"!" ?w lexpr:"expr"]
+14 unop = [{
+  "!":"!"
+  "-":"-"
+} ?w lexpr:"expr"]
 15 item = [.._seps!:"name" ?[?w "?":"try_item"] .r?([{
     [?w "[" ?w {.t?:"id" .$_:"id" expr:"id"} ?w "]"]
     [?w "." ?w .._seps!:"id"]
