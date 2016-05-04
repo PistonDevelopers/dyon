@@ -26,6 +26,7 @@ pub enum Expect {
     Something
 }
 
+#[derive(Debug)]
 pub enum Flow {
     /// Continues execution.
     Continue,
@@ -299,9 +300,9 @@ impl Runtime {
                         try_ids: vec![],
                         source_range: ret.source_range(),
                     });
-                let flow = try!(self.assign_specific(AssignOp::Set,
+                let _flow = try!(self.assign_specific(AssignOp::Set,
                     &item, ret, module));
-                Ok((Expect::Something, flow))
+                Ok((Expect::Something, Flow::Return))
             }
             ReturnVoid(_) => {
                 Ok((Expect::Nothing, Flow::Return))
@@ -1561,9 +1562,7 @@ impl Runtime {
                     };
                     if !val { break }
                     match try!(self.block(&for_expr.block, module)) {
-                        (_, Flow::Return) => {
-                            return Ok(Flow::Return);
-                        }
+                        (_, Flow::Return) => { return Ok(Flow::Return); }
                         (_, Flow::Continue) => {}
                         (_, Flow::Break(x)) => {
                             match x {
