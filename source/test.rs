@@ -1,5 +1,11 @@
 
+fn foo(mut a, b) {
+    a[0] = clone(b)
+}
+
 fn main() {
-    x := to_string({x: 0, y: 1})
-    println(x)
+    a := [4]
+    b := 5
+    foo(mut a, b)
+    println(a)
 }
