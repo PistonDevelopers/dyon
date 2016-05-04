@@ -83,8 +83,11 @@ impl Function {
         if mutable_args {
             let mut name_plus_args = String::from(&**name);
             name_plus_args.push('(');
+            let mut first = true;
             for arg in &args {
-                name_plus_args.push_str(if arg.mutable { "mut," } else { "_," });
+                if !first { name_plus_args.push(','); }
+                name_plus_args.push_str(if arg.mutable { "mut" } else { "_" });
+                first = false;
             }
             name_plus_args.push(')');
             name = Arc::new(name_plus_args);
@@ -906,8 +909,11 @@ impl Call {
         if mutable.iter().any(|&arg| arg) {
             let mut name_plus_args = String::from(&**name);
             name_plus_args.push('(');
+            let mut first = true;
             for &arg in &mutable {
-                name_plus_args.push_str(if arg { "mut," } else { "_," });
+                if !first { name_plus_args.push(','); }
+                name_plus_args.push_str(if arg { "mut" } else { "_" });
+                first = false;
             }
             name_plus_args.push(')');
             name = Arc::new(name_plus_args);

@@ -115,11 +115,14 @@ pub fn check(
         if mutable_args {
             let mut name_plus_args = String::from(&***nodes[i].name.as_ref().unwrap());
             name_plus_args.push('(');
+            let mut first = true;
             for &arg in nodes[i].children.iter()
                 .filter(|&&n| match nodes[n].kind {
                     Kind::Arg | Kind::CallArg => true, _ => false
                 }) {
-                name_plus_args.push_str(if nodes[arg].mutable { "mut," } else { "_," });
+                if !first { name_plus_args.push(','); }
+                name_plus_args.push_str(if nodes[arg].mutable { "mut" } else { "_" });
+                first = false;
             }
             name_plus_args.push(')');
             nodes[i].name = Some(Arc::new(name_plus_args));
