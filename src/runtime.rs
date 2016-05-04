@@ -169,7 +169,12 @@ fn item_lookup(
                         &format!("{}\nExpected number",
                             stack_trace(call_stack))))
                 };
-                let v = &mut arr[id as usize];
+                let v = match arr.get_mut(id as usize) {
+                    None => return Err(module.error(prop.source_range(),
+                                       &format!("{}\nOut of bounds `{}`",
+                                                stack_trace(call_stack), id))),
+                    Some(x) => x
+                };
                 // Resolve reference.
                 if let &mut Variable::Ref(id) = v {
                     // Do not resolve if last, because references should be
