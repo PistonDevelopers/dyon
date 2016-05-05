@@ -877,7 +877,7 @@ impl Runtime {
                                 }
                             }
                         }
-                        &Variable::Object(ref obj) => {
+                        &Variable::Object(ref b) => {
                             unsafe {
                                 match *r {
                                     Variable::Object(ref mut n) => {
@@ -885,9 +885,9 @@ impl Runtime {
                                             // Check address to avoid unsafe
                                             // reading and writing to same memory.
                                             let n_addr = n as *const _ as usize;
-                                            let obj_addr = obj as *const _ as usize;
-                                            if n_addr != obj_addr {
-                                                *r = b.clone()
+                                            let b_addr = b as *const _ as usize;
+                                            if n_addr != b_addr {
+                                                *r = Variable::Object(b.clone())
                                             }
                                             // *n = obj.clone()
                                         } else {
@@ -896,7 +896,7 @@ impl Runtime {
                                     }
                                     Variable::Return => {
                                         if let Set = op {
-                                            *r = Variable::Object(obj.clone())
+                                            *r = Variable::Object(b.clone())
                                         } else {
                                             return Err(module.error(
                                                 left.source_range(),
@@ -911,7 +911,7 @@ impl Runtime {
                                 }
                             }
                         }
-                        &Variable::Array(ref arr) => {
+                        &Variable::Array(ref b) => {
                             unsafe {
                                 match *r {
                                     Variable::Array(ref mut n) => {
@@ -919,9 +919,9 @@ impl Runtime {
                                             // Check address to avoid unsafe
                                             // reading and writing to same memory.
                                             let n_addr = n as *const _ as usize;
-                                            let arr_addr = arr as *const _ as usize;
-                                            if n_addr != arr_addr {
-                                                *r = b.clone()
+                                            let b_addr = b as *const _ as usize;
+                                            if n_addr != b_addr {
+                                                *r = Variable::Array(b.clone())
                                             }
                                             // *n = arr.clone();
                                         } else {
@@ -930,7 +930,7 @@ impl Runtime {
                                     }
                                     Variable::Return => {
                                         if let Set = op {
-                                            *r = Variable::Array(arr.clone())
+                                            *r = Variable::Array(b.clone())
                                         } else {
                                             return Err(module.error(
                                                 left.source_range(),
@@ -945,7 +945,7 @@ impl Runtime {
                                 }
                             }
                         }
-                        &Variable::Option(ref opt) => {
+                        &Variable::Option(ref b) => {
                             unsafe {
                                 match *r {
                                     Variable::Option(ref mut n) => {
@@ -953,9 +953,9 @@ impl Runtime {
                                             // Check address to avoid unsafe
                                             // reading and writing to same memory.
                                             let n_addr = n as *const _ as usize;
-                                            let obj_addr = opt as *const _ as usize;
-                                            if n_addr != obj_addr {
-                                                *r = b.clone()
+                                            let b_addr = b as *const _ as usize;
+                                            if n_addr != b_addr {
+                                                *r = Variable::Option(b.clone())
                                             }
                                         } else {
                                             unimplemented!()
@@ -963,7 +963,7 @@ impl Runtime {
                                     }
                                     Variable::Return => {
                                         if let Set = op {
-                                            *r = Variable::Option(opt.clone())
+                                            *r = Variable::Option(b.clone())
                                         } else {
                                             return Err(module.error(
                                                 left.source_range(),
@@ -978,7 +978,7 @@ impl Runtime {
                                 }
                             }
                         }
-                        &Variable::Result(ref res) => {
+                        &Variable::Result(ref b) => {
                             unsafe {
                                 match *r {
                                     Variable::Result(ref mut n) => {
@@ -986,9 +986,9 @@ impl Runtime {
                                             // Check address to avoid unsafe
                                             // reading and writing to same memory.
                                             let n_addr = n as *const _ as usize;
-                                            let obj_addr = res as *const _ as usize;
-                                            if n_addr != obj_addr {
-                                                *r = b.clone()
+                                            let b_addr = b as *const _ as usize;
+                                            if n_addr != b_addr {
+                                                *r = Variable::Result(b.clone())
                                             }
                                         } else {
                                             unimplemented!()
@@ -996,7 +996,7 @@ impl Runtime {
                                     }
                                     Variable::Return => {
                                         if let Set = op {
-                                            *r = Variable::Result(res.clone())
+                                            *r = Variable::Result(b.clone())
                                         } else {
                                             return Err(module.error(
                                                 left.source_range(),
@@ -1011,7 +1011,7 @@ impl Runtime {
                                 }
                             }
                         }
-                        &Variable::RustObject(ref robj) => {
+                        &Variable::RustObject(ref b) => {
                             unsafe {
                                 match *r {
                                     Variable::RustObject(ref mut n) => {
@@ -1019,9 +1019,9 @@ impl Runtime {
                                             // Check address to avoid unsafe
                                             // reading and writing to same memory.
                                             let n_addr = n as *const _ as usize;
-                                            let obj_addr = robj as *const _ as usize;
-                                            if n_addr != obj_addr {
-                                                *r = b.clone()
+                                            let b_addr = b as *const _ as usize;
+                                            if n_addr != b_addr {
+                                                *r = Variable::RustObject(b.clone())
                                             }
                                         } else {
                                             unimplemented!()
@@ -1029,7 +1029,7 @@ impl Runtime {
                                     }
                                     Variable::Return => {
                                         if let Set = op {
-                                            *r = Variable::RustObject(robj.clone())
+                                            *r = Variable::RustObject(b.clone())
                                         } else {
                                             return Err(module.error(
                                                 left.source_range(),
