@@ -198,6 +198,12 @@ pub fn check(
         let mut it: Option<usize> = None;
 
         'search: loop {
+            if nodes[parent].kind == Kind::ForN &&
+               nodes[parent].name == nodes[i].name {
+               it = Some(parent);
+               break 'search;
+            }
+
             let me = nodes[parent].children.binary_search(&child)
                 .expect("Expected parent to contain child");
             let children = &nodes[parent].children[..me];
@@ -957,6 +963,8 @@ pub enum Kind {
     N,
     KeyValue,
     For,
+    ForN,
+    End,
     Init,
     Cond,
     ElseIfCond,
@@ -1002,6 +1010,8 @@ impl Kind {
             "n" => Kind::N,
             "key_value" => Kind::KeyValue,
             "for" => Kind::For,
+            "for_n" => Kind::ForN,
+            "end" => Kind::End,
             "init" => Kind::Init,
             "cond" => Kind::Cond,
             "else_if_cond" => Kind::ElseIfCond,

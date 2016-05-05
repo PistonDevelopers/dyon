@@ -188,9 +188,16 @@ mod tests {
     use self::test::Bencher;
 
     #[bench]
-    fn bench_add_two(b: &mut Bencher) {
+    fn bench_add(b: &mut Bencher) {
         b.iter(||
             run("source/bench/add.rs")
+        );
+    }
+
+    #[bench]
+    fn bench_add_n(b: &mut Bencher) {
+        b.iter(||
+            run("source/bench/add_n.rs")
         );
     }
 
