@@ -1,14 +1,16 @@
 
-fn foo(mut a, b) {
-    a[0] = clone(b)
+fn foo(mut list) {
+    push(mut list, 3)
 }
 
-fn bar(a, b) {
-    foo(mut a, b)
+fn bar(mut list: 'return) -> {
+    return pop(mut list)
 }
 
 fn main() {
-    a := [4]
-    b := 5
-    bar(a, b)
+    list := []
+    foo(mut list)
+    println(list)
+    bar(mut list)
+    println(list)
 }

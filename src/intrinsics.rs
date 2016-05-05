@@ -59,11 +59,11 @@ pub fn standard(f: &mut HashMap<Arc<String>, PreludeFunction>) {
         lts: vec![Lt::Default],
         returns: true
     });
-    f.insert(Arc::new("push".into()), PreludeFunction {
+    f.insert(Arc::new("push(mut,_)".into()), PreludeFunction {
         lts: vec![Lt::Default, Lt::Arg(0)],
         returns: false
     });
-    f.insert(Arc::new("pop".into()), PreludeFunction {
+    f.insert(Arc::new("pop(mut)".into()), PreludeFunction {
         lts: vec![Lt::Return],
         returns: true
     });
@@ -411,7 +411,7 @@ pub fn call_standard(
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
-        "push" => {
+        "push(mut,_)" => {
             rt.push_fn(call.name.clone(), None, st + 1, lc);
             let item = rt.stack.pop().expect(TINVOTS);
             let v = rt.stack.pop().expect(TINVOTS);
@@ -436,7 +436,7 @@ pub fn call_standard(
             rt.pop_fn(call.name.clone());
             Expect::Nothing
         }
-        "pop" => {
+        "pop(mut)" => {
             rt.push_fn(call.name.clone(), None, st + 1, lc);
             let arr = rt.stack.pop().expect(TINVOTS);
             let mut v: Option<Variable> = None;

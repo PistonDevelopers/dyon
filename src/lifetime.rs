@@ -312,14 +312,14 @@ pub fn check(
                     }
                     None => {}
                 }
-                let suggestions = suggestions(&**name, &function_lookup);
+                let suggestions = suggestions(&**name, &function_lookup, prelude);
                 return Err(node.source.wrap(
                     format!("Could not find function `{}`{}", name, suggestions)));
             }
         };
         // Check that number of arguments is the same as in declaration.
         if function_args[i] != n {
-        let suggestions = suggestions(&**name, &function_lookup);
+        let suggestions = suggestions(&**name, &function_lookup, prelude);
             return Err(node.source.wrap(
                 format!("{}: Expected {} arguments, found {}{}",
                 name, function_args[i], n, suggestions)));
@@ -411,6 +411,7 @@ pub fn check(
             // Item is 4 levels down inside arg/add/mul/val
             for _ in 0..4 {
                 let node: &Node = &nodes[n];
+                if node.kind == Kind::Item { break; }
                 if node.children.len() == 0 {
                     can_be_item = false;
                     break;
@@ -536,7 +537,8 @@ pub fn check(
 // Meant to be put last in error message.
 fn suggestions(
     name: &str,
-    function_lookup: &HashMap<Arc<String>, usize>
+    function_lookup: &HashMap<Arc<String>, usize>,
+    prelude: &Prelude
 ) -> String {
     let search_name = if let Some((mut_pos, _)) = name.chars().enumerate()
         .find(|&(_, c)| c == '(') {
@@ -547,6 +549,14 @@ fn suggestions(
     let mut found_suggestions = false;
     let mut suggestions = String::from("\n\nDid you mean:\n");
     for f in function_lookup.keys() {
+        if (&***f).starts_with(search_name) {
+            suggestions.push_str("- ");
+            suggestions.push_str(f);
+            suggestions.push('\n');
+            found_suggestions = true;
+        }
+    }
+    for f in prelude.functions.keys() {
         if (&***f).starts_with(search_name) {
             suggestions.push_str("- ");
             suggestions.push_str(f);
