@@ -1,5 +1,16 @@
 
+fn foo(mut list) {
+    push(mut list, 3)
+}
+
+fn bar(mut list: 'return) -> {
+    return pop(mut list)
+}
+
 fn main() {
-    x := to_string({x: 0, y: 1})
-    println(x)
+    list := []
+    foo(mut list)
+    println(list)
+    bar(mut list)
+    println(list)
 }

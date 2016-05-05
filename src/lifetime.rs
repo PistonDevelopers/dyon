@@ -28,6 +28,7 @@ pub fn check(
                 nodes.push(Node {
                     kind: kind,
                     name: None,
+                    mutable: false,
                     source: Range::empty(0),
                     parent: parent,
                     children: vec![],
@@ -93,10 +94,38 @@ pub fn check(
                         let i = *parents.last().unwrap();
                         nodes[i].op = Some(Op::Set);
                     }
+                    "mut" => {
+                        let i = *parents.last().unwrap();
+                        nodes[i].mutable = _val;
+                    }
                     _ => {}
                 }
             }
             _ => {}
+        }
+    }
+
+    // Add mutability information to function names.
+    for i in 0..nodes.len() {
+        match nodes[i].kind {
+            Kind::Fn | Kind::Call => {}
+            _ => continue
+        };
+        let mutable_args = nodes[i].children.iter().any(|&arg| nodes[arg].mutable);
+        if mutable_args {
+            let mut name_plus_args = String::from(&***nodes[i].name.as_ref().unwrap());
+            name_plus_args.push('(');
+            let mut first = true;
+            for &arg in nodes[i].children.iter()
+                .filter(|&&n| match nodes[n].kind {
+                    Kind::Arg | Kind::CallArg => true, _ => false
+                }) {
+                if !first { name_plus_args.push(','); }
+                name_plus_args.push_str(if nodes[arg].mutable { "mut" } else { "_" });
+                first = false;
+            }
+            name_plus_args.push(')');
+            nodes[i].name = Some(Arc::new(name_plus_args));
         }
     }
 
@@ -283,15 +312,17 @@ pub fn check(
                     }
                     None => {}
                 }
+                let suggestions = suggestions(&**name, &function_lookup, prelude);
                 return Err(node.source.wrap(
-                    format!("Could not find function `{}`", name)));
+                    format!("Could not find function `{}`{}", name, suggestions)));
             }
         };
         // Check that number of arguments is the same as in declaration.
         if function_args[i] != n {
+        let suggestions = suggestions(&**name, &function_lookup, prelude);
             return Err(node.source.wrap(
-                format!("{}: Expected {} arguments, found {}",
-                name, function_args[i], n)));
+                format!("{}: Expected {} arguments, found {}{}",
+                name, function_args[i], n, suggestions)));
         }
         node.declaration = Some(functions[i]);
     }
@@ -380,6 +411,7 @@ pub fn check(
             // Item is 4 levels down inside arg/add/mul/val
             for _ in 0..4 {
                 let node: &Node = &nodes[n];
+                if node.kind == Kind::Item { break; }
                 if node.children.len() == 0 {
                     can_be_item = false;
                     break;
@@ -454,7 +486,89 @@ pub fn check(
         }
     }
 
+    // Check that mutable locals are not immutable arguments.
+    for &(_, i) in &mutated_locals {
+        if let Some(decl) = nodes[i].declaration {
+            if nodes[decl].kind == Kind::Arg {
+                if !nodes[decl].mutable {
+                    return Err(nodes[i].source.wrap(
+                        format!("Requires `mut {}`", nodes[i].name.as_ref().unwrap())
+                    ));
+                }
+            }
+        }
+    }
+
+    // Check that calling mutable argument are not immutable.
+    for &c in &calls {
+        let call = &nodes[c];
+        let reference = |i: usize| {
+            let mut n: usize = i;
+            // Item is 2 levels down inside call_arg/item
+            for _ in 0..2 {
+                let node: &Node = &nodes[n];
+                if node.kind == Kind::Item { return Some(n); }
+                if node.children.len() == 0 { break; }
+                n = node.children[0];
+            }
+            None
+        };
+
+        for &arg in call.children.iter()
+            .filter(|&&n| nodes[n].kind == Kind::CallArg
+                          && nodes[n].mutable)
+        {
+            if let Some(n) = reference(arg) {
+                if let Some(decl) = nodes[n].declaration {
+                   if nodes[decl].kind == Kind::Arg && !nodes[decl].mutable {
+                       return Err(nodes[n].source.wrap(
+                           format!("Requires `mut {}`", nodes[n].name.as_ref().unwrap())
+                       ));
+                   }
+               }
+            }
+        }
+    }
+
     Ok(())
+}
+
+// Search for suggestions using matching function signature.
+// Meant to be put last in error message.
+fn suggestions(
+    name: &str,
+    function_lookup: &HashMap<Arc<String>, usize>,
+    prelude: &Prelude
+) -> String {
+    let search_name = if let Some((mut_pos, _)) = name.chars().enumerate()
+        .find(|&(_, c)| c == '(') {
+        &name[..mut_pos - 1]
+    } else {
+        name
+    };
+    let mut found_suggestions = false;
+    let mut suggestions = String::from("\n\nDid you mean:\n");
+    for f in function_lookup.keys() {
+        if (&***f).starts_with(search_name) {
+            suggestions.push_str("- ");
+            suggestions.push_str(f);
+            suggestions.push('\n');
+            found_suggestions = true;
+        }
+    }
+    for f in prelude.functions.keys() {
+        if (&***f).starts_with(search_name) {
+            suggestions.push_str("- ");
+            suggestions.push_str(f);
+            suggestions.push('\n');
+            found_suggestions = true;
+        }
+    }
+    if found_suggestions {
+        suggestions
+    } else {
+        String::from("")
+    }
 }
 
 fn compare_lifetimes(
@@ -537,6 +651,8 @@ pub struct Node {
     pub kind: Kind,
     /// The name.
     pub name: Option<Arc<String>>,
+    /// Whether the argument or call argument is mutable.
+    pub mutable: bool,
     /// The range in source.
     pub source: Range,
     /// The parent index.

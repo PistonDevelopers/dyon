@@ -77,8 +77,21 @@ impl Function {
             }
         }
 
-        let name = try!(name.ok_or(()));
+        let mut name = try!(name.ok_or(()));
         let block = try!(block.ok_or(()));
+        let mutable_args = args.iter().any(|arg| arg.mutable);
+        if mutable_args {
+            let mut name_plus_args = String::from(&**name);
+            name_plus_args.push('(');
+            let mut first = true;
+            for arg in &args {
+                if !first { name_plus_args.push(','); }
+                name_plus_args.push_str(if arg.mutable { "mut" } else { "_" });
+                first = false;
+            }
+            name_plus_args.push(')');
+            name = Arc::new(name_plus_args);
+        }
         Ok((convert.subtract(start), Function {
             name: name,
             file: file,
@@ -95,6 +108,7 @@ pub struct Arg {
     pub name: Arc<String>,
     pub lifetime: Option<Arc<String>>,
     pub source_range: Range,
+    pub mutable: bool,
 }
 
 impl Arg {
@@ -107,10 +121,14 @@ impl Arg {
 
         let mut name: Option<Arc<String>> = None;
         let mut lifetime: Option<Arc<String>> = None;
+        let mut mutable = false;
         loop {
             if let Ok(range) = convert.end_node(node) {
                 convert.update(range);
                 break;
+            } else if let Ok((range, val)) = convert.meta_bool("mut") {
+                convert.update(range);
+                mutable = val;
             } else if let Ok((range, val)) = convert.meta_string("name") {
                 convert.update(range);
                 name = Some(val);
@@ -129,6 +147,7 @@ impl Arg {
             name: name,
             lifetime: lifetime,
             source_range: convert.source(start).unwrap(),
+            mutable: mutable,
         }))
     }
 }
@@ -209,6 +228,9 @@ impl Expression {
             if let Ok(range) = convert.end_node(node) {
                 convert.update(range);
                 break;
+            } else if let Ok((range, _)) = convert.meta_bool("mut") {
+                // Ignore `mut` since it is handled by lifetime checker.
+                convert.update(range);
             } else if let Ok((range, val)) = Object::from_meta_data(
                     convert, ignored) {
                 convert.update(range);
@@ -856,6 +878,7 @@ impl Call {
 
         let mut name: Option<Arc<String>> = None;
         let mut args = vec![];
+        let mut mutable: Vec<bool> = vec![];
         loop {
             if let Ok(range) = convert.end_node(node) {
                 convert.update(range);
@@ -865,6 +888,14 @@ impl Call {
                 name = Some(val);
             } else if let Ok((range, val)) = Expression::from_meta_data(
                 "call_arg", convert, ignored) {
+                let mut peek = convert.clone();
+                mutable.push(match peek.start_node("call_arg") {
+                    Ok(r) => {
+                        peek.update(r);
+                        peek.meta_bool("mut").is_ok()
+                    }
+                    _ => unreachable!()
+                });
                 convert.update(range);
                 args.push(val);
             } else {
@@ -874,7 +905,22 @@ impl Call {
             }
         }
 
-        let name = try!(name.ok_or(()));
+        let mut name = try!(name.ok_or(()));
+
+        // Append mutability information to function name.
+        if mutable.iter().any(|&arg| arg) {
+            let mut name_plus_args = String::from(&**name);
+            name_plus_args.push('(');
+            let mut first = true;
+            for &arg in &mutable {
+                if !first { name_plus_args.push(','); }
+                name_plus_args.push_str(if arg { "mut" } else { "_" });
+                first = false;
+            }
+            name_plus_args.push(')');
+            name = Arc::new(name_plus_args);
+        }
+
         Ok((convert.subtract(start), Call {
             name: name,
             args: args,
@@ -893,6 +939,7 @@ impl Call {
 
         let mut name = String::new();
         let mut args = vec![];
+        let mut mutable: Vec<bool> = vec![];
         loop {
             if let Ok(range) = convert.end_node(node) {
                 convert.update(range);
@@ -903,6 +950,14 @@ impl Call {
                 name.push_str(&val);
             } else if let Ok((range, val)) = Expression::from_meta_data(
                 "call_arg", convert, ignored) {
+                let mut peek = convert.clone();
+                mutable.push(match peek.start_node("call_arg") {
+                    Ok(r) => {
+                        peek.update(r);
+                        peek.meta_bool("mut").is_ok()
+                    }
+                    _ => unreachable!()
+                });
                 convert.update(range);
                 args.push(val);
             } else {
@@ -910,6 +965,18 @@ impl Call {
                 convert.update(range);
                 ignored.push(range);
             }
+        }
+
+        // Append mutability information to function name.
+        if mutable.iter().any(|&arg| arg) {
+            name.push('(');
+            let mut first = true;
+            for &arg in &mutable {
+                if !first { name.push(','); }
+                name.push_str(if arg { "mut" } else { "_" });
+                first = false;
+            }
+            name.push(')');
         }
 
         Ok((convert.subtract(start), Call {
