@@ -19,6 +19,7 @@ _seps: "(){}[],.:;=<>*+-/%^?"
     array:"array"
     array_fill:"array_fill"
     ["return" .w! expr:"return"]
+    for_n:"for_n"
     for:"for"
     loop:"loop"
     if:"if"
@@ -92,6 +93,8 @@ _seps: "(){}[],.:;=<>*+-/%^?"
     expr:"init" ?w ";" ?w
     expr:"cond" ?w ";" ?w
     expr:"step" ?w block:"block"]
+17 for_n = [?["'" .._seps!:"label" ?w ":" ?w] "for" .w!
+    .._seps!:"name" ?w expr:"end" ?w block:"block"]
 17 loop = [?["'" .._seps!:"label" ?w ":" ?w] "loop" .w!  block:"block"]
 18 break = ["break" ?w ?["'" .._seps!:"label"]]
 19 continue = ["continue" ?w ?["'" .._seps!:"label"]]

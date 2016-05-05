@@ -74,21 +74,20 @@ fn bodies() -> {
 }
 
 /// Computes all pairwise position differences between the planets.
-fn pairwise_diffs_bodies_diff(bodies, diff) {
+fn pairwise_diffs_bodies_diff(bodies, mut diff) {
     n := len(bodies)
     k := 0
-    for i := 0; i < n; i += 1 {
-        for j := i + 1; j < n; j += 1 {
-            diff[k] = vec3_sub(bodies[i].pos, bodies[j].pos)
+    for i n {
+        for j n-i-1 {
+            diff[k] = vec3_sub(bodies[i].pos, bodies[j+i+1].pos)
             k += 1
         }
     }
 }
 
 /// Computes the magnitude of the force between each pair of planets.
-fn magnitudes_diff_dt_mag(diff, dt, mag) {
-    n := len(diff)
-    for i := 0; i < n; i += 1 {
+fn magnitudes_diff_dt_mag(diff, dt, mut mag) {
+    for i len(diff) {
         d2 := vec3_squared_norm(diff[i])
         mag[i] = dt / (d2 * sqrt(d2))
     }
@@ -96,14 +95,15 @@ fn magnitudes_diff_dt_mag(diff, dt, mag) {
 
 /// Updates the velocities of the planets by computing their gravitational
 /// accelerations and performing one step of Euler integration.
-fn update_velocities_bodies_dt_diff_mag(bodies, dt, diff, mag) {
-    pairwise_diffs(bodies: bodies, diff: diff)
-    magnitudes(diff: diff, dt: dt, mag: mag)
+fn update_velocities_bodies_dt_diff_mag(mut bodies, dt, mut diff, mut mag) {
+    pairwise_diffs(bodies: bodies, diff: mut diff)
+    magnitudes(diff: diff, dt: dt, mag: mut mag)
 
     n := len(bodies)
     k := 0
-    for i := 0; i < n; i += 1 {
-        for j := i + 1; j < n; j += 1 {
+    for i n {
+        for j n-i-1 {
+            j := j+i+1
             diff := diff[k]
             mag := mag[k]
             bodies[i].vel = vec3_sub(bodies[i].vel,
@@ -122,10 +122,9 @@ fn update_velocities_bodies_dt_diff_mag(bodies, dt, diff, mag) {
 /// Note: the `diff` & `mag` arrays are effectively scratch space. They're
 /// provided as arguments to avoid re-zeroing them every time `advance` is
 /// called.
-fn advance_bodies_dt_diff_mag(bodies, dt, diff, mag) {
-    update_velocities(bodies: bodies, dt: dt, diff: diff, mag: mag)
-    n := len(bodies)
-    for i := 0; i < n; i += 1 {
+fn advance_bodies_dt_diff_mag(mut bodies, dt, mut diff, mut mag) {
+    update_velocities(bodies: mut bodies, dt: dt, diff: mut diff, mag: mut mag)
+    for i len(bodies) {
         bodies[i].pos = vec3_add(bodies[i].pos, vec3_mul(bodies[i].vel, dt))
     }
 }
@@ -134,10 +133,11 @@ fn advance_bodies_dt_diff_mag(bodies, dt, diff, mag) {
 fn energy(bodies) -> {
     e := 0.0
     n := len(bodies)
-    for i := 0; i < n; i += 1 {
+    for i n {
         e += vec3_squared_norm(bodies[i].vel) * bodies[i].mass / 2.0
         m := 0
-        for j := i + 1; j < n; j += 1 {
+        for j n-i-1 {
+            j := j+i+1
             m += bodies[j].mass /
                  vec3_norm(vec3_sub(bodies[i].pos, bodies[j].pos))
         }
@@ -147,10 +147,9 @@ fn energy(bodies) -> {
 }
 
 /// Offsets the sun's velocity to make the overall momentum of the system zero.
-fn offset_momentum(bodies) {
+fn offset_momentum(mut bodies) {
     p := vec3_zero()
-    n := len(bodies)
-    for i := 0; i < n; i += 1 {
+    for i len(bodies) {
         p = vec3_add(p, vec3_mul(bodies[i].vel, bodies[i].mass))
     }
     bodies[0].vel = vec3_mul(p, (-1.0 / bodies[0].mass))
@@ -162,11 +161,11 @@ fn main() {
     diff := [vec3_zero(); n_pairs()]
     mag := [0; n_pairs()]
 
-    offset_momentum(bodies)
+    offset_momentum(mut bodies)
     // println(energy(bodies))
 
-    for i := 0; i < n; i += 1 {
-        advance(bodies: bodies, dt: 0.01, diff: diff, mag: mag)
+    for i n {
+        advance(bodies: mut bodies, dt: 0.01, diff: mut diff, mag: mut mag)
     }
 
     // println(energy(bodies))
