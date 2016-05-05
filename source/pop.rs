@@ -4,5 +4,5 @@ fn main() {
 
 fn foo() -> {
     x := [1, 2, 3]
-    return clone(pop(x))
+    return clone(pop(mut x))
 }
