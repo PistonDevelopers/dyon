@@ -1,3 +1,7 @@
+/*
+Same name can be reused for functions with different mutability pattern.
+*/
+
 fn new_window() -> {
     return {title: "(no title)"}
 }
