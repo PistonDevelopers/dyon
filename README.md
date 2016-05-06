@@ -23,13 +23,15 @@ Dyon uses ".rs" to get Rust syntax coloring.
 - Custom Rust objects using `Arc<Mutex<Any>>`
 - Functions without return `fn foo() { ... }`
 - Functions with return `fn foo() -> { ... return x }`
-- Lifetime checker (no garbage collector is needed) `fn foo(a, b: 'a) { a.x = b }`
+- Lifetime checker (no garbage collector is needed) `fn foo(mut a, b: 'a) { a.x = b }`
+- Mutability checker `fn foo(mut a) { bar(mut a) }`
 - Return lifetime `fn id(x: 'return) -> { return x }`
 - Checks type at runtime when mutating variable `a = 2.0 // ERROR: Expected assigning to number`
 - Objects inserts new key with `a.x := 0` and checks existence and type with `a.x = 0`
 - Named argument syntax based on snake case `foo(bar: b)` is equal to `foo_bar(b)`
 - If expression `a := if b < c { 0 } else { 1 }`
 - For loop `for i := 0; i < 10; i += 1 { ... }`
+- Short For loop `for i 10 { ... }`
 - Infinite loop `loop { ... }`
 - Unlabeled break `loop { break }`
 - Unlabled continue `loop { continue }`
@@ -62,6 +64,8 @@ The idea was to make a simple, but convenient scripting language that integrated
 - Dynamic modules with imported prelude were added to explore a different approach to organizing code
 - For nice error handling, added option, result and `?` operator
 - To test the design of the language, created a demo for interactive coding
+- Mutability check to improve readability
+- Short For loop to improve readability and performance
 
 Main goals:
 
