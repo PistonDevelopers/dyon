@@ -74,5 +74,5 @@ fn update(mut data, settings, dt) {
             pos[1] + dir[1] * speed
         ]
     }
-    data.snake_body = data.next_snake_body
+    data.snake_body = clone(data.next_snake_body)
 }

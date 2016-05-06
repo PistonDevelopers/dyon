@@ -10,8 +10,8 @@ fn title(window: 'return) -> {
     return window.title
 }
 
-fn title(mut window, val: 'window) {
-    window.title = val
+fn title(mut window, val) {
+    window.title = clone(val)
 }
 
 fn main() {

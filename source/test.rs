@@ -1,5 +1,6 @@
-
 fn main() {
-    m := unwrap(load("source/bench/n_body.rs"))
-    call(m, "main", [])
+    a := []
+    b := {cool: true}
+    push(mut a, b)
+    println(a)
 }

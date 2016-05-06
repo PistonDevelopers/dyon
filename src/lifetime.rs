@@ -433,18 +433,21 @@ pub fn check(
         if let Some(declaration) = call.declaration {
             let function = &nodes[declaration];
             for (i, &a) in function.children.iter()
-                .filter(|&&i| nodes[i].kind == Kind::Arg)
-                .enumerate() {
+                .enumerate()
+                .filter(|&(_, &i)| nodes[i].kind == Kind::Arg)  {
                 let arg = &nodes[a];
                 if let Some(ref lt) = arg.lifetime {
                     // When arguments should outlive the return value,
                     // make sure they are referenced.
                     let arg_lifetime = arg_lifetime(a, arg, &nodes, &arg_names);
-                    if let Some(Lifetime::Return(_)) = arg_lifetime {
-                        if !is_reference(i) {
-                            return Err(arg.source.wrap(
-                                format!("Requires reference to variable")));
+                    match arg_lifetime {
+                        Some(Lifetime::Return(_)) | Some(Lifetime::Argument(_)) => {
+                            if !is_reference(i) {
+                                return Err(nodes[call.children[i]].source.wrap(
+                                    format!("Requires reference to variable")));
+                            }
                         }
+                        _ => {}
                     }
 
                     if &**lt != "return" {
@@ -478,6 +481,11 @@ pub fn check(
                         }
                     }
                     Lt::Arg(ind) => {
+                        if !is_reference(i) {
+                            return Err(arg.source.wrap(
+                                format!("Requires reference to variable")));
+                        }
+
                         let left = call.children[ind];
                         let right = call.children[i];
                         let lifetime_left = nodes[left].lifetime(&nodes, &arg_names);
@@ -585,7 +593,7 @@ fn compare_lifetimes(
     match (l, r) {
         (Some(l), Some(r)) => {
             match l.partial_cmp(&r) {
-                Some(Ordering::Greater) => {
+                Some(Ordering::Greater) | Some(Ordering::Equal) => {
                     match r {
                         Lifetime::Local(r) => {
                             return Err(format!("`{}` does not live long enough",

@@ -187,45 +187,49 @@ mod tests {
     use super::run;
     use self::test::Bencher;
 
+    fn run_bench(source: &str) {
+        run(source).unwrap_or_else(|err| panic!("{}", err));
+    }
+
     #[bench]
     fn bench_add(b: &mut Bencher) {
         b.iter(||
-            run("source/bench/add.rs")
+            run_bench("source/bench/add.rs")
         );
     }
 
     #[bench]
     fn bench_add_n(b: &mut Bencher) {
         b.iter(||
-            run("source/bench/add_n.rs")
+            run_bench("source/bench/add_n.rs")
         );
     }
 
     #[bench]
     fn bench_main(b: &mut Bencher) {
         b.iter(||
-            run("source/bench/main.rs")
+            run_bench("source/bench/main.rs")
         );
     }
 
     #[bench]
     fn bench_array(b: &mut Bencher) {
         b.iter(||
-            run("source/bench/array.rs")
+            run_bench("source/bench/array.rs")
         );
     }
 
     #[bench]
     fn bench_object(b: &mut Bencher) {
         b.iter(||
-            run("source/bench/object.rs")
+            run_bench("source/bench/object.rs")
         );
     }
 
     #[bench]
     fn bench_call(b: &mut Bencher) {
         b.iter(||
-            run("source/bench/call.rs")
+            run_bench("source/bench/call.rs")
         );
     }
 
