@@ -15,18 +15,16 @@ use Error;
 const TINVOTS: &'static str = "There is no value on the stack";
 
 pub fn standard(f: &mut HashMap<Arc<String>, PreludeFunction>) {
-    f.insert(Arc::new("println".into()), PreludeFunction {
-        lts: vec![Lt::Default],
-        returns: false
-    });
-    f.insert(Arc::new("print".into()), PreludeFunction {
-        lts: vec![Lt::Default],
-        returns: false
-    });
-    f.insert(Arc::new("clone".into()), PreludeFunction {
-        lts: vec![Lt::Default],
-        returns: false
-    });
+    let sarg = |f: &mut HashMap<Arc<String>, PreludeFunction>, name: &str| {
+        f.insert(Arc::new(name.into()), PreludeFunction {
+            lts: vec![Lt::Default],
+            returns: true
+        });
+    };
+
+    sarg(f, "println");
+    sarg(f, "print");
+    sarg(f, "clone");
     f.insert(Arc::new("debug".into()), PreludeFunction {
         lts: vec![],
         returns: false
@@ -35,30 +33,17 @@ pub fn standard(f: &mut HashMap<Arc<String>, PreludeFunction>) {
         lts: vec![],
         returns: false
     });
-    f.insert(Arc::new("sleep".into()), PreludeFunction {
-        lts: vec![Lt::Default],
-        returns: false
-    });
-    f.insert(Arc::new("round".into()), PreludeFunction {
-        lts: vec![Lt::Default],
-        returns: true
-    });
+    sarg(f, "sleep");
     f.insert(Arc::new("random".into()), PreludeFunction {
         lts: vec![],
         returns: true
     });
-    f.insert(Arc::new("read_number".into()), PreludeFunction {
-        lts: vec![Lt::Default],
-        returns: true
-    });
+    sarg(f, "read_number");
     f.insert(Arc::new("read_line".into()), PreludeFunction {
         lts: vec![],
         returns: true
     });
-    f.insert(Arc::new("len".into()), PreludeFunction {
-        lts: vec![Lt::Default],
-        returns: true
-    });
+    sarg(f, "len");
     f.insert(Arc::new("push_ref(mut,_)".into()), PreludeFunction {
         lts: vec![Lt::Default, Lt::Arg(0)],
         returns: false
@@ -71,66 +56,25 @@ pub fn standard(f: &mut HashMap<Arc<String>, PreludeFunction>) {
         lts: vec![Lt::Return],
         returns: true
     });
-    f.insert(Arc::new("trim_right".into()), PreludeFunction {
-        lts: vec![Lt::Default],
-        returns: true
-    });
-    f.insert(Arc::new("to_string".into()), PreludeFunction {
-        lts: vec![Lt::Default],
-        returns: true
-    });
-    f.insert(Arc::new("typeof".into()), PreludeFunction {
-        lts: vec![Lt::Default],
-        returns: true
-    });
-    f.insert(Arc::new("sqrt".into()), PreludeFunction {
-        lts: vec![Lt::Default],
-        returns: true
-    });
-    f.insert(Arc::new("sin".into()), PreludeFunction {
-        lts: vec![Lt::Default],
-        returns: true
-    });
-    f.insert(Arc::new("asin".into()), PreludeFunction {
-        lts: vec![Lt::Default],
-        returns: true
-    });
-    f.insert(Arc::new("cos".into()), PreludeFunction {
-        lts: vec![Lt::Default],
-        returns: true
-    });
-    f.insert(Arc::new("acos".into()), PreludeFunction {
-        lts: vec![Lt::Default],
-        returns: true
-    });
-    f.insert(Arc::new("tan".into()), PreludeFunction {
-        lts: vec![Lt::Default],
-        returns: true
-    });
-    f.insert(Arc::new("atan".into()), PreludeFunction {
-        lts: vec![Lt::Default],
-        returns: true
-    });
-    f.insert(Arc::new("exp".into()), PreludeFunction {
-        lts: vec![Lt::Default],
-        returns: true
-    });
-    f.insert(Arc::new("ln".into()), PreludeFunction {
-        lts: vec![Lt::Default],
-        returns: true
-    });
-    f.insert(Arc::new("log2".into()), PreludeFunction {
-        lts: vec![Lt::Default],
-        returns: true
-    });
-    f.insert(Arc::new("log10".into()), PreludeFunction {
-        lts: vec![Lt::Default],
-        returns: true
-    });
-    f.insert(Arc::new("load".into()), PreludeFunction {
-        lts: vec![Lt::Default],
-        returns: true
-    });
+    sarg(f, "trim_right");
+    sarg(f, "to_string");
+    sarg(f, "typeof");
+    sarg(f, "round");
+    sarg(f, "abs");
+    sarg(f, "floor");
+    sarg(f, "ceil");
+    sarg(f, "sqrt");
+    sarg(f, "sin");
+    sarg(f, "asin");
+    sarg(f, "cos");
+    sarg(f, "acos");
+    sarg(f, "tan");
+    sarg(f, "atan");
+    sarg(f, "exp");
+    sarg(f, "ln");
+    sarg(f, "log2");
+    sarg(f, "log10");
+    sarg(f, "load");
     f.insert(Arc::new("load_source_imports".into()), PreludeFunction {
         lts: vec![Lt::Default; 2],
         returns: true
@@ -151,30 +95,12 @@ pub fn standard(f: &mut HashMap<Arc<String>, PreludeFunction>) {
         lts: vec![],
         returns: true
     });
-    f.insert(Arc::new("unwrap".into()), PreludeFunction {
-        lts: vec![Lt::Default],
-        returns: true
-    });
-    f.insert(Arc::new("unwrap_err".into()), PreludeFunction {
-        lts: vec![Lt::Default],
-        returns: true
-    });
-    f.insert(Arc::new("some".into()), PreludeFunction {
-        lts: vec![Lt::Default],
-        returns: true
-    });
-    f.insert(Arc::new("ok".into()), PreludeFunction {
-        lts: vec![Lt::Default],
-        returns: true
-    });
-    f.insert(Arc::new("err".into()), PreludeFunction {
-        lts: vec![Lt::Default],
-        returns: true
-    });
-    f.insert(Arc::new("is_err".into()), PreludeFunction {
-        lts: vec![Lt::Default],
-        returns: true
-    });
+    sarg(f, "unwrap");
+    sarg(f, "unwrap_err");
+    sarg(f, "some");
+    sarg(f, "ok");
+    sarg(f, "err");
+    sarg(f, "is_err");
 }
 
 fn deep_clone(v: &Variable, stack: &Vec<Variable>) -> Variable {
@@ -359,6 +285,10 @@ pub fn call_standard(
         "ln" => try!(rt.unary_f64(call, module, |a| a.ln())),
         "log2" => try!(rt.unary_f64(call, module, |a| a.log2())),
         "log10" => try!(rt.unary_f64(call, module, |a| a.log10())),
+        "round" => try!(rt.unary_f64(call, module, |a| a.round())),
+        "abs" => try!(rt.unary_f64(call, module, |a| a.abs())),
+        "floor" => try!(rt.unary_f64(call, module, |a| a.floor())),
+        "ceil" => try!(rt.unary_f64(call, module, |a| a.ceil())),
         "sleep" => {
             use std::thread::sleep;
             use std::time::Duration;
@@ -379,19 +309,6 @@ pub fn call_standard(
         "random" => {
             rt.push_fn(call.name.clone(), None, st + 1, lc);
             let v = Variable::F64(rt.rng.gen());
-            rt.stack.push(v);
-            rt.pop_fn(call.name.clone());
-            Expect::Something
-        }
-        "round" => {
-            rt.push_fn(call.name.clone(), None, st + 1, lc);
-            let v = rt.stack.pop().expect(TINVOTS);
-            let v = match rt.resolve(&v) {
-                &Variable::F64(b) => b,
-                x => return Err(module.error(call.args[0].source_range(),
-                                &rt.expected(x, "number")))
-            };
-            let v = Variable::F64(v.round());
             rt.stack.push(v);
             rt.pop_fn(call.name.clone());
             Expect::Something
