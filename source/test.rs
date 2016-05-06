@@ -1,6 +1,3 @@
 fn main() {
-    a := []
-    b := {cool: true}
-    push(mut a, b)
-    println(a)
+    println(ceil(2.9))
 }
