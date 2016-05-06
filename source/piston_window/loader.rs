@@ -80,7 +80,7 @@ fn init_snake_body_parts_size(parts, size) -> {
     // end := [(parts - 1) * size, (parts - 1) * size]
     end := [0, 0]
     for i := 0; i < parts; i += 1 {
-        push(body, [end[0] - i * size, end[1] - i * size])
+        push(mut body, [end[0] - i * size, end[1] - i * size])
     }
     return clone(body)
 }
@@ -104,7 +104,7 @@ fn event_loader_source_settings_module(mut loader, source, mut settings, mut m) 
         dt := unwrap(update_dt())
         loader.time += dt
         if should_reload(loader) {
-            loader.last_reload = loader.time
+            loader.last_reload = clone(loader.time)
             new_m := load(source)
             if is_err(new_m) {
                 loader.got_error = true

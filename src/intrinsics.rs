@@ -59,8 +59,12 @@ pub fn standard(f: &mut HashMap<Arc<String>, PreludeFunction>) {
         lts: vec![Lt::Default],
         returns: true
     });
-    f.insert(Arc::new("push(mut,_)".into()), PreludeFunction {
+    f.insert(Arc::new("push_ref(mut,_)".into()), PreludeFunction {
         lts: vec![Lt::Default, Lt::Arg(0)],
+        returns: false
+    });
+    f.insert(Arc::new("push(mut,_)".into()), PreludeFunction {
+        lts: vec![Lt::Default; 2],
         returns: false
     });
     f.insert(Arc::new("pop(mut)".into()), PreludeFunction {
@@ -411,9 +415,35 @@ pub fn call_standard(
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
+        "push_ref(mut,_)" => {
+            rt.push_fn(call.name.clone(), None, st + 1, lc);
+            let item = rt.stack.pop().expect(TINVOTS);
+            let v = rt.stack.pop().expect(TINVOTS);
+
+            if let Variable::Ref(ind) = v {
+                let ok = if let Variable::Array(ref mut arr) = rt.stack[ind] {
+                    arr.push(item);
+                    true
+                } else {
+                    false
+                };
+                if !ok {
+                    return Err(module.error(call.args[0].source_range(),
+                        &format!("{}\nExpected reference to array",
+                            rt.stack_trace())));
+                }
+            } else {
+                return Err(module.error(call.args[0].source_range(),
+                    &format!("{}\nExpected reference to array",
+                        rt.stack_trace())));
+            }
+            rt.pop_fn(call.name.clone());
+            Expect::Nothing
+        }
         "push(mut,_)" => {
             rt.push_fn(call.name.clone(), None, st + 1, lc);
             let item = rt.stack.pop().expect(TINVOTS);
+            let item = deep_clone(rt.resolve(&item), &rt.stack);
             let v = rt.stack.pop().expect(TINVOTS);
 
             if let Variable::Ref(ind) = v {

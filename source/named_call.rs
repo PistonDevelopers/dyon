@@ -1,7 +1,7 @@
 fn up_to(n) -> {
     x := []
     for i := 0; i < n; i += 1 {
-        push(mut x, clone(i))
+        push(mut x, i)
     }
     return clone(x)
 }
