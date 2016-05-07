@@ -5,6 +5,7 @@ use range::Range;
 
 use ast;
 use intrinsics;
+use embed;
 
 use Variable;
 use Module;
@@ -213,6 +214,17 @@ impl Runtime {
             option_type: Variable::Text(Arc::new("option".into())),
             result_type: Variable::Text(Arc::new("result".into())),
         }
+    }
+
+    pub fn pop<T: embed::PopVariable>(&mut self) -> Result<T, String> {
+        let v = self.stack.pop().unwrap_or_else(|| {
+            panic!("There is no value on the stack")
+        });
+        T::pop_var(self, self.resolve(&v))
+    }
+
+    pub fn push<T: embed::PushVariable>(&mut self, val: T) {
+        self.stack.push(val.push_var())
     }
 
     pub fn expected(&self, var: &Variable, ty: &str) -> String {

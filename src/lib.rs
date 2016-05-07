@@ -13,6 +13,7 @@ pub mod runtime;
 pub mod lifetime;
 pub mod intrinsics;
 pub mod prelude;
+pub mod embed;
 
 pub use runtime::Runtime;
 pub use prelude::{Lt, Prelude, PreludeFunction};

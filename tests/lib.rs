@@ -53,8 +53,8 @@ fn test_syntax() {
 }
 
 #[test]
-fn test_print_functions() {
-    test_src("source/functions/print_functions.rs");
+fn test_functions() {
+    test_src("source/functions/functions.rs");
 }
 
 #[test]
