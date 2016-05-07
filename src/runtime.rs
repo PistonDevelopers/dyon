@@ -118,7 +118,7 @@ fn item_lookup(
                         &format!("{}\nExpected string",
                             stack_trace(call_stack))))
                 };
-                let v = match obj.entry(id.clone()) {
+                let v = match Arc::make_mut(obj).entry(id.clone()) {
                     Entry::Vacant(vac) => {
                         if insert && last {
                             // Insert a key to overwrite with new value.
@@ -169,7 +169,7 @@ fn item_lookup(
                         &format!("{}\nExpected number",
                             stack_trace(call_stack))))
                 };
-                let v = match arr.get_mut(id as usize) {
+                let v = match Arc::make_mut(arr).get_mut(id as usize) {
                     None => return Err(module.error(prop.source_range(),
                                        &format!("{}\nOut of bounds `{}`",
                                                 stack_trace(call_stack), id))),
@@ -633,7 +633,7 @@ impl Runtime {
                 }
             }
         }
-        self.stack.push(Variable::Object(object));
+        self.stack.push(Variable::Object(Arc::new(object)));
         Ok(Flow::Continue)
     }
 
@@ -656,7 +656,7 @@ impl Runtime {
                 Some(x) => array.push(x)
             }
         }
-        self.stack.push(Variable::Array(array));
+        self.stack.push(Variable::Array(Arc::new(array)));
         Ok(Flow::Continue)
     }
 
@@ -683,7 +683,7 @@ impl Runtime {
         let fill: Variable = self.stack.pop().expect("Expected fill");
         let v = match (self.resolve(&fill), self.resolve(&n)) {
             (x, &Variable::F64(n)) => {
-                Variable::Array(vec![x.clone(); n as usize])
+                Variable::Array(Arc::new(vec![x.clone(); n as usize]))
             }
             _ => return Err(module.error(array_fill.n.source_range(),
                 &format!("{}\nExpected number for length in `[value; length]`",
