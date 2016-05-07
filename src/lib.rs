@@ -17,8 +17,9 @@ pub mod prelude;
 pub use runtime::Runtime;
 pub use prelude::{Lt, Prelude, PreludeFunction};
 
-pub type Object = HashMap<Arc<String>, Variable>;
-pub type Array = Vec<Variable>;
+pub type Array = Arc<Vec<Variable>>;
+pub type Object = Arc<HashMap<Arc<String>, Variable>>;
+pub type RustObject = Arc<Mutex<Any>>;
 
 #[derive(Debug, Clone)]
 pub struct Error {
@@ -30,15 +31,15 @@ pub struct Error {
 
 #[derive(Debug, Clone)]
 pub enum Variable {
+    Ref(usize),
     Return,
     Bool(bool),
     F64(f64),
     Text(Arc<String>),
-    Object(Arc<Object>),
-    Array(Arc<Vec<Variable>>),
-    Ref(usize),
+    Array(Array),
+    Object(Object),
     UnsafeRef(*mut Variable),
-    RustObject(Arc<Mutex<Any>>),
+    RustObject(RustObject),
     Option(Option<Box<Variable>>),
     Result(Result<Box<Variable>, Box<Error>>),
 }
