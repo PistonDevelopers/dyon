@@ -1,8 +1,8 @@
 fn main() {
-    context := unwrap(load("source/functions/context.rs"))
-    print_context := unwrap(load(
-        source: "source/functions/print_context.rs",
-        imports: [context]
+    functions := unwrap(load("source/functions/functions.rs"))
+    print := unwrap(load(
+        source: "source/functions/print.rs",
+        imports: [functions]
     ))
-    call(print_context, "main", [])
+    call(print, "main", [])
 }

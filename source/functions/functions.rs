@@ -1,3 +1,11 @@
+/*
+Functions are categorized into different types:
+
+- intrinsic (part of standard Dyon environment)
+- external (custom Rust functions operating on the Dyon environment)
+- loaded (imported and local functions)
+*/
+
 fn print_function(f) {
     print(f.name)
     print("(")
@@ -15,15 +23,7 @@ fn print_function(f) {
     if f.returns {
         print(" ->")
     }
+    print(" ... ")
+    print(f.type)
     println("")
-}
-
-fn foo(a: 'b, b) -> {}
-
-fn main() {
-    fs := functions()
-    n := len(fs)
-    for i := 0; i < n; i += 1 {
-        print(function: fs[i])
-    }
 }

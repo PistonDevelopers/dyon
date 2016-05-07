@@ -111,115 +111,15 @@ fn load_module() -> Option<Module> {
     }
 }
 
-mod stack {
-    use dyon::{Runtime, Variable};
-    use std::sync::Arc;
-
-    pub fn push_opt_bool(rt: &mut Runtime, val: Option<bool>) {
-        match val {
-            None => {
-                rt.stack.push(Variable::Option(None))
-            }
-            Some(b) => {
-                rt.stack.push(Variable::Option(Some(Box::new(Variable::Bool(b)))))
-            }
-        }
-    }
-
-    pub fn push_bool(rt: &mut Runtime, val: bool) {
-        rt.stack.push(Variable::Bool(val))
-    }
-
-    pub fn push_opt_num(rt: &mut Runtime, val: Option<f64>) {
-        match val {
-            None => {
-                rt.stack.push(Variable::Option(None))
-            }
-            Some(n) => {
-                rt.stack.push(Variable::Option(Some(Box::new(Variable::F64(n)))))
-            }
-        }
-    }
-
-    pub fn pop_num(rt: &mut Runtime) -> Result<f64, String> {
-        let num = rt.stack.pop().expect("Expected number");
-        match rt.resolve(&num) {
-            &Variable::F64(n) => Ok(n),
-            x => Err(rt.expected(x, "number"))
-        }
-    }
-
-    pub fn pop_color(rt: &mut Runtime) -> Result<[f32; 4], String> {
-        let color = rt.stack.pop().expect("Expected color");
-        match rt.resolve(&color) {
-            &Variable::Array(ref arr) => {
-                let r = match rt.resolve(&arr[0]) {
-                    &Variable::F64(r) => r,
-                    x => return Err(rt.expected(x, "number"))
-                };
-                let g = match rt.resolve(&arr[1]) {
-                    &Variable::F64(r) => r,
-                    x => return Err(rt.expected(x, "number"))
-                };
-                let b = match rt.resolve(&arr[2]) {
-                    &Variable::F64(r) => r,
-                    x => return Err(rt.expected(x, "number"))
-                };
-                let a = match rt.resolve(&arr[3]) {
-                    &Variable::F64(r) => r,
-                    x => return Err(rt.expected(x, "number"))
-                };
-                Ok([r as f32, g as f32, b as f32, a as f32])
-            }
-            x => return Err(rt.expected(x, "color"))
-        }
-    }
-
-    pub fn pop_rect(rt: &mut Runtime) -> Result<[f64; 4], String> {
-        let v = rt.stack.pop().expect("Expected rect");
-        match rt.resolve(&v) {
-            &Variable::Array(ref arr) => {
-                let x = match rt.resolve(&arr[0]) {
-                    &Variable::F64(x) => x,
-                    x => return Err(rt.expected(x, "number"))
-                };
-                let y = match rt.resolve(&arr[1]) {
-                    &Variable::F64(y) => y,
-                    x => return Err(rt.expected(x, "number"))
-                };
-                let w = match rt.resolve(&arr[2]) {
-                    &Variable::F64(w) => w,
-                    x => return Err(rt.expected(x, "number"))
-                };
-                let h = match rt.resolve(&arr[3]) {
-                    &Variable::F64(h) => h,
-                    x => return Err(rt.expected(x, "number"))
-                };
-                Ok([x, y, w, h])
-            }
-            x => return Err(rt.expected(x, "rect"))
-        }
-    }
-
-    pub fn pop_string(rt: &mut Runtime) -> Result<Arc<String>, String> {
-        let v = rt.stack.pop().expect("Expected string");
-        match rt.resolve(&v) {
-            &Variable::Text(ref s) => Ok(s.clone()),
-            x => Err(rt.expected(x, "string"))
-        }
-    }
-}
-
 mod dyon_functions {
     use dyon::Runtime;
     use current::Current;
-    use stack::*;
 
     pub fn render(rt: &mut Runtime) -> Result<(), String> {
         use piston_window::*;
 
         let e = unsafe { &*Current::<PistonWindow>::new() };
-        push_bool(rt, e.render_args().is_some());
+        rt.push(e.render_args().is_some());
         Ok(())
     }
 
@@ -227,7 +127,7 @@ mod dyon_functions {
         use piston_window::*;
 
         let e = unsafe { &*Current::<PistonWindow>::new() };
-        push_bool(rt, e.update_args().is_some());
+        rt.push(e.update_args().is_some());
         Ok(())
     }
 
@@ -235,7 +135,7 @@ mod dyon_functions {
         use piston_window::*;
 
         let e = unsafe { &*Current::<PistonWindow>::new() };
-        push_bool(rt, e.press_args().is_some());
+        rt.push(e.press_args().is_some());
         Ok(())
     }
 
@@ -243,7 +143,7 @@ mod dyon_functions {
         use piston_window::*;
 
         let e = unsafe { &*Current::<PistonWindow>::new() };
-        push_bool(rt, e.release_args().is_some());
+        rt.push(e.release_args().is_some());
         Ok(())
     }
 
@@ -251,7 +151,7 @@ mod dyon_functions {
         use piston_window::*;
 
         let e = unsafe { &*Current::<PistonWindow>::new() };
-        push_bool(rt, e.focus_args().is_some());
+        rt.push(e.focus_args().is_some());
         Ok(())
     }
 
@@ -259,7 +159,7 @@ mod dyon_functions {
         use piston_window::*;
 
         let e = unsafe { &*Current::<PistonWindow>::new() };
-        push_opt_bool(rt, e.focus_args());
+        rt.push(e.focus_args());
         Ok(())
     }
 
@@ -267,7 +167,7 @@ mod dyon_functions {
         use piston_window::*;
 
         let e = unsafe { &mut *Current::<PistonWindow>::new() };
-        let color = try!(pop_color(rt));
+        let color: [f32; 4] = try!(rt.pop());
         e.draw_2d(|_c, g| {
             clear(color, g);
         });
@@ -278,8 +178,8 @@ mod dyon_functions {
         use piston_window::*;
 
         let e = unsafe { &mut *Current::<PistonWindow>::new() };
-        let rect = try!(pop_rect(rt));
-        let color = try!(pop_color(rt));
+        let rect: [f64; 4] = try!(rt.pop());
+        let color: [f32; 4] = try!(rt.pop());
         e.draw_2d(|c, g| {
             rectangle(color, rect, c.transform, g);
         });
@@ -290,8 +190,8 @@ mod dyon_functions {
         use piston_window::*;
 
         let e = unsafe { &mut *Current::<PistonWindow>::new() };
-        let rect = try!(pop_rect(rt));
-        let color = try!(pop_color(rt));
+        let rect: [f64; 4] = try!(rt.pop());
+        let color: [f32; 4] = try!(rt.pop());
         e.draw_2d(|c, g| {
             ellipse(color, rect, c.transform, g);
         });
@@ -303,9 +203,9 @@ mod dyon_functions {
 
         let e = unsafe { &mut *Current::<PistonWindow>::new() };
 
-        let resolution = try!(pop_num(rt));
-        let rect = try!(pop_rect(rt));
-        let color = try!(pop_color(rt));
+        let resolution: f64 = try!(rt.pop());
+        let rect: [f64; 4] = try!(rt.pop());
+        let color: [f32; 4] = try!(rt.pop());
         e.draw_2d(|c, g| {
             Ellipse::new(color)
                 .resolution(resolution as u32)
@@ -318,9 +218,9 @@ mod dyon_functions {
         use piston_window::*;
 
         let e = unsafe { &mut *Current::<PistonWindow>::new() };
-        let rect = try!(pop_rect(rt));
-        let radius = try!(pop_num(rt));
-        let color = try!(pop_color(rt));
+        let rect: [f64; 4] = try!(rt.pop());
+        let radius: f64 = try!(rt.pop());
+        let color: [f32; 4] = try!(rt.pop());
         e.draw_2d(|c, g| {
             line(color, radius, rect, c.transform, g);
         });
@@ -333,18 +233,19 @@ mod dyon_functions {
         let e = unsafe { &mut *Current::<PistonWindow>::new() };
         if let Some(new_e) = e.next() {
             *e = new_e;
-            push_bool(rt, true);
+            rt.push(true);
         } else {
-            push_bool(rt, false);
+            rt.push(false);
         }
         Ok(())
     }
 
     pub fn set_title(rt: &mut Runtime) -> Result<(), String> {
+        use std::sync::Arc;
         use piston_window::*;
 
         let e = unsafe { &mut *Current::<PistonWindow>::new() };
-        let title = try!(pop_string(rt));
+        let title: Arc<String> = try!(rt.pop());
         e.set_title((*title).clone());
         Ok(())
     }
@@ -353,7 +254,7 @@ mod dyon_functions {
         use piston_window::*;
 
         let e = unsafe { &mut *Current::<PistonWindow>::new() };
-        push_opt_num(rt, e.update_args().map(|args| args.dt));
+        rt.push(e.update_args().map(|args| args.dt));
         Ok(())
     }
 
@@ -362,9 +263,9 @@ mod dyon_functions {
 
         let e = unsafe { &mut *Current::<PistonWindow>::new() };
         if let Some(Button::Keyboard(key)) = e.press_args() {
-            push_opt_num(rt, Some(key as u64 as f64));
+            rt.push(Some(key as u64 as f64));
         } else {
-            push_opt_num(rt, None);
+            rt.push::<Option<f64>>(None);
         }
         Ok(())
     }
@@ -374,9 +275,9 @@ mod dyon_functions {
 
         let e = unsafe { &mut *Current::<PistonWindow>::new() };
         if let Some(Button::Keyboard(key)) = e.release_args() {
-            push_opt_num(rt, Some(key as u64 as f64));
+            rt.push(Some(key as u64 as f64));
         } else {
-            push_opt_num(rt, None);
+            rt.push::<Option<f64>>(None);
         }
         Ok(())
     }
