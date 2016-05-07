@@ -13,8 +13,9 @@ fn main() {
         println("===================")
     }
 
+    render := unwrap(load("source/piston_window/render.rs"))
     source := "source/piston_window/snake.rs"
-    m := unwrap(load(source))
+    m := unwrap(load(source: source, imports: [render]))
 
     settings := call_ret(m, "settings", [])
     data := init_data(settings)

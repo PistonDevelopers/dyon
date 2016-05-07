@@ -223,6 +223,10 @@ impl Runtime {
         T::pop_var(self, self.resolve(&v))
     }
 
+    pub fn var<T: embed::PopVariable>(&self, var: &Variable) -> Result<T, String> {
+        T::pop_var(self, self.resolve(&var))
+    }
+
     pub fn push<T: embed::PushVariable>(&mut self, val: T) {
         self.stack.push(val.push_var())
     }

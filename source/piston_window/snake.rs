@@ -19,19 +19,20 @@ fn settings() -> {
 }
 
 fn render(settings, data) {
-    clear(settings.background_color)
-    size := 4
+    size := 40
     offset := 1
     n := len(data.snake_body)
+    d := []
+    clear(dlist: mut d, color: settings.background_color)
     for i := 1; i < n; i += 1 {
         pos := data.snake_body[i]
         prev_pos := data.snake_body[i - 1]
-        draw(color: [.2, .2, 0, 1], radius: 1,
+        draw(dlist: mut d, color: [.2, .2, 0, 1], radius: 1,
             line: [prev_pos[0], prev_pos[1], pos[0], pos[1]])
     }
     for i := 0; i < n; i += 1 {
         pos := data.snake_body[i]
-        draw(color: [.2, .2, 0, 1], rectangle: [
+        draw(dlist: mut d, color: [.2, .2, 0, 1], ellipse: [
             pos[0] - 0.5 * size, pos[1] - 0.5 * size, size, size])
     }
     if n > 0 {
@@ -41,8 +42,10 @@ fn render(settings, data) {
             pos[0] + cos(data.snake_angle) * dir_len,
             pos[1] + sin(data.snake_angle) * dir_len
         ]
-        draw(color: [0, 0, 1, 1], radius: 1, line: [pos[0], pos[1], pos2[0], pos2[1]])
+        draw(dlist: mut d, color: [0, 0, 1, 1], radius: 1, line: [pos[0], pos[1], pos2[0], pos2[1]])
     }
+
+    draw(d)
 }
 
 fn update(mut data, settings, dt) {
