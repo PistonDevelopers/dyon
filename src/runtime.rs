@@ -7,8 +7,6 @@ use ast;
 use intrinsics;
 
 use Variable;
-use Array;
-use Object;
 use Module;
 
 /// Which side an expression is evalutated.
@@ -612,7 +610,7 @@ impl Runtime {
         obj: &ast::Object,
         module: &Module
     ) -> Result<Flow, String> {
-        let mut object: Object = HashMap::new();
+        let mut object: HashMap<_, _> = HashMap::new();
         for &(ref key, ref expr) in &obj.key_values {
             match try!(self.expression(expr, Side::Right, module)) {
                 (_, Flow::Return) => { return Ok(Flow::Return); }
@@ -642,7 +640,7 @@ impl Runtime {
         arr: &ast::Array,
         module: &Module
     ) -> Result<Flow, String> {
-        let mut array: Array = Vec::new();
+        let mut array: Vec<Variable> = Vec::new();
         for item in &arr.items {
             match try!(self.expression(item, Side::Right, module)) {
                 (_, Flow::Return) => { return Ok(Flow::Return); }
