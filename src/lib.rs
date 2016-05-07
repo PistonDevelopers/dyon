@@ -208,6 +208,13 @@ mod tests {
     }
 
     #[bench]
+    fn bench_sum(b: &mut Bencher) {
+        b.iter(||
+            run_bench("source/bench/sum.rs")
+        );
+    }
+
+    #[bench]
     fn bench_main(b: &mut Bencher) {
         b.iter(||
             run_bench("source/bench/main.rs")
