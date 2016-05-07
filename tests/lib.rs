@@ -19,138 +19,37 @@ pub fn debug_src(source: &str) {
 }
 
 #[test]
-fn test_main() {
-    test_src("source/main.rs");
-}
-
-#[test]
-fn test_args() {
-    test_src("source/args.rs");
-}
-
-#[test]
-fn test_id() {
-    test_src("source/id.rs");
-}
-
-#[test]
-fn test_call() {
-    test_src("source/call.rs");
-}
-
-#[test]
-fn test_prop() {
-    test_src("source/prop.rs");
-}
-
-#[test]
-fn test_for() {
-    test_src("source/for.rs");
-}
-
-#[test]
-fn test_compare() {
-    test_src("source/compare.rs");
-}
-
-#[test]
-fn test_add() {
-    test_src("source/add.rs");
-}
-
-#[test]
-fn test_mul() {
-    test_src("source/mul.rs");
-}
-
-#[test]
-fn test_pow() {
-    test_src("source/pow.rs");
-}
-
-#[test]
-fn test_add_mul() {
-    test_src("source/add_mul.rs");
-}
-
-#[test]
-fn test_mul_add() {
-    test_src("source/mul_add.rs");
-}
-
-#[test]
-fn test_pos_len() {
-    test_src("source/pos_len.rs");
-}
-
-#[test]
-fn test_if() {
-    test_src("source/if.rs");
-}
-
-#[test]
-fn test_else_if() {
-    test_src("source/else_if.rs");
-}
-
-#[test]
-fn test_assign_if() {
-    test_src("source/assign_if.rs");
-}
-
-#[test]
-fn test_new_pos() {
-    test_src("source/new_pos.rs");
-}
-
-#[test]
-fn test_lifetime() {
-    test_src("source/lifetime.rs");
-}
-
-#[test]
-fn test_lifetime_6() {
-    test_src("source/lifetime_6.rs");
-}
-
-#[test]
-fn test_insert() {
-    test_src("source/insert.rs");
-}
-
-#[test]
-fn test_named_call() {
-    test_src("source/named_call.rs");
-}
-
-#[test]
-fn test_max_min() {
-    test_src("source/max_min.rs");
-}
-
-#[test]
-fn test_return_void() {
-    test_src("source/return_void.rs");
-}
-
-#[test]
-fn test_typeof() {
-    test_src("source/typeof.rs");
-}
-
-#[test]
-fn test_load_module() {
-    test_src("source/load_module.rs");
-}
-
-#[test]
-fn test_println_colon() {
-    test_src("source/println_colon.rs");
-}
-
-#[test]
-fn test_neg() {
-    test_src("source/neg.rs");
+fn test_syntax() {
+    test_src("source/syntax/main.rs");
+    test_src("source/syntax/args.rs");
+    test_src("source/syntax/id.rs");
+    test_src("source/syntax/call.rs");
+    test_src("source/syntax/prop.rs");
+    test_src("source/syntax/for.rs");
+    test_src("source/syntax/compare.rs");
+    test_src("source/syntax/add.rs");
+    test_src("source/syntax/mul.rs");
+    test_src("source/syntax/pow.rs");
+    test_src("source/syntax/add_mul.rs");
+    test_src("source/syntax/mul_add.rs");
+    test_src("source/syntax/pos_len.rs");
+    test_src("source/syntax/if.rs");
+    test_src("source/syntax/else_if.rs");
+    test_src("source/syntax/assign_if.rs");
+    test_src("source/syntax/new_pos.rs");
+    test_src("source/syntax/lifetime.rs");
+    test_src("source/syntax/lifetime_6.rs");
+    test_src("source/syntax/insert.rs");
+    test_src("source/syntax/named_call.rs");
+    test_src("source/syntax/max_min.rs");
+    test_src("source/syntax/return_void.rs");
+    test_src("source/syntax/typeof.rs");
+    test_src("source/syntax/load_module.rs");
+    test_src("source/syntax/println_colon.rs");
+    test_src("source/syntax/neg.rs");
+    test_src("source/syntax/some.rs");
+    test_src("source/syntax/pop.rs");
+    test_src("source/syntax/accessor.rs");
 }
 
 #[test]
@@ -159,51 +58,12 @@ fn test_print_functions() {
 }
 
 #[test]
-fn test_some() {
-    test_src("source/some.rs");
-}
-
-#[test]
-fn test_pop() {
-    test_src("source/pop.rs");
-}
-
-#[test]
-fn test_accessor() {
-    test_src("source/accessor.rs");
-}
-
-#[test]
-fn test_error_propagate() {
+fn test_error() {
     test_src("source/error/propagate.rs");
-}
-
-#[test]
-fn test_error_call() {
     test_src("source/error/call.rs");
-}
-
-#[test]
-fn test_error_named_call() {
     test_src("source/error/named_call.rs");
-}
-
-#[test]
-fn test_error_if() {
     test_src("source/error/if.rs");
-}
-
-#[test]
-fn test_error_trace() {
     test_src("source/error/trace.rs");
-}
-
-#[test]
-fn test_error_unwrap_err() {
     test_src("source/error/unwrap_err.rs");
-}
-
-#[test]
-fn test_error_option() {
     test_src("source/error/option.rs");
 }
