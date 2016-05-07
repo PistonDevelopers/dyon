@@ -113,14 +113,14 @@ fn deep_clone(v: &Variable, stack: &Vec<Variable>) -> Variable {
         Text(_) => v.clone(),
         Object(ref obj) => {
             let mut res = obj.clone();
-            for (_, val) in &mut res {
+            for (_, val) in Arc::make_mut(&mut res) {
                 *val = deep_clone(val, stack);
             }
             Object(res)
         }
         Array(ref arr) => {
             let mut res = arr.clone();
-            for it in &mut res {
+            for it in Arc::make_mut(&mut res) {
                 *it = deep_clone(it, stack);
             }
             Array(res)
@@ -339,7 +339,7 @@ pub fn call_standard(
 
             if let Variable::Ref(ind) = v {
                 let ok = if let Variable::Array(ref mut arr) = rt.stack[ind] {
-                    arr.push(item);
+                    Arc::make_mut(arr).push(item);
                     true
                 } else {
                     false
@@ -365,7 +365,7 @@ pub fn call_standard(
 
             if let Variable::Ref(ind) = v {
                 let ok = if let Variable::Array(ref mut arr) = rt.stack[ind] {
-                    arr.push(item);
+                    Arc::make_mut(arr).push(item);
                     true
                 } else {
                     false
@@ -389,7 +389,7 @@ pub fn call_standard(
             let mut v: Option<Variable> = None;
             if let Variable::Ref(ind) = arr {
                 let ok = if let Variable::Array(ref mut arr) = rt.stack[ind] {
-                    v = arr.pop();
+                    v = Arc::make_mut(arr).pop();
                     true
                 } else {
                     false
@@ -575,7 +575,7 @@ pub fn call_standard(
             }
             match rt.resolve(&modules) {
                 &Variable::Array(ref array) => {
-                    for it in array {
+                    for it in &**array {
                         match rt.resolve(it) {
                             &Variable::RustObject(ref obj) => {
                                 match obj.lock().unwrap().downcast_ref::<Module>() {
@@ -666,9 +666,9 @@ pub fn call_standard(
                     }
                     let call = ast::Call {
                         name: fn_name.clone(),
-                        args: args.into_iter().map(|arg|
+                        args: args.iter().map(|arg|
                             ast::Expression::Variable(
-                                call.source_range, arg)).collect(),
+                                call.source_range, arg.clone())).collect(),
                         source_range: call.source_range,
                     };
                     // TODO: Figure out what to do expect and flow.
@@ -726,9 +726,9 @@ pub fn call_standard(
                     }
                     let call = ast::Call {
                         name: fn_name.clone(),
-                        args: args.into_iter().map(|arg|
+                        args: args.iter().map(|arg|
                             ast::Expression::Variable(
-                                call.source_range, arg)).collect(),
+                                call.source_range, arg.clone())).collect(),
                         source_range: call.source_range,
                     };
                     // TODO: Figure out what to do expect and flow.
@@ -777,10 +777,10 @@ pub fn call_standard(
                                 Box::new(Variable::Text(ret_lifetime.clone()))
                             )),
                     });
-                    args.push(Variable::Object(obj_arg));
+                    args.push(Variable::Object(Arc::new(obj_arg)));
                 }
-                obj.insert(arguments.clone(), Variable::Array(args));
-                functions.push(Variable::Object(obj));
+                obj.insert(arguments.clone(), Variable::Array(Arc::new(args)));
+                functions.push(Variable::Object(Arc::new(obj)));
             }
             for (f_name, &(_, ref f)) in &module.ext_prelude {
                 let mut obj = HashMap::new();
@@ -803,10 +803,10 @@ pub fn call_standard(
                                 Box::new(Variable::Text(ret_lifetime.clone()))
                             )),
                     });
-                    args.push(Variable::Object(obj_arg));
+                    args.push(Variable::Object(Arc::new(obj_arg)));
                 }
-                obj.insert(arguments.clone(), Variable::Array(args));
-                functions.push(Variable::Object(obj));
+                obj.insert(arguments.clone(), Variable::Array(Arc::new(args)));
+                functions.push(Variable::Object(Arc::new(obj)));
             }
             for f in module.functions.values() {
                 let mut obj = HashMap::new();
@@ -826,10 +826,10 @@ pub fn call_standard(
                                 )))
                         }
                     );
-                    args.push(Variable::Object(obj_arg));
+                    args.push(Variable::Object(Arc::new(obj_arg)));
                 }
-                obj.insert(arguments.clone(), Variable::Array(args));
-                functions.push(Variable::Object(obj));
+                obj.insert(arguments.clone(), Variable::Array(Arc::new(args)));
+                functions.push(Variable::Object(Arc::new(obj)));
             }
             // Sort by function names.
             functions.sort_by(|a, b|
@@ -845,7 +845,7 @@ pub fn call_standard(
                     _ => panic!("Expected two objects")
                 }
             );
-            let v = Variable::Array(functions);
+            let v = Variable::Array(Arc::new(functions));
             rt.stack.push(v);
             rt.pop_fn(call.name.clone());
             Expect::Something
