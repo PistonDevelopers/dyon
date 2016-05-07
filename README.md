@@ -7,7 +7,7 @@ Notice: This is very early stage in development. Breaking changes will happen!
 
 To run snake demo for interactive coding:
 
-1. [Install Rust](https://www.rust-lang.org/) (Rust 1.8 beta or newer)
+1. [Install Rust](https://www.rust-lang.org/) (Rust Nightly is required at the moment)
 2. Fork the repo to your local hard drive
 3. In Terminal, type `cargo run --release --example piston_window`
 4. Edit "source/piston_window/snake.rs" while running the demo
