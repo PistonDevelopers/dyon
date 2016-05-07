@@ -50,6 +50,7 @@ fn test_syntax() {
     test_src("source/syntax/some.rs");
     test_src("source/syntax/pop.rs");
     test_src("source/syntax/accessor.rs");
+    test_src("source/syntax/sum.rs");
 }
 
 #[test]

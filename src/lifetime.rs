@@ -198,7 +198,7 @@ pub fn check(
         let mut it: Option<usize> = None;
 
         'search: loop {
-            if nodes[parent].kind == Kind::ForN &&
+            if nodes[parent].kind.is_decl_loop() &&
                nodes[parent].name == nodes[i].name {
                it = Some(parent);
                break 'search;
@@ -801,6 +801,8 @@ impl Node {
         let mut call_arg_ind = 0;
         for &c in &self.children {
             match (self.kind, nodes[c].kind) {
+                (_, Kind::Sum) => {}
+                (_, Kind::End) => {}
                 (_, Kind::Assign) => {}
                 (_, Kind::Object) => {}
                 (_, Kind::KeyValue) => {}
@@ -972,6 +974,7 @@ pub enum Kind {
     KeyValue,
     For,
     ForN,
+    Sum,
     End,
     Init,
     Cond,
@@ -1019,6 +1022,7 @@ impl Kind {
             "key_value" => Kind::KeyValue,
             "for" => Kind::For,
             "for_n" => Kind::ForN,
+            "sum" => Kind::Sum,
             "end" => Kind::End,
             "init" => Kind::Init,
             "cond" => Kind::Cond,
@@ -1036,5 +1040,12 @@ impl Kind {
             "unop" => Kind::UnOp,
             _ => return None
         })
+    }
+
+    pub fn is_decl_loop(&self) -> bool {
+        match *self {
+            Kind::ForN | Kind::Sum => true,
+            _ => false
+        }
     }
 }
