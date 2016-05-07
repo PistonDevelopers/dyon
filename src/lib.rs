@@ -236,7 +236,14 @@ mod tests {
     #[bench]
     fn bench_n_body(b: &mut Bencher) {
         b.iter(||
-            run("source/bench/n_body.rs")
+            run_bench("source/bench/n_body.rs")
+        );
+    }
+
+    #[bench]
+    fn bench_len(b: &mut Bencher) {
+        b.iter(||
+            run_bench("source/bench/len.rs")
         );
     }
 }
