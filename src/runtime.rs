@@ -2103,8 +2103,8 @@ impl Runtime {
             match try!(self.block(&for_n_expr.block, module)) {
                 (_, Flow::Return) => { return Ok(Flow::Return); }
                 (Expect::Something, Flow::Continue) => {
-                    res.push(self.stack.last()
-                        .expect("There is no value on the stack").clone());
+                    res.push(self.stack.pop()
+                        .expect("There is no value on the stack"));
                 }
                 (Expect::Nothing, Flow::Continue) => {
                     return Err(module.error(for_n_expr.block.source_range,
