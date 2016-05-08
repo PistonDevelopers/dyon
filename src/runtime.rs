@@ -358,6 +358,10 @@ impl Runtime {
                                      try!(self.for_n_expr(for_n_expr, module)))),
             Sum(ref for_n_expr) => Ok((Expect::Something,
                                      try!(self.sum_n_expr(for_n_expr, module)))),
+            Min(ref for_n_expr) => Ok((Expect::Something,
+                                     try!(self.min_n_expr(for_n_expr, module)))),
+            Max(ref for_n_expr) => Ok((Expect::Something,
+                                     try!(self.max_n_expr(for_n_expr, module)))),
             If(ref if_expr) => self.if_expr(if_expr, module),
             Compare(ref compare) => Ok((Expect::Something,
                                         try!(self.compare(compare, module)))),
@@ -1830,6 +1834,230 @@ impl Runtime {
         self.stack.truncate(prev_st);
         self.local_stack.truncate(prev_lc);
         self.stack.push(Variable::F64(sum));
+        Ok(flow)
+    }
+    fn min_n_expr(
+        &mut self,
+        for_n_expr: &ast::ForN,
+        module: &Module
+    ) -> Result<Flow, String> {
+        let prev_st = self.stack.len();
+        let prev_lc = self.local_stack.len();
+        let mut min: Option<(f64, f64)> = None;
+        // Initialize counter.
+        self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
+        self.stack.push(Variable::F64(0.0));
+        // Evaluate end such that it's on the stack.
+        match try!(self.expression(&for_n_expr.end, Side::Right, module)) {
+            (_, Flow::Return) => { return Ok(Flow::Return); }
+            (Expect::Something, Flow::Continue) => {}
+            _ => return Err(module.error(for_n_expr.end.source_range(),
+                &format!("{}\nExpected number from for end",
+                    self.stack_trace())))
+        };
+        let end = self.stack.pop().expect("There is no value on the stack");
+        let end = match self.resolve(&end) {
+            &Variable::F64(val) => val,
+            x => return Err(module.error(for_n_expr.end.source_range(),
+                            &self.expected(x, "number")))
+        };
+        let st = self.stack.len();
+        let lc = self.local_stack.len();
+        let mut flow = Flow::Continue;
+        loop {
+            let ind = match &self.stack[st - 1] {
+                &Variable::F64(val) => {
+                    if val < end {}
+                    else { break }
+                    val
+                }
+                x => return Err(module.error(for_n_expr.source_range,
+                                &self.expected(x, "number")))
+            };
+            match try!(self.block(&for_n_expr.block, module)) {
+                (_, Flow::Return) => { return Ok(Flow::Return); }
+                (Expect::Something, Flow::Continue) => {
+                    match self.stack.last().expect("There is no value on the stack") {
+                        &Variable::F64(val) => {
+                            if let Some((ref mut min_arg, ref mut min_val)) = min {
+                                if *min_val > val {
+                                    *min_arg = ind;
+                                    *min_val = val;
+                                }
+                            } else {
+                                min = Some((ind, val));
+                            }
+                        },
+                        x => return Err(module.error(for_n_expr.block.source_range,
+                                &self.expected(x, "number")))
+                    };
+                }
+                (Expect::Nothing, Flow::Continue) => {
+                    return Err(module.error(for_n_expr.block.source_range,
+                                "Expected `number`"))
+                }
+                (_, Flow::Break(x)) => {
+                    match x {
+                        Some(label) => {
+                            let same =
+                            if let Some(ref for_label) = for_n_expr.label {
+                                &label == for_label
+                            } else { false };
+                            if !same {
+                                flow = Flow::Break(Some(label))
+                            }
+                        }
+                        None => {}
+                    }
+                    break;
+                }
+                (_, Flow::ContinueLoop(x)) => {
+                    match x {
+                        Some(label) => {
+                            let same =
+                            if let Some(ref for_label) = for_n_expr.label {
+                                &label == for_label
+                            } else { false };
+                            if !same {
+                                flow = Flow::ContinueLoop(Some(label));
+                                break;
+                            }
+                        }
+                        None => {}
+                    }
+                }
+            }
+            let error = if let Variable::F64(ref mut val) = self.stack[st - 1] {
+                *val += 1.0;
+                false
+            } else { true };
+            if error {
+                return Err(module.error(for_n_expr.source_range,
+                           &self.expected(&self.stack[st - 1], "number")))
+            }
+            self.stack.truncate(st);
+            self.local_stack.truncate(lc);
+        };
+        self.stack.truncate(prev_st);
+        self.local_stack.truncate(prev_lc);
+        self.stack.push(match min {
+            None => Variable::Option(None),
+            Some((arg, val)) => Variable::Option(Some(Box::new(
+                Variable::Array(Arc::new(vec![Variable::F64(arg), Variable::F64(val)]))
+            )))
+        });
+        Ok(flow)
+    }
+    fn max_n_expr(
+        &mut self,
+        for_n_expr: &ast::ForN,
+        module: &Module
+    ) -> Result<Flow, String> {
+        let prev_st = self.stack.len();
+        let prev_lc = self.local_stack.len();
+        let mut max: Option<(f64, f64)> = None;
+        // Initialize counter.
+        self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
+        self.stack.push(Variable::F64(0.0));
+        // Evaluate end such that it's on the stack.
+        match try!(self.expression(&for_n_expr.end, Side::Right, module)) {
+            (_, Flow::Return) => { return Ok(Flow::Return); }
+            (Expect::Something, Flow::Continue) => {}
+            _ => return Err(module.error(for_n_expr.end.source_range(),
+                &format!("{}\nExpected number from for end",
+                    self.stack_trace())))
+        };
+        let end = self.stack.pop().expect("There is no value on the stack");
+        let end = match self.resolve(&end) {
+            &Variable::F64(val) => val,
+            x => return Err(module.error(for_n_expr.end.source_range(),
+                            &self.expected(x, "number")))
+        };
+        let st = self.stack.len();
+        let lc = self.local_stack.len();
+        let mut flow = Flow::Continue;
+        loop {
+            let ind = match &self.stack[st - 1] {
+                &Variable::F64(val) => {
+                    if val < end {}
+                    else { break }
+                    val
+                }
+                x => return Err(module.error(for_n_expr.source_range,
+                                &self.expected(x, "number")))
+            };
+            match try!(self.block(&for_n_expr.block, module)) {
+                (_, Flow::Return) => { return Ok(Flow::Return); }
+                (Expect::Something, Flow::Continue) => {
+                    match self.stack.last().expect("There is no value on the stack") {
+                        &Variable::F64(val) => {
+                            if let Some((ref mut max_arg, ref mut max_val)) = max {
+                                if *max_val < val {
+                                    *max_arg = ind;
+                                    *max_val = val;
+                                }
+                            } else {
+                                max = Some((ind, val));
+                            }
+                        },
+                        x => return Err(module.error(for_n_expr.block.source_range,
+                                &self.expected(x, "number")))
+                    };
+                }
+                (Expect::Nothing, Flow::Continue) => {
+                    return Err(module.error(for_n_expr.block.source_range,
+                                "Expected `number`"))
+                }
+                (_, Flow::Break(x)) => {
+                    match x {
+                        Some(label) => {
+                            let same =
+                            if let Some(ref for_label) = for_n_expr.label {
+                                &label == for_label
+                            } else { false };
+                            if !same {
+                                flow = Flow::Break(Some(label))
+                            }
+                        }
+                        None => {}
+                    }
+                    break;
+                }
+                (_, Flow::ContinueLoop(x)) => {
+                    match x {
+                        Some(label) => {
+                            let same =
+                            if let Some(ref for_label) = for_n_expr.label {
+                                &label == for_label
+                            } else { false };
+                            if !same {
+                                flow = Flow::ContinueLoop(Some(label));
+                                break;
+                            }
+                        }
+                        None => {}
+                    }
+                }
+            }
+            let error = if let Variable::F64(ref mut val) = self.stack[st - 1] {
+                *val += 1.0;
+                false
+            } else { true };
+            if error {
+                return Err(module.error(for_n_expr.source_range,
+                           &self.expected(&self.stack[st - 1], "number")))
+            }
+            self.stack.truncate(st);
+            self.local_stack.truncate(lc);
+        };
+        self.stack.truncate(prev_st);
+        self.local_stack.truncate(prev_lc);
+        self.stack.push(match max {
+            None => Variable::Option(None),
+            Some((arg, val)) => Variable::Option(Some(Box::new(
+                Variable::Array(Arc::new(vec![Variable::F64(arg), Variable::F64(val)]))
+            )))
+        });
         Ok(flow)
     }
     #[inline(always)]

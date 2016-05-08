@@ -31,6 +31,8 @@ _seps: "(){}[],.:;=<>*+-/%^?"
     ["return":"return_void"]
     add:"add"
     sum:"sum"
+    min:"min"
+    max:"max"
     ["(" ?w expr ?w ")"]
     unop:"unop"
     text
@@ -52,6 +54,8 @@ _seps: "(){}[],.:;=<>*+-/%^?"
         compare:"compare"
         add:"add"
         sum:"sum"
+        min:"min"
+        max:"max"
         ["(" ?w expr ?w ")"]
         unop:"unop"
         text
@@ -67,6 +71,8 @@ _seps: "(){}[],.:;=<>*+-/%^?"
     array:"array"
     array_fill:"array_fill"
     sum:"sum"
+    min:"min"
+    max:"max"
     block:"block"
     ["(" ?w expr ?w ")"]
     unop:"unop"
@@ -100,19 +106,23 @@ _seps: "(){}[],.:;=<>*+-/%^?"
     .._seps!:"name" ?w expr:"end" ?w block:"block"]
 18 sum = [?["'" .._seps!:"label" ?w ":" ?w] {"sum" "∑"} .w!
     .._seps!:"name" ?w expr:"end" ?w block:"block"]
-19 loop = [?["'" .._seps!:"label" ?w ":" ?w] "loop" .w!  block:"block"]
-20 break = ["break" ?w ?["'" .._seps!:"label"]]
-21 continue = ["continue" ?w ?["'" .._seps!:"label"]]
-22 if = [
+19 min = [?["'" .._seps!:"label" ?w ":" ?w] "min" .w!
+    .._seps!:"name" ?w expr:"end" ?w block:"block"]
+20 max = [?["'" .._seps!:"label" ?w ":" ?w] "max" .w!
+    .._seps!:"name" ?w expr:"end" ?w block:"block"]
+21 loop = [?["'" .._seps!:"label" ?w ":" ?w] "loop" .w!  block:"block"]
+22 break = ["break" ?w ?["'" .._seps!:"label"]]
+23 continue = ["continue" ?w ?["'" .._seps!:"label"]]
+24 if = [
     "if" .w! expr:"cond" ?w block:"true_block"
     .r?([?w "else" w "if" ?w expr:"else_if_cond" ?w block:"else_if_block"])
     ?[?w "else" ?w block:"else_block"]
 ]
-23 call = [.._seps!:"name" ?w "(" .s?.([?w "," ?w] arg_expr:"call_arg") ?w ")"]
-24 named_call = [.._seps!:"word" ?w "(" ?w
+25 call = [.._seps!:"name" ?w "(" .s?.([?w "," ?w] arg_expr:"call_arg") ?w ")"]
+26 named_call = [.._seps!:"word" ?w "(" ?w
     .s?.([?w "," ?w] [.._seps!:"word" ?w ":" ?w arg_expr:"call_arg" ?w]) ")"]
-25 assign = [lexpr:"left" ?w assign_op ?w expr:"right"]
-26 assign_op = {
+27 assign = [lexpr:"left" ?w assign_op ?w expr:"right"]
+28 assign_op = {
     ":=":":="
     "=":"="
     "+=":"+="
@@ -121,8 +131,8 @@ _seps: "(){}[],.:;=<>*+-/%^?"
     "/=":"/="
     "%=":"%="
 }
-27 compare = [lexpr:"left" ?w compare_op ?w expr:"right"]
-28 compare_op = {
+29 compare = [lexpr:"left" ?w compare_op ?w expr:"right"]
+30 compare_op = {
     "==":"=="
     "!=":"!="
     "<=":"<="

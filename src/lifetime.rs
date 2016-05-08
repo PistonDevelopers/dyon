@@ -975,6 +975,8 @@ pub enum Kind {
     For,
     ForN,
     Sum,
+    Min,
+    Max,
     End,
     Init,
     Cond,
@@ -1023,6 +1025,8 @@ impl Kind {
             "for" => Kind::For,
             "for_n" => Kind::ForN,
             "sum" => Kind::Sum,
+            "min" => Kind::Min,
+            "max" => Kind::Max,
             "end" => Kind::End,
             "init" => Kind::Init,
             "cond" => Kind::Cond,
@@ -1044,7 +1048,7 @@ impl Kind {
 
     pub fn is_decl_loop(&self) -> bool {
         match *self {
-            Kind::ForN | Kind::Sum => true,
+            Kind::ForN | Kind::Sum | Kind::Min | Kind::Max => true,
             _ => false
         }
     }
