@@ -1,23 +1,19 @@
 _seps: "(){}[],.:;=<>*+-/%^?"
 
 200 multi_line_comment = ["/*" ..."*/"? .r?({
-    [!"*/" "*" ..."*/"?]
-    [multi_line_comment ..."*/"?]
-    ["/" ..."*/"?]
+    [!"*/" "*" ..."*/"?] [multi_line_comment ..."*/"?] ["/" ..."*/"?]
 }) "*/"]
 201 comment = {multi_line_comment ["//" ..."\n"?]}
-// 202 w = .r!({.w! comment})
 202 w = .r!({.w! comment})
 
 0 fn = ["fn" .w! .."("!:"name" ?w "(" args ")" ?w ?"->":"returns" ?w block:"block"]
-1 args = .s?.([?w "," ?w] arg:"arg")
+1 args = .s?.(, arg:"arg")
 2 arg = [?"mut":"mut" ?w .._seps!:"name" ?[?w ":" ?w "'" ?w .._seps!:"lifetime"]]
 // Support both multi-line expressions and single line.
 3 block = ["{" ?w {.l([?w expr:"expr" ?w]) [?w expr:"expr"]} ?w "}"]
 4 expr = [{
     object:"object"
-    array:"array"
-    array_fill:"array_fill"
+    arr
     ["return" .w! expr:"return"]
     for_n:"for_n"
     for:"for"
@@ -30,116 +26,73 @@ _seps: "(){}[],.:;=<>*+-/%^?"
     compare:"compare"
     ["return":"return_void"]
     add:"add"
-    sum:"sum"
-    min:"min"
-    max:"max"
-    ["(" ?w expr ?w ")"]
-    unop:"unop"
-    text
-    call:"call"
-    named_call:"named_call"
-    num
-    bool
-    item:"item"
-} ?[?w "?":"try"]]
+    short_loops
+    items
+} try]
 // Interprets "return" as variable, does not expect loops or assignment.
 5 arg_expr = {
     ["mut":"mut" ?w item:"item"]
     [{
         object:"object"
-        array:"array"
-        array_fill:"array_fill"
+        arr
         if:"if"
         block:"block"
         compare:"compare"
         add:"add"
-        sum:"sum"
-        min:"min"
-        max:"max"
-        ["(" ?w expr ?w ")"]
-        unop:"unop"
-        text
-        call:"call"
-        named_call:"named_call"
-        num
-        bool
-        item:"item"
-    } ?[?w "?":"try"]]
+        short_loops
+        items
+    } try]
 }
 6 lexpr = [{
     object:"object"
-    array:"array"
-    array_fill:"array_fill"
-    sum:"sum"
-    min:"min"
-    max:"max"
+    arr
+    short_loops
     block:"block"
-    ["(" ?w expr ?w ")"]
-    unop:"unop"
-    text
-    call:"call"
-    named_call:"named_call"
-    num
-    bool
-    item:"item"
-} ?[?w "?":"try"]]
-7 object = ["{" ?w .s?.([?w "," ?w] key_value:"key_value") ?w "}"]
-8 array = ["[" ?w .s?.([?w "," ?w] expr:"array_item") ?w "]"]
-9 array_fill = ["[" ?w [expr:"fill" ?w ";" ?w expr:"n"] ?w "]"]
+    items
+} try]
+7 object = ["{" ?w .s?.(, key_value:"key_value") ?w "}"]
+8 array = ["[" ?w .s?.(, expr:"array_item") ?w "]"]
+9 array_fill = ["[" ?w expr:"fill" ?w ";" ?w expr:"n" ?w "]"]
 10 key_value = [.._seps!:"key" ?w ":" ?w expr:"val"]
 11 num = .$_:"num"
 12 text = .t?:"text"
 13 bool = {"true":"bool" "false":!"bool"}
-14 unop = [{
-  "!":"!"
-  "-":"-"
-} ?w lexpr:"expr"]
+14 unop = [{"!":"!" "-":"-"} ?w lexpr:"expr"]
 15 item = [.._seps!:"name" ?[?w "?":"try_item"] .r?([{
-    [?w "[" ?w {.t?:"id" .$_:"id" expr:"id"} ?w "]"]
-    [?w "." ?w .._seps!:"id"]
-} ?[?w "?":"try_id"]])]
-16 for = [?["'" .._seps!:"label" ?w ":" ?w] "for" .w!
+           [?w "[" ?w {.t?:"id" .$_:"id" expr:"id"} ?w "]"]
+           [?w "." ?w .._seps!:"id"]} ?[?w "?":"try_id"]])]
+16 for = [label "for" .w!
     expr:"init" ?w ";" ?w
     expr:"cond" ?w ";" ?w
     expr:"step" ?w block:"block"]
-17 for_n = [?["'" .._seps!:"label" ?w ":" ?w] "for" .w!
-    .._seps!:"name" ?w expr:"end" ?w block:"block"]
-18 sum = [?["'" .._seps!:"label" ?w ":" ?w] {"sum" "∑"} .w!
-    .._seps!:"name" ?w expr:"end" ?w block:"block"]
-19 min = [?["'" .._seps!:"label" ?w ":" ?w] "min" .w!
-    .._seps!:"name" ?w expr:"end" ?w block:"block"]
-20 max = [?["'" .._seps!:"label" ?w ":" ?w] "max" .w!
-    .._seps!:"name" ?w expr:"end" ?w block:"block"]
-21 loop = [?["'" .._seps!:"label" ?w ":" ?w] "loop" .w!  block:"block"]
-22 break = ["break" ?w ?["'" .._seps!:"label"]]
-23 continue = ["continue" ?w ?["'" .._seps!:"label"]]
-24 if = [
-    "if" .w! expr:"cond" ?w block:"true_block"
-    .r?([?w "else" w "if" ?w expr:"else_if_cond" ?w block:"else_if_block"])
-    ?[?w "else" ?w block:"else_block"]
-]
-25 call = [.._seps!:"name" ?w "(" .s?.([?w "," ?w] arg_expr:"call_arg") ?w ")"]
-26 named_call = [.._seps!:"word" ?w "(" ?w
-    .s?.([?w "," ?w] [.._seps!:"word" ?w ":" ?w arg_expr:"call_arg" ?w]) ")"]
-27 assign = [lexpr:"left" ?w assign_op ?w expr:"right"]
-28 assign_op = {
-    ":=":":="
-    "=":"="
-    "+=":"+="
-    "-=":"-="
-    "*=":"*="
-    "/=":"/="
-    "%=":"%="
-}
-29 compare = [lexpr:"left" ?w compare_op ?w expr:"right"]
-30 compare_op = {
-    "==":"=="
-    "!=":"!="
-    "<=":"<="
-    "<":"<"
-    ">=":">="
-    ">":">"
-}
+17 for_n = [label "for" short_body]
+18 loop = [label "loop" .w!  block:"block"]
+19 break = ["break" ?w ?["'" .._seps!:"label"]]
+20 continue = ["continue" ?w ?["'" .._seps!:"label"]]
+21 if = ["if" .w! expr:"cond" ?w block:"true_block"
+         .r?([?w "else" w "if" ?w expr:"else_if_cond" ?w block:"else_if_block"])
+         ?[?w "else" ?w block:"else_block"]]
+22 call = [.._seps!:"name" ?w "(" .s?.(, arg_expr:"call_arg") ?w ")"]
+23 named_call = [.._seps!:"word" ?w "(" ?w
+    .s?.(, [.._seps!:"word" ?w ":" ?w arg_expr:"call_arg" ?w]) ")"]
+24 assign = [lexpr:"left" ?w assign_op ?w expr:"right"]
+25 assign_op = {":=":":=" "=":"=" "+=":"+=" "-=":"-=" "*=":"*=" "/=":"/=" "%=":"%="}
+26 compare = [lexpr:"left" ?w compare_op ?w expr:"right"]
+27 compare_op = {"==":"==" "!=":"!=" "<=":"<=" "<":"<" ">=":">=" ">":">"}
+
+30 label = ?["'" .._seps!:"label" ?w ":" ?w]
+31 short_body = [.w! .._seps!:"name" ?w expr:"end" ?w block:"block"]
+32 try = ?[?w "?":"try"]
+33 , = [?w "," ?w]
+34 arr = {array:"array" array_fill:"array_fill"}
+35 items = {["(" ?w expr ?w ")"] unop:"unop"
+            text call:"call" named_call:"named_call"
+            num bool item:"item"}
+
+40 short_loops = {sum:"sum" min:"min" max:"max"}
+41 sum = [label {"sum" "∑"} short_body]
+42 min = [label "min" short_body]
+42 max = [label "max" short_body]
 
 101 + = [?w {"+":"+" "||":"+"} ?w]
 102 - = [?w "-":"-" ?w]
@@ -147,12 +100,7 @@ _seps: "(){}[],.:;=<>*+-/%^?"
 104 / = [?w "/":"/" ?w]
 105 % = [?w "%":"%" ?w]
 107 pow = [lexpr:"base" ?w "^" ?w lexpr:"exp"]
-108 mul = .s!({* / %} {
-    pow:"pow"
-    lexpr:"val"
-})
-109 add = .s!({+ -} {
-    mul:"mul"
-})
+108 mul = .s!({* / %} {pow:"pow" lexpr:"val"})
+109 add = .s!({+ -} mul:"mul")
 
 1000 document = .l({fn:"fn" comment})
