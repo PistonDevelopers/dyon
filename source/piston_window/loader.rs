@@ -32,7 +32,9 @@ fn main() {
             dt *= if data.focused { settings.focus_speed } else { settings.unfocus_speed }
             call(m, "update(mut,_,_)", [data, settings, dt])
         }
-        event(loader: mut loader, source: source, settings: mut settings, module: mut m)
+        event(loader: mut loader, source: source,
+              settings: mut settings, module: mut m,
+              imports: [render])
         key := press_keyboard_key()
         if key != none() {
             key := unwrap(key)
@@ -100,13 +102,13 @@ fn should_reload(loader) -> {
         && ((loader.last_reload + loader.reload_interval) < loader.time)
 }
 
-fn event_loader_source_settings_module(mut loader, source, mut settings, mut m) {
+fn event_loader_source_settings_module_imports(mut loader, source, mut settings, mut m, imports) {
     if update() {
         dt := unwrap(update_dt())
         loader.time += dt
         if should_reload(loader) {
             loader.last_reload = clone(loader.time)
-            new_m := load(source)
+            new_m := load(source: source, imports: imports)
             if is_err(new_m) {
                 loader.got_error = true
                 println(unwrap_err(new_m))
