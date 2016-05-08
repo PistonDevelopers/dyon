@@ -24,6 +24,7 @@ fn test_syntax() {
     test_src("source/syntax/args.rs");
     test_src("source/syntax/id.rs");
     test_src("source/syntax/call.rs");
+    test_src("source/syntax/array.rs");
     test_src("source/syntax/prop.rs");
     test_src("source/syntax/for.rs");
     test_src("source/syntax/compare.rs");
@@ -51,6 +52,7 @@ fn test_syntax() {
     test_src("source/syntax/pop.rs");
     test_src("source/syntax/accessor.rs");
     test_src("source/syntax/sum.rs");
+    test_src("source/syntax/min_max.rs");
 }
 
 #[test]
