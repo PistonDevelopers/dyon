@@ -2095,7 +2095,6 @@ impl Runtime {
                 &Variable::F64(val) => {
                     if val < end {}
                     else { break }
-                    val
                 }
                 x => return Err(module.error(for_n_expr.source_range,
                                 &self.expected(x, "number")))
