@@ -2108,7 +2108,7 @@ impl Runtime {
                 }
                 (Expect::Nothing, Flow::Continue) => {
                     return Err(module.error(for_n_expr.block.source_range,
-                                "Expected `number`"))
+                                "Expected variable"))
                 }
                 (_, Flow::Break(x)) => {
                     match x {
