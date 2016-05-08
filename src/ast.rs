@@ -210,6 +210,7 @@ pub enum Expression {
     Sum(Box<ForN>),
     Min(Box<ForN>),
     Max(Box<ForN>),
+    Sift(Box<ForN>),
     If(Box<If>),
     Compare(Box<Compare>),
     UnOp(Box<UnOpExpression>),
@@ -325,6 +326,10 @@ impl Expression {
                     "max", convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::Max(Box::new(val)));
+            } else if let Ok((range, val)) = ForN::from_meta_data(
+                    "sift", convert, ignored) {
+                convert.update(range);
+                result = Some(Expression::Sift(Box::new(val)));
             } else if let Ok((range, val)) = Loop::from_meta_data(
                     convert, ignored) {
                 convert.update(range);
@@ -379,6 +384,7 @@ impl Expression {
             Sum(ref for_n_expr) => for_n_expr.source_range,
             Min(ref for_n_expr) => for_n_expr.source_range,
             Max(ref for_n_expr) => for_n_expr.source_range,
+            Sift(ref for_n_expr) => for_n_expr.source_range,
             If(ref if_expr) => if_expr.source_range,
             Compare(ref comp) => comp.source_range,
             UnOp(ref unop) => unop.source_range,

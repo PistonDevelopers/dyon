@@ -89,10 +89,11 @@ _seps: "(){}[],.:;=<>*+-/%^?"
             text call:"call" named_call:"named_call"
             num bool item:"item"}
 
-40 short_loops = {sum:"sum" min:"min" max:"max"}
+40 short_loops = {sum:"sum" min:"min" max:"max" sift:"sift"}
 41 sum = [label {"sum" "∑"} short_body]
 42 min = [label "min" short_body]
 42 max = [label "max" short_body]
+43 sift = [label "sift" short_body]
 
 101 + = [?w {"+":"+" "||":"+"} ?w]
 102 - = [?w "-":"-" ?w]

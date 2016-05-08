@@ -10,6 +10,14 @@ pub fn test_src(source: &str) {
     });
 }
 
+pub fn test_fail_src(source: &str) {
+    let mut module = Module::new();
+    match load(source, &mut module) {
+        Ok(_) => panic!("`{}` should fail", source),
+        Err(_) => {}
+    };
+}
+
 pub fn debug_src(source: &str) {
     let mut module = Module::new();
     load(source, &mut module).unwrap_or_else(|err| {
@@ -39,7 +47,13 @@ fn test_syntax() {
     test_src("source/syntax/assign_if.rs");
     test_src("source/syntax/new_pos.rs");
     test_src("source/syntax/lifetime.rs");
+    test_fail_src("source/syntax/lifetime_2.rs");
+    test_fail_src("source/syntax/lifetime_3.rs");
+    test_fail_src("source/syntax/lifetime_4.rs");
+    test_fail_src("source/syntax/lifetime_5.rs");
     test_src("source/syntax/lifetime_6.rs");
+    test_src("source/syntax/lifetime_7.rs");
+    test_src("source/syntax/lifetime_8.rs");
     test_src("source/syntax/insert.rs");
     test_src("source/syntax/named_call.rs");
     test_src("source/syntax/max_min.rs");
