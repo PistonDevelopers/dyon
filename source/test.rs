@@ -1,22 +1,41 @@
 fn main() {
-    list := [3, 4, 5, 12, 42]
-    n := len(list)
+    list := [81, 402, 5, 12, 42]
+    // min := min(list)
+    min := min i len(list) { list[i] }
+    // max := max(list)
+    max := max i len(list) { list[i] }
+    println("min: " + to_string(min))
+    println("max: " + to_string(max))
+}
 
-    println("sum: " + to_string(∑ i n { list[i] }))
-    println("avg: " + to_string(∑ i n { list[i] } / n))
-    println("odd: " + to_string(∑ i n { list[i] % 2 }))
-    println("sum >10: " + to_string(∑ i n {
-        if list[i] > 10 { list[i] } else { continue }
-    }))
-    println("stop at 5: " + to_string(∑ i n {
-        if list[i] == 5 { break }
-        list[i]
-    }))
-    println("sim prod: " + to_string(exp(∑ i n { ln(list[i]) })))
-    println("sim any >30: " + to_string(0 != ∑ i n {
-        if list[i] > 30 { 1 } else { continue }
-    }))
-    println("sim all <50: " + to_string(n == ∑ i n {
-        if list[i] < 50 { 1 } else { continue }
-    }))
+fn min(list) -> {
+    min_arg := none()
+    min_val := none()
+    for i len(list) {
+        less := if min_arg == none() { true }
+                else if list[i] < unwrap(min_val) { true }
+                else { false }
+        if less {
+            min_arg = some(i)
+            min_val = some(list[i])
+        }
+    }
+    return if min_arg == none() { none() }
+           else { some([unwrap(min_arg), unwrap(min_val)]) }
+}
+
+fn max(list) -> {
+    max_arg := none()
+    max_val := none()
+    for i len(list) {
+        more := if max_arg == none() { true }
+                else if list[i] > unwrap(max_val) { true }
+                else { false }
+        if more {
+            max_arg = some(i)
+            max_val = some(list[i])
+        }
+    }
+    return if max_arg == none() { none() }
+           else { some([unwrap(max_arg), unwrap(max_val)]) }
 }

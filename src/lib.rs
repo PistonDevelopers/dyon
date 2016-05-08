@@ -255,4 +255,18 @@ mod tests {
             run_bench("source/bench/len.rs")
         );
     }
+
+    #[bench]
+    fn bench_min_fn(b: &mut Bencher) {
+        b.iter(||
+            run_bench("source/bench/min_fn.rs")
+        );
+    }
+
+    #[bench]
+    fn bench_min(b: &mut Bencher) {
+        b.iter(||
+            run_bench("source/bench/min.rs")
+        );
+    }
 }
