@@ -398,6 +398,15 @@ pub fn check(
                 .map_err(|err| nodes[right].source.wrap(err)));
     }
 
+    // Check the lifetime of declared locals.
+    for &(a, i) in &locals {
+        let right = nodes[a].children[1];
+        let lifetime_left = Some(Lifetime::Local(i));
+        let lifetime_right = nodes[right].lifetime(&nodes, &arg_names);
+        try!(compare_lifetimes(lifetime_left, lifetime_right, &nodes)
+                .map_err(|err| nodes[right].source.wrap(err)));
+    }
+
     // Check the lifetime of returned values.
     for &i in &returns {
         let right = nodes[i].children[0];
@@ -745,7 +754,8 @@ impl Node {
         arg_names: &ArgNames
     ) -> Option<Lifetime> {
         match self.kind {
-            Kind::Add | Kind::Mul | Kind::Pow | Kind::Compare => {
+            Kind::Add | Kind::Mul | Kind::Pow | Kind::Compare
+            | Kind::Sum | Kind::Min | Kind::Max => {
                 if self.children.len() > 1 {
                     return None;
                 }
@@ -801,7 +811,12 @@ impl Node {
         let mut call_arg_ind = 0;
         for &c in &self.children {
             match (self.kind, nodes[c].kind) {
+                (_, Kind::ForN) => {}
+                (_, Kind::Continue) => {}
+                (_, Kind::Sift) => {}
                 (_, Kind::Sum) => {}
+                (_, Kind::Min) => {}
+                (_, Kind::Max) => {}
                 (_, Kind::End) => {}
                 (_, Kind::Assign) => {}
                 (_, Kind::Object) => {}
@@ -977,6 +992,7 @@ pub enum Kind {
     Sum,
     Min,
     Max,
+    Sift,
     End,
     Init,
     Cond,
@@ -1027,6 +1043,7 @@ impl Kind {
             "sum" => Kind::Sum,
             "min" => Kind::Min,
             "max" => Kind::Max,
+            "sift" => Kind::Sift,
             "end" => Kind::End,
             "init" => Kind::Init,
             "cond" => Kind::Cond,
@@ -1048,7 +1065,7 @@ impl Kind {
 
     pub fn is_decl_loop(&self) -> bool {
         match *self {
-            Kind::ForN | Kind::Sum | Kind::Min | Kind::Max => true,
+            Kind::ForN | Kind::Sum | Kind::Min | Kind::Max | Kind::Sift => true,
             _ => false
         }
     }
