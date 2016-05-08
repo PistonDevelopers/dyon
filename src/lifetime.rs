@@ -745,7 +745,7 @@ impl Node {
         arg_names: &ArgNames
     ) -> Option<Lifetime> {
         match self.kind {
-            Kind::Add | Kind::Mul | Kind::Pow => {
+            Kind::Add | Kind::Mul | Kind::Pow | Kind::Compare => {
                 if self.children.len() > 1 {
                     return None;
                 }
