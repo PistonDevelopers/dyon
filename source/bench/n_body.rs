@@ -1,26 +1,16 @@
-fn pi() -> {return 3.141592653589793}
-fn solar_mass() -> {return 4 * pi() * pi()}
-fn year() -> {return 365.24}
-fn n_bodies() -> {return 5}
-fn n_pairs() -> {return n_bodies() * (n_bodies() - 1) / 2}
+pi() = 3.141592653589793
+solar_mass() = 4 * pi() * pi()
+year() = 365.24
+n_bodies() = 5
+n_pairs() = n_bodies() * (n_bodies() - 1) / 2
 
-fn vec3(x, y, z) -> {
-    return [clone(x), clone(y), clone(z)]
-}
-fn vec3_zero() -> { return [0, 0, 0] }
-fn vec3_norm(self) -> { return sqrt(vec3_squared_norm(self)) }
-fn vec3_squared_norm(self) -> {
-    return self[0] * self[0] + self[1] * self[1] + self[2] * self[2]
-}
-fn vec3_add(a, b) -> {
-    return [a[0] + b[0], a[1] + b[1], a[2] + b[2]]
-}
-fn vec3_sub(a, b) -> {
-    return [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
-}
-fn vec3_mul(a, b) -> {
-    return [a[0] * b, a[1] * b, a[2] * b]
-}
+vec3(x, y, z) = [clone(x), clone(y), clone(z)]
+vec3_zero() = [0, 0, 0]
+vec3_norm(self) = sqrt(vec3_squared_norm(self))
+vec3_squared_norm(self) = self[0] * self[0] + self[1] * self[1] + self[2] * self[2]
+vec3_add(a, b) = [a[0] + b[0], a[1] + b[1], a[2] + b[2]]
+vec3_sub(a, b) = [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
+vec3_mul(a, b) = [a[0] * b, a[1] * b, a[2] * b]
 
 fn bodies() -> {
     return [

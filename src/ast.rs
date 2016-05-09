@@ -51,6 +51,7 @@ impl Function {
         let mut name: Option<Arc<String>> = None;
         let mut args: Vec<Arg> = vec![];
         let mut block: Option<Block> = None;
+        let mut expr: Option<Expression> = None;
         let mut returns = false;
         loop {
             if let Ok(range) = convert.end_node(node) {
@@ -70,6 +71,10 @@ impl Function {
                 "block", convert, ignored) {
                 convert.update(range);
                 block = Some(val);
+            } else if let Ok((range, val)) = Expression::from_meta_data(
+                "expr", convert, ignored) {
+                convert.update(range);
+                expr = Some(val);
             } else {
                 let range = convert.ignore();
                 convert.update(range);
@@ -78,7 +83,17 @@ impl Function {
         }
 
         let mut name = try!(name.ok_or(()));
-        let block = try!(block.ok_or(()));
+        let block = match expr {
+            None => try!(block.ok_or(())),
+            Some(expr) => {
+                returns = true;
+                let source_range = expr.source_range();
+                Block {
+                    expressions: vec![Expression::Return(Box::new(expr))],
+                    source_range: source_range
+                }
+            }
+        };
         let mutable_args = args.iter().any(|arg| arg.mutable);
         if mutable_args {
             let mut name_plus_args = String::from(&**name);
