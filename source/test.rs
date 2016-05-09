@@ -1,7 +1,7 @@
 fn main() {
-    println(any i 3 { i == 7 })
+    println(¬ ∃ i 3 { i == 7 })
     // println(any(3))
-    println(all i 3 { i != 5 })
+    println(∀ i 3 { (i ¬= 5) ∨ (i < 2) })
     // println(all(3))
 }
 
