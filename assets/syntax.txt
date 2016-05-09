@@ -6,7 +6,10 @@ _seps: "(){}[],.:;=<>*+-/%^?"
 201 comment = {multi_line_comment ["//" ..."\n"?]}
 202 w = .r!({.w! comment})
 
-0 fn = ["fn" .w! .."("!:"name" ?w "(" args ")" ?w ?"->":"returns" ?w block:"block"]
+0 fn = {
+    ["fn" .w! .."("!:"name" ?w "(" args ")" ?w ?"->":"returns" ?w block:"block"]
+    [.."("!:"name" ?w "(" args ")" ?w "=" ?w expr:"expr"]
+}
 1 args = .s?.(, arg:"arg")
 2 arg = [?"mut":"mut" ?w .._seps!:"name" ?[?w ":" ?w "'" ?w .._seps!:"lifetime"]]
 // Support both multi-line expressions and single line.
