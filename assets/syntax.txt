@@ -60,7 +60,7 @@ _seps: "(){}[],.:;=<>*+-/%^?"
 11 num = .$_:"num"
 12 text = .t?:"text"
 13 bool = {"true":"bool" "false":!"bool"}
-14 unop = [{"!":"!" "-":"-"} ?w lexpr:"expr"]
+14 unop = [{"!":"!" "¬":"!" "-":"-"} ?w lexpr:"expr"]
 15 item = [.._seps!:"name" ?[?w "?":"try_item"] .r?([{
            [?w "[" ?w {.t?:"id" .$_:"id" expr:"id"} ?w "]"]
            [?w "." ?w .._seps!:"id"]} ?[?w "?":"try_id"]])]
@@ -81,7 +81,7 @@ _seps: "(){}[],.:;=<>*+-/%^?"
 24 assign = [lexpr:"left" ?w assign_op ?w expr:"right"]
 25 assign_op = {":=":":=" "=":"=" "+=":"+=" "-=":"-=" "*=":"*=" "/=":"/=" "%=":"%="}
 26 compare = [lexpr:"left" ?w compare_op ?w expr:"right"]
-27 compare_op = {"==":"==" "!=":"!=" "<=":"<=" "<":"<" ">=":">=" ">":">"}
+27 compare_op = {"==":"==" "!=":"!=" "¬=":"!=" "<=":"<=" "<":"<" ">=":">=" ">":">"}
 
 30 label = ?["'" .._seps!:"label" ?w ":" ?w]
 31 short_body = [.w! .._seps!:"name" ?w {["[" ?w expr:"start" , expr:"end" ?w ")"]
@@ -98,12 +98,12 @@ _seps: "(){}[],.:;=<>*+-/%^?"
 42 min = [label "min" short_body]
 42 max = [label "max" short_body]
 43 sift = [label "sift" short_body]
-44 any = [label "any" short_body]
-45 all = [label "all" short_body]
+44 any = [label {"any" "∃"} short_body]
+45 all = [label {"all" "∀"} short_body]
 
-101 + = [?w {"+":"+" "||":"+"} ?w]
+101 + = [?w {"+":"+" "||":"+" "∨":"+" "or":"+"} ?w]
 102 - = [?w "-":"-" ?w]
-103 * = [?w {"*":"*" "&&":"*"} ?w]
+103 * = [?w {"*":"*" "&&":"*" "∧":"*" "and":"*"} ?w]
 104 / = [?w "/":"/" ?w]
 105 % = [?w "%":"%" ?w]
 107 pow = [lexpr:"base" ?w "^" ?w lexpr:"exp"]
