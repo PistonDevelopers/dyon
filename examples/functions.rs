@@ -74,8 +74,6 @@ impl embed::PopVariable for Person {
 
 impl embed::PushVariable for Person {
     fn push_var(&self) -> Variable {
-        use dyon::embed::PushVariable;
-
         let mut obj: HashMap<_, Variable> = HashMap::new();
         obj.insert(Arc::new("first_name".into()), self.first_name.push_var());
         obj.insert(Arc::new("last_name".into()), self.last_name.push_var());
