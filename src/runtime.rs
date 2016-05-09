@@ -1663,9 +1663,28 @@ impl Runtime {
     ) -> Result<Flow, String> {
         let prev_st = self.stack.len();
         let prev_lc = self.local_stack.len();
+
+        let start = if let Some(ref start) = for_n_expr.start {
+            // Evaluate start such that it's on the stack.
+            match try!(self.expression(start, Side::Right, module)) {
+                (_, Flow::Return) => { return Ok(Flow::Return); }
+                (Expect::Something, Flow::Continue) => {}
+                _ => return Err(module.error(for_n_expr.end.source_range(),
+                    &format!("{}\nExpected number from for start",
+                        self.stack_trace())))
+            };
+            let start = self.stack.pop().expect("There is no value on the stack");
+            let start = match self.resolve(&start) {
+                &Variable::F64(val) => val,
+                x => return Err(module.error(for_n_expr.end.source_range(),
+                                &self.expected(x, "number")))
+            };
+            start
+        } else { 0.0 };
+
         // Initialize counter.
         self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
-        self.stack.push(Variable::F64(0.0));
+        self.stack.push(Variable::F64(start));
         // Evaluate end such that it's on the stack.
         match try!(self.expression(&for_n_expr.end, Side::Right, module)) {
             (_, Flow::Return) => { return Ok(Flow::Return); }
@@ -1749,9 +1768,28 @@ impl Runtime {
         let prev_st = self.stack.len();
         let prev_lc = self.local_stack.len();
         let mut sum = 0.0;
+
+        let start = if let Some(ref start) = for_n_expr.start {
+            // Evaluate start such that it's on the stack.
+            match try!(self.expression(start, Side::Right, module)) {
+                (_, Flow::Return) => { return Ok(Flow::Return); }
+                (Expect::Something, Flow::Continue) => {}
+                _ => return Err(module.error(for_n_expr.end.source_range(),
+                    &format!("{}\nExpected number from for start",
+                        self.stack_trace())))
+            };
+            let start = self.stack.pop().expect("There is no value on the stack");
+            let start = match self.resolve(&start) {
+                &Variable::F64(val) => val,
+                x => return Err(module.error(for_n_expr.end.source_range(),
+                                &self.expected(x, "number")))
+            };
+            start
+        } else { 0.0 };
+
         // Initialize counter.
         self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
-        self.stack.push(Variable::F64(0.0));
+        self.stack.push(Variable::F64(start));
         // Evaluate end such that it's on the stack.
         match try!(self.expression(&for_n_expr.end, Side::Right, module)) {
             (_, Flow::Return) => { return Ok(Flow::Return); }
@@ -1781,7 +1819,8 @@ impl Runtime {
             match try!(self.block(&for_n_expr.block, module)) {
                 (_, Flow::Return) => { return Ok(Flow::Return); }
                 (Expect::Something, Flow::Continue) => {
-                    match self.stack.last().expect("There is no value on the stack") {
+                    match self.resolve(self.stack.last()
+                              .expect("There is no value on the stack")) {
                         &Variable::F64(val) => sum += val,
                         x => return Err(module.error(for_n_expr.block.source_range,
                                 &self.expected(x, "number")))
@@ -1845,10 +1884,29 @@ impl Runtime {
     ) -> Result<Flow, String> {
         let prev_st = self.stack.len();
         let prev_lc = self.local_stack.len();
+
+        let start = if let Some(ref start) = for_n_expr.start {
+            // Evaluate start such that it's on the stack.
+            match try!(self.expression(start, Side::Right, module)) {
+                (_, Flow::Return) => { return Ok(Flow::Return); }
+                (Expect::Something, Flow::Continue) => {}
+                _ => return Err(module.error(for_n_expr.end.source_range(),
+                    &format!("{}\nExpected number from for start",
+                        self.stack_trace())))
+            };
+            let start = self.stack.pop().expect("There is no value on the stack");
+            let start = match self.resolve(&start) {
+                &Variable::F64(val) => val,
+                x => return Err(module.error(for_n_expr.end.source_range(),
+                                &self.expected(x, "number")))
+            };
+            start
+        } else { 0.0 };
+
         let mut min: Option<(f64, f64)> = None;
         // Initialize counter.
         self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
-        self.stack.push(Variable::F64(0.0));
+        self.stack.push(Variable::F64(start));
         // Evaluate end such that it's on the stack.
         match try!(self.expression(&for_n_expr.end, Side::Right, module)) {
             (_, Flow::Return) => { return Ok(Flow::Return); }
@@ -1879,7 +1937,8 @@ impl Runtime {
             match try!(self.block(&for_n_expr.block, module)) {
                 (_, Flow::Return) => { return Ok(Flow::Return); }
                 (Expect::Something, Flow::Continue) => {
-                    match self.stack.last().expect("There is no value on the stack") {
+                    match self.resolve(self.stack.last()
+                              .expect("There is no value on the stack")) {
                         &Variable::F64(val) => {
                             if let Some((ref mut min_arg, ref mut min_val)) = min {
                                 if *min_val > val {
@@ -1957,10 +2016,29 @@ impl Runtime {
     ) -> Result<Flow, String> {
         let prev_st = self.stack.len();
         let prev_lc = self.local_stack.len();
+
+        let start = if let Some(ref start) = for_n_expr.start {
+            // Evaluate start such that it's on the stack.
+            match try!(self.expression(start, Side::Right, module)) {
+                (_, Flow::Return) => { return Ok(Flow::Return); }
+                (Expect::Something, Flow::Continue) => {}
+                _ => return Err(module.error(for_n_expr.end.source_range(),
+                    &format!("{}\nExpected number from for start",
+                        self.stack_trace())))
+            };
+            let start = self.stack.pop().expect("There is no value on the stack");
+            let start = match self.resolve(&start) {
+                &Variable::F64(val) => val,
+                x => return Err(module.error(for_n_expr.end.source_range(),
+                                &self.expected(x, "number")))
+            };
+            start
+        } else { 0.0 };
+
         let mut max: Option<(f64, f64)> = None;
         // Initialize counter.
         self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
-        self.stack.push(Variable::F64(0.0));
+        self.stack.push(Variable::F64(start));
         // Evaluate end such that it's on the stack.
         match try!(self.expression(&for_n_expr.end, Side::Right, module)) {
             (_, Flow::Return) => { return Ok(Flow::Return); }
@@ -1991,7 +2069,8 @@ impl Runtime {
             match try!(self.block(&for_n_expr.block, module)) {
                 (_, Flow::Return) => { return Ok(Flow::Return); }
                 (Expect::Something, Flow::Continue) => {
-                    match self.stack.last().expect("There is no value on the stack") {
+                    match self.resolve(self.stack.last()
+                              .expect("There is no value on the stack")) {
                         &Variable::F64(val) => {
                             if let Some((ref mut max_arg, ref mut max_val)) = max {
                                 if *max_val < val {
@@ -2070,9 +2149,29 @@ impl Runtime {
         let prev_st = self.stack.len();
         let prev_lc = self.local_stack.len();
         let mut res: Vec<Variable> = vec![];
+
+        let start = if let Some(ref start) = for_n_expr.start {
+            // Evaluate start such that it's on the stack.
+            match try!(self.expression(start, Side::Right, module)) {
+                (_, Flow::Return) => { return Ok(Flow::Return); }
+                (Expect::Something, Flow::Continue) => {}
+                _ => return Err(module.error(for_n_expr.end.source_range(),
+                    &format!("{}\nExpected number from for start",
+                        self.stack_trace())))
+            };
+            let start = self.stack.pop().expect("There is no value on the stack");
+            let start = match self.resolve(&start) {
+                &Variable::F64(val) => val,
+                x => return Err(module.error(for_n_expr.end.source_range(),
+                                &self.expected(x, "number")))
+            };
+            start
+        } else { 0.0 };
+
         // Initialize counter.
         self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
-        self.stack.push(Variable::F64(0.0));
+        self.stack.push(Variable::F64(start));
+
         // Evaluate end such that it's on the stack.
         match try!(self.expression(&for_n_expr.end, Side::Right, module)) {
             (_, Flow::Return) => { return Ok(Flow::Return); }
@@ -2103,7 +2202,7 @@ impl Runtime {
                 (_, Flow::Return) => { return Ok(Flow::Return); }
                 (Expect::Something, Flow::Continue) => {
                     res.push(self.stack.pop()
-                        .expect("There is no value on the stack"));
+                       .expect("There is no value on the stack"));
                 }
                 (Expect::Nothing, Flow::Continue) => {
                     return Err(module.error(for_n_expr.block.source_range,

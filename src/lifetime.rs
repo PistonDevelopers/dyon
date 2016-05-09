@@ -392,8 +392,8 @@ pub fn check(
     // Check the lifetime of mutated locals.
     for &(a, i) in &mutated_locals {
         let right = nodes[a].children[1];
-        let lifetime_left = nodes[i].lifetime(&nodes, &arg_names);
-        let lifetime_right = nodes[right].lifetime(&nodes, &arg_names);
+        let ref lifetime_left = nodes[i].lifetime(&nodes, &arg_names);
+        let ref lifetime_right = nodes[right].lifetime(&nodes, &arg_names);
         try!(compare_lifetimes(lifetime_left, lifetime_right, &nodes)
                 .map_err(|err| nodes[right].source.wrap(err)));
     }
@@ -401,8 +401,8 @@ pub fn check(
     // Check the lifetime of declared locals.
     for &(a, i) in &locals {
         let right = nodes[a].children[1];
-        let lifetime_left = Some(Lifetime::Local(i));
-        let lifetime_right = nodes[right].lifetime(&nodes, &arg_names);
+        let ref lifetime_left = Some(Lifetime::Local(i));
+        let ref lifetime_right = nodes[right].lifetime(&nodes, &arg_names);
         try!(compare_lifetimes(lifetime_left, lifetime_right, &nodes)
                 .map_err(|err| nodes[right].source.wrap(err)));
     }
@@ -410,11 +410,24 @@ pub fn check(
     // Check the lifetime of returned values.
     for &i in &returns {
         let right = nodes[i].children[0];
-        let lifetime_right = nodes[right].lifetime(&nodes, &arg_names);
+        let ref lifetime_right = nodes[right].lifetime(&nodes, &arg_names);
         try!(compare_lifetimes(
-            Some(Lifetime::Return(vec![])), lifetime_right, &nodes)
+            &Some(Lifetime::Return(vec![])), lifetime_right, &nodes)
                 .map_err(|err| nodes[right].source.wrap(err))
         );
+    }
+
+    // Check that calls do not have arguments with shorter lifetime than the call.
+    for &c in &calls {
+        let call = &nodes[c];
+        // Fake a local variable.
+        let ref lifetime_left = Some(Lifetime::Local(c));
+        for &a in call.children.iter()
+            .filter(|&&i| nodes[i].kind == Kind::CallArg)  {
+            let ref lifetime_right = nodes[a].lifetime(&nodes, &arg_names);
+            try!(compare_lifetimes(lifetime_left, lifetime_right, &nodes)
+                    .map_err(|err| nodes[a].source.wrap(err)));
+        }
     }
 
     // Check that calls satisfy the lifetime constraints of arguments.
@@ -465,8 +478,8 @@ pub fn check(
                             .expect("Expected argument name");
                         let left = call.children[ind];
                         let right = call.children[i];
-                        let lifetime_left = nodes[left].lifetime(&nodes, &arg_names);
-                        let lifetime_right = nodes[right].lifetime(&nodes, &arg_names);
+                        let ref lifetime_left = nodes[left].lifetime(&nodes, &arg_names);
+                        let ref lifetime_right = nodes[right].lifetime(&nodes, &arg_names);
                         try!(compare_lifetimes(
                             lifetime_left, lifetime_right, &nodes)
                                 .map_err(|err| nodes[right].source.wrap(err))
@@ -497,8 +510,8 @@ pub fn check(
 
                         let left = call.children[ind];
                         let right = call.children[i];
-                        let lifetime_left = nodes[left].lifetime(&nodes, &arg_names);
-                        let lifetime_right = nodes[right].lifetime(&nodes, &arg_names);
+                        let ref lifetime_left = nodes[left].lifetime(&nodes, &arg_names);
+                        let ref lifetime_right = nodes[right].lifetime(&nodes, &arg_names);
                         try!(compare_lifetimes(
                             lifetime_left, lifetime_right, &nodes)
                                 .map_err(|err| nodes[right].source.wrap(err))
@@ -595,20 +608,20 @@ fn suggestions(
 }
 
 fn compare_lifetimes(
-    l: Option<Lifetime>,
-    r: Option<Lifetime>,
+    l: &Option<Lifetime>,
+    r: &Option<Lifetime>,
     nodes: &Vec<Node>
 ) -> Result<(), String> {
     match (l, r) {
-        (Some(l), Some(r)) => {
+        (&Some(ref l), &Some(ref r)) => {
             match l.partial_cmp(&r) {
                 Some(Ordering::Greater) | Some(Ordering::Equal) => {
                     match r {
-                        Lifetime::Local(r) => {
+                        &Lifetime::Local(r) => {
                             return Err(format!("`{}` does not live long enough",
                                 nodes[r].name.as_ref().expect("Expected name")));
                         }
-                        Lifetime::Argument(ref r) => {
+                        &Lifetime::Argument(ref r) => {
                             return Err(format!("`{}` does not live long enough",
                                 nodes[r[0]].name.as_ref().expect("Expected name")));
                         }
@@ -617,7 +630,7 @@ fn compare_lifetimes(
                 }
                 None => {
                     match (l, r) {
-                        (Lifetime::Argument(ref l), Lifetime::Argument(ref r)) => {
+                        (&Lifetime::Argument(ref l), &Lifetime::Argument(ref r)) => {
                             // TODO: Report function name for other cases.
                             let func = nodes[nodes[r[0]].parent.unwrap()]
                                 .name.as_ref().unwrap();
@@ -626,7 +639,7 @@ fn compare_lifetimes(
                                 nodes[r[0]].name.as_ref().expect("Expected name"),
                                 nodes[l[0]].name.as_ref().expect("Expected name")));
                         }
-                        (Lifetime::Argument(ref l), Lifetime::Return(ref r)) => {
+                        (&Lifetime::Argument(ref l), &Lifetime::Return(ref r)) => {
                             if r.len() > 0 {
                                 return Err(format!("Requires `{}: '{}`",
                                     nodes[r[0]].name.as_ref().expect("Expected name"),
@@ -635,7 +648,7 @@ fn compare_lifetimes(
                                 unimplemented!();
                             }
                         }
-                        (Lifetime::Return(ref l), Lifetime::Return(ref r)) => {
+                        (&Lifetime::Return(ref l), &Lifetime::Return(ref r)) => {
                             if l.len() > 0 && r.len() > 0 {
                                 return Err(format!("Requires `{}: '{}`",
                                     nodes[r[0]].name.as_ref().expect("Expected name"),
@@ -644,7 +657,7 @@ fn compare_lifetimes(
                                 unimplemented!();
                             }
                         }
-                        (Lifetime::Return(ref l), Lifetime::Argument(ref r)) => {
+                        (&Lifetime::Return(ref l), &Lifetime::Argument(ref r)) => {
                             if l.len() == 0 {
                                 let last = *r.last().expect("Expected argument index");
                                 return Err(format!("Requires `{}: 'return`",
@@ -817,7 +830,8 @@ impl Node {
                 (_, Kind::Sum) => {}
                 (_, Kind::Min) => {}
                 (_, Kind::Max) => {}
-                (_, Kind::End) => {}
+                (_, Kind::Start) => { continue }
+                (_, Kind::End) => { continue }
                 (_, Kind::Assign) => {}
                 (_, Kind::Object) => {}
                 (_, Kind::KeyValue) => {}
@@ -993,6 +1007,7 @@ pub enum Kind {
     Min,
     Max,
     Sift,
+    Start,
     End,
     Init,
     Cond,
@@ -1044,6 +1059,7 @@ impl Kind {
             "min" => Kind::Min,
             "max" => Kind::Max,
             "sift" => Kind::Sift,
+            "start" => Kind::Start,
             "end" => Kind::End,
             "init" => Kind::Init,
             "cond" => Kind::Cond,

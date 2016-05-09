@@ -103,43 +103,6 @@ pub fn standard(f: &mut HashMap<Arc<String>, PreludeFunction>) {
     sarg(f, "is_err");
 }
 
-fn deep_clone(v: &Variable, stack: &Vec<Variable>) -> Variable {
-    use Variable::*;
-
-    match *v {
-        F64(_) => v.clone(),
-        Return => v.clone(),
-        Bool(_) => v.clone(),
-        Text(_) => v.clone(),
-        Object(ref obj) => {
-            let mut res = obj.clone();
-            for (_, val) in Arc::make_mut(&mut res) {
-                *val = deep_clone(val, stack);
-            }
-            Object(res)
-        }
-        Array(ref arr) => {
-            let mut res = arr.clone();
-            for it in Arc::make_mut(&mut res) {
-                *it = deep_clone(it, stack);
-            }
-            Array(res)
-        }
-        Ref(ind) => {
-            deep_clone(&stack[ind], stack)
-        }
-        UnsafeRef(_) => panic!("Unsafe reference can not be cloned"),
-        RustObject(_) => v.clone(),
-        Option(None) => Variable::Option(None),
-        // `some(x)` always uses deep clone, so it does not contain references.
-        Option(Some(ref v)) => Option(Some(v.clone())),
-        // `ok(x)` always uses deep clone, so it does not contain references.
-        Result(Ok(ref ok)) => Result(Ok(ok.clone())),
-        // `err(x)` always uses deep clone, so it does not contain references.
-        Result(Err(ref err)) => Result(Err(err.clone())),
-    }
-}
-
 enum EscapeString {
     Json,
     None
@@ -254,7 +217,7 @@ pub fn call_standard(
         "clone" => {
             rt.push_fn(call.name.clone(), None, st + 1, lc);
             let v = rt.stack.pop().expect(TINVOTS);
-            let v = deep_clone(rt.resolve(&v), &rt.stack);
+            let v = rt.resolve(&v).deep_clone(&rt.stack);
             rt.stack.push(v);
             rt.pop_fn(call.name.clone());
             Expect::Something
@@ -360,7 +323,7 @@ pub fn call_standard(
         "push(mut,_)" => {
             rt.push_fn(call.name.clone(), None, st + 1, lc);
             let item = rt.stack.pop().expect(TINVOTS);
-            let item = deep_clone(rt.resolve(&item), &rt.stack);
+            let item = rt.resolve(&item).deep_clone(&rt.stack);
             let v = rt.stack.pop().expect(TINVOTS);
 
             if let Variable::Ref(ind) = v {
@@ -857,7 +820,7 @@ pub fn call_standard(
         "some" => {
             rt.push_fn(call.name.clone(), None, st + 1, lc);
             let v = rt.stack.pop().expect(TINVOTS);
-            let v = deep_clone(rt.resolve(&v), &rt.stack);
+            let v = rt.resolve(&v).deep_clone(&rt.stack);
             rt.stack.push(Variable::Option(Some(Box::new(v))));
             rt.pop_fn(call.name.clone());
             Expect::Something
@@ -865,7 +828,7 @@ pub fn call_standard(
         "ok" => {
             rt.push_fn(call.name.clone(), None, st + 1, lc);
             let v = rt.stack.pop().expect(TINVOTS);
-            let v = deep_clone(rt.resolve(&v), &rt.stack);
+            let v = rt.resolve(&v).deep_clone(&rt.stack);
             rt.stack.push(Variable::Result(Ok(Box::new(v))));
             rt.pop_fn(call.name.clone());
             Expect::Something
@@ -873,7 +836,7 @@ pub fn call_standard(
         "err" => {
             rt.push_fn(call.name.clone(), None, st + 1, lc);
             let v = rt.stack.pop().expect(TINVOTS);
-            let v = deep_clone(rt.resolve(&v), &rt.stack);
+            let v = rt.resolve(&v).deep_clone(&rt.stack);
             rt.stack.push(Variable::Result(Err(Box::new(
                 Error { message: v, trace: vec![] }))));
             rt.pop_fn(call.name.clone());

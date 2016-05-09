@@ -3,12 +3,8 @@ fn main() {
 }
 
 fn primes(n) -> {
-    return 'prime: sift i n-2 {
-        p := i + 2
-        for j sqrt(p)-2 {
-            o := j + 2
-            if (p % o) == 0 { continue 'prime }
-        }
-        clone(p)
+    return 'prime: sift i [2, n) {
+        for j [2, sqrt(i)) { if (i % j) == 0 { continue 'prime } }
+        clone(i)
     }
 }

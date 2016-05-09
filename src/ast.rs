@@ -1272,6 +1272,7 @@ impl For {
 #[derive(Debug, Clone)]
 pub struct ForN {
     pub name: Arc<String>,
+    pub start: Option<Expression>,
     pub end: Expression,
     pub block: Block,
     pub label: Option<Arc<String>>,
@@ -1289,7 +1290,8 @@ impl ForN {
         convert.update(start_range);
 
         let mut name: Option<Arc<String>> = None;
-        let mut end: Option<Expression> = None;
+        let mut start_expr: Option<Expression> = None;
+        let mut end_expr: Option<Expression> = None;
         let mut block: Option<Block> = None;
         let mut label: Option<Arc<String>> = None;
         loop {
@@ -1307,9 +1309,13 @@ impl ForN {
                 convert.update(range);
                 name = Some(val);
             } else if let Ok((range, val)) = Expression::from_meta_data(
+                "start", convert, ignored) {
+                convert.update(range);
+                start_expr = Some(val);
+            } else if let Ok((range, val)) = Expression::from_meta_data(
                 "end", convert, ignored) {
                 convert.update(range);
-                end = Some(val);
+                end_expr = Some(val);
             } else {
                 let range = convert.ignore();
                 convert.update(range);
@@ -1318,11 +1324,12 @@ impl ForN {
         }
 
         let name = try!(name.ok_or(()));
-        let end = try!(end.ok_or(()));
+        let end_expr = try!(end_expr.ok_or(()));
         let block = try!(block.ok_or(()));
         Ok((convert.subtract(start), ForN {
             name: name,
-            end: end,
+            start: start_expr,
+            end: end_expr,
             block: block,
             label: label,
             source_range: convert.source(start).unwrap(),

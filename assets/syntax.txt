@@ -81,7 +81,8 @@ _seps: "(){}[],.:;=<>*+-/%^?"
 27 compare_op = {"==":"==" "!=":"!=" "<=":"<=" "<":"<" ">=":">=" ">":">"}
 
 30 label = ?["'" .._seps!:"label" ?w ":" ?w]
-31 short_body = [.w! .._seps!:"name" ?w expr:"end" ?w block:"block"]
+31 short_body = [.w! .._seps!:"name" ?w {["[" ?w expr:"start" , expr:"end" ?w ")"]
+                 expr:"end"} ?w block:"block"]
 32 try = ?[?w "?":"try"]
 33 , = [?w "," ?w]
 34 arr = {array:"array" array_fill:"array_fill"}
