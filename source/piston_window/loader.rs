@@ -18,7 +18,7 @@ fn main() {
     m := unwrap(load(source: source, imports: [render]))
 
     settings := call_ret(m, "settings", [])
-    data := init_data(settings)
+    data := call_ret(m, "init_data", [settings])
     loader := new_loader(interval: settings.reload_interval)
     set(title: call_ret(m, "title", []))
     loop {
@@ -39,7 +39,7 @@ fn main() {
         if key != none() {
             key := unwrap(key)
             if key == settings.reset_key {
-                data = init_data(settings)
+                data = call_ret(m, "init_data", [settings])
             } else if key == settings.turn_left {
                 data.pressing_left = true
             } else if key == settings.turn_right {
@@ -61,31 +61,6 @@ fn main() {
             data.focused = focus_arg() == some(true)
         }
     }
-}
-
-fn init_data(settings) -> {
-    data := {
-        snake_body: init_snake_body(
-            parts: settings.snake_parts,
-            size: settings.snake_parts_size
-        ),
-        snake_angle: 1,
-        pressing_left: false,
-        pressing_right: false,
-        focused: true,
-    }
-    data.next_snake_body := data.snake_body
-    return clone(data)
-}
-
-fn init_snake_body_parts_size(parts, size) -> {
-    body := []
-    // end := [(parts - 1) * size, (parts - 1) * size]
-    end := [0, 0]
-    for i := 0; i < parts; i += 1 {
-        push(mut body, [end[0] - i * size, end[1] - i * size])
-    }
-    return clone(body)
 }
 
 fn new_loader_interval(interval) -> {

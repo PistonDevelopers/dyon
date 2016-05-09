@@ -2,7 +2,7 @@ fn title() -> { return "Snake!" }
 
 fn settings() -> {
     return {
-        background_color: [1; 4],
+        background_color: [1, 1, 0.8, 1],
         reload_interval: 0.25,
         reload_key: 1073741882, // F1
         reset_key: 114, // R
@@ -11,11 +11,36 @@ fn settings() -> {
         snake_trail: 10,
         turn_left: 97, // A
         turn_right: 100, // D,
-        turn_speed: 3,
+        turn_speed: 5,
         speed: 50,
         focus_speed: 1,
         unfocus_speed: .1,
     }
+}
+
+fn init_data(settings) -> {
+    data := {
+        snake_body: init_snake_body(
+            parts: settings.snake_parts,
+            size: settings.snake_parts_size
+        ),
+        snake_angle: 1,
+        pressing_left: false,
+        pressing_right: false,
+        focused: true,
+    }
+    data.next_snake_body := data.snake_body
+    return clone(data)
+}
+
+fn init_snake_body_parts_size(parts, size) -> {
+    body := []
+    // end := [(parts - 1) * size, (parts - 1) * size]
+    end := [0, 0]
+    for i := 0; i < parts; i += 1 {
+        push(mut body, [end[0] - i * size, end[1] - i * size])
+    }
+    return clone(body)
 }
 
 fn render(settings, data) {
@@ -43,6 +68,20 @@ fn render(settings, data) {
             pos[1] + sin(data.snake_angle) * dir_len
         ]
         draw(dlist: mut d, color: [0, 0, 1, 1], radius: 1, line: [pos[0], pos[1], pos2[0], pos2[1]])
+    }
+
+    red := [0, 0.4, 0, 1]
+    laser := [1, 0, 0, 1]
+
+    walls := [
+        [red, [100, 0, 200, 100]],
+        [red, [200, 100, 200, 200]],
+        [red, [300, 100, 300, 200]],
+        [laser, [300, 200, 400, 200]]
+    ]
+
+    for i len(walls) {
+        draw(dlist: mut d, color: walls[i][0], radius: 5, line: walls[i][1])
     }
 
     draw(d)
