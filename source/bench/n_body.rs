@@ -78,8 +78,8 @@ fn pairwise_diffs_bodies_diff(bodies, mut diff) {
     n := len(bodies)
     k := 0
     for i n {
-        for j n-i-1 {
-            diff[k] = vec3_sub(bodies[i].pos, bodies[j+i+1].pos)
+        for j [i+1, n) {
+            diff[k] = vec3_sub(bodies[i].pos, bodies[j].pos)
             k += 1
         }
     }
@@ -102,8 +102,7 @@ fn update_velocities_bodies_dt_diff_mag(mut bodies, dt, mut diff, mut mag) {
     n := len(bodies)
     k := 0
     for i n {
-        for j n-i-1 {
-            j := j+i+1
+        for j [i+1, n) {
             diff := diff[k]
             mag := mag[k]
             bodies[i].vel = vec3_sub(bodies[i].vel,
@@ -136,8 +135,7 @@ fn energy(bodies) -> {
     for i n {
         e += vec3_squared_norm(bodies[i].vel) * bodies[i].mass / 2.0
         m := 0
-        for j n-i-1 {
-            j := j+i+1
+        for j [i+1, n) {
             m += bodies[j].mass /
                  vec3_norm(vec3_sub(bodies[i].pos, bodies[j].pos))
         }

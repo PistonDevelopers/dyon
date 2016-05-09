@@ -45,6 +45,45 @@ pub enum Variable {
     Result(Result<Box<Variable>, Box<Error>>),
 }
 
+impl Variable {
+    fn deep_clone(&self, stack: &Vec<Variable>) -> Variable {
+        use Variable::*;
+
+        match *self {
+            F64(_) => self.clone(),
+            Return => self.clone(),
+            Bool(_) => self.clone(),
+            Text(_) => self.clone(),
+            Object(ref obj) => {
+                let mut res = obj.clone();
+                for (_, val) in Arc::make_mut(&mut res) {
+                    *val = val.deep_clone(stack);
+                }
+                Object(res)
+            }
+            Array(ref arr) => {
+                let mut res = arr.clone();
+                for it in Arc::make_mut(&mut res) {
+                    *it = it.deep_clone(stack);
+                }
+                Array(res)
+            }
+            Ref(ind) => {
+                stack[ind].deep_clone(stack)
+            }
+            UnsafeRef(_) => panic!("Unsafe reference can not be cloned"),
+            RustObject(_) => self.clone(),
+            Option(None) => Variable::Option(None),
+            // `some(x)` always uses deep clone, so it does not contain references.
+            Option(Some(ref v)) => Option(Some(v.clone())),
+            // `ok(x)` always uses deep clone, so it does not contain references.
+            Result(Ok(ref ok)) => Result(Ok(ok.clone())),
+            // `err(x)` always uses deep clone, so it does not contain references.
+            Result(Err(ref err)) => Result(Err(err.clone())),
+        }
+    }
+}
+
 impl PartialEq for Variable {
     fn eq(&self, other: &Variable) -> bool {
         match (self, other) {

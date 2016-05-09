@@ -4,13 +4,9 @@ fn main() {
 
 fn primes_trad(n) -> {
     x := []
-    'prime: for i n-2 {
-        p := i + 2
-        for j sqrt(p)-2 {
-            o := j + 2
-            if (p % o) == 0 { continue 'prime }
-        }
-        push(mut x, p)
+    'prime: for i [2, n) {
+        for j [2, sqrt(i)) { if (i % j) == 0 { continue 'prime } }
+        push(mut x, i)
     }
     return clone(x)
 }
