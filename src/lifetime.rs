@@ -768,7 +768,7 @@ impl Node {
     ) -> Option<Lifetime> {
         match self.kind {
             Kind::Add | Kind::Mul | Kind::Pow | Kind::Compare
-            | Kind::Sum | Kind::Min | Kind::Max => {
+            | Kind::Sum | Kind::Min | Kind::Max | Kind::Any | Kind::All => {
                 if self.children.len() > 1 {
                     return None;
                 }
@@ -830,6 +830,8 @@ impl Node {
                 (_, Kind::Sum) => {}
                 (_, Kind::Min) => {}
                 (_, Kind::Max) => {}
+                (_, Kind::Any) => {}
+                (_, Kind::All) => {}
                 (_, Kind::Start) => { continue }
                 (_, Kind::End) => { continue }
                 (_, Kind::Assign) => {}
@@ -1007,6 +1009,8 @@ pub enum Kind {
     Min,
     Max,
     Sift,
+    Any,
+    All,
     Start,
     End,
     Init,
@@ -1060,6 +1064,8 @@ impl Kind {
             "max" => Kind::Max,
             "sift" => Kind::Sift,
             "start" => Kind::Start,
+            "any" => Kind::Any,
+            "all" => Kind::All,
             "end" => Kind::End,
             "init" => Kind::Init,
             "cond" => Kind::Cond,
@@ -1081,7 +1087,8 @@ impl Kind {
 
     pub fn is_decl_loop(&self) -> bool {
         match *self {
-            Kind::ForN | Kind::Sum | Kind::Min | Kind::Max | Kind::Sift => true,
+            Kind::ForN | Kind::Sum | Kind::Min | Kind::Max | Kind::Sift
+            | Kind::Any | Kind::All => true,
             _ => false
         }
     }
