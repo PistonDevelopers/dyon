@@ -34,7 +34,7 @@ Dyon uses ".rs" to get Rust syntax coloring.
 - For loop `for i := 0; i < 10; i += 1 { ... }`
 - Short For loop `for i 10 { ... }`
 - Short For loop with offset `for i [2, 10) { ... }`
-- ∑`/`sum`, `min`, `max`, `sift`, `∃`/`any`, `∀`/`all` loops
+- `∑`/`sum`, `min`, `max`, `sift`, `∃`/`any`, `∀`/`all` loops
 - Infinite loop `loop { ... }`
 - Unlabeled break `loop { break }`
 - Unlabled continue `loop { continue }`
