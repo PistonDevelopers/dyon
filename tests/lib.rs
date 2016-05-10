@@ -6,7 +6,7 @@ use dyon::*;
 pub fn test_src(source: &str) {
     let mut module = Module::new();
     load(source, &mut module).unwrap_or_else(|err| {
-        panic!("{}", err);
+        panic!("In `{}`:\n{}", source, err);
     });
 }
 
@@ -21,7 +21,7 @@ pub fn test_fail_src(source: &str) {
 pub fn debug_src(source: &str) {
     let mut module = Module::new();
     load(source, &mut module).unwrap_or_else(|err| {
-        panic!("{}", err);
+        panic!("In `{}`:\n{}", source, err);
     });
     panic!("{:?}", module.functions);
 }
@@ -67,6 +67,7 @@ fn test_syntax() {
     test_src("source/syntax/accessor.rs");
     test_src("source/syntax/sum.rs");
     test_src("source/syntax/min_max.rs");
+    test_src("source/syntax/vec4.rs");
 }
 
 #[test]

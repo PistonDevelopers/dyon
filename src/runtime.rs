@@ -2692,6 +2692,9 @@ impl Runtime {
                     Mul => Variable::Vec4([a[0] * b[0], a[1] * b[1], a[2] * b[2], a[3] * b[3]]),
                     Dot => Variable::F64((a[0] * b[0] + a[1] * b[1] +
                                           a[2] * b[2] + a[3] * b[3]) as f64),
+                    Cross => Variable::Vec4([a[1] * b[2] - a[2] * b[1],
+                                             a[2] * b[0] - a[0] * b[2],
+                                             a[0] * b[1] - a[1] * b[0], 0.0]),
                     Div => Variable::Vec4([a[0] / b[0], a[1] / b[1], a[2] / b[2], a[3] / b[3]]),
                     Rem => Variable::Vec4([a[0] % b[0], a[1] % b[1], a[2] % b[2], a[3] % b[3]]),
                     Pow => Variable::Vec4([a[0].powf(b[0]), a[1].powf(b[1]),
@@ -2706,10 +2709,13 @@ impl Runtime {
                     Mul => Variable::Vec4([a[0] * b, a[1] * b, a[2] * b, a[3] * b]),
                     Dot => Variable::F64((a[0] * b + a[1] * b +
                                           a[2] * b + a[3] * b) as f64),
+                    Cross => return Err(module.error(binop.source_range,
+                        &format!("{}\nExpected two vec4 for `{:?}`",
+                            self.stack_trace(), binop.op.symbol()))),
                     Div => Variable::Vec4([a[0] / b, a[1] / b, a[2] / b, a[3] / b]),
                     Rem => Variable::Vec4([a[0] % b, a[1] % b, a[2] % b, a[3] % b]),
                     Pow => Variable::Vec4([a[0].powf(b), a[1].powf(b),
-                                           a[2].powf(b), a[3].powf(b)])
+                                           a[2].powf(b), a[3].powf(b)]),
                 }
             }
             (&Variable::F64(a), &Variable::Vec4(b)) => {
@@ -2720,6 +2726,9 @@ impl Runtime {
                     Mul => Variable::Vec4([a * b[0], a * b[1], a * b[2], a * b[3]]),
                     Dot => Variable::F64((a * b[0] + a * b[1] +
                                           a * b[2] + a * b[3]) as f64),
+                    Cross => return Err(module.error(binop.source_range,
+                        &format!("{}\nExpected two vec4 for `{:?}`",
+                            self.stack_trace(), binop.op.symbol()))),
                     Div => Variable::Vec4([a / b[0], a / b[1], a / b[2], a / b[3]]),
                     Rem => Variable::Vec4([a % b[0], a % b[1], a % b[2], a % b[3]]),
                     Pow => Variable::Vec4([a.powf(b[0]), a.powf(b[1]),

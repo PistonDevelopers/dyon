@@ -681,6 +681,9 @@ impl Mul {
             } else if let Ok((range, _)) = convert.meta_bool("*.") {
                 convert.update(range);
                 ops.push(BinOp::Dot);
+            } else if let Ok((range, _)) = convert.meta_bool("x") {
+                convert.update(range);
+                ops.push(BinOp::Cross);
             } else if let Ok((range, _)) = convert.meta_bool("*") {
                 convert.update(range);
                 ops.push(BinOp::Mul);
@@ -809,6 +812,7 @@ pub enum BinOp {
     Sub,
     Mul,
     Dot,
+    Cross,
     Div,
     Rem,
     Pow
@@ -821,6 +825,7 @@ impl BinOp {
             BinOp::Sub => "-",
             BinOp::Mul => "*",
             BinOp::Dot => "*.",
+            BinOp::Cross => "x",
             BinOp::Div => "/",
             BinOp::Rem => "%",
             BinOp::Pow => "^",
