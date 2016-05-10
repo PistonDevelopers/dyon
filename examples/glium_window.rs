@@ -1,4 +1,5 @@
 extern crate glium_graphics;
+extern crate glium;
 extern crate piston;
 extern crate dyon;
 extern crate current;
@@ -24,15 +25,23 @@ fn main() {
 
     let mut g2d = Glium2d::new(opengl, window);
     let mut e: Option<Event> = None;
-    let window_guard = CurrentGuard::new(window);
-    let event_guard: CurrentGuard<Option<Event>> = CurrentGuard::new(&mut e);
-    let g2d_guard = CurrentGuard::new(&mut g2d);
-    if error(runtime.run(&module)) {
-        return;
+    let mut target = window.draw();
+
+    {
+        let window_guard = CurrentGuard::new(window);
+        let event_guard: CurrentGuard<Option<Event>> = CurrentGuard::new(&mut e);
+        let g2d_guard = CurrentGuard::new(&mut g2d);
+        let target_guard = CurrentGuard::new(&mut target);
+        if error(runtime.run(&module)) {
+            return;
+        }
+        drop(target_guard);
+        drop(g2d_guard);
+        drop(event_guard);
+        drop(window_guard);
     }
-    drop(g2d_guard);
-    drop(event_guard);
-    drop(window_guard);
+
+    target.finish().unwrap();
 }
 
 
@@ -68,19 +77,17 @@ mod dyon_functions {
 
     pub fn draw(rt: &mut Runtime) -> Result<(), String> {
         use piston::input::*;
-        use glium_graphics::{Glium2d, GliumWindow};
+        use glium_graphics::Glium2d;
+        use glium::Frame;
 
-        let window = unsafe { &mut *Current::<GliumWindow>::new() };
         let e = unsafe { &*Current::<Option<Event>>::new() };
         let g2d = unsafe { &mut *Current::<Glium2d>::new() };
+        let target = unsafe { &mut *Current::<Frame>::new() };
         if let &Some(ref e) = e {
             if let Some(args) = e.render_args() {
-                let mut target = window.draw();
-                let res = g2d.draw(&mut target, args.viewport(), |c, g| {
+                g2d.draw(target, args.viewport(), |c, g| {
                     draw_2d(rt, c, g)
-                });
-                target.finish().unwrap();
-                res
+                })
             } else {
                 Ok(())
             }
@@ -92,10 +99,16 @@ mod dyon_functions {
     pub fn next_event(rt: &mut Runtime) -> Result<(), String> {
         use piston::input::*;
         use glium_graphics::GliumWindow;
+        use glium::Frame;
 
         let window = unsafe { &mut *Current::<GliumWindow>::new() };
         let e = unsafe { &mut *Current::<Option<Event>>::new() };
+        let target = unsafe { &mut *Current::<Frame>::new() };
         if let Some(new_e) = window.next() {
+            if new_e.after_render_args().is_some() {
+                target.set_finish().unwrap();
+                *target = window.draw();
+            }
             *e = Some(new_e);
             rt.push(true);
         } else {
