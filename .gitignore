@@ -23,9 +23,4 @@
 /.rust/
 rusti.sh
 watch.sh
-/examples/**
-!/examples/*.rs
-!/examples/assets/
-!/bin/assets/
-
 Cargo.lock
