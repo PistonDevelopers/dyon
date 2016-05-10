@@ -7,14 +7,14 @@ fn main() {
     {
         println("External functions:")
         println("===================")
-        functions := unwrap(load("source/piston_window/functions.rs"))
+        functions := unwrap(load("examples/common/functions.rs"))
         list := functions()
         call(functions, "print_functions", [list])
         println("===================")
     }
 
-    render := unwrap(load("source/piston_window/render.rs"))
-    source := "source/piston_window/snake.rs"
+    render := unwrap(load("examples/piston_window/render.rs"))
+    source := "examples/piston_window/snake.rs"
     m := unwrap(load(source: source, imports: [render]))
 
     settings := call_ret(m, "settings", [])
