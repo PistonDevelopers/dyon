@@ -101,6 +101,10 @@ pub fn standard(f: &mut HashMap<Arc<String>, PreludeFunction>) {
     sarg(f, "ok");
     sarg(f, "err");
     sarg(f, "is_err");
+    sarg(f, "x");
+    sarg(f, "y");
+    sarg(f, "z");
+    sarg(f, "w");
 }
 
 enum EscapeString {
@@ -130,6 +134,19 @@ fn write_variable<W>(
         }
         Variable::F64(x) => {
             try!(write!(w, "{}", x));
+        }
+        Variable::Vec4(v) => {
+            try!(write!(w, "({}, {}", v[0], v[1]));
+            if v[2] != 0.0 || v[3] != 0.0 {
+                try!(write!(w, ", {}", v[2]));
+                if v[3] != 0.0 {
+                    try!(write!(w, ", {})", v[3]));
+                } else {
+                    try!(write!(w, ")"));
+                }
+            } else {
+                try!(write!(w, ")"));
+            }
         }
         Variable::Bool(x) => {
             try!(write!(w, "{}", x));
@@ -213,7 +230,24 @@ pub fn call_standard(
                     rt.stack_trace())))
         };
     }
+    let vec4_comp = |rt: &mut Runtime, module: &Module, call: &ast::Call, i: usize|
+                     -> Result<Expect, String> {
+        rt.push_fn(call.name.clone(), None, st + 1, lc);
+        let v = rt.stack.pop().expect(TINVOTS);
+        let v = match rt.resolve(&v) {
+            &Variable::Vec4(ref vec4) => Variable::F64(vec4[i] as f64),
+            x => return Err(module.error(call.args[i].source_range(),
+                            &rt.expected(x, "number")))
+        };
+        rt.stack.push(v);
+        rt.pop_fn(call.name.clone());
+        Ok(Expect::Something)
+    };
     let expect = match &**call.name {
+        "x" => try!(vec4_comp(rt, module, call, 0)),
+        "y" => try!(vec4_comp(rt, module, call, 1)),
+        "z" => try!(vec4_comp(rt, module, call, 2)),
+        "w" => try!(vec4_comp(rt, module, call, 3)),
         "clone" => {
             rt.push_fn(call.name.clone(), None, st + 1, lc);
             let v = rt.stack.pop().expect(TINVOTS);
@@ -468,6 +502,7 @@ pub fn call_standard(
             let v = match rt.resolve(&v) {
                 &Variable::Text(_) => rt.text_type.clone(),
                 &Variable::F64(_) => rt.f64_type.clone(),
+                &Variable::Vec4(_) => rt.vec4_type.clone(),
                 &Variable::Return => rt.return_type.clone(),
                 &Variable::Bool(_) => rt.bool_type.clone(),
                 &Variable::Object(_) => rt.object_type.clone(),

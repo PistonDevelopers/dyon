@@ -36,6 +36,7 @@ pub enum Variable {
     Return,
     Bool(bool),
     F64(f64),
+    Vec4([f32; 4]),
     Text(Arc<String>),
     Array(Array),
     Object(Object),
@@ -51,6 +52,7 @@ impl Variable {
 
         match *self {
             F64(_) => self.clone(),
+            Vec4(_) => self.clone(),
             Return => self.clone(),
             Bool(_) => self.clone(),
             Text(_) => self.clone(),
