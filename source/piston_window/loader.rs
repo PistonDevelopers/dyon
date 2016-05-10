@@ -73,8 +73,8 @@ fn new_loader_interval(interval) -> {
 }
 
 fn should_reload(loader) -> {
-    return !loader.got_error
-        && ((loader.last_reload + loader.reload_interval) < loader.time)
+    return !loader.got_error &&
+          ((loader.last_reload + loader.reload_interval) < loader.time)
 }
 
 fn event_loader_source_settings_module_imports(mut loader, source, mut settings, mut m, imports) {
