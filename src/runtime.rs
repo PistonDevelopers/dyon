@@ -57,6 +57,7 @@ pub struct Runtime {
     pub rng: rand::ThreadRng,
     pub text_type: Variable,
     pub f64_type: Variable,
+    pub vec4_type: Variable,
     pub return_type: Variable,
     pub bool_type: Variable,
     pub object_type: Variable,
@@ -204,6 +205,7 @@ impl Runtime {
             rng: rand::thread_rng(),
             text_type: Variable::Text(Arc::new("string".into())),
             f64_type: Variable::Text(Arc::new("number".into())),
+            vec4_type: Variable::Text(Arc::new("vec4".into())),
             return_type: Variable::Text(Arc::new("return".into())),
             bool_type: Variable::Text(Arc::new("boolean".into())),
             object_type: Variable::Text(Arc::new("object".into())),
@@ -343,6 +345,9 @@ impl Runtime {
             Number(ref num) => {
                 self.number(num);
                 Ok((Expect::Something, Flow::Continue))
+            }
+            Vec4(ref vec4) => {
+                Ok((Expect::Something, try!(self.vec4(vec4, side, module))))
             }
             Text(ref text) => {
                 self.text(text);
@@ -846,6 +851,44 @@ impl Runtime {
                                     _ => return Err(module.error(
                                             left.source_range(),
                                             &format!("{}\nExpected assigning to a number",
+                                                self.stack_trace())))
+                                };
+                            }
+                        }
+                        &Variable::Vec4(b) => {
+                            unsafe {
+                                match *r {
+                                    Variable::Vec4(ref mut n) => {
+                                        match op {
+                                            Set => *n = b,
+                                            Add => *n = [n[0] + b[0], n[1] + b[1],
+                                                         n[2] + b[2], n[3] + b[3]],
+                                            Sub => *n = [n[0] - b[0], n[1] - b[1],
+                                                         n[2] - b[2], n[3] - b[3]],
+                                            Mul => *n = [n[0] * b[0], n[1] * b[1],
+                                                         n[2] * b[2], n[3] * b[3]],
+                                            Div => *n = [n[0] / b[0], n[1] / b[1],
+                                                         n[2] / b[2], n[3] / b[3]],
+                                            Rem => *n = [n[0] % b[0], n[1] % b[1],
+                                                         n[2] % b[2], n[3] % b[3]],
+                                            Pow => *n = [n[0].powf(b[0]), n[1].powf(b[1]),
+                                                         n[2].powf(b[2]), n[3].powf(b[3])],
+                                            Assign => {}
+                                        }
+                                    }
+                                    Variable::Return => {
+                                        if let Set = op {
+                                            *r = Variable::Vec4(b)
+                                        } else {
+                                            return Err(module.error(
+                                                left.source_range(),
+                                                &format!("{}\nReturn has no value",
+                                                    self.stack_trace())))
+                                        }
+                                    }
+                                    _ => return Err(module.error(
+                                            left.source_range(),
+                                            &format!("{}\nExpected assigning to a vec4",
                                                 self.stack_trace())))
                                 };
                             }
@@ -1361,6 +1404,7 @@ impl Runtime {
         let v = match var {
             &Variable::Text(_) => self.text_type.clone(),
             &Variable::F64(_) => self.f64_type.clone(),
+            &Variable::Vec4(_) => self.vec4_type.clone(),
             &Variable::Return => self.return_type.clone(),
             &Variable::Bool(_) => self.bool_type.clone(),
             &Variable::Object(_) => self.object_type.clone(),
@@ -2511,6 +2555,48 @@ impl Runtime {
     fn number(&mut self, num: &ast::Number) {
         self.stack.push(Variable::F64(num.num));
     }
+    fn vec4(
+        &mut self,
+        vec4: &ast::Vec4,
+        side: Side,
+        module: &Module
+    ) -> Result<Flow, String> {
+        for expr in &vec4.args {
+            match try!(self.expression(expr, side, module)) {
+                (_, Flow::Return) => { return Ok(Flow::Return); }
+                (Expect::Something, Flow::Continue) => {}
+                _ => return Err(module.error(expr.source_range(),
+                    &format!("{}\nExpected something from vec4 argument",
+                        self.stack_trace())))
+            };
+        }
+        let w = self.stack.pop().expect("There is no value on the stack");
+        let w = match self.resolve(&w) {
+            &Variable::F64(val) => val,
+            x => return Err(module.error(vec4.args[3].source_range(),
+                &self.expected(x, "number")))
+        };
+        let z = self.stack.pop().expect("There is no value on the stack");
+        let z = match self.resolve(&z) {
+            &Variable::F64(val) => val,
+            x => return Err(module.error(vec4.args[2].source_range(),
+                &self.expected(x, "number")))
+        };
+        let y = self.stack.pop().expect("There is no value on the stack");
+        let y = match self.resolve(&y) {
+            &Variable::F64(val) => val,
+            x => return Err(module.error(vec4.args[1].source_range(),
+                &self.expected(x, "number")))
+        };
+        let x = self.stack.pop().expect("There is no value on the stack");
+        let x = match self.resolve(&x) {
+            &Variable::F64(val) => val,
+            x => return Err(module.error(vec4.args[0].source_range(),
+                &self.expected(x, "number")))
+        };
+        self.stack.push(Variable::Vec4([x as f32, y as f32, z as f32, w as f32]));
+        Ok(Flow::Continue)
+    }
     #[inline(always)]
     fn bool(&mut self, val: &ast::Bool) {
         self.stack.push(Variable::Bool(val.val));
@@ -2530,6 +2616,14 @@ impl Runtime {
         };
         let val = self.stack.pop().expect("Expected unary argument");
         let v = match self.resolve(&val) {
+            &Variable::Vec4(b) => {
+                Variable::F64(match unop.op {
+                    ast::UnOp::Norm => (b[0] * b[0] + b[1] * b[1] + b[2] * b[2]).sqrt() as f64,
+                    _ => return Err(module.error(unop.source_range,
+                                    &format!("{}\nUnknown vec4 unary operator",
+                                             self.stack_trace())))
+                })
+            }
             &Variable::Bool(b) => {
                 Variable::Bool(match unop.op {
                     ast::UnOp::Not => !b,
@@ -2584,8 +2678,62 @@ impl Runtime {
                     Mul => a * b,
                     Div => a / b,
                     Rem => a % b,
-                    Pow => a.powf(b)
+                    Pow => a.powf(b),
+                    _ => return Err(module.error(binop.source_range,
+                        &format!("{}\nUnknown number operator `{:?}`",
+                            self.stack_trace(),
+                            binop.op.symbol())))
                 })
+            }
+            (&Variable::Vec4(a), &Variable::Vec4(b)) => {
+                match binop.op {
+                    Add => Variable::Vec4([a[0] + b[0], a[1] + b[1], a[2] + b[2], a[3] + b[3]]),
+                    Sub => Variable::Vec4([a[0] - b[0], a[1] - b[1], a[2] - b[2], a[3] - b[3]]),
+                    Mul => Variable::Vec4([a[0] * b[0], a[1] * b[1], a[2] * b[2], a[3] * b[3]]),
+                    Dot => Variable::F64((a[0] * b[0] + a[1] * b[1] +
+                                          a[2] * b[2] + a[3] * b[3]) as f64),
+                    Cross => Variable::Vec4([a[1] * b[2] - a[2] * b[1],
+                                             a[2] * b[0] - a[0] * b[2],
+                                             a[0] * b[1] - a[1] * b[0], 0.0]),
+                    Div => Variable::Vec4([a[0] / b[0], a[1] / b[1], a[2] / b[2], a[3] / b[3]]),
+                    Rem => Variable::Vec4([a[0] % b[0], a[1] % b[1], a[2] % b[2], a[3] % b[3]]),
+                    Pow => Variable::Vec4([a[0].powf(b[0]), a[1].powf(b[1]),
+                                           a[2].powf(b[2]), a[3].powf(b[3])])
+                }
+            }
+            (&Variable::Vec4(a), &Variable::F64(b)) => {
+                let b = b as f32;
+                match binop.op {
+                    Add => Variable::Vec4([a[0] + b, a[1] + b, a[2] + b, a[3] + b]),
+                    Sub => Variable::Vec4([a[0] - b, a[1] - b, a[2] - b, a[3] - b]),
+                    Mul => Variable::Vec4([a[0] * b, a[1] * b, a[2] * b, a[3] * b]),
+                    Dot => Variable::F64((a[0] * b + a[1] * b +
+                                          a[2] * b + a[3] * b) as f64),
+                    Cross => return Err(module.error(binop.source_range,
+                        &format!("{}\nExpected two vec4 for `{:?}`",
+                            self.stack_trace(), binop.op.symbol()))),
+                    Div => Variable::Vec4([a[0] / b, a[1] / b, a[2] / b, a[3] / b]),
+                    Rem => Variable::Vec4([a[0] % b, a[1] % b, a[2] % b, a[3] % b]),
+                    Pow => Variable::Vec4([a[0].powf(b), a[1].powf(b),
+                                           a[2].powf(b), a[3].powf(b)]),
+                }
+            }
+            (&Variable::F64(a), &Variable::Vec4(b)) => {
+                let a = a as f32;
+                match binop.op {
+                    Add => Variable::Vec4([a + b[0], a + b[1], a + b[2], a + b[3]]),
+                    Sub => Variable::Vec4([a - b[0], a - b[1], a - b[2], a - b[3]]),
+                    Mul => Variable::Vec4([a * b[0], a * b[1], a * b[2], a * b[3]]),
+                    Dot => Variable::F64((a * b[0] + a * b[1] +
+                                          a * b[2] + a * b[3]) as f64),
+                    Cross => return Err(module.error(binop.source_range,
+                        &format!("{}\nExpected two vec4 for `{:?}`",
+                            self.stack_trace(), binop.op.symbol()))),
+                    Div => Variable::Vec4([a / b[0], a / b[1], a / b[2], a / b[3]]),
+                    Rem => Variable::Vec4([a % b[0], a % b[1], a % b[2], a % b[3]]),
+                    Pow => Variable::Vec4([a.powf(b[0]), a.powf(b[1]),
+                                           a.powf(b[2]), a.powf(b[3])])
+                }
             }
             (&Variable::Bool(a), &Variable::Bool(b)) => {
                 Variable::Bool(match binop.op {
@@ -2619,7 +2767,7 @@ impl Runtime {
                 Try the `to_string` function", self.stack_trace()))),
             _ => return Err(module.error(binop.source_range, &format!(
                 "{}\nInvalid type for binary operator `{:?}`, \
-                expected numbers, bools or strings",
+                expected numbers, vec4s, bools or strings",
                 self.stack_trace(),
                 binop.op.symbol())))
         };

@@ -768,7 +768,8 @@ impl Node {
     ) -> Option<Lifetime> {
         match self.kind {
             Kind::Add | Kind::Mul | Kind::Pow | Kind::Compare
-            | Kind::Sum | Kind::Min | Kind::Max | Kind::Any | Kind::All => {
+            | Kind::Sum | Kind::Min | Kind::Max | Kind::Any | Kind::All
+            | Kind::Vec4 => {
                 if self.children.len() > 1 {
                     return None;
                 }
@@ -832,6 +833,7 @@ impl Node {
                 (_, Kind::Max) => {}
                 (_, Kind::Any) => {}
                 (_, Kind::All) => {}
+                (_, Kind::Vec4) => {}
                 (_, Kind::Start) => { continue }
                 (_, Kind::End) => { continue }
                 (_, Kind::Assign) => {}
@@ -1027,6 +1029,11 @@ pub enum Kind {
     Break,
     Continue,
     UnOp,
+    Vec4,
+    X,
+    Y,
+    Z,
+    W,
 }
 
 impl Kind {
@@ -1081,6 +1088,11 @@ impl Kind {
             "break" => Kind::Break,
             "continue" => Kind::Continue,
             "unop" => Kind::UnOp,
+            "vec4" => Kind::Vec4,
+            "x" => Kind::X,
+            "y" => Kind::Y,
+            "z" => Kind::Z,
+            "w" => Kind::W,
             _ => return None
         })
     }

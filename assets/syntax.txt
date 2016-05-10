@@ -1,4 +1,4 @@
-_seps: "(){}[],.:;=<>*+-/%^?"
+_seps: "(){}[],.:;=<>*·+-/%^?|&∧∨!¬∑∃∀\n"
 
 200 multi_line_comment = ["/*" ..."*/"? .r?({
     [!"*/" "*" ..."*/"?] [multi_line_comment ..."*/"?] ["/" ..."*/"?]
@@ -58,9 +58,13 @@ _seps: "(){}[],.:;=<>*+-/%^?"
 9 array_fill = ["[" ?w expr:"fill" ?w ";" ?w expr:"n" ?w "]"]
 10 key_value = [.._seps!:"key" ?w ":" ?w expr:"val"]
 11 num = .$_:"num"
+12 vec4 = ["(" ?w expr:"x" , expr:"y" ?[, expr:"z" ?[, expr:"w"]] ?w ")"]
 12 text = .t?:"text"
 13 bool = {"true":"bool" "false":!"bool"}
-14 unop = [{"!":"!" "¬":"!" "-":"-"} ?w lexpr:"expr"]
+14 unop = {
+    [{"!":"!" "¬":"!" "-":"-"} ?w lexpr:"expr"]
+    ["|":"norm" ?w expr:"expr" ?w "|"]
+}
 15 item = [.._seps!:"name" ?[?w "?":"try_item"] .r?([{
            [?w "[" ?w {.t?:"id" .$_:"id" expr:"id"} ?w "]"]
            [?w "." ?w .._seps!:"id"]} ?[?w "?":"try_id"]])]
@@ -89,7 +93,7 @@ _seps: "(){}[],.:;=<>*+-/%^?"
 32 try = ?[?w "?":"try"]
 33 , = [?w "," ?w]
 34 arr = {array:"array" array_fill:"array_fill"}
-35 items = {["(" ?w expr ?w ")"] unop:"unop"
+35 items = {vec4:"vec4" ["(" ?w expr ?w ")"] unop:"unop"
             text call:"call" named_call:"named_call"
             num bool item:"item"}
 
@@ -103,7 +107,13 @@ _seps: "(){}[],.:;=<>*+-/%^?"
 
 101 + = [?w {"+":"+" "||":"+" "∨":"+" "or":"+"} ?w]
 102 - = [?w "-":"-" ?w]
-103 * = [?w {"*":"*" "&&":"*" "∧":"*" "and":"*"} ?w]
+// Allow whitespace before multiplication sign, but no new line.
+// This prevents `x` on a new line from being interpreted as multiplication sign.
+103 * = [.r?({" " "\t" "\r"}) {
+    "*.":"*." "·":"*."
+    "x":"x" "⨯":"x"
+    "*":"*" "&&":"*" "∧":"*" "and":"*"
+} ?w]
 104 / = [?w "/":"/" ?w]
 105 % = [?w "%":"%" ?w]
 107 pow = [lexpr:"base" ?w "^" ?w lexpr:"exp"]

@@ -219,6 +219,7 @@ pub enum Expression {
     Assign(Box<Assign>),
     Text(Text),
     Number(Number),
+    Vec4(Vec4),
     Bool(Bool),
     For(Box<For>),
     ForN(Box<ForN>),
@@ -305,6 +306,10 @@ impl Expression {
                     num: val,
                     source_range: convert.source(start).unwrap(),
                 }));
+            } else if let Ok((range, val)) = Vec4::from_meta_data(
+                    convert, ignored) {
+                convert.update(range);
+                result = Some(Expression::Vec4(val));
             } else if let Ok((range, val)) = convert.meta_bool("bool") {
                 convert.update(range);
                 result = Some(Expression::Bool(Bool {
@@ -403,6 +408,7 @@ impl Expression {
             Assign(ref assign) => assign.source_range,
             Text(ref text) => text.source_range,
             Number(ref num) => num.source_range,
+            Vec4(ref vec4) => vec4.source_range,
             Bool(ref b) => b.source_range,
             For(ref for_expr) => for_expr.source_range,
             ForN(ref for_n_expr) => for_n_expr.source_range,
@@ -672,6 +678,12 @@ impl Mul {
                 convert, ignored) {
                 convert.update(range);
                 items.push(val);
+            } else if let Ok((range, _)) = convert.meta_bool("*.") {
+                convert.update(range);
+                ops.push(BinOp::Dot);
+            } else if let Ok((range, _)) = convert.meta_bool("x") {
+                convert.update(range);
+                ops.push(BinOp::Cross);
             } else if let Ok((range, _)) = convert.meta_bool("*") {
                 convert.update(range);
                 ops.push(BinOp::Mul);
@@ -799,6 +811,8 @@ pub enum BinOp {
     Add,
     Sub,
     Mul,
+    Dot,
+    Cross,
     Div,
     Rem,
     Pow
@@ -810,6 +824,8 @@ impl BinOp {
             BinOp::Add => "+",
             BinOp::Sub => "-",
             BinOp::Mul => "*",
+            BinOp::Dot => "*.",
+            BinOp::Cross => "x",
             BinOp::Div => "/",
             BinOp::Rem => "%",
             BinOp::Pow => "^",
@@ -828,7 +844,8 @@ impl BinOp {
 #[derive(Debug, Copy, Clone)]
 pub enum UnOp {
     Not,
-    Neg
+    Neg,
+    Norm,
 }
 
 #[derive(Debug, Clone)]
@@ -1091,6 +1108,9 @@ impl UnOpExpression {
             } else if let Ok((range, _)) = convert.meta_bool("-") {
                 convert.update(range);
                 unop = Some(UnOp::Neg);
+            } else if let Ok((range, _)) = convert.meta_bool("norm") {
+                convert.update(range);
+                unop = Some(UnOp::Norm);
             } else if let Ok((range, val)) = Expression::from_meta_data(
                 "expr", convert, ignored) {
                 convert.update(range);
@@ -1212,6 +1232,68 @@ pub enum AssignOp {
 pub struct Number {
     pub num: f64,
     pub source_range: Range,
+}
+
+#[derive(Debug, Clone)]
+pub struct Vec4 {
+    pub args: Vec<Expression>,
+    pub source_range: Range,
+}
+
+impl Vec4 {
+    pub fn from_meta_data(
+        mut convert: Convert,
+        ignored: &mut Vec<Range>)
+    -> Result<(Range, Vec4), ()> {
+        let start = convert.clone();
+        let node = "vec4";
+        let start_range = try!(convert.start_node(node));
+        convert.update(start_range);
+
+        let mut x: Option<Expression> = None;
+        let mut y: Option<Expression> = None;
+        let mut z: Option<Expression> = None;
+        let mut w: Option<Expression> = None;
+        loop {
+            if let Ok(range) = convert.end_node(node) {
+                convert.update(range);
+                break;
+            } else if let Ok((range, val)) = Expression::from_meta_data(
+                "x", convert, ignored) {
+                convert.update(range);
+                x = Some(val);
+            } else if let Ok((range, val)) = Expression::from_meta_data(
+                "y", convert, ignored) {
+                convert.update(range);
+                y = Some(val);
+            } else if let Ok((range, val)) = Expression::from_meta_data(
+                "z", convert, ignored) {
+                convert.update(range);
+                z = Some(val);
+            } else if let Ok((range, val)) = Expression::from_meta_data(
+                "w", convert, ignored) {
+                convert.update(range);
+                w = Some(val);
+            } else {
+                let range = convert.ignore();
+                convert.update(range);
+                ignored.push(range);
+            }
+        }
+
+        let x = try!(x.ok_or(()));
+        let y = try!(y.ok_or(()));
+        let z = z.unwrap_or(Expression::Number(
+            Number { num: 0.0, source_range: Range::empty(0) }
+        ));
+        let w = w.unwrap_or(Expression::Number(
+            Number { num: 0.0, source_range: Range::empty(0) }
+        ));
+        Ok((convert.subtract(start), Vec4 {
+            args: vec![x, y, z, w],
+            source_range: convert.source(start).unwrap(),
+        }))
+    }
 }
 
 #[derive(Debug, Clone)]
