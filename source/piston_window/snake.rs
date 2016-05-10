@@ -1,21 +1,19 @@
-fn title() -> { return "Snake!" }
+title() = "Snake!"
 
-fn settings() -> {
-    return {
-        background_color: [1, 1, 0.8, 1],
-        reload_interval: 0.25,
-        reload_key: 1073741882, // F1
-        reset_key: 114, // R
-        snake_parts: 100,
-        snake_parts_size: 5,
-        snake_trail: 10,
-        turn_left: 97, // A
-        turn_right: 100, // D,
-        turn_speed: 5,
-        speed: 50,
-        focus_speed: 1,
-        unfocus_speed: .1,
-    }
+settings() = {
+    background_color: [1, 1, 0.8, 1],
+    reload_interval: 0.25,
+    reload_key: 1073741882, // F1
+    reset_key: 114, // R
+    snake_parts: 100,
+    snake_parts_size: 5,
+    snake_trail: 10,
+    turn_left: 97, // A
+    turn_right: 100, // D,
+    turn_speed: 5,
+    speed: 50,
+    focus_speed: 1,
+    unfocus_speed: .1,
 }
 
 fn init_data(settings) -> {
