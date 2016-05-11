@@ -225,12 +225,33 @@ impl Runtime {
         T::pop_var(self, self.resolve(&v))
     }
 
+    pub fn pop_vec4<T: embed::ConvertVec4>(&mut self) -> Result<T, String> {
+        let v = self.stack.pop().unwrap_or_else(|| {
+            panic!("There is no value on the stack")
+        });
+        match self.resolve(&v) {
+            &Variable::Vec4(val) => Ok(T::from(val)),
+            x => Err(self.expected(x, "vec4"))
+        }
+    }
+
     pub fn var<T: embed::PopVariable>(&self, var: &Variable) -> Result<T, String> {
         T::pop_var(self, self.resolve(&var))
     }
 
+    pub fn var_vec4<T: embed::ConvertVec4>(&self, var: &Variable) -> Result<T, String> {
+        match self.resolve(&var) {
+            &Variable::Vec4(val) => Ok(T::from(val)),
+            x => Err(self.expected(x, "vec4"))
+        }
+    }
+
     pub fn push<T: embed::PushVariable>(&mut self, val: T) {
         self.stack.push(val.push_var())
+    }
+
+    pub fn push_vec4<T: embed::ConvertVec4>(&mut self, val: T) {
+        self.stack.push(Variable::Vec4(val.to()))
     }
 
     pub fn expected(&self, var: &Variable, ty: &str) -> String {

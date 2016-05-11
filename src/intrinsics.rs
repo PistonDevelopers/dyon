@@ -105,6 +105,7 @@ pub fn standard(f: &mut HashMap<Arc<String>, PreludeFunction>) {
     sarg(f, "y");
     sarg(f, "z");
     sarg(f, "w");
+    sarg(f, "dir_angle");
 }
 
 enum EscapeString {
@@ -935,6 +936,20 @@ pub fn call_standard(
             let v = rt.stack.pop().expect(TINVOTS);
             let v = match rt.resolve(&v) {
                 &Variable::Result(Err(ref err)) => err.message.clone(),
+                x => {
+                    return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(x, "err(_)")));
+                }
+            };
+            rt.stack.push(v);
+            rt.pop_fn(call.name.clone());
+            Expect::Something
+        }
+        "dir_angle" => {
+            rt.push_fn(call.name.clone(), None, st + 1, lc);
+            let v = rt.stack.pop().expect(TINVOTS);
+            let v = match rt.resolve(&v) {
+                &Variable::F64(val) => Variable::Vec4([val.cos() as f32, val.sin() as f32, 0.0, 0.0]),
                 x => {
                     return Err(module.error(call.args[0].source_range(),
                         &rt.expected(x, "err(_)")));
