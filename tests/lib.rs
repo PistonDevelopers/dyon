@@ -71,6 +71,11 @@ fn test_syntax() {
 }
 
 #[test]
+fn test_typechk() {
+    test_fail_src("source/typechk/opt.rs");
+}
+
+#[test]
 fn test_functions() {
     test_src("source/functions/functions.rs");
 }

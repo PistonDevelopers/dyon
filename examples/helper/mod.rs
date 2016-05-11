@@ -9,54 +9,64 @@ use self::dyon::*;
 use self::current::Current;
 use self::piston::input::*;
 use self::piston::window::*;
-use self::graphics::*;
+use self::graphics::{Context, Graphics};
 
 pub const NO_EVENT: &'static str = "No event";
 
 pub fn add_functions<W: Any + AdvancedWindow>(module: &mut Module) {
     module.add(Arc::new("render".into()), render, PreludeFunction {
         lts: vec![],
-        returns: true
+        tys: vec![],
+        ret: Type::Bool
     });
     module.add(Arc::new("update".into()), update, PreludeFunction {
         lts: vec![],
-        returns: true
+        tys: vec![],
+        ret: Type::Bool
     });
     module.add(Arc::new("press".into()), press, PreludeFunction {
         lts: vec![],
-        returns: true
+        tys: vec![],
+        ret: Type::Bool
     });
     module.add(Arc::new("release".into()), release, PreludeFunction {
         lts: vec![],
-        returns: true
+        tys: vec![],
+        ret: Type::Bool
     });
     module.add(Arc::new("focus".into()), focus, PreludeFunction {
         lts: vec![],
-        returns: true,
+        tys: vec![],
+        ret: Type::Bool,
     });
     module.add(Arc::new("focus_arg".into()), focus_arg, PreludeFunction {
         lts: vec![],
-        returns: true,
+        tys: vec![],
+        ret: Type::Bool,
     });
     module.add(Arc::new("set_title".into()),
         set_title::<W>, PreludeFunction {
             lts: vec![Lt::Default],
-            returns: false
+            tys: vec![Type::Text],
+            ret: Type::Void
         });
     module.add(Arc::new("update_dt".into()),
         update_dt, PreludeFunction {
             lts: vec![],
-            returns: true
+            tys: vec![],
+            ret: Type::F64
         });
     module.add(Arc::new("press_keyboard_key".into()),
         press_keyboard_key, PreludeFunction {
             lts: vec![],
-            returns: true
+            tys: vec![],
+            ret: Type::F64
         });
     module.add(Arc::new("release_keyboard_key".into()),
         release_keyboard_key, PreludeFunction {
             lts: vec![],
-            returns: true
+            tys: vec![],
+            ret: Type::F64
         });
 }
 
@@ -140,6 +150,8 @@ pub fn set_title<W: Any + AdvancedWindow>(rt: &mut Runtime) -> Result<(), String
 }
 
 pub fn draw_2d<G: Graphics>(rt: &mut Runtime, c: Context, g: &mut G) -> Result<(), String> {
+    use self::graphics::*;
+
     let draw_list = rt.stack.pop().expect("There is no value on the stack");
     let arr = rt.resolve(&draw_list);
     if let &Variable::Array(ref arr) = arr {

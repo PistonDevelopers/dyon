@@ -7,6 +7,7 @@ use piston_meta::json;
 use runtime::{Expect, Flow, Runtime, Side};
 use ast;
 use prelude::{Lt, PreludeFunction};
+use Type;
 
 use Variable;
 use Module;
@@ -15,97 +16,110 @@ use Error;
 const TINVOTS: &'static str = "There is no value on the stack";
 
 pub fn standard(f: &mut HashMap<Arc<String>, PreludeFunction>) {
-    let sarg = |f: &mut HashMap<Arc<String>, PreludeFunction>, name: &str| {
+    let sarg = |f: &mut HashMap<Arc<String>, PreludeFunction>, name: &str, ty: Type, ret: Type| {
         f.insert(Arc::new(name.into()), PreludeFunction {
             lts: vec![Lt::Default],
-            returns: true
+            tys: vec![ty],
+            ret: ret
         });
     };
 
-    sarg(f, "println");
-    sarg(f, "print");
-    sarg(f, "clone");
+    sarg(f, "println", Type::Any, Type::Void);
+    sarg(f, "print", Type::Any, Type::Void);
+    sarg(f, "clone", Type::Any, Type::Any);
     f.insert(Arc::new("debug".into()), PreludeFunction {
         lts: vec![],
-        returns: false
+        tys: vec![],
+        ret: Type::Void
     });
     f.insert(Arc::new("backtrace".into()), PreludeFunction {
         lts: vec![],
-        returns: false
+        tys: vec![],
+        ret: Type::Void
     });
-    sarg(f, "sleep");
+    sarg(f, "sleep", Type::F64, Type::Void);
     f.insert(Arc::new("random".into()), PreludeFunction {
         lts: vec![],
-        returns: true
+        tys: vec![],
+        ret: Type::Void
     });
-    sarg(f, "read_number");
+    sarg(f, "read_number", Type::Text, Type::Any);
     f.insert(Arc::new("read_line".into()), PreludeFunction {
         lts: vec![],
-        returns: true
+        tys: vec![],
+        ret: Type::Any
     });
-    sarg(f, "len");
+    sarg(f, "len", Type::array(), Type::F64);
     f.insert(Arc::new("push_ref(mut,_)".into()), PreludeFunction {
         lts: vec![Lt::Default, Lt::Arg(0)],
-        returns: false
+        tys: vec![Type::array(), Type::Any],
+        ret: Type::F64
     });
     f.insert(Arc::new("push(mut,_)".into()), PreludeFunction {
         lts: vec![Lt::Default; 2],
-        returns: false
+        tys: vec![Type::array(), Type::Any],
+        ret: Type::Void
     });
     f.insert(Arc::new("pop(mut)".into()), PreludeFunction {
         lts: vec![Lt::Return],
-        returns: true
+        tys: vec![Type::array()],
+        ret: Type::Any
     });
-    sarg(f, "trim_right");
-    sarg(f, "to_string");
-    sarg(f, "typeof");
-    sarg(f, "round");
-    sarg(f, "abs");
-    sarg(f, "floor");
-    sarg(f, "ceil");
-    sarg(f, "sqrt");
-    sarg(f, "sin");
-    sarg(f, "asin");
-    sarg(f, "cos");
-    sarg(f, "acos");
-    sarg(f, "tan");
-    sarg(f, "atan");
-    sarg(f, "exp");
-    sarg(f, "ln");
-    sarg(f, "log2");
-    sarg(f, "log10");
-    sarg(f, "load");
+    sarg(f, "trim_right", Type::Text, Type::Text);
+    sarg(f, "to_string", Type::Any, Type::Text);
+    sarg(f, "typeof", Type::Any, Type::Text);
+    sarg(f, "round", Type::F64, Type::F64);
+    sarg(f, "abs", Type::F64, Type::F64);
+    sarg(f, "floor", Type::F64, Type::F64);
+    sarg(f, "ceil", Type::F64, Type::F64);
+    sarg(f, "sqrt", Type::F64, Type::F64);
+    sarg(f, "sin", Type::F64, Type::F64);
+    sarg(f, "asin", Type::F64, Type::F64);
+    sarg(f, "cos", Type::F64, Type::F64);
+    sarg(f, "acos", Type::F64, Type::F64);
+    sarg(f, "tan", Type::F64, Type::F64);
+    sarg(f, "atan", Type::F64, Type::F64);
+    sarg(f, "exp", Type::F64, Type::F64);
+    sarg(f, "ln", Type::F64, Type::F64);
+    sarg(f, "log2", Type::F64, Type::F64);
+    sarg(f, "log10", Type::F64, Type::F64);
+    sarg(f, "load", Type::Text, Type::result());
     f.insert(Arc::new("load_source_imports".into()), PreludeFunction {
         lts: vec![Lt::Default; 2],
-        returns: true
+        tys: vec![Type::Text, Type::array()],
+        ret: Type::result()
     });
     f.insert(Arc::new("call".into()), PreludeFunction {
         lts: vec![Lt::Default; 3],
-        returns: false
+        tys: vec![Type::Any, Type::Text, Type::array()],
+        ret: Type::Any
     });
     f.insert(Arc::new("call_ret".into()), PreludeFunction {
         lts: vec![Lt::Default; 3],
-        returns: true
+        tys: vec![Type::Any, Type::Text, Type::array()],
+        ret: Type::Any
     });
     f.insert(Arc::new("functions".into()), PreludeFunction {
         lts: vec![],
-        returns: true
+        tys: vec![],
+        ret: Type::Any
     });
     f.insert(Arc::new("none".into()), PreludeFunction {
         lts: vec![],
-        returns: true
+        tys: vec![],
+        ret: Type::option()
     });
-    sarg(f, "unwrap");
-    sarg(f, "unwrap_err");
-    sarg(f, "some");
-    sarg(f, "ok");
-    sarg(f, "err");
-    sarg(f, "is_err");
-    sarg(f, "x");
-    sarg(f, "y");
-    sarg(f, "z");
-    sarg(f, "w");
-    sarg(f, "dir_angle");
+    sarg(f, "unwrap", Type::Any, Type::Any);
+    sarg(f, "unwrap_err", Type::Any, Type::Any);
+    sarg(f, "some", Type::Any, Type::option());
+    sarg(f, "ok", Type::Any, Type::result());
+    sarg(f, "err", Type::Any, Type::result());
+    sarg(f, "is_err", Type::Any, Type::Bool);
+    sarg(f, "x", Type::Vec4, Type::F64);
+    sarg(f, "y", Type::Vec4, Type::F64);
+    sarg(f, "z", Type::Vec4, Type::F64);
+    sarg(f, "w", Type::Vec4, Type::F64);
+    sarg(f, "dir_angle", Type::F64, Type::Vec4);
 }
 
 enum EscapeString {
@@ -758,7 +772,7 @@ pub fn call_standard(
             for (f_name, f) in &intrinsics {
                 let mut obj = HashMap::new();
                 obj.insert(name.clone(), Variable::Text(f_name.clone()));
-                obj.insert(returns.clone(), Variable::Bool(f.returns));
+                obj.insert(returns.clone(), Variable::Bool(f.returns()));
                 obj.insert(ty.clone(), Variable::Text(intrinsic.clone()));
                 let mut args = vec![];
                 for (i, lt) in f.lts.iter().enumerate() {
@@ -784,7 +798,7 @@ pub fn call_standard(
             for (f_name, &(_, ref f)) in &module.ext_prelude {
                 let mut obj = HashMap::new();
                 obj.insert(name.clone(), Variable::Text(f_name.clone()));
-                obj.insert(returns.clone(), Variable::Bool(f.returns));
+                obj.insert(returns.clone(), Variable::Bool(f.returns()));
                 obj.insert(ty.clone(), Variable::Text(external.clone()));
                 let mut args = vec![];
                 for (i, lt) in f.lts.iter().enumerate() {
@@ -810,7 +824,7 @@ pub fn call_standard(
             for f in module.functions.values() {
                 let mut obj = HashMap::new();
                 obj.insert(name.clone(), Variable::Text(f.name.clone()));
-                obj.insert(returns.clone(), Variable::Bool(f.returns));
+                obj.insert(returns.clone(), Variable::Bool(f.returns()));
                 obj.insert(ty.clone(), Variable::Text(loaded.clone()));
                 let mut args = vec![];
                 for arg in &f.args {

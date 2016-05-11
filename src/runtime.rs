@@ -540,7 +540,7 @@ impl Runtime {
                         }
                         try!(f(self).map_err(|err|
                             module.error(call.source_range, &err)));
-                        if pr.returns {
+                        if pr.returns() {
                             return Ok((Expect::Something, Flow::Continue));
                         } else {
                             return Ok((Expect::Nothing, Flow::Continue));
@@ -557,7 +557,7 @@ impl Runtime {
                         call.args.len())));
                 }
                 // Arguments must be computed.
-                if f.returns {
+                if f.returns() {
                     // Add return value before arguments on the stack.
                     // The stack value should remain, but the local should not.
                     self.stack.push(Variable::Return);
@@ -575,7 +575,7 @@ impl Runtime {
                     };
                 }
                 self.push_fn(call.name.clone(), Some(f.file.clone()), st, lc);
-                if f.returns {
+                if f.returns() {
                     self.local_stack.push((self.ret.clone(), st - 1));
                 }
                 for (i, arg) in f.args.iter().enumerate() {
@@ -608,7 +608,7 @@ impl Runtime {
                             _ => {}
                         }
                         self.pop_fn(call.name.clone());
-                        match (f.returns, x) {
+                        match (f.returns(), x) {
                             (true, Expect::Nothing) => {
                                 match self.stack.last() {
                                     Some(&Variable::Return) =>

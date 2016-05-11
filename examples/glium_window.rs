@@ -49,19 +49,21 @@ fn load_module() -> Option<Module> {
     use std::sync::Arc;
     use dyon_functions::*;
     use helper::add_functions;
-    use dyon::{Lt, Module, PreludeFunction};
+    use dyon::{Lt, Module, PreludeFunction, Type};
     use glium_graphics::GliumWindow;
 
     let mut module = Module::new();
     add_functions::<GliumWindow>(&mut module);
     module.add(Arc::new("draw".into()), draw, PreludeFunction {
         lts: vec![Lt::Default],
-        returns: false
+        tys: vec![Type::array()],
+        ret: Type::Void
     });
     module.add(Arc::new("next_event".into()),
         next_event, PreludeFunction {
             lts: vec![],
-            returns: true
+            tys: vec![],
+            ret: Type::Bool
         });
     if error(load("examples/piston_window/loader.rs", &mut module)) {
         None

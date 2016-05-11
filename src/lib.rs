@@ -14,11 +14,11 @@ pub mod lifetime;
 pub mod intrinsics;
 pub mod prelude;
 pub mod embed;
-pub mod types;
+pub mod typecheck;
 
 pub use runtime::Runtime;
 pub use prelude::{Lt, Prelude, PreludeFunction};
-pub use types::Type;
+pub use typecheck::Type;
 
 pub type Array = Arc<Vec<Variable>>;
 pub type Object = Arc<HashMap<Arc<String>, Variable>>;
@@ -172,20 +172,29 @@ pub fn load(source: &str, module: &mut Module) -> Result<(), String> {
     module.source = Some(d.clone());
 
     let mut data = vec![];
-    try!(parse_errstr(&syntax_rules, &d, &mut data));
+    try!(parse_errstr(&syntax_rules, &d, &mut data).map_err(
+        |err| format!("In `{}:`\n{}", source, err)
+    ));
     let check_data = data.clone();
-    let prelude = Prelude::from_module(module);
+    let prelude = Arc::new(Prelude::from_module(module));
+    let prelude2 = prelude.clone();
 
     // Do lifetime checking in parallel directly on meta data.
     let handle = thread::spawn(move || {
         let check_data = check_data;
-        let prelude = prelude;
-        lifetime::check(&check_data, &prelude)
+        lifetime::check(&check_data, &prelude2)
     });
 
     // Convert to AST.
     let mut ignored = vec![];
     ast::convert(Arc::new(source.into()), &data, &mut ignored, module).unwrap();
+
+    match typecheck::run(module, &prelude) {
+        Ok(()) => {}
+        Err(err) => {
+            return Err(format!("In `{}`:\n{}", source, err))
+        }
+    };
 
     // Check that lifetime checking succeeded.
     match handle.join().unwrap() {

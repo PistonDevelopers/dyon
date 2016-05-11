@@ -5,7 +5,7 @@ extern crate current;
 use std::sync::Arc;
 use piston_window::*;
 use current::CurrentGuard;
-use dyon::{error, load, Lt, Module, PreludeFunction, Runtime};
+use dyon::{error, load, Lt, Module, PreludeFunction, Runtime, Type};
 
 mod helper;
 
@@ -40,12 +40,14 @@ fn load_module() -> Option<Module> {
     add_functions::<PistonWindow>(&mut module);
     module.add(Arc::new("draw".into()), draw, PreludeFunction {
         lts: vec![Lt::Default],
-        returns: false
+        tys: vec![Type::array()],
+        ret: Type::Void
     });
     module.add(Arc::new("next_event".into()),
         next_event, PreludeFunction {
             lts: vec![],
-            returns: true
+            tys: vec![],
+            ret: Type::Bool
         });
     if error(load("examples/piston_window/loader.rs", &mut module)) {
         None

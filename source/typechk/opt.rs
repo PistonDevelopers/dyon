@@ -1,4 +1,4 @@
-fn foo() -> bool {
+fn foo() -> opt[bool] {
     return some(true)
 }
 

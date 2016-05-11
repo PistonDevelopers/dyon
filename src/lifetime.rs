@@ -20,7 +20,7 @@ pub fn check(
             MetaData::StartNode(ref kind) => {
                 let kind = match Kind::new(kind) {
                     Some(kind) => kind,
-                    None => panic!("Unknown kind `{}`", kind)
+                    None => return Err(d.range().wrap(format!("Unknown kind `{}`", kind)))
                 };
 
                 let parent = parents.last().map(|i| *i);
@@ -1035,8 +1035,10 @@ pub enum Kind {
     Z,
     W,
     Type,
+    Arr,
     Opt,
     Res,
+    RetType,
 }
 
 impl Kind {
@@ -1097,8 +1099,10 @@ impl Kind {
             "z" => Kind::Z,
             "w" => Kind::W,
             "type" => Kind::Type,
+            "arr" => Kind::Arr,
             "opt" => Kind::Opt,
             "res" => Kind::Res,
+            "ret_type" => Kind::RetType,
             _ => return None
         })
     }
