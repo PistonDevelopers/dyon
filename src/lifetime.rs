@@ -857,6 +857,7 @@ impl Node {
                 (_, Kind::Left) => {}
                 (_, Kind::Right) => {}
                 (_, Kind::Expr) => {}
+                (_, Kind::Return) => {}
                 (_, Kind::Array) => {}
                 (_, Kind::ArrayItem) => {}
                 (_, Kind::ArrayFill) => {}

@@ -192,6 +192,7 @@ impl Type {
 fn check_call(
     call: &ast::Call,
     expected: &Type,
+    fn_expected: &Type,
     module: &Module,
     prelude: &Prelude
 ) -> Result<Type, String> {
@@ -201,7 +202,7 @@ fn check_call(
                 &format!("Type mismatch: Expected {} arguments, found {}", f.args.len(), call.args.len())));
         }
         for (i, arg) in call.args.iter().enumerate() {
-            let ty = try!(check_expr(arg, expected, module, prelude));
+            let ty = try!(check_expr(arg, expected, fn_expected, module, prelude));
             if !ty.goes_with(&f.args[i].ty) {
                 return Err(module.error(arg.source_range(),
                     &format!("Type mismatch: Expected `{}`, found `{}`",
@@ -215,7 +216,7 @@ fn check_call(
                 &format!("Type mismatch: Expected {} arguments, found {}", f.tys.len(), call.args.len())));
         }
         for (i, arg) in call.args.iter().enumerate() {
-            let ty = try!(check_expr(arg, expected, module, prelude));
+            let ty = try!(check_expr(arg, expected, fn_expected, module, prelude));
             if !ty.goes_with(&f.tys[i]) {
                 return Err(module.error(arg.source_range(),
                     &format!("Type mismatch: Expected `{}`, found `{}`",
@@ -229,11 +230,17 @@ fn check_call(
     }
 }
 
-fn check_expr(expr: &ast::Expression, expected: &Type, module: &Module, prelude: &Prelude) -> Result<Type, String> {
+fn check_expr(
+    expr: &ast::Expression,
+    expected: &Type,
+    fn_expected: &Type,
+    module: &Module,
+    prelude: &Prelude
+) -> Result<Type, String> {
     use ast::Expression::*;
 
     match expr {
-        &Call(ref call) => check_call(call, expected, module, prelude),
+        &Call(ref call) => check_call(call, expected, fn_expected, module, prelude),
         &Bool(_) => Ok(Type::Bool),
         // TODO: Get type from declaration.
         &Item(_) => Ok(Type::Any),
@@ -241,11 +248,11 @@ fn check_expr(expr: &ast::Expression, expected: &Type, module: &Module, prelude:
         &Array(_) => Ok(Type::array()),
         &ArrayFill(_) => Ok(Type::array()),
         &Return(ref expr) => {
-            let ty = try!(check_expr(expr, expected, module, prelude));
-            if !expected.goes_with(&ty) {
+            let ty = try!(check_expr(expr, fn_expected, fn_expected, module, prelude));
+            if !fn_expected.goes_with(&ty) {
                 return Err(module.error(expr.source_range(),
                     &format!("Type mismatch: Expected `{}`, found `{}`",
-                        expected.description(), ty.description())))
+                        fn_expected.description(), ty.description())))
             } else {
                 Ok(ty)
             }
@@ -253,9 +260,13 @@ fn check_expr(expr: &ast::Expression, expected: &Type, module: &Module, prelude:
         &ReturnVoid(_) => Ok(Type::Void),
         &Break(_) => Ok(Type::Void),
         &Continue(_) => Ok(Type::Void),
-        &Block(ref block) => check_block(block, expected, module, prelude),
+        &Block(ref block) => check_block(block, expected, fn_expected, module, prelude),
         &BinOp(ref _binop) => Ok(Type::Any),
-        &Assign(ref _assign) => Ok(Type::Void),
+        &Assign(ref assign) => {
+            let ty = try!(check_expr(&assign.left, &Type::Any, fn_expected, module, prelude));
+            try!(check_expr(&assign.right, &ty, fn_expected, module, prelude));
+            Ok(Type::Void)
+        }
         &Text(_) => Ok(Type::Text),
         &Number(_) => Ok(Type::F64),
         &Vec4(_) => Ok(Type::Vec4),
@@ -268,7 +279,7 @@ fn check_expr(expr: &ast::Expression, expected: &Type, module: &Module, prelude:
         &Any(_) => Ok(Type::Bool),
         &All(_) => Ok(Type::Bool),
         &If(ref if_expr) => {
-            let ty = try!(check_expr(&if_expr.cond, expected, module, prelude));
+            let ty = try!(check_expr(&if_expr.cond, expected, fn_expected, module, prelude));
             if !ty.goes_with(&Type::Bool) {
                 return Err(module.error(if_expr.cond.source_range(),
                     &format!("Type mismatch: Expected `{}`, found `{}`",
@@ -286,19 +297,24 @@ fn check_expr(expr: &ast::Expression, expected: &Type, module: &Module, prelude:
 fn check_block(
     block: &ast::Block,
     expected: &Type,
+    fn_expected: &Type,
     module: &Module,
     prelude: &Prelude
 ) -> Result<Type, String> {
+    if block.expressions.len() == 0 { return Ok(Type::Void) }
     let mut ty: Option<Type> = None;
-    for expr in &block.expressions {
-        ty = Some(try!(check_expr(expr, expected, module, prelude)));
+    for i in 0..block.expressions.len() - 1 {
+        ty = Some(try!(check_expr(&block.expressions[i], &Type::Void, fn_expected, module, prelude)));
+    }
+    for expr in block.expressions.last() {
+        ty = Some(try!(check_expr(expr, expected, fn_expected, module, prelude)));
     }
     Ok(ty.unwrap_or(Type::Void))
 }
 
 pub fn run(module: &Module, prelude: &Prelude) -> Result<(), String> {
     for f in module.functions.values() {
-        try!(check_block(&f.block, &f.ret, module, prelude));
+        try!(check_block(&f.block, &Type::Void, &f.ret, module, prelude));
     }
     Ok(())
 }
