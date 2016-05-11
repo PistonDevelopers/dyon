@@ -330,8 +330,16 @@ pub fn convert_meta_data(
                         nodes[i].ty = Some(Type::Bool);
                     }
                     "returns" => {
+                        // Assuming this will be overwritten when
+                        // type is parsed or inferred.
                         let i = *parents.last().unwrap();
                         nodes[i].ty = Some(Type::Any);
+                    }
+                    "return_void" => {
+                        // There is no sub node, so we need change kind of parent.
+                        // This should always be an expression.
+                        let i = *parents.last().unwrap();
+                        nodes[i].kind = Kind::ReturnVoid;
                     }
                     _ => {}
                 }

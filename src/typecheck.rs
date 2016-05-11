@@ -2,10 +2,6 @@
 use piston_meta::bootstrap::Convert;
 use range::Range;
 
-use ast;
-use Module;
-use Prelude;
-
 #[derive(Debug, Clone, PartialEq)]
 pub enum Type {
     Void,

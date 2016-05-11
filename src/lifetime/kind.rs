@@ -59,6 +59,7 @@ pub enum Kind {
     Opt,
     Res,
     RetType,
+    ReturnVoid,
 }
 
 impl Kind {
@@ -123,6 +124,7 @@ impl Kind {
             "opt" => Kind::Opt,
             "res" => Kind::Res,
             "ret_type" => Kind::RetType,
+            "return_void" => Kind::ReturnVoid,
             _ => return None
         })
     }

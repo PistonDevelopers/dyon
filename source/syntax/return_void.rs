@@ -1,6 +1,5 @@
 fn foo() -> {
     return = "hi!"
-    return
 }
 
 fn main() {

@@ -86,6 +86,13 @@ fn check_fn(n: usize, nodes: &Vec<Node>, ty: &Type) -> Result<(), Range<String>>
                     }
                 }
             }
+            Kind::ReturnVoid => {
+                if !ty.goes_with(&Type::Void) {
+                    return Err(nodes[ch].source.wrap(
+                        format!("Type mistmatch: Expected `{}`, found `{}`",
+                            ty.description(), Type::Void.description())));
+                }
+            }
             _ => {}
         }
         try!(check_fn(ch, nodes, ty));
