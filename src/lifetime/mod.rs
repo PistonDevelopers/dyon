@@ -12,8 +12,9 @@ use self::lt::{arg_lifetime, compare_lifetimes, Lifetime};
 use prelude::{Lt, Prelude};
 
 mod kind;
-mod node;
+pub mod node;
 mod lt;
+mod typecheck;
 
 pub fn check(
     data: &[Range<MetaData>],
@@ -482,6 +483,8 @@ pub fn check(
             }
         }
     }
+
+    try!(typecheck::run(&mut nodes, prelude));
 
     Ok(())
 }

@@ -1,11 +1,9 @@
-
-fn foo() -> bool {
-    x := {
-        return 5
-    }
-    return true
+fn foo() -> opt[bool] {
+    return some(true)
 }
 
 fn main() {
-    println(foo())
+    if foo() {
+        println("oh?")
+    }
 }

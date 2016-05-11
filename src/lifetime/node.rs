@@ -1,11 +1,13 @@
 use std::sync::Arc;
 use range::Range;
 use super::piston_meta::MetaData;
+use super::piston_meta::bootstrap::Convert;
 use super::lt::{arg_lifetime, Lifetime};
 use super::kind::Kind;
 use super::Op;
 use super::ArgNames;
 use Lt;
+use Type;
 
 #[derive(Debug)]
 pub struct Node {
@@ -13,6 +15,8 @@ pub struct Node {
     pub kind: Kind,
     /// The name.
     pub name: Option<Arc<String>>,
+    /// The type.
+    pub ty: Option<Type>,
     /// Whether the argument or call argument is mutable.
     pub mutable: bool,
     /// The range in source.
@@ -40,17 +44,15 @@ pub struct Node {
 }
 
 impl Node {
-    /*
     pub fn print(&self, nodes: &[Node], indent: u32) {
         for _ in 0..indent { print!(" ") }
-        println!("{:?} {:?} {{", self.kind, self.name);
+        println!("kind: {:?}, name: {:?}, type: {:?} {{", self.kind, self.name, self.ty);
         for &c in &self.children {
             nodes[c].print(nodes, indent + 1);
         }
         for _ in 0..indent { print!(" ") }
         println!("}}")
     }
-    */
 
     pub fn lifetime(
         &self,
@@ -214,12 +216,33 @@ pub fn convert_meta_data(
     data: &[Range<MetaData>]
 ) -> Result<(), Range<String>> {
     let mut parents: Vec<usize> = vec![];
+    let ref mut ignored = vec![];
+    let mut skip: Option<usize> = None;
     for (i, d) in data.iter().enumerate() {
+        if let Some(j) = skip {
+            if j > i { continue; }
+        }
         match d.data {
-            MetaData::StartNode(ref kind) => {
-                let kind = match Kind::new(kind) {
+            MetaData::StartNode(ref kind_name) => {
+                let kind = match Kind::new(kind_name) {
                     Some(kind) => kind,
-                    None => return Err(d.range().wrap(format!("Unknown kind `{}`", kind)))
+                    None => return Err(d.range().wrap(format!("Unknown kind `{}`", kind_name)))
+                };
+
+                // Parse type information and put it in parent node.
+                if kind == Kind::Type || kind == Kind::RetType {
+                    let convert = Convert::new(&data[i..]);
+                    if let Ok((range, val)) = Type::from_meta_data(kind_name, convert, ignored) {
+                        let parent = *parents.last().unwrap();
+                        nodes[parent].ty = Some(val);
+                        skip = Some(range.next_offset() + i);
+                        continue;
+                    }
+                }
+
+                let ty = match kind {
+                    Kind::Fn => Some(Type::Void),
+                    _ => None
                 };
 
                 let parent = parents.last().map(|i| *i);
@@ -227,6 +250,7 @@ pub fn convert_meta_data(
                 nodes.push(Node {
                     kind: kind,
                     name: None,
+                    ty: ty,
                     mutable: false,
                     source: Range::empty(0),
                     parent: parent,
@@ -280,6 +304,10 @@ pub fn convert_meta_data(
                         let i = *parents.last().unwrap();
                         nodes[i].ids += 1;
                     }
+                    "text" => {
+                        let i = *parents.last().unwrap();
+                        nodes[i].ty = Some(Type::Text);
+                    }
                     _ => {}
                 }
             }
@@ -297,10 +325,26 @@ pub fn convert_meta_data(
                         let i = *parents.last().unwrap();
                         nodes[i].mutable = _val;
                     }
+                    "bool" => {
+                        let i = *parents.last().unwrap();
+                        nodes[i].ty = Some(Type::Bool);
+                    }
+                    "returns" => {
+                        let i = *parents.last().unwrap();
+                        nodes[i].ty = Some(Type::Any);
+                    }
                     _ => {}
                 }
             }
-            _ => {}
+            MetaData::F64(ref n, _) => {
+                match &***n {
+                    "num" => {
+                        let i = *parents.last().unwrap();
+                        nodes[i].ty = Some(Type::F64);
+                    }
+                    _ => {}
+                }
+            }
         }
     }
     Ok(())

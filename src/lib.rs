@@ -189,13 +189,6 @@ pub fn load(source: &str, module: &mut Module) -> Result<(), String> {
     let mut ignored = vec![];
     ast::convert(Arc::new(source.into()), &data, &mut ignored, module).unwrap();
 
-    match typecheck::run(module, &prelude) {
-        Ok(()) => {}
-        Err(err) => {
-            return Err(format!("In `{}`:\n{}", source, err))
-        }
-    };
-
     // Check that lifetime checking succeeded.
     match handle.join().unwrap() {
         Ok(()) => {}
