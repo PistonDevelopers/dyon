@@ -149,32 +149,30 @@ pub fn draw_2d<G: Graphics>(rt: &mut Runtime, c: Context, g: &mut G) -> Result<(
                 let ty: Arc<String> = try!(rt.var(&it[0]));
                 match &**ty {
                     "clear" => {
-                        let color: [f32; 4] = try!(rt.var(&it[1]));
+                        let color: [f32; 4] = try!(rt.var_vec4(&it[1]));
                         clear(color, g);
                     }
-                    "draw_color_radius_line" => {
-                        let color: [f32; 4] = try!(rt.var(&it[1]));
+                    "line_color_radius_from_to" => {
+                        let color: [f32; 4] = try!(rt.var_vec4(&it[1]));
                         let radius: f64 = try!(rt.var(&it[2]));
-                        let rect: [f64; 4] = try!(rt.var(&it[3]));
-                        line(color, radius, rect, c.transform, g);
+                        let from: [f64; 2] = try!(rt.var_vec4(&it[3]));
+                        let to: [f64; 2] = try!(rt.var_vec4(&it[4]));
+                        line(color, radius, [from[0], from[1], to[0], to[1]], c.transform, g);
                     }
-                    "draw_color_rectangle" => {
-                        let color: [f32; 4] = try!(rt.var(&it[1]));
-                        let rect: [f64; 4] = try!(rt.var(&it[2]));
-                        rectangle(color, rect, c.transform, g);
+                    "rectangle_color_corner_size" => {
+                        let color: [f32; 4] = try!(rt.var_vec4(&it[1]));
+                        let corner: [f64; 2] = try!(rt.var_vec4(&it[2]));
+                        let size: [f64; 2] = try!(rt.var_vec4(&it[3]));
+                        rectangle(color, [corner[0], corner[1], size[0], size[1]], c.transform, g);
                     }
-                    "draw_color_ellipse" => {
-                        let color: [f32; 4] = try!(rt.var(&it[1]));
-                        let rect: [f64; 4] = try!(rt.var(&it[2]));
-                        ellipse(color, rect, c.transform, g);
-                    }
-                    "draw_color_ellipse_resolution" => {
-                        let color: [f32; 4] = try!(rt.var(&it[1]));
-                        let rect: [f64; 4] = try!(rt.var(&it[2]));
-                        let resolution: u32 = try!(rt.var(&it[3]));
+                    "ellipse_color_corner_size_resolution" => {
+                        let color: [f32; 4] = try!(rt.var_vec4(&it[1]));
+                        let corner: [f64; 2] = try!(rt.var_vec4(&it[2]));
+                        let size: [f64; 2] = try!(rt.var_vec4(&it[3]));
+                        let resolution: u32 = try!(rt.var(&it[4]));
                         Ellipse::new(color)
                         .resolution(resolution as u32)
-                        .draw(rect, &c.draw_state, c.transform, g);
+                        .draw([corner[0], corner[1], size[0], size[1]], &c.draw_state, c.transform, g);
                     }
                     _ => {}
                 }

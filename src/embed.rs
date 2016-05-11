@@ -23,6 +23,13 @@ pub trait PushVariable {
     fn push_var(&self) -> Variable;
 }
 
+/// Implemented by types that can be converted to and from vec4.
+pub trait ConvertVec4: Sized {
+    /// Converts vec4 to self.
+    fn from(val: [f32; 4]) -> Self;
+    fn to(&self) -> [f32; 4];
+}
+
 impl PopVariable for String {
     fn pop_var(rt: &Runtime, var: &Variable) -> Result<Self, String> {
         if let &Variable::Text(ref s) = var {
@@ -206,4 +213,34 @@ impl<T: PushVariable> PushVariable for Vec<T> {
     fn push_var(&self) -> Variable {
         Variable::Array(Arc::new(self.iter().map(|it| it.push_var()).collect()))
     }
+}
+
+impl ConvertVec4 for [f32; 2] {
+    fn from(val: [f32; 4]) -> Self { [val[0], val[1]] }
+    fn to(&self) -> [f32; 4] { [self[0], self[1], 0.0, 0.0] }
+}
+
+impl ConvertVec4 for [f32; 3] {
+    fn from(val: [f32; 4]) -> Self { [val[0], val[1], val[2]] }
+    fn to(&self) -> [f32; 4] { [self[0], self[1], self[2], 0.0] }
+}
+
+impl ConvertVec4 for [f32; 4] {
+    fn from(val: [f32; 4]) -> Self { val }
+    fn to(&self) -> [f32; 4] { *self }
+}
+
+impl ConvertVec4 for [f64; 2] {
+    fn from(val: [f32; 4]) -> Self { [val[0] as f64, val[1] as f64] }
+    fn to(&self) -> [f32; 4] { [self[0] as f32, self[1] as f32, 0.0, 0.0] }
+}
+
+impl ConvertVec4 for [f64; 3] {
+    fn from(val: [f32; 4]) -> Self { [val[0] as f64, val[1] as f64, val[2] as f64] }
+    fn to(&self) -> [f32; 4] { [self[0] as f32, self[1] as f32, self[2] as f32, 0.0] }
+}
+
+impl ConvertVec4 for [f64; 4] {
+    fn from(val: [f32; 4]) -> Self { [val[0] as f64, val[1] as f64, val[2] as f64, val[3] as f64] }
+    fn to(&self) -> [f32; 4] { [self[0] as f32, self[1] as f32, self[2] as f32, self[3] as f32] }
 }

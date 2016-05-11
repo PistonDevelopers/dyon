@@ -6,18 +6,23 @@ fn clear_dlist_color(mut draw_list, color) {
     push(mut draw_list, ["clear", color])
 }
 
-fn draw_dlist_color_radius_line(mut draw_list, color, radius, line) {
-    push(mut draw_list, ["draw_color_radius_line", color, radius, line])
+fn line_dlist_color_radius_from_to(mut draw_list, color, radius, from, to) {
+    push(mut draw_list, ["line_color_radius_from_to", color, radius, from, to])
 }
 
-fn draw_dlist_color_rectangle(mut draw_list, color, rectangle) {
-    push(mut draw_list, ["draw_color_rectangle", color, rectangle])
+fn rectangle_dlist_color_corner_size(mut draw_list, color, corner, size) {
+    push(mut draw_list, ["rectangle_color_corner_size", color, corner, size])
 }
 
-fn draw_dlist_color_ellipse(mut draw_list, color, ellipse) {
-    push(mut draw_list, ["draw_color_ellipse", color, ellipse])
+fn ellipse_dlist_color_corner_size(mut draw_list, color, corner, size) {
+    ellipse(dlist: mut draw_list, color: color, corner: corner, size: size, resolution: 16)
 }
 
-fn draw_dlist_color_ellipse_resolution(mut draw_list, color, ellipse, resolution) {
-    push(mut draw_list, ["draw_color_ellipse_resolution", color, ellipse, resolution])
+fn ellipse_dlist_color_corner_size_resolution(mut draw_list, color, corner, size, resolution) {
+    push(mut draw_list, ["ellipse_color_corner_size_resolution", color, corner, size, resolution])
+}
+
+fn circle_dlist_color_center_radius(mut draw_list, color, center, radius) {
+    width := 2 * radius
+    ellipse(dlist: mut draw_list, color: color, corner: center - radius, size: (width, width))
 }
