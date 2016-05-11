@@ -189,14 +189,19 @@ impl Type {
     }
 }
 
-fn check_call(call: &ast::Call, module: &Module, prelude: &Prelude) -> Result<Type, String> {
+fn check_call(
+    call: &ast::Call,
+    expected: &Type,
+    module: &Module,
+    prelude: &Prelude
+) -> Result<Type, String> {
     if let Some(f) = module.functions.get(&call.name) {
         if f.args.len() != call.args.len() {
             return Err(module.error(call.source_range,
                 &format!("Type mismatch: Expected {} arguments, found {}", f.args.len(), call.args.len())));
         }
         for (i, arg) in call.args.iter().enumerate() {
-            let ty = try!(check_expr(arg, module, prelude));
+            let ty = try!(check_expr(arg, expected, module, prelude));
             if !ty.goes_with(&f.args[i].ty) {
                 return Err(module.error(arg.source_range(),
                     &format!("Type mismatch: Expected `{}`, found `{}`",
@@ -210,7 +215,7 @@ fn check_call(call: &ast::Call, module: &Module, prelude: &Prelude) -> Result<Ty
                 &format!("Type mismatch: Expected {} arguments, found {}", f.tys.len(), call.args.len())));
         }
         for (i, arg) in call.args.iter().enumerate() {
-            let ty = try!(check_expr(arg, module, prelude));
+            let ty = try!(check_expr(arg, expected, module, prelude));
             if !ty.goes_with(&f.tys[i]) {
                 return Err(module.error(arg.source_range(),
                     &format!("Type mismatch: Expected `{}`, found `{}`",
@@ -224,22 +229,31 @@ fn check_call(call: &ast::Call, module: &Module, prelude: &Prelude) -> Result<Ty
     }
 }
 
-fn check_expr(expr: &ast::Expression, module: &Module, prelude: &Prelude) -> Result<Type, String> {
+fn check_expr(expr: &ast::Expression, expected: &Type, module: &Module, prelude: &Prelude) -> Result<Type, String> {
     use ast::Expression::*;
 
     match expr {
-        &Call(ref call) => check_call(call, module, prelude),
+        &Call(ref call) => check_call(call, expected, module, prelude),
         &Bool(_) => Ok(Type::Bool),
         // TODO: Get type from declaration.
         &Item(_) => Ok(Type::Any),
         &Object(_) => Ok(Type::Any),
         &Array(_) => Ok(Type::array()),
         &ArrayFill(_) => Ok(Type::array()),
-        &Return(ref expr) => check_expr(expr, module, prelude),
+        &Return(ref expr) => {
+            let ty = try!(check_expr(expr, expected, module, prelude));
+            if !expected.goes_with(&ty) {
+                return Err(module.error(expr.source_range(),
+                    &format!("Type mismatch: Expected `{}`, found `{}`",
+                        expected.description(), ty.description())))
+            } else {
+                Ok(ty)
+            }
+        }
         &ReturnVoid(_) => Ok(Type::Void),
         &Break(_) => Ok(Type::Void),
         &Continue(_) => Ok(Type::Void),
-        &Block(ref block) => check_block(block, module, prelude),
+        &Block(ref block) => check_block(block, expected, module, prelude),
         &BinOp(ref _binop) => Ok(Type::Any),
         &Assign(ref _assign) => Ok(Type::Void),
         &Text(_) => Ok(Type::Text),
@@ -254,7 +268,7 @@ fn check_expr(expr: &ast::Expression, module: &Module, prelude: &Prelude) -> Res
         &Any(_) => Ok(Type::Bool),
         &All(_) => Ok(Type::Bool),
         &If(ref if_expr) => {
-            let ty = try!(check_expr(&if_expr.cond, module, prelude));
+            let ty = try!(check_expr(&if_expr.cond, expected, module, prelude));
             if !ty.goes_with(&Type::Bool) {
                 return Err(module.error(if_expr.cond.source_range(),
                     &format!("Type mismatch: Expected `{}`, found `{}`",
@@ -269,17 +283,22 @@ fn check_expr(expr: &ast::Expression, module: &Module, prelude: &Prelude) -> Res
     }
 }
 
-fn check_block(block: &ast::Block, module: &Module, prelude: &Prelude) -> Result<Type, String> {
+fn check_block(
+    block: &ast::Block,
+    expected: &Type,
+    module: &Module,
+    prelude: &Prelude
+) -> Result<Type, String> {
     let mut ty: Option<Type> = None;
     for expr in &block.expressions {
-        ty = Some(try!(check_expr(expr, module, prelude)));
+        ty = Some(try!(check_expr(expr, expected, module, prelude)));
     }
     Ok(ty.unwrap_or(Type::Void))
 }
 
 pub fn run(module: &Module, prelude: &Prelude) -> Result<(), String> {
     for f in module.functions.values() {
-        try!(check_block(&f.block, module, prelude));
+        try!(check_block(&f.block, &f.ret, module, prelude));
     }
     Ok(())
 }
