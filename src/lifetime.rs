@@ -1034,6 +1034,9 @@ pub enum Kind {
     Y,
     Z,
     W,
+    Type,
+    Opt,
+    Res,
 }
 
 impl Kind {
@@ -1093,6 +1096,9 @@ impl Kind {
             "y" => Kind::Y,
             "z" => Kind::Z,
             "w" => Kind::W,
+            "type" => Kind::Type,
+            "opt" => Kind::Opt,
+            "res" => Kind::Res,
             _ => return None
         })
     }

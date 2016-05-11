@@ -5,6 +5,7 @@ use piston_meta::MetaData;
 
 use Variable;
 use Module;
+use Type;
 
 pub fn convert(
     file: Arc<String>,
@@ -122,6 +123,7 @@ impl Function {
 pub struct Arg {
     pub name: Arc<String>,
     pub lifetime: Option<Arc<String>>,
+    pub ty: Type,
     pub source_range: Range,
     pub mutable: bool,
 }
@@ -136,6 +138,7 @@ impl Arg {
 
         let mut name: Option<Arc<String>> = None;
         let mut lifetime: Option<Arc<String>> = None;
+        let mut ty: Option<Type> = None;
         let mut mutable = false;
         loop {
             if let Ok(range) = convert.end_node(node) {
@@ -150,6 +153,10 @@ impl Arg {
             } else if let Ok((range, val)) = convert.meta_string("lifetime") {
                 convert.update(range);
                 lifetime = Some(val);
+            } else if let Ok((range, val)) = Type::from_meta_data(
+                    "type", convert, ignored) {
+                convert.update(range);
+                ty = Some(val);
             } else {
                 let range = convert.ignore();
                 convert.update(range);
@@ -158,9 +165,14 @@ impl Arg {
         }
 
         let name = try!(name.ok_or(()));
+        let ty = match ty {
+            None => Type::Any,
+            Some(ty) => ty
+        };
         Ok((convert.subtract(start), Arg {
             name: name,
             lifetime: lifetime,
+            ty: ty,
             source_range: convert.source(start).unwrap(),
             mutable: mutable,
         }))

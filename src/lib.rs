@@ -14,9 +14,11 @@ pub mod lifetime;
 pub mod intrinsics;
 pub mod prelude;
 pub mod embed;
+pub mod types;
 
 pub use runtime::Runtime;
 pub use prelude::{Lt, Prelude, PreludeFunction};
+pub use types::Type;
 
 pub type Array = Arc<Vec<Variable>>;
 pub type Object = Arc<HashMap<Arc<String>, Variable>>;

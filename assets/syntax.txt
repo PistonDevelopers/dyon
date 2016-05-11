@@ -11,7 +11,7 @@ _seps: "(){}[],.:;=<>*·+-/%^?|&∧∨!¬∑∃∀\n"
     [.."("!:"name" ?w "(" args ")" ?w "=" ?w expr:"expr"]
 }
 1 args = .s?.(, arg:"arg")
-2 arg = [?"mut":"mut" ?w .._seps!:"name" ?[?w ":" ?w "'" ?w .._seps!:"lifetime"]]
+2 arg = [?"mut":"mut" ?w .._seps!:"name" ?[?w ":" ?w ?["'" ?w .._seps!:"lifetime"] ?w ?type:"type"]]
 // Support both multi-line expressions and single line.
 3 block = ["{" ?w {.l([?w expr:"expr" ?w]) [?w expr:"expr"]} ?w "}"]
 4 expr = [{
@@ -104,6 +104,17 @@ _seps: "(){}[],.:;=<>*·+-/%^?|&∧∨!¬∑∃∀\n"
 43 sift = [label "sift" short_body]
 44 any = [label {"any" "∃"} short_body]
 45 all = [label {"all" "∀"} short_body]
+
+50 type = {
+    "bool":"bool"
+    "f64":"f64"
+    "str":"str"
+    "vec4":"vec4"
+    ["opt" ?w "[" ?w type:"opt" ?w "]"]
+    "opt":"opt_any"
+    ["res" ?w "[" ?w type:"res" ?w "]"]
+    "res":"res_any"
+}
 
 101 + = [?w {"+":"+" "||":"+" "∨":"+" "or":"+"} ?w]
 102 - = [?w "-":"-" ?w]
