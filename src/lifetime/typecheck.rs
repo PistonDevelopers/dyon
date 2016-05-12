@@ -26,7 +26,7 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                         }
                     }
                 }
-                Kind::Mul | Kind::Return | Kind::Val | Kind::CallArg | Kind::Expr
+                Kind::Return | Kind::Val | Kind::CallArg | Kind::Expr
                 | Kind::Cond => {
                     for &ch in &nodes[i].children {
                         if let Some(ref ty) = nodes[ch].ty {
@@ -42,6 +42,27 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                         if let Some(ref ty) = nodes[ch].ty {
                             it_ty = if let Some(ref it) = it_ty {
                                 match it.add(ty) {
+                                    None => return Err(nodes[ch].source.wrap(
+                                        format!("Type mismatch: Binary operator can not be used with `{}` and `{}`",
+                                        it.description(), ty.description()))),
+                                    x => x
+                                }
+                            } else {
+                                Some(ty.clone())
+                            }
+                        } else {
+                            continue 'node;
+                        }
+                    }
+                    this_ty = it_ty;
+                }
+                Kind::Mul => {
+                    // Require type to be inferred from all children.
+                    let mut it_ty: Option<Type> = None;
+                    for &ch in &nodes[i].children {
+                        if let Some(ref ty) = nodes[ch].ty {
+                            it_ty = if let Some(ref it) = it_ty {
+                                match it.mul(ty) {
                                     None => return Err(nodes[ch].source.wrap(
                                         format!("Type mismatch: Binary operator can not be used with `{}` and `{}`",
                                         it.description(), ty.description()))),

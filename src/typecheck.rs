@@ -146,6 +146,25 @@ impl Type {
         }
     }
 
+    pub fn mul(&self, other: &Type) -> Option<Type> {
+        use self::Type::*;
+
+        match (self, other) {
+
+            (&Void, _) | (_, &Void) => None,
+            (&Array(_), _) | (_, &Array(_)) => None,
+            (&Bool, &Bool) => Some(Bool),
+            (&Text, &Text) => Some(Text),
+            (&F64, &F64) => Some(F64),
+            (&Vec4, &F64) => Some(Vec4),
+            (&F64, &Vec4) => Some(Vec4),
+            (&Vec4, &Vec4) => Some(Vec4),
+            (&Any, x) if x != &Type::Void => Some(Any),
+            (x, &Any) if x != &Type::Void => Some(Any),
+            _ => None
+        }
+    }
+
     pub fn from_meta_data(node: &str, mut convert: Convert, ignored: &mut Vec<Range>)
     -> Result<(Range, Type), ()> {
         let start = convert.clone();
