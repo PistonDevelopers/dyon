@@ -54,6 +54,13 @@ impl Node {
         println!("}}")
     }
 
+    pub fn find_child_by_kind(&self, nodes: &[Node], kind: Kind) -> Option<usize> {
+        for &ch in &self.children {
+            if nodes[ch].kind == kind { return Some(ch); }
+        }
+        return None
+    }
+
     pub fn lifetime(
         &self,
         nodes: &[Node],
