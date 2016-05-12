@@ -242,6 +242,9 @@ pub fn convert_meta_data(
 
                 let ty = match kind {
                     Kind::Fn => Some(Type::Void),
+                    Kind::Array | Kind::ArrayFill => Some(Type::array()),
+                    Kind::Vec4 => Some(Type::Vec4),
+                    Kind::Object => Some(Type::object()),
                     _ => None
                 };
 

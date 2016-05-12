@@ -1,5 +1,5 @@
 fn foo() -> bool {
-    return {}
+    return (0, 1)
 }
 
 fn main() {
