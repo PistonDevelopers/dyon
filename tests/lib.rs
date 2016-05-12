@@ -91,6 +91,7 @@ fn test_typechk() {
     test_fail_src("source/typechk/pow_3.rs");
     test_fail_src("source/typechk/call.rs");
     test_src("source/typechk/obj.rs");
+    test_fail_src("source/typechk/obj_2.rs");
 }
 
 #[test]

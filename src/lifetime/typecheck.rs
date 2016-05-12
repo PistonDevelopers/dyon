@@ -41,8 +41,24 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                     }
                     if this_ty.is_none() {
                         if let Some(ref f) = prelude.functions.get(
-                                                     nodes[i].name.as_ref().unwrap()) {
-                            this_ty = Some(f.ret.clone());
+                            nodes[i].name.as_ref().unwrap()) {
+                            let mut missing = false;
+                            for j in 0..nodes[i].children.len() {
+                                let ch = nodes[i].children[j];
+                                if nodes[ch].item_try_or_ids() { continue 'node; }
+                                if let &Some(ref ch_ty) = &nodes[ch].ty {
+                                    if !ch_ty.goes_with(&f.tys[j]) {
+                                        return Err(nodes[ch].source.wrap(
+                                            format!("Type mismatch: Expected `{}`, found `{}`",
+                                                f.tys[j].description(), ch_ty.description())));
+                                    }
+                                } else {
+                                    missing = true;
+                                }
+                            }
+                            if !missing {
+                                this_ty = Some(f.ret.clone());
+                            }
                         }
                     }
                 }
