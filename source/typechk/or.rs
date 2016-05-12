@@ -1,6 +1,6 @@
 
 fn foo() -> bool {
-    return false or 5
+    return true or false
 }
 
 fn main() {

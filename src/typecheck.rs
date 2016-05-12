@@ -131,9 +131,10 @@ impl Type {
         use self::Type::*;
 
         match (self, other) {
+
             (&Void, _) | (_, &Void) => None,
-            (&Bool, _) | (_, &Bool) => None,
             (&Array(_), _) | (_, &Array(_)) => None,
+            (&Bool, &Bool) => Some(Bool),
             (&Text, &Text) => Some(Text),
             (&F64, &F64) => Some(F64),
             (&Vec4, &F64) => Some(Vec4),
