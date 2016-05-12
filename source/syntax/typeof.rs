@@ -6,7 +6,6 @@ fn typeof_return() -> {
     if typeof(return) == "number" {
         println("return is number OK")
     }
-    return
 }
 
 fn main() {

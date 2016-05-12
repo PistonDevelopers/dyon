@@ -1,4 +1,4 @@
-fn print_function(f) {
+fn print_function(f: {}) {
     print(f.name)
     print("(")
     n := len(f.arguments)
@@ -18,7 +18,7 @@ fn print_function(f) {
     println("")
 }
 
-fn print_functions(functions) {
+fn print_functions(functions: [{}]) {
     n := len(functions)
     for i := 0; i < n; i += 1 {
         if functions[i].type != "external" { continue }

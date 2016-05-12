@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use ast;
 use intrinsics;
 use Module;
+use Type;
 
 /// Argument lifetime constraint.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -18,12 +19,14 @@ pub enum Lt {
 #[derive(Clone)]
 pub struct PreludeFunction {
     pub lts: Vec<Lt>,
-    pub returns: bool,
+    pub tys: Vec<Type>,
+    pub ret: Type,
 }
 
 impl PreludeFunction {
     pub fn new(f: &ast::Function) -> PreludeFunction {
         let mut lts: Vec<Lt> = vec![];
+        let mut tys: Vec<Type> = vec![];
         'next_arg: for arg in &f.args {
             if let Some(ref lt) = arg.lifetime {
                 if **lt == "return" {
@@ -40,12 +43,16 @@ impl PreludeFunction {
             } else {
                 lts.push(Lt::Default);
             }
+            tys.push(arg.ty.clone());
         }
         PreludeFunction {
             lts: lts,
-            returns: f.returns,
+            tys: tys,
+            ret: f.ret.clone(),
         }
     }
+
+    pub fn returns(&self) -> bool { self.ret != Type::Void }
 }
 
 pub struct Prelude {

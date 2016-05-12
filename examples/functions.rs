@@ -16,15 +16,18 @@ fn load_module() -> Option<Module> {
     let mut module = Module::new();
     module.add(Arc::new("say_hello".into()), say_hello, PreludeFunction {
         lts: vec![],
-        returns: false
+        tys: vec![],
+        ret: Type::Void
     });
     module.add(Arc::new("homer".into()), homer, PreludeFunction {
         lts: vec![],
-        returns: true
+        tys: vec![],
+        ret: Type::Any
     });
     module.add(Arc::new("age".into()), age, PreludeFunction {
         lts: vec![Lt::Default],
-        returns: true
+        tys: vec![Type::Any],
+        ret: Type::F64
     });
     if error(load("source/functions/loader.rs", &mut module)) {
         None

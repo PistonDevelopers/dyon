@@ -4,7 +4,7 @@ year() = 365.24
 n_bodies() = 5
 n_pairs() = n_bodies() * (n_bodies() - 1) / 2
 
-fn bodies() -> {
+fn bodies() -> [{}] {
     return [
         // Sun
         {
@@ -56,7 +56,7 @@ fn bodies() -> {
 }
 
 /// Computes all pairwise position differences between the planets.
-fn pairwise_diffs_bodies_diff(bodies, mut diff) {
+fn pairwise_diffs_bodies_diff(bodies: [{}], mut diff: [vec4]) {
     n := len(bodies)
     k := 0
     for i n {
@@ -68,7 +68,7 @@ fn pairwise_diffs_bodies_diff(bodies, mut diff) {
 }
 
 /// Computes the magnitude of the force between each pair of planets.
-fn magnitudes_diff_dt_mag(diff, dt, mut mag) {
+fn magnitudes_diff_dt_mag(diff: [vec4], dt: f64, mut mag: [f64]) {
     for i len(diff) {
         mag[i] = dt / |diff[i]|^3
     }
@@ -76,7 +76,9 @@ fn magnitudes_diff_dt_mag(diff, dt, mut mag) {
 
 /// Updates the velocities of the planets by computing their gravitational
 /// accelerations and performing one step of Euler integration.
-fn update_velocities_bodies_dt_diff_mag(mut bodies, dt, mut diff, mut mag) {
+fn update_velocities_bodies_dt_diff_mag(
+    mut bodies: [{}], dt: f64, mut diff: [vec4], mut mag: [f64]
+) {
     pairwise_diffs(bodies: bodies, diff: mut diff)
     magnitudes(diff: diff, dt: dt, mag: mut mag)
 
@@ -99,7 +101,9 @@ fn update_velocities_bodies_dt_diff_mag(mut bodies, dt, mut diff, mut mag) {
 /// Note: the `diff` & `mag` arrays are effectively scratch space. They're
 /// provided as arguments to avoid re-zeroing them every time `advance` is
 /// called.
-fn advance_bodies_dt_diff_mag(mut bodies, dt, mut diff, mut mag) {
+fn advance_bodies_dt_diff_mag(
+    mut bodies: [{}], dt: f64, mut diff: [vec4], mut mag: [f64]
+) {
     update_velocities(bodies: mut bodies, dt: dt, diff: mut diff, mag: mut mag)
     for i len(bodies) {
         bodies[i].pos += bodies[i].vel * dt
@@ -107,7 +111,7 @@ fn advance_bodies_dt_diff_mag(mut bodies, dt, mut diff, mut mag) {
 }
 
 /// Computes the total energy of the solar system.
-fn energy(bodies) -> {
+fn energy(bodies: [{}]) -> f64 {
     n := len(bodies)
     return ∑ i n {
         e := bodies[i].vel · bodies[i].vel * bodies[i].mass / 2.0
@@ -121,7 +125,7 @@ fn energy(bodies) -> {
 }
 
 /// Offsets the sun's velocity to make the overall momentum of the system zero.
-fn offset_momentum(mut bodies) {
+fn offset_momentum(mut bodies: [{}]) {
     p := (0, 0, 0)
     for i len(bodies) {
         p += bodies[i].vel * bodies[i].mass

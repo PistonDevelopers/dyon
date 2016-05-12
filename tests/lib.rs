@@ -71,6 +71,30 @@ fn test_syntax() {
 }
 
 #[test]
+fn test_typechk() {
+    test_fail_src("source/typechk/opt.rs");
+    test_fail_src("source/typechk/return.rs");
+    test_fail_src("source/typechk/return_2.rs");
+    test_fail_src("source/typechk/return_3.rs");
+    test_fail_src("source/typechk/return_4.rs");
+    test_fail_src("source/typechk/return_5.rs");
+    test_fail_src("source/typechk/return_6.rs");
+    test_fail_src("source/typechk/return_7.rs");
+    test_fail_src("source/typechk/return_8.rs");
+    test_src("source/typechk/add.rs");
+    test_src("source/typechk/mat_expr.rs");
+    test_src("source/typechk/or.rs");
+    test_fail_src("source/typechk/or_2.rs");
+    test_fail_src("source/typechk/mul.rs");
+    test_fail_src("source/typechk/pow.rs");
+    test_src("source/typechk/pow_2.rs");
+    test_fail_src("source/typechk/pow_3.rs");
+    test_fail_src("source/typechk/call.rs");
+    test_src("source/typechk/obj.rs");
+    test_fail_src("source/typechk/obj_2.rs");
+}
+
+#[test]
 fn test_functions() {
     test_src("source/functions/functions.rs");
 }

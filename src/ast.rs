@@ -5,6 +5,7 @@ use piston_meta::MetaData;
 
 use Variable;
 use Module;
+use Type;
 
 pub fn convert(
     file: Arc<String>,
@@ -33,7 +34,7 @@ pub struct Function {
     pub file: Arc<String>,
     pub args: Vec<Arg>,
     pub block: Block,
-    pub returns: bool,
+    pub ret: Type,
     pub source_range: Range,
 }
 
@@ -52,7 +53,7 @@ impl Function {
         let mut args: Vec<Arg> = vec![];
         let mut block: Option<Block> = None;
         let mut expr: Option<Expression> = None;
-        let mut returns = false;
+        let mut ret = Type::Void;
         loop {
             if let Ok(range) = convert.end_node(node) {
                 convert.update(range);
@@ -64,9 +65,15 @@ impl Function {
                     convert, ignored) {
                 convert.update(range);
                 args.push(val);
-            } else if let Ok((range, val)) = convert.meta_bool("returns") {
+            } else if let Ok((range, _val)) = convert.meta_bool("returns") {
                 convert.update(range);
-                returns = val;
+                if let Type::Void = ret {
+                    ret = Type::Any;
+                }
+            } else if let Ok((range, val)) = Type::from_meta_data(
+                    "ret_type", convert, ignored) {
+                convert.update(range);
+                ret = val;
             } else if let Ok((range, val)) = Block::from_meta_data(
                 "block", convert, ignored) {
                 convert.update(range);
@@ -86,7 +93,7 @@ impl Function {
         let block = match expr {
             None => try!(block.ok_or(())),
             Some(expr) => {
-                returns = true;
+                ret = Type::Any;
                 let source_range = expr.source_range();
                 Block {
                     expressions: vec![Expression::Return(Box::new(expr))],
@@ -112,16 +119,19 @@ impl Function {
             file: file,
             args: args,
             block: block,
-            returns: returns,
+            ret: ret,
             source_range: convert.source(start).unwrap(),
         }))
     }
+
+    pub fn returns(&self) -> bool { self.ret != Type::Void }
 }
 
 #[derive(Debug, Clone)]
 pub struct Arg {
     pub name: Arc<String>,
     pub lifetime: Option<Arc<String>>,
+    pub ty: Type,
     pub source_range: Range,
     pub mutable: bool,
 }
@@ -136,6 +146,7 @@ impl Arg {
 
         let mut name: Option<Arc<String>> = None;
         let mut lifetime: Option<Arc<String>> = None;
+        let mut ty: Option<Type> = None;
         let mut mutable = false;
         loop {
             if let Ok(range) = convert.end_node(node) {
@@ -150,6 +161,10 @@ impl Arg {
             } else if let Ok((range, val)) = convert.meta_string("lifetime") {
                 convert.update(range);
                 lifetime = Some(val);
+            } else if let Ok((range, val)) = Type::from_meta_data(
+                    "type", convert, ignored) {
+                convert.update(range);
+                ty = Some(val);
             } else {
                 let range = convert.ignore();
                 convert.update(range);
@@ -158,9 +173,14 @@ impl Arg {
         }
 
         let name = try!(name.ok_or(()));
+        let ty = match ty {
+            None => Type::Any,
+            Some(ty) => ty
+        };
         Ok((convert.subtract(start), Arg {
             name: name,
             lifetime: lifetime,
+            ty: ty,
             source_range: convert.source(start).unwrap(),
             mutable: mutable,
         }))
@@ -909,6 +929,11 @@ impl Item {
             } else if let Ok((range, _)) = convert.meta_bool("try_item") {
                 convert.update(range);
                 try = true;
+                // Ignore item extra node, which is there to help the type checker.
+            } else if let Ok(range) = convert.start_node("item_extra") {
+                convert.update(range);
+            } else if let Ok(range) = convert.end_node("item_extra") {
+                convert.update(range);
             } else if let Ok((range, val)) = convert.meta_string("id") {
                 let start_id = convert;
                 convert.update(range);
