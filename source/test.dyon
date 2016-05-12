@@ -1,5 +1,14 @@
+fn foo(mut a: vec4) -> {
+    return (1, 2) x (3, 4)
+}
+
+fn bar_with(with) {
+    println("hi!")
+}
+
 fn main() {
-    x := {}
-    push(mut x, 3)
-    println(x)
+    a := (1, 3)
+    println(foo(mut a))
+    x := [1, 0, 3]
+    bar(with: x)
 }
