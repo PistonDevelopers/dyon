@@ -18,6 +18,8 @@ Dyon uses ".rs" to get Rust syntax coloring.
 
 [Dyon for the Atom Editor](./editor-plugins/atom/README.md)
 
+![coding](./images/code.png)
+
 ### List of features
 
 - Array `arr := [a, b, c]`
