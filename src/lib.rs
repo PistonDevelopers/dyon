@@ -240,66 +240,66 @@ mod tests {
 
     #[bench]
     fn bench_add(b: &mut Bencher) {
-        b.iter(|| run_bench("source/bench/add.rs"));
+        b.iter(|| run_bench("source/bench/add.dyon"));
     }
 
     #[bench]
     fn bench_add_n(b: &mut Bencher) {
-        b.iter(|| run_bench("source/bench/add_n.rs"));
+        b.iter(|| run_bench("source/bench/add_n.dyon"));
     }
 
     #[bench]
     fn bench_sum(b: &mut Bencher) {
-        b.iter(|| run_bench("source/bench/sum.rs"));
+        b.iter(|| run_bench("source/bench/sum.dyon"));
     }
 
     #[bench]
     fn bench_main(b: &mut Bencher) {
-        b.iter(|| run_bench("source/bench/main.rs"));
+        b.iter(|| run_bench("source/bench/main.dyon"));
     }
 
     #[bench]
     fn bench_array(b: &mut Bencher) {
-        b.iter(|| run_bench("source/bench/array.rs"));
+        b.iter(|| run_bench("source/bench/array.dyon"));
     }
 
     #[bench]
     fn bench_object(b: &mut Bencher) {
-        b.iter(|| run_bench("source/bench/object.rs"));
+        b.iter(|| run_bench("source/bench/object.dyon"));
     }
 
     #[bench]
     fn bench_call(b: &mut Bencher) {
-        b.iter(|| run_bench("source/bench/call.rs"));
+        b.iter(|| run_bench("source/bench/call.dyon"));
     }
 
     #[bench]
     fn bench_n_body(b: &mut Bencher) {
-        b.iter(|| run_bench("source/bench/n_body.rs"));
+        b.iter(|| run_bench("source/bench/n_body.dyon"));
     }
 
     #[bench]
     fn bench_len(b: &mut Bencher) {
-        b.iter(|| run_bench("source/bench/len.rs"));
+        b.iter(|| run_bench("source/bench/len.dyon"));
     }
 
     #[bench]
     fn bench_min_fn(b: &mut Bencher) {
-        b.iter(|| run_bench("source/bench/min_fn.rs"));
+        b.iter(|| run_bench("source/bench/min_fn.dyon"));
     }
 
     #[bench]
     fn bench_min(b: &mut Bencher) {
-        b.iter(|| run_bench("source/bench/min.rs"));
+        b.iter(|| run_bench("source/bench/min.dyon"));
     }
 
     #[bench]
     fn bench_primes(b: &mut Bencher) {
-        b.iter(|| run_bench("source/bench/primes.rs"));
+        b.iter(|| run_bench("source/bench/primes.dyon"));
     }
 
     #[bench]
     fn bench_primes_trad(b: &mut Bencher) {
-        b.iter(|| run_bench("source/bench/primes_trad.rs"));
+        b.iter(|| run_bench("source/bench/primes_trad.dyon"));
     }
 }

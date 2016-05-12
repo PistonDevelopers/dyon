@@ -1,0 +1,14 @@
+@import "syntax-variables";
+
+atom-text-editor::shadow .meta.attribute.dyon {
+  color: mix(#ff0, @syntax-text-color, 20%);
+}
+
+atom-text-editor::shadow .storage.modifier.lifetime.dyon,
+atom-text-editor::shadow .entity.name.lifetime.dyon {
+  color: mix(#0ff, @syntax-text-color, 70%);
+}
+
+atom-text-editor::shadow .keyword.unsafe.dyon {
+  color: mix(#f00, @syntax-text-color, 40%);
+}

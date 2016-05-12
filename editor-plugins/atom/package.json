@@ -1,0 +1,9 @@
+{
+  "name": "language-dyon",
+  "version": "0.0.1",
+  "description": "Syntax highlighting for Dyon",
+  "engines": {
+    "atom": "*",
+    "node": "*"
+  }
+}
