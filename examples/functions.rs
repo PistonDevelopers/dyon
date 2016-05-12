@@ -29,7 +29,7 @@ fn load_module() -> Option<Module> {
         tys: vec![Type::Any],
         ret: Type::F64
     });
-    if error(load("source/functions/loader.rs", &mut module)) {
+    if error(load("source/functions/loader.dyon", &mut module)) {
         None
     } else {
         Some(module)

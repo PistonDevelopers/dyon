@@ -14,6 +14,12 @@ To run snake demo for interactive coding:
 
 Dyon uses ".rs" to get Rust syntax coloring.
 
+### Editor-plugins
+
+[Dyon for the Atom Editor](./editor-plugins/atom/README.md)
+
+![coding](./images/code.png)
+
 ### List of features
 
 - Array `arr := [a, b, c]`

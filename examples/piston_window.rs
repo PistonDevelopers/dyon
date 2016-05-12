@@ -49,7 +49,7 @@ fn load_module() -> Option<Module> {
             tys: vec![],
             ret: Type::Bool
         });
-    if error(load("examples/piston_window/loader.rs", &mut module)) {
+    if error(load("examples/piston_window/loader.dyon", &mut module)) {
         None
     } else {
         Some(module)
