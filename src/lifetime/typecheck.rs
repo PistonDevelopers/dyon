@@ -81,7 +81,7 @@ fn check_fn(n: usize, nodes: &Vec<Node>, ty: &Type) -> Result<(), Range<String>>
                 if let Some(ref ret_ty) = nodes[ch].ty {
                     if !ty.goes_with(ret_ty) {
                         return Err(nodes[ch].source.wrap(
-                            format!("Type mistmatch: Expected `{}`, found `{}`",
+                            format!("Type mismatch: Expected `{}`, found `{}`",
                                 ty.description(), ret_ty.description())));
                     }
                 }
@@ -89,7 +89,7 @@ fn check_fn(n: usize, nodes: &Vec<Node>, ty: &Type) -> Result<(), Range<String>>
             Kind::ReturnVoid => {
                 if !ty.goes_with(&Type::Void) {
                     return Err(nodes[ch].source.wrap(
-                        format!("Type mistmatch: Expected `{}`, found `{}`",
+                        format!("Type mismatch: Expected `{}`, found `{}`",
                             ty.description(), Type::Void.description())));
                 }
             }
@@ -107,7 +107,7 @@ fn check_if(n: usize, nodes: &Vec<Node>) -> Result<(), Range<String>> {
                 if let Some(ref cond_ty) = nodes[ch].ty {
                     if !Type::Bool.goes_with(cond_ty) {
                         return Err(nodes[ch].source.wrap(
-                            format!("Type mistmatch: Expected `{}`, found `{}`",
+                            format!("Type mismatch: Expected `{}`, found `{}`",
                                 Type::Bool.description(), cond_ty.description())));
                     }
                 }

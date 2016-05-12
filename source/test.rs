@@ -1,5 +1,5 @@
 fn foo() -> bool {
-    return {}
+    return load("source/test.rs")
 }
 
 fn main() {
