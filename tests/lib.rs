@@ -86,6 +86,7 @@ fn test_typechk() {
     test_src("source/typechk/or.rs");
     test_fail_src("source/typechk/or_2.rs");
     test_fail_src("source/typechk/mul.rs");
+    test_fail_src("source/typechk/pow.rs");
 }
 
 #[test]

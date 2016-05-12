@@ -27,7 +27,7 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                     }
                 }
                 Kind::Return | Kind::Val | Kind::CallArg | Kind::Expr
-                | Kind::Cond => {
+                | Kind::Cond | Kind::Exp => {
                     for &ch in &nodes[i].children {
                         if let Some(ref ty) = nodes[ch].ty {
                             this_ty = Some(ty.clone());
@@ -97,6 +97,15 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
     for i in 0..nodes.len() {
         let kind = nodes[i].kind;
         match kind {
+            Kind::Exp => {
+                if let Some(ref ty) = nodes[i].ty {
+                    if !Type::F64.goes_with(ty) && !Type::Vec4.goes_with(ty) {
+                        return Err(nodes[i].source.wrap(
+                            format!("Type mismatch: Expected `f64` or `vec4`, found `{}`",
+                                ty.description())));
+                    }
+                }
+            }
             Kind::Fn => {
                 // TODO: Infer type from body when written as mathematical expression.
                 if let Some(ref ty) = nodes[i].ty {
