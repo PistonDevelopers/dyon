@@ -240,6 +240,14 @@ pub fn convert_meta_data(
                     }
                 }
 
+                if kind == Kind::Expr {
+                    let parent = *parents.last().unwrap();
+                    if nodes[parent].kind == Kind::Fn {
+                        // Function returns a value.
+                        nodes[parent].ty = Some(Type::Any);
+                    }
+                }
+
                 let ty = match kind {
                     Kind::Fn => Some(Type::Void),
                     Kind::Array | Kind::ArrayFill => Some(Type::array()),

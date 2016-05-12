@@ -8,7 +8,7 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
     let mut changed;
     loop {
         changed = false;
-        for i in 0..nodes.len() {
+        'node: for i in 0..nodes.len() {
             if nodes[i].ty.is_some() { continue; }
             let kind = nodes[i].kind;
             let mut this_ty = None;
@@ -26,7 +26,7 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                         }
                     }
                 }
-                Kind::Mul | Kind::Add | Kind::Return | Kind::Val | Kind::CallArg | Kind::Expr
+                Kind::Mul | Kind::Return | Kind::Val | Kind::CallArg | Kind::Expr
                 | Kind::Cond => {
                     for &ch in &nodes[i].children {
                         if let Some(ref ty) = nodes[ch].ty {
@@ -34,6 +34,27 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                             break;
                         }
                     }
+                }
+                Kind::Add => {
+                    // Require type to be inferred from all children.
+                    let mut it_ty: Option<Type> = None;
+                    for &ch in &nodes[i].children {
+                        if let Some(ref ty) = nodes[ch].ty {
+                            it_ty = if let Some(ref it) = it_ty {
+                                match it.add(ty) {
+                                    None => return Err(nodes[ch].source.wrap(
+                                        format!("Type mismatch: Binary operator can not be used with `{}` and `{}`",
+                                        it.description(), ty.description()))),
+                                    x => x
+                                }
+                            } else {
+                                Some(ty.clone())
+                            }
+                        } else {
+                            continue 'node;
+                        }
+                    }
+                    this_ty = it_ty;
                 }
                 Kind::Block => {
                     for &ch in nodes[i].children.last() {
@@ -56,6 +77,7 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
         let kind = nodes[i].kind;
         match kind {
             Kind::Fn => {
+                // TODO: Infer type from body when written as mathematical expression.
                 if let Some(ref ty) = nodes[i].ty {
                     try!(check_fn(i, nodes, ty))
                 } else {

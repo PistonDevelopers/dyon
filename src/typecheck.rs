@@ -127,6 +127,24 @@ impl Type {
         }
     }
 
+    pub fn add(&self, other: &Type) -> Option<Type> {
+        use self::Type::*;
+
+        match (self, other) {
+            (&Void, _) | (_, &Void) => None,
+            (&Bool, _) | (_, &Bool) => None,
+            (&Array(_), _) | (_, &Array(_)) => None,
+            (&Text, &Text) => Some(Text),
+            (&F64, &F64) => Some(F64),
+            (&Vec4, &F64) => Some(Vec4),
+            (&F64, &Vec4) => Some(Vec4),
+            (&Vec4, &Vec4) => Some(Vec4),
+            (&Any, x) if x != &Type::Void => Some(Any),
+            (x, &Any) if x != &Type::Void => Some(Any),
+            _ => None
+        }
+    }
+
     pub fn from_meta_data(node: &str, mut convert: Convert, ignored: &mut Vec<Range>)
     -> Result<(Range, Type), ()> {
         let start = convert.clone();

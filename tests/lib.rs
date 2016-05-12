@@ -81,6 +81,8 @@ fn test_typechk() {
     test_fail_src("source/typechk/return_6.rs");
     test_fail_src("source/typechk/return_7.rs");
     test_fail_src("source/typechk/return_8.rs");
+    test_src("source/typechk/add.rs");
+    test_src("source/typechk/mat_expr.rs");
 }
 
 #[test]
