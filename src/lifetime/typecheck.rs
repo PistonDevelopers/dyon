@@ -15,8 +15,28 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
             match kind {
                 Kind::Call => {
                     if let Some(decl) = nodes[i].declaration {
-                        if let Some(ref ty) = nodes[decl].ty {
-                            this_ty = Some(ty.clone());
+                        let mut missing = false;
+                        for j in 0..nodes[i].children.len() {
+                            let ch = nodes[i].children[j];
+                            if nodes[ch].item_try_or_ids() { continue 'node; }
+                            let arg = nodes[decl].children[j];
+                            match (&nodes[ch].ty, &nodes[arg].ty) {
+                                (&Some(ref ch_ty), &Some(ref arg_ty)) => {
+                                    if !ch_ty.goes_with(arg_ty) {
+                                        return Err(nodes[ch].source.wrap(
+                                            format!("Type mismatch: Expected `{}`, found `{}`",
+                                                arg_ty.description(), ch_ty.description())));
+                                    }
+                                }
+                                (&None, _) | (_, &None) => {
+                                    missing = true;
+                                }
+                            }
+                        }
+                        if !missing {
+                            if let Some(ref ty) = nodes[decl].ty {
+                                this_ty = Some(ty.clone());
+                            }
                         }
                     }
                     if this_ty.is_none() {
@@ -26,9 +46,47 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                         }
                     }
                 }
+                Kind::Assign => {
+                    let left = match nodes[i].find_child_by_kind(nodes, Kind::Left) {
+                        None => continue,
+                        Some(x) => x
+                    };
+                    let right = match nodes[i].find_child_by_kind(nodes, Kind::Right) {
+                        None => continue,
+                        Some(x) => x
+                    };
+                    if nodes[right].item_try_or_ids() { continue 'node; }
+                    nodes[left].ty = match (&nodes[left].ty, &nodes[right].ty) {
+                        (&None, &Some(ref right_ty)) => {
+                            // Make assign return void since there is no more need for checking.
+                            this_ty = Some(Type::Void);
+                            Some(right_ty.clone())
+                        }
+                        _ => { continue }
+                    };
+                    changed = true;
+                }
+                Kind::Item => {
+                    if nodes[i].item_try_or_ids() { continue 'node; }
+                    if let Some(decl) = nodes[i].declaration {
+                        // No member identifiers.
+                        if let Some(ref ty) = nodes[decl].ty {
+                            this_ty = Some(ty.clone());
+                        }
+                    }
+                    if let Some(parent) = nodes[i].parent {
+                        if nodes[parent].kind == Kind::Left {
+                           if let Some(ref ty) = nodes[parent].ty {
+                               // Get type from assignment left expression.
+                               this_ty = Some(ty.clone());
+                           }
+                       }
+                    }
+                }
                 Kind::Return | Kind::Val | Kind::CallArg | Kind::Expr
-                | Kind::Cond | Kind::Exp | Kind::Base => {
+                | Kind::Cond | Kind::Exp | Kind::Base | Kind::Right => {
                     for &ch in &nodes[i].children {
+                        if nodes[ch].item_try_or_ids() { continue 'node; }
                         if let Some(ref ty) = nodes[ch].ty {
                             this_ty = Some(ty.clone());
                             break;
@@ -39,6 +97,7 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                     // Require type to be inferred from all children.
                     let mut it_ty: Option<Type> = None;
                     for &ch in &nodes[i].children {
+                        if nodes[ch].item_try_or_ids() { continue 'node; }
                         if let Some(ref ty) = nodes[ch].ty {
                             it_ty = if let Some(ref it) = it_ty {
                                 match it.add(ty) {
@@ -60,6 +119,7 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                     // Require type to be inferred from all children.
                     let mut it_ty: Option<Type> = None;
                     for &ch in &nodes[i].children {
+                        if nodes[ch].item_try_or_ids() { continue 'node; }
                         if let Some(ref ty) = nodes[ch].ty {
                             it_ty = if let Some(ref it) = it_ty {
                                 match it.mul(ty) {
@@ -79,13 +139,16 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                 }
                 Kind::Pow => {
                     let base = match nodes[i].find_child_by_kind(nodes, Kind::Base) {
-                        None => continue,
+                        None => continue 'node,
                         Some(x) => x
                     };
                     let exp = match nodes[i].find_child_by_kind(nodes, Kind::Exp) {
-                        None => continue,
+                        None => continue 'node,
                         Some(x) => x
                     };
+                    if nodes[base].item_try_or_ids() || nodes[exp].item_try_or_ids() {
+                        continue 'node;
+                    }
                     match (&nodes[base].ty, &nodes[exp].ty) {
                         (&Some(ref base_ty), &Some(ref exp_ty)) => {
                             if let Some(ty) = base_ty.pow(exp_ty) {
@@ -102,6 +165,7 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                 }
                 Kind::Block => {
                     for &ch in nodes[i].children.last() {
+                        if nodes[ch].item_try_or_ids() { continue 'node; }
                         if let Some(ref ty) = nodes[ch].ty {
                             this_ty = Some(ty.clone());
                             break;

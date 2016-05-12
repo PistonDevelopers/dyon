@@ -929,6 +929,11 @@ impl Item {
             } else if let Ok((range, _)) = convert.meta_bool("try_item") {
                 convert.update(range);
                 try = true;
+                // Ignore item extra node, which is there to help the type checker.
+            } else if let Ok(range) = convert.start_node("item_extra") {
+                convert.update(range);
+            } else if let Ok(range) = convert.end_node("item_extra") {
+                convert.update(range);
             } else if let Ok((range, val)) = convert.meta_string("id") {
                 let start_id = convert;
                 convert.update(range);

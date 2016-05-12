@@ -19,6 +19,8 @@ pub struct Node {
     pub ty: Option<Type>,
     /// Whether the argument or call argument is mutable.
     pub mutable: bool,
+    /// Whether there is a `?` operator used on the node.
+    pub try: bool,
     /// The range in source.
     pub source: Range,
     /// The parent index.
@@ -59,6 +61,12 @@ impl Node {
             if nodes[ch].kind == kind { return Some(ch); }
         }
         return None
+    }
+
+    pub fn item_try_or_ids(&self) -> bool {
+        if self.try { true }
+        else if self.kind == Kind::Item && self.children.len() > 0 { true }
+        else { false }
     }
 
     pub fn lifetime(
@@ -270,6 +278,7 @@ pub fn convert_meta_data(
                     name: None,
                     ty: ty,
                     mutable: false,
+                    try: false,
                     source: Range::empty(0),
                     parent: parent,
                     children: vec![],
@@ -342,6 +351,10 @@ pub fn convert_meta_data(
                     "mut" => {
                         let i = *parents.last().unwrap();
                         nodes[i].mutable = _val;
+                    }
+                    "try_item" => {
+                        let i = *parents.last().unwrap();
+                        nodes[i].try = _val;
                     }
                     "bool" => {
                         let i = *parents.last().unwrap();

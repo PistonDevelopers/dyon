@@ -65,27 +65,28 @@ _seps: "(){}[],.:;=<>*·+-/%^?|&∧∨!¬∑∃∀\n"
     [{"!":"!" "¬":"!" "-":"-"} ?w lexpr:"expr"]
     ["|":"norm" ?w expr:"expr" ?w "|"]
 }
-15 item = [.._seps!:"name" ?[?w "?":"try_item"] .r?([{
+15 item = [.._seps!:"name" ?[?w "?":"try_item"] ?item_extra:"item_extra"]
+16 item_extra = .r!([{
            [?w "[" ?w {.t?:"id" .$_:"id" expr:"id"} ?w "]"]
-           [?w "." ?w .._seps!:"id"]} ?[?w "?":"try_id"]])]
-16 for = [label "for" .w!
+           [?w "." ?w .._seps!:"id"]} ?[?w "?":"try_id"]])
+17 for = [label "for" .w!
     expr:"init" ?w ";" ?w
     expr:"cond" ?w ";" ?w
     expr:"step" ?w block:"block"]
-17 for_n = [label "for" short_body]
-18 loop = [label "loop" .w!  block:"block"]
-19 break = ["break" ?w ?["'" .._seps!:"label"]]
-20 continue = ["continue" ?w ?["'" .._seps!:"label"]]
-21 if = ["if" .w! expr:"cond" ?w block:"true_block"
+18 for_n = [label "for" short_body]
+19 loop = [label "loop" .w!  block:"block"]
+20 break = ["break" ?w ?["'" .._seps!:"label"]]
+21 continue = ["continue" ?w ?["'" .._seps!:"label"]]
+22 if = ["if" .w! expr:"cond" ?w block:"true_block"
          .r?([?w "else" w "if" ?w expr:"else_if_cond" ?w block:"else_if_block"])
          ?[?w "else" ?w block:"else_block"]]
-22 call = [.._seps!:"name" ?w "(" .s?.(, arg_expr:"call_arg") ?w ")"]
-23 named_call = [.._seps!:"word" ?w "(" ?w
+23 call = [.._seps!:"name" ?w "(" .s?.(, arg_expr:"call_arg") ?w ")"]
+24 named_call = [.._seps!:"word" ?w "(" ?w
     .s?.(, [.._seps!:"word" ?w ":" ?w arg_expr:"call_arg" ?w]) ")"]
-24 assign = [lexpr:"left" ?w assign_op ?w expr:"right"]
-25 assign_op = {":=":":=" "=":"=" "+=":"+=" "-=":"-=" "*=":"*=" "/=":"/=" "%=":"%="}
-26 compare = [lexpr:"left" ?w compare_op ?w expr:"right"]
-27 compare_op = {"==":"==" "!=":"!=" "¬=":"!=" "<=":"<=" "<":"<" ">=":">=" ">":">"}
+25 assign = [lexpr:"left" ?w assign_op ?w expr:"right"]
+26 assign_op = {":=":":=" "=":"=" "+=":"+=" "-=":"-=" "*=":"*=" "/=":"/=" "%=":"%="}
+27 compare = [lexpr:"left" ?w compare_op ?w expr:"right"]
+28 compare_op = {"==":"==" "!=":"!=" "¬=":"!=" "<=":"<=" "<":"<" ">=":">=" ">":">"}
 
 30 label = ?["'" .._seps!:"label" ?w ":" ?w]
 31 short_body = [.w! .._seps!:"name" ?w {["[" ?w expr:"start" , expr:"end" ?w ")"]
