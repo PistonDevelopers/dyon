@@ -1,9 +1,7 @@
 fn main() {
-    color := #e7be8d
-    println(to_string(color: color))
-    linear_color := srgb_to_linear(color: color)
-    println(linear_color)
-    srgb_color := linear_to_srgb(color: linear_color)
-    println(to_string(color: srgb_color))
-    println(srgb_color - color)
+    msg := " hello "
+    println("..." + msg + "...")
+    println("..." + trim_left(msg) + "...")
+    println("..." + trim_right(msg) + "...")
+    println("..." + trim(msg) + "...")
 }
