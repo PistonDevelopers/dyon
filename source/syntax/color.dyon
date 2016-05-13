@@ -1,0 +1,4 @@
+fn main() {
+    color := #e7be8d
+    println(to_string(color: color))
+}
