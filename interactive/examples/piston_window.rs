@@ -1,13 +1,12 @@
 extern crate dyon;
 extern crate piston_window;
 extern crate current;
+extern crate dyon_interactive;
 
 use std::sync::Arc;
 use piston_window::*;
 use current::CurrentGuard;
 use dyon::{error, load, Lt, Module, PreludeFunction, Runtime, Type};
-
-mod helper;
 
 fn main() {
     let mut window: PistonWindow =
@@ -34,7 +33,7 @@ fn main() {
 
 fn load_module() -> Option<Module> {
     use dyon_functions::*;
-    use helper::add_functions;
+    use dyon_interactive::add_functions;
 
     let mut module = Module::new();
     add_functions::<PistonWindow>(&mut module);
@@ -58,8 +57,8 @@ fn load_module() -> Option<Module> {
 
 mod dyon_functions {
     use dyon::Runtime;
+    use dyon_interactive::{draw_2d, NO_EVENT};
     use current::Current;
-    use helper::{draw_2d, NO_EVENT};
 
     pub fn draw(rt: &mut Runtime) -> Result<(), String> {
         use piston_window::*;

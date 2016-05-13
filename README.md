@@ -5,14 +5,11 @@ Notice: This is very early stage in development. Breaking changes will happen!
 
 ![snake](./images/snake.png)
 
-To run snake demo for interactive coding:
+Libraries that helps setting up a Dyon environment:
 
-1. [Install Rust](https://www.rust-lang.org/) (Rust Nightly is required at the moment)
-2. Fork the repo to your local hard drive
-3. In Terminal, type `cargo run --release --example piston_window`
-4. Edit "source/piston_window/snake.rs" while running the demo
+- [dyon_interactive](./interactive/README.md) - Interactive coding with the Piston game engine
 
-Dyon uses ".rs" to get Rust syntax coloring.
+Dyon script files ends with ".dyon".
 
 ### Editor-plugins
 
@@ -60,9 +57,9 @@ Dyon uses ".rs" to get Rust syntax coloring.
 
 Dyon is a hypothetical particle predicted by several grand unified theories in physics with both eletrical and magnetic charge. See [wikipedia article](https://en.wikipedia.org/wiki/Dyon) for more information.
 
-The name Dyon fits because, just like the particle, there are things that are yet to be discovered.
-However, it was not born out of a grand new vision about language design,
-but is the result of exploring and testing new stuff.
+The name Dyon fits because, just like the particle, there are things that are yet to be discovered about language design.
+However, this language was not born out of a grand new vision,
+but is the result of exploring and testing new ideas.
 
 ### Motivation and goals
 
@@ -75,7 +72,7 @@ The idea was to make a simple, but convenient scripting language that integrated
 - To test the design of the language, created a demo for interactive coding
 - Mutability check to improve readability
 - Short For loop to improve readability and performance
-- Mathematical loops and unicode symbols as alternative syntax
+- Mathematical loops and unicode symbols to improve readability
 
 Main goals:
 

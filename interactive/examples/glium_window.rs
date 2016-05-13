@@ -3,14 +3,13 @@ extern crate glium;
 extern crate piston;
 extern crate dyon;
 extern crate current;
+extern crate dyon_interactive;
 
 use glium_graphics::{Glium2d, GliumWindow, OpenGL};
 use piston::window::WindowSettings;
 use piston::input::Event;
 use dyon::{error, load, Module, Runtime};
 use current::CurrentGuard;
-
-mod helper;
 
 fn main() {
     let opengl = OpenGL::V3_2;
@@ -48,7 +47,7 @@ fn main() {
 fn load_module() -> Option<Module> {
     use std::sync::Arc;
     use dyon_functions::*;
-    use helper::add_functions;
+    use dyon_interactive::add_functions;
     use dyon::{Lt, Module, PreludeFunction, Type};
     use glium_graphics::GliumWindow;
 
@@ -74,8 +73,8 @@ fn load_module() -> Option<Module> {
 
 mod dyon_functions {
     use dyon::Runtime;
+    use dyon_interactive::{draw_2d, NO_EVENT};
     use current::Current;
-    use helper::{draw_2d, NO_EVENT};
 
     pub fn draw(rt: &mut Runtime) -> Result<(), String> {
         use piston::input::*;
