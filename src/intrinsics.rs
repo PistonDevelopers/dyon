@@ -67,6 +67,7 @@ pub fn standard(f: &mut HashMap<Arc<String>, PreludeFunction>) {
     });
     sarg(f, "trim_right", Type::Text, Type::Text);
     sarg(f, "to_string", Type::Any, Type::Text);
+    sarg(f, "to_string_color", Type::Vec4, Type::Text);
     sarg(f, "typeof", Type::Any, Type::Text);
     sarg(f, "round", Type::F64, Type::F64);
     sarg(f, "abs", Type::F64, Type::F64);
@@ -508,6 +509,39 @@ pub fn call_standard(
             write_variable(&mut buf, rt, rt.resolve(&v), EscapeString::None).unwrap();
             let v = Variable::Text(Arc::new(String::from_utf8(buf).unwrap()));
             rt.stack.push(v);
+            rt.pop_fn(call.name.clone());
+            Expect::Something
+        }
+        "to_string_color" => {
+            rt.push_fn(call.name.clone(), None, st + 1, lc);
+            let v = rt.stack.pop().expect(TINVOTS);
+            let v = match rt.resolve(&v) {
+                &Variable::Vec4(val) => val,
+                x => return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(x, "vec4")))
+            };
+            let mut buf: Vec<u8> = vec![];
+            let clamp = |x| {
+                if x < 0.0 { 0.0 } else if x > 1.0 { 1.0 } else { x }
+            };
+            let r = (clamp(v[0]) * 255.0) as usize;
+            let g = (clamp(v[1]) * 255.0) as usize;
+            let b = (clamp(v[2]) * 255.0) as usize;
+            let a = (clamp(v[3]) * 255.0) as usize;
+            let map = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+                       'a', 'b', 'c', 'd', 'e', 'f'];
+            let (r1, r2) = (r >> 4, r & 0xf);
+            let (g1, g2) = (g >> 4, g & 0xf);
+            let (b1, b2) = (b >> 4, b & 0xf);
+            let (a1, a2) = (a >> 4, a & 0xf);
+            buf.push('#' as u8);
+            buf.push(map[r1] as u8); buf.push(map[r2] as u8);
+            buf.push(map[g1] as u8); buf.push(map[g2] as u8);
+            buf.push(map[b1] as u8); buf.push(map[b2] as u8);
+            if a != 255 {
+                buf.push(map[a1] as u8); buf.push(map[a2] as u8);
+            }
+            rt.stack.push(Variable::Text(Arc::new(String::from_utf8(buf).unwrap())));
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
