@@ -68,6 +68,8 @@ pub fn standard(f: &mut HashMap<Arc<String>, PreludeFunction>) {
     sarg(f, "trim_right", Type::Text, Type::Text);
     sarg(f, "to_string", Type::Any, Type::Text);
     sarg(f, "to_string_color", Type::Vec4, Type::Text);
+    sarg(f, "srgb_to_linear_color", Type::Vec4, Type::Vec4);
+    sarg(f, "linear_to_srgb_color", Type::Vec4, Type::Vec4);
     sarg(f, "typeof", Type::Any, Type::Text);
     sarg(f, "round", Type::F64, Type::F64);
     sarg(f, "abs", Type::F64, Type::F64);
@@ -542,6 +544,46 @@ pub fn call_standard(
                 buf.push(map[a1] as u8); buf.push(map[a2] as u8);
             }
             rt.stack.push(Variable::Text(Arc::new(String::from_utf8(buf).unwrap())));
+            rt.pop_fn(call.name.clone());
+            Expect::Something
+        }
+        "srgb_to_linear_color" => {
+            rt.push_fn(call.name.clone(), None, st + 1, lc);
+            let v = rt.stack.pop().expect(TINVOTS);
+            let v = match rt.resolve(&v) {
+                &Variable::Vec4(val) => val,
+                x => return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(x, "vec4")))
+            };
+            let to_linear = |f: f32| {
+                if f <= 0.04045 {
+                    f / 12.92
+                } else {
+                    ((f + 0.055) / 1.055).powf(2.4)
+                }
+            };
+            let v = [to_linear(v[0]), to_linear(v[1]), to_linear(v[2]), v[3]];
+            rt.stack.push(Variable::Vec4(v));
+            rt.pop_fn(call.name.clone());
+            Expect::Something
+        }
+        "linear_to_srgb_color" => {
+            rt.push_fn(call.name.clone(), None, st + 1, lc);
+            let v = rt.stack.pop().expect(TINVOTS);
+            let v = match rt.resolve(&v) {
+                &Variable::Vec4(val) => val,
+                x => return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(x, "vec4")))
+            };
+            let to_srgb = |f: f32| {
+                if f <= 0.0031308 {
+                    f * 12.92
+                } else {
+                    1.055 * f.powf(1.0 / 2.4) - 0.055
+                }
+            };
+            let v = [to_srgb(v[0]), to_srgb(v[1]), to_srgb(v[2]), v[3]];
+            rt.stack.push(Variable::Vec4(v));
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
