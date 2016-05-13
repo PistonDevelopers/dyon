@@ -1,7 +1,7 @@
 title() = "Snake!"
 
 settings() = {
-    background_color: (1, 1, 0.8, 1),
+    background_color: #e5d6a1,
     reload_interval: 0.25,
     reload_key: 1073741882, // F1
     reset_key: 114, // R
@@ -48,12 +48,12 @@ fn render(settings: {}, data: {}) {
     d := []
     clear(dlist: mut d, color: settings.background_color)
     for i n-1 {
-        line(dlist: mut d, color: (.2, .2, 0, 1), radius: 1,
+        line(dlist: mut d, color: #29271f, radius: 1,
              from: data.snake_body[i+1], to: data.snake_body[i])
     }
     for i n {
         pos := data.snake_body[i]
-        circle(dlist: mut d, color: (.2, .2, 0, 1),
+        circle(dlist: mut d, color: #000000,
                center: pos, radius: radius)
     }
     if n > 0 {
@@ -61,16 +61,17 @@ fn render(settings: {}, data: {}) {
         pos := data.snake_body[0]
         dir := dir(angle: data.snake_angle)
         pos2 := pos + dir * dir_len
-        line(dlist: mut d, color: (0, 0, 1, 1), radius: 1, from: pos, to: pos2)
+        line(dlist: mut d, color: #1510dc, radius: 1,
+             from: pos, to: pos2)
     }
 
-    red := (0, 0.4, 0, 1)
-    laser := (1, 0, 0, 1)
+    normal := #38642b
+    laser := #b02525
 
     walls := [
-        [red, (100, 0), (200, 100)],
-        [red, (200, 100), (200, 200)],
-        [red, (300, 100), (300, 200)],
+        [normal, (100, 0), (200, 100)],
+        [normal, (200, 100), (200, 200)],
+        [normal, (300, 100), (300, 200)],
         [laser, (300, 200), (400, 200)]
     ]
 

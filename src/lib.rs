@@ -2,6 +2,7 @@
 extern crate piston_meta;
 extern crate rand;
 extern crate range;
+extern crate read_color;
 
 use std::any::Any;
 use std::sync::{Arc, Mutex};
