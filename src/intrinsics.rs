@@ -65,6 +65,8 @@ pub fn standard(f: &mut HashMap<Arc<String>, PreludeFunction>) {
         tys: vec![Type::array()],
         ret: Type::Any
     });
+    sarg(f, "trim", Type::Text, Type::Text);
+    sarg(f, "trim_left", Type::Text, Type::Text);
     sarg(f, "trim_right", Type::Text, Type::Text);
     sarg(f, "to_string", Type::Any, Type::Text);
     sarg(f, "to_string_color", Type::Vec4, Type::Text);
@@ -483,6 +485,30 @@ pub fn call_standard(
                     }
                 }
             }
+            rt.pop_fn(call.name.clone());
+            Expect::Something
+        }
+        "trim" => {
+            rt.push_fn(call.name.clone(), None, st + 1, lc);
+            let v = rt.stack.pop().expect(TINVOTS);
+            let v = match rt.resolve(&v) {
+                &Variable::Text(ref t) => t.clone(),
+                x => return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(x, "text")))
+            };
+            rt.stack.push(Variable::Text(Arc::new(v.trim().into())));
+            rt.pop_fn(call.name.clone());
+            Expect::Something
+        }
+        "trim_left" => {
+            rt.push_fn(call.name.clone(), None, st + 1, lc);
+            let v = rt.stack.pop().expect(TINVOTS);
+            let v = match rt.resolve(&v) {
+                &Variable::Text(ref t) => t.clone(),
+                x => return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(x, "text")))
+            };
+            rt.stack.push(Variable::Text(Arc::new(v.trim_left().into())));
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
