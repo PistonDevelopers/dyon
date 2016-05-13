@@ -1,0 +1,26 @@
+[package]
+name = "piston-dyon_interactive"
+version = "0.1.0"
+authors = ["Sven Nilsen <bvssvni@gmail.com>"]
+description = "A library for interactive coding with the Piston game engine"
+keywords = ["script", "scripting", "game", "language", "piston"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/pistondevelopers/dyon.git"
+homepage = "https://github.com/pistondevelopers/dyon/interactive"
+
+[lib]
+name = "dyon_interactive"
+
+[dependencies.dyon]
+version = "0.6.1"
+path = ".."
+
+[dependencies]
+piston = "0.22.0"
+current = "0.1.1"
+piston2d-graphics = "0.16.0"
+
+[dev-dependencies]
+piston_window = "0.47.0"
+piston2d-glium_graphics = "0.25.0"
+glium = "0.14.0"

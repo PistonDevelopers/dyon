@@ -4,21 +4,13 @@ version = "0.6.1"
 authors = ["Sven Nilsen <bvssvni@gmail.com>"]
 keywords = ["script", "scripting", "game", "language", "piston"]
 description = "A rusty dynamically typed scripting language"
-license = "MIT"
+license = "MIT OR Apache-2.0"
 readme = "README.md"
 repository = "https://github.com/pistondevelopers/dyon.git"
 homepage = "https://github.com/pistondevelopers/dyon"
-exclude = ["images/*"]
+exclude = ["images/*", "editor-plugins/*"]
 
 [dependencies]
 piston_meta = "0.26.1"
 range = "0.3.1"
 rand = "0.3.13"
-
-[dev-dependencies]
-piston_window = "0.47.0"
-current = "0.1.1"
-piston2d-graphics = "0.16.0"
-piston2d-glium_graphics = "0.25.0"
-glium = "0.14.0"
-piston = "0.22.1"

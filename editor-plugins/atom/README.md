@@ -1,4 +1,9 @@
-## How to install Dyon grammar for the Atom editor
+# dyon_for_atom
+Dyon syntax highlighting for the Atom editor
+
+![screenshot](../../images/code.png)
+
+## How to install
 
 1. Open up the Terminal window
 2. Go to `~/.atom/packages`
