@@ -336,6 +336,17 @@ impl Expression {
                     val: val,
                     source_range: convert.source(start).unwrap(),
                 }));
+            } else if let Ok((range, val)) = convert.meta_string("color") {
+                use read_color;
+
+                convert.update(range);
+                if let Some((rgb, a)) = read_color::rgb_maybe_a(&mut val.chars()) {
+                    let v = [rgb[0] as f32 / 255.0, rgb[1] as f32 / 255.0, rgb[2] as f32 / 255.0,
+                             a.unwrap_or(255) as f32 / 255.0];
+                    result = Some(Expression::Variable(range, Variable::Vec4(v)));
+                } else {
+                    return Err(());
+                }
             } else if let Ok((range, val)) = Call::from_meta_data(
                     convert, ignored) {
                 convert.update(range);
@@ -647,6 +658,9 @@ impl Add {
             }
         }
 
+        if items.len() == 0 {
+            return Err(())
+        }
         Ok((convert.subtract(start), Add {
             items: items,
             ops: ops,
@@ -720,6 +734,9 @@ impl Mul {
             }
         }
 
+        if items.len() == 0 {
+            return Err(())
+        }
         Ok((convert.subtract(start), Mul {
             items: items,
             ops: ops,
