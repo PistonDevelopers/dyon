@@ -13,6 +13,8 @@ use Variable;
 use Module;
 use Error;
 
+mod meta;
+
 const TINVOTS: &'static str = "There is no value on the stack";
 
 pub fn standard(f: &mut HashMap<Arc<String>, PreludeFunction>) {
@@ -125,6 +127,11 @@ pub fn standard(f: &mut HashMap<Arc<String>, PreludeFunction>) {
     sarg(f, "z", Type::Vec4, Type::F64);
     sarg(f, "w", Type::Vec4, Type::F64);
     sarg(f, "dir_angle", Type::F64, Type::Vec4);
+    f.insert(Arc::new("load_meta_file".into()), PreludeFunction {
+        lts: vec![Lt::Default; 2],
+        tys: vec![Type::Text; 2],
+        ret: Type::Result(Box::new(Type::array()))
+    });
 }
 
 enum EscapeString {
@@ -1074,6 +1081,32 @@ pub fn call_standard(
             rt.stack.push(v);
             rt.pop_fn(call.name.clone());
             Expect::Something
+        }
+        "load_meta_file" => {
+            rt.push_fn(call.name.clone(), None, st + 1, lc);
+            let file = rt.stack.pop().expect(TINVOTS);
+            let meta = rt.stack.pop().expect(TINVOTS);
+            let file = match rt.resolve(&file) {
+                &Variable::Text(ref file) => file.clone(),
+                x => return Err(module.error(call.args[1].source_range(),
+                                &rt.expected(x, "str")))
+            };
+            let meta = match rt.resolve(&meta) {
+                &Variable::Text(ref meta) => meta.clone(),
+                x => return Err(module.error(call.args[0].source_range(),
+                                &rt.expected(x, "str")))
+            };
+            let res = meta::load_meta_file(&**meta, &**file);
+            rt.stack.push(Variable::Result(match res {
+                Ok(res) => Ok(Box::new(Variable::Array(Arc::new(res)))),
+                Err(err) => Err(Box::new(Error {
+                    message: Variable::Text(Arc::new(err)),
+                    trace: vec![]
+                }))
+            }));
+            rt.pop_fn(call.name.clone());
+            Expect::Something
+
         }
         _ => return Err(module.error(call.source_range,
             &format!("{}\nUnknown function `{}`", rt.stack_trace(), call.name)))

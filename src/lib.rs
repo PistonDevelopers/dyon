@@ -27,10 +27,10 @@ pub type RustObject = Arc<Mutex<Any>>;
 
 #[derive(Debug, Clone)]
 pub struct Error {
-    message: Variable,
+    pub message: Variable,
     // Extra information to help debug error.
     // Stores error messages for all `?` operators.
-    trace: Vec<String>,
+    pub trace: Vec<String>,
 }
 
 #[derive(Debug, Clone)]

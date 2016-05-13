@@ -1,7 +1,4 @@
 fn main() {
-    msg := " hello "
-    println("..." + msg + "...")
-    println("..." + trim_left(msg) + "...")
-    println("..." + trim_right(msg) + "...")
-    println("..." + trim(msg) + "...")
+    data := unwrap(load(meta: "assets/test_meta.txt", file: "assets/test_data.txt"))
+    println(data)
 }
