@@ -1149,7 +1149,13 @@ pub fn call_standard(
                 match handle_res {
                     Ok(handle) => {
                         match handle.join() {
-                            Ok(res) => Ok(Box::new(res)),
+                            Ok(res) => match res {
+                                Ok(res) => Ok(Box::new(res)),
+                                Err(err) => Err(Box::new(Error {
+                                    message: Variable::Text(Arc::new(err)),
+                                    trace: vec![]
+                                }))
+                            },
                             Err(_err) => Err(Box::new(Error {
                                 message: Variable::Text(Arc::new(
                                     "Thread did not exit successfully".into())),

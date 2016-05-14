@@ -568,14 +568,17 @@ impl Runtime {
             result_type: self.result_type.clone(),
         };
         let new_module: Module = module.clone();
-        let handle: JoinHandle<Variable> = thread::spawn(move || {
+        let handle: JoinHandle<Result<Variable, String>> = thread::spawn(move || {
             let mut new_rt = new_rt;
             let new_module = new_module;
             let fake_call = fake_call;
-            let _ = new_rt.call(&fake_call, &new_module);
+            match new_rt.call(&fake_call, &new_module) {
+                Err(err) => return Err(err),
+                Ok(_) => {}
+            };
 
             let v = new_rt.stack.pop().expect("There is no value on the stack");
-            v.deep_clone(&new_rt.stack)
+            Ok(v.deep_clone(&new_rt.stack))
         });
         self.stack.push(Variable::Thread(Thread::new(handle)));
         Ok((Expect::Something, Flow::Continue))

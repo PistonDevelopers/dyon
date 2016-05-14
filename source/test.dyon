@@ -1,48 +1,13 @@
-fn get_url(url) -> res {
-    data := load(
-        meta: "assets/test_meta.txt",
-        url: url
-    )?
-    return ok(data)
-}
-
-fn foo(n, a: [{}]) -> {
-    println(n)
-    println(a[0].x)
-    return sum i n {
-        sleep(0.1)
-        i+1
-    }
-}
-
-fn bar() {}
-
-fn bar2() -> f64 {
-    return 2
+fn foo(a: 'b f64, mut b: []) -> {
+    b[0] = {a: a}
+    debug()
+    return 5
 }
 
 fn main() {
-    url := "https://goo.gl/IzuRJU"
-
-    b := {x: "Hi!"}
-    a := [b]
-
-    // data_thread := go get_url(url)
-    data_thread := go foo(4, a)
-    // data_thread := go bar()
-
-    for i 10 {
-        sleep(0.1)
-    }
-    println("Done here")
-    data := unwrap(join(thread: data_thread))
-    println(data)
+    y := 5
+    x := [{}, 2, 3]
+    foo_thread := go foo(y, mut x)
+    r := unwrap(join(thread: foo_thread))
+    println("r: " + to_string(r))
 }
-
-/*
-fn main() {
-    if go bar2() {
-
-    }
-}
-*/

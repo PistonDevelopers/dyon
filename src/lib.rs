@@ -38,11 +38,11 @@ pub struct Error {
 
 #[derive(Clone)]
 pub struct Thread {
-    pub handle: Option<Arc<Mutex<JoinHandle<Variable>>>>,
+    pub handle: Option<Arc<Mutex<JoinHandle<Result<Variable, String>>>>>,
 }
 
 impl Thread {
-    pub fn new(handle: JoinHandle<Variable>) -> Thread {
+    pub fn new(handle: JoinHandle<Result<Variable, String>>) -> Thread {
         Thread {
             handle: Some(Arc::new(Mutex::new(handle)))
         }
@@ -53,7 +53,7 @@ impl Thread {
     pub fn invalidate_handle(
         rt: &mut Runtime,
         var: Variable
-    ) -> Result<JoinHandle<Variable>, String> {
+    ) -> Result<JoinHandle<Result<Variable, String>>, String> {
         use std::error::Error;
 
         let thread = match var {
