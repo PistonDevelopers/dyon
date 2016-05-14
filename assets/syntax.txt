@@ -84,10 +84,11 @@ _seps: "(){}[],.:;=<>*·+-/%^?|&∧∨!¬∑∃∀\n"
 25 call = [.._seps!:"name" ?w "(" .s?.(, arg_expr:"call_arg") ?w ")"]
 26 named_call = [.._seps!:"word" ?w "(" ?w
     .s?.(, [.._seps!:"word" ?w ":" ?w arg_expr:"call_arg" ?w]) ")"]
-27 assign = [lexpr:"left" ?w assign_op ?w expr:"right"]
-28 assign_op = {":=":":=" "=":"=" "+=":"+=" "-=":"-=" "*=":"*=" "/=":"/=" "%=":"%="}
-29 compare = [lexpr:"left" ?w compare_op ?w expr:"right"]
-30 compare_op = {"==":"==" "!=":"!=" "¬=":"!=" "<=":"<=" "<":"<" ">=":">=" ">":">"}
+27 go = ["go" ?w {call:"call" named_call:"named_call"}]
+28 assign = [lexpr:"left" ?w assign_op ?w expr:"right"]
+29 assign_op = {":=":":=" "=":"=" "+=":"+=" "-=":"-=" "*=":"*=" "/=":"/=" "%=":"%="}
+30 compare = [lexpr:"left" ?w compare_op ?w expr:"right"]
+31 compare_op = {"==":"==" "!=":"!=" "¬=":"!=" "<=":"<=" "<":"<" ">=":">=" ">":">"}
 
 40 label = ?["'" .._seps!:"label" ?w ":" ?w]
 41 short_body = [.w! .._seps!:"name" ?w {["[" ?w expr:"start" , expr:"end" ?w ")"]
@@ -96,7 +97,7 @@ _seps: "(){}[],.:;=<>*·+-/%^?|&∧∨!¬∑∃∀\n"
 43 , = [?w "," ?w]
 44 arr = {array:"array" array_fill:"array_fill"}
 45 items = {vec4:"vec4" ["(" ?w expr ?w ")"] unop:"unop"
-            text call:"call" named_call:"named_call"
+            text go:"go" call:"call" named_call:"named_call"
             num bool color item:"item"}
 
 50 short_loops = {sum:"sum" min:"min" max:"max" sift:"sift" any:"any" all:"all"}

@@ -6,6 +6,8 @@ extern crate read_color;
 extern crate hyper;
 
 use std::any::Any;
+use std::fmt;
+use std::thread::JoinHandle;
 use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 use range::Range;
@@ -34,6 +36,56 @@ pub struct Error {
     pub trace: Vec<String>,
 }
 
+#[derive(Clone)]
+pub struct Thread {
+    pub handle: Option<Arc<Mutex<JoinHandle<Variable>>>>,
+}
+
+impl Thread {
+    pub fn new(handle: JoinHandle<Variable>) -> Thread {
+        Thread {
+            handle: Some(Arc::new(Mutex::new(handle)))
+        }
+    }
+
+    /// Removes the thread handle from the stack.
+    /// This is to prevent an extra reference when resolving the variable.
+    pub fn invalidate_handle(
+        rt: &mut Runtime,
+        var: Variable
+    ) -> Result<JoinHandle<Variable>, String> {
+        use std::error::Error;
+
+        let thread = match var {
+            Variable::Ref(ind) => {
+                use std::mem::replace;
+
+                match replace(&mut rt.stack[ind], Variable::Thread(Thread { handle: None })) {
+                    Variable::Thread(th) => th,
+                    x => return Err(rt.expected(&x, "Thread"))
+                }
+            }
+            Variable::Thread(thread) => thread,
+            x => return Err(rt.expected(&x, "Thread"))
+        };
+        let handle = match thread.handle {
+            None => return Err("The Thread has already been invalidated".into()),
+            Some(thread) => thread
+        };
+        let mutex = try!(Arc::try_unwrap(handle).map_err(|_|
+            format!("{}\nCan not access Thread because there is \
+            more than one reference to it", rt.stack_trace())));
+        mutex.into_inner().map_err(|err|
+            format!("{}\nCan not lock Thread mutex:\n{}", rt.stack_trace(), err.description()))
+    }
+}
+
+impl fmt::Debug for Thread {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "thread")
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum Variable {
     Ref(usize),
@@ -48,7 +100,15 @@ pub enum Variable {
     RustObject(RustObject),
     Option(Option<Box<Variable>>),
     Result(Result<Box<Variable>, Box<Error>>),
+    Thread(Thread),
 }
+
+/*
+This is requires because `UnsafeRef(*mut Variable)` can not be sent across threads.
+The lack of `UnsafeRef` variant when sending across threads is guaranteed at language level.
+TODO: Make the interior of `UnsafeRef` inaccessible outside the library.
+*/
+unsafe impl Send for Variable {}
 
 impl Variable {
     fn deep_clone(&self, stack: &Vec<Variable>) -> Variable {
@@ -86,6 +146,7 @@ impl Variable {
             Result(Ok(ref ok)) => Result(Ok(ok.clone())),
             // `err(x)` always uses deep clone, so it does not contain references.
             Result(Err(ref err)) => Result(Err(err.clone())),
+            Thread(_) => self.clone(),
         }
     }
 }
@@ -107,11 +168,12 @@ impl PartialEq for Variable {
     }
 }
 
+#[derive(Clone)]
 pub struct Module {
     pub source: Option<String>,
     pub functions: HashMap<Arc<String>, Arc<ast::Function>>,
-    pub ext_prelude: HashMap<Arc<String>,
-        (fn(&mut Runtime) -> Result<(), String>, PreludeFunction)>,
+    pub ext_prelude: Arc<HashMap<Arc<String>,
+        (fn(&mut Runtime) -> Result<(), String>, PreludeFunction)>>,
 }
 
 impl Module {
@@ -119,7 +181,7 @@ impl Module {
         Module {
             source: None,
             functions: HashMap::new(),
-            ext_prelude: HashMap::new(),
+            ext_prelude: Arc::new(HashMap::new()),
         }
     }
 
@@ -144,7 +206,10 @@ impl Module {
         f: fn(&mut Runtime) -> Result<(), String>,
         prelude_function: PreludeFunction
     ) {
-        self.ext_prelude.insert(name.clone(), (f, prelude_function));
+        Arc::get_mut(&mut self.ext_prelude)
+            .expect("Can not add prelude function when there is \
+                     more than one reference to the module")
+            .insert(name.clone(), (f, prelude_function));
     }
 }
 

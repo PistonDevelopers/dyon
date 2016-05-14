@@ -133,6 +133,7 @@ impl Node {
         let mut call_arg_ind = 0;
         for &c in &self.children {
             match (self.kind, nodes[c].kind) {
+                (_, Kind::Go) => {}
                 (_, Kind::ForN) => {}
                 (_, Kind::Continue) => {}
                 (_, Kind::Sift) => {}

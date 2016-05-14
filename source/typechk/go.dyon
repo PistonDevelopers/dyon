@@ -1,0 +1,11 @@
+fn bar() {}
+
+fn main() {
+    data_thread := go bar()
+    for i 10 {
+        sleep(0.1)
+    }
+    println("Done here")
+    data := unwrap(join(thread: data_thread))
+    println(data)
+}

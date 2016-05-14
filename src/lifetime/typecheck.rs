@@ -13,6 +13,9 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
             let kind = nodes[i].kind;
             let mut this_ty = None;
             match kind {
+                Kind::Go => {
+                    // TODO: Infer thread type from function.
+                }
                 Kind::Call => {
                     if let Some(decl) = nodes[i].declaration {
                         let mut missing = false;
@@ -209,6 +212,21 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                         format!("Could not infer type of function `{}`",
                         nodes[i].name.as_ref().unwrap())
                     ));
+                }
+            }
+            Kind::Go => {
+                if nodes[i].children.len() > 0 {
+                    if let Some(decl) = nodes[nodes[i].children[0]].declaration {
+                        match nodes[decl].ty {
+                            None | Some(Type::Void) => {
+                                return Err(nodes[i].source.wrap(
+                                    format!("Requires `->` on `{}`",
+                                    nodes[decl].name.as_ref().unwrap())
+                                ));
+                            }
+                            _ => {}
+                        }
+                    }
                 }
             }
             Kind::If => {

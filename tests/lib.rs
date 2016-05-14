@@ -93,6 +93,7 @@ fn test_typechk() {
     test_fail_src("source/typechk/call.dyon");
     test_src("source/typechk/obj.dyon");
     test_fail_src("source/typechk/obj_2.dyon");
+    test_fail_src("source/typechk/go.dyon");
 }
 
 #[test]
