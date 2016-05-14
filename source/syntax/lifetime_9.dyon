@@ -1,0 +1,13 @@
+fn foo(a: 'b f64, mut b: []) -> {
+    b[0] = {a: a}
+    debug()
+    return 5
+}
+
+fn main() {
+    y := 5
+    x := [{}, 2, 3]
+    foo_thread := go foo(y, mut x)
+    r := unwrap(join(thread: foo_thread))
+    println("r: " + to_string(r))
+}

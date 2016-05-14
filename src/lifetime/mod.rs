@@ -348,6 +348,42 @@ pub fn check(
         }
     }
 
+    // Check that `go` functions does not have lifetime constraints.
+    for &c in &calls {
+        let call = &nodes[c];
+        if let Some(parent) = call.parent {
+            if nodes[parent].kind != Kind::Go { continue }
+        } else {
+            continue;
+        }
+        if let Some(declaration) = call.declaration {
+            let function = &nodes[declaration];
+            for (i, &a) in function.children.iter()
+                .enumerate()
+                .filter(|&(_, &i)| nodes[i].kind == Kind::Arg)  {
+                let arg = &nodes[a];
+                if arg.lifetime.is_some() {
+                    return Err(nodes[call.children[i]].source.wrap(
+                        format!("Can not use `go` because this argument has a lifetime constraint")));
+                }
+            }
+        } else {
+            // Check that call to intrinsic satisfy the declared constraints.
+            for ((i, &lt), _) in
+            call.lts.iter().enumerate()
+                .zip(call.children.iter()
+                .filter(|&&n| nodes[n].kind == Kind::CallArg)) {
+                match lt {
+                    Lt::Default => {}
+                    _ => {
+                        return Err(nodes[call.children[i]].source.wrap(
+                            format!("Can not use `go` because this argument has a lifetime constraint")));
+                    }
+                }
+            }
+        }
+    }
+
     // Check that calls satisfy the lifetime constraints of arguments.
     for &c in &calls {
         let call = &nodes[c];
