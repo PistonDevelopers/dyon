@@ -10,9 +10,7 @@ fn main() {
     n := 10000000
 
     t := 10
-    threads := sift i t {
-        go sum_n(i, n / t)
-    }
+    threads := sift i t { go sum_n(i, n / t) }
     println(unwrap(results(mut threads)))
 
     // println(foo(0, n))
