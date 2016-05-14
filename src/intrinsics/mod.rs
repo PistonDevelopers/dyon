@@ -237,7 +237,11 @@ fn write_variable<W>(
                 }
             }
         }
-        ref x => panic!("Could not print out `{:?}`", x)
+        Variable::Thread(_) => try!(write!(w, "_thread")),
+        Variable::Return => try!(write!(w, "_return")),
+        Variable::UnsafeRef(_) => try!(write!(w, "_unsafe_ref")),
+        Variable::RustObject(_) => try!(write!(w, "_rust_object")),
+        // ref x => panic!("Could not print out `{:?}`", x)
     }
     Ok(())
 }
