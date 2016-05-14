@@ -1,4 +1,12 @@
+fn foo() -> res {
+    data := load(
+        meta: "assets/test_meta.txt",
+        url: "https://raw.githubusercontent.com/PistonDevelopers/dyon/master/assets/test_data.txt"
+    )?
+    return ok(data)
+}
+
 fn main() {
-    data := unwrap(load(meta: "assets/test_meta.txt", file: "assets/test_data.txt"))
+    data := unwrap(foo())
     println(data)
 }
