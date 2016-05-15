@@ -257,6 +257,20 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
             Kind::If => {
                 try!(check_if(i, nodes))
             }
+            Kind::Block => {
+                // Make sure all results are used.
+                if nodes[i].children.len() <= 1 { continue }
+                for j in 0..nodes[i].children.len() - 1 {
+                    let ch = nodes[i].children[j];
+                    if let Some(ref ty) = nodes[ch].ty {
+                        if ty != &Type::Void {
+                            return Err(nodes[ch].source.wrap(
+                                format!("Unused result `{}`", ty.description())
+                            ));
+                        }
+                    }
+                }
+            }
             _ => {}
         }
     }

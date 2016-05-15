@@ -99,7 +99,7 @@ pub fn standard(f: &mut HashMap<Arc<String>, PreludeFunction>) {
     f.insert(Arc::new("call".into()), PreludeFunction {
         lts: vec![Lt::Default; 3],
         tys: vec![Type::Any, Type::Text, Type::array()],
-        ret: Type::Any
+        ret: Type::Void
     });
     f.insert(Arc::new("call_ret".into()), PreludeFunction {
         lts: vec![Lt::Default; 3],
@@ -137,7 +137,7 @@ pub fn standard(f: &mut HashMap<Arc<String>, PreludeFunction>) {
         tys: vec![Type::Text; 2],
         ret: Type::Result(Box::new(Type::array()))
     });
-    sarg(f, "join_thread", Type::Any, Type::Result(Box::new(Type::Any)));
+    sarg(f, "join_thread", Type::thread(), Type::Result(Box::new(Type::Any)));
 }
 
 enum EscapeString {

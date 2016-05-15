@@ -15,5 +15,7 @@ fn main() {
     threads := sift i t { go sum_n(i, n / t) }
     println(unwrap(results(mut threads)))
 
+    join(thread: go sum_n(0, 100))
+
     // println(sum_n(0, n))
 }
