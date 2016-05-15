@@ -14,7 +14,11 @@ pub fn test_fail_src(source: &str) {
     let mut module = Module::new();
     match load(source, &mut module) {
         Ok(_) => panic!("`{}` should fail", source),
-        Err(_) => {}
+        Err(err) => {
+            if err.starts_with(&format!("Could not open `{}`", source)) {
+                panic!("{}", err)
+            }
+        }
     };
 }
 
@@ -93,8 +97,8 @@ fn test_typechk() {
     test_fail_src("source/typechk/pow_3.dyon");
     test_fail_src("source/typechk/call.dyon");
     test_src("source/typechk/obj.dyon");
-    test_fail_src("source/typechk/obj_2.dyon");
     test_fail_src("source/typechk/go.dyon");
+    test_fail_src("source/typechk/threads.dyon");
 }
 
 #[test]

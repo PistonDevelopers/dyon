@@ -14,7 +14,13 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
             let mut this_ty = None;
             match kind {
                 Kind::Go => {
-                    // TODO: Infer thread type from function.
+                    // Infer thread type from function.
+                    if nodes[i].children.len() > 0 {
+                        let ch = nodes[i].children[0];
+                        if let Some(ref ty) = nodes[ch].ty {
+                            this_ty = Some(Type::Thread(Box::new(ty.clone())))
+                        }
+                    }
                 }
                 Kind::Call => {
                     if let Some(decl) = nodes[i].declaration {
@@ -88,9 +94,17 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                 Kind::Item => {
                     if nodes[i].item_try_or_ids() { continue 'node; }
                     if let Some(decl) = nodes[i].declaration {
-                        // No member identifiers.
-                        if let Some(ref ty) = nodes[decl].ty {
-                            this_ty = Some(ty.clone());
+                        match nodes[decl].kind {
+                            Kind::Sum | Kind::Min | Kind::Max |
+                            Kind::Any | Kind::All | Kind::Sift => {
+                                // All indices are numbers.
+                                this_ty = Some(Type::F64);
+                            }
+                            _ => {
+                                if let Some(ref ty) = nodes[decl].ty {
+                                    this_ty = Some(ty.clone());
+                                }
+                            }
                         }
                     }
                     if let Some(parent) = nodes[i].parent {
@@ -189,6 +203,17 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                             this_ty = Some(ty.clone());
                             break;
                         }
+                    }
+                }
+                Kind::Sift => {
+                    // Infer type from body.
+                    let ch = if let Some(ch) = nodes[i].find_child_by_kind(nodes, Kind::Block) {
+                        ch
+                    } else {
+                        continue 'node;
+                    };
+                    if let Some(ref ty) = nodes[ch].ty {
+                        this_ty = Some(Type::Array(Box::new(ty.clone())));
                     }
                 }
                 _ => {}
