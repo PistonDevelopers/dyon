@@ -68,6 +68,11 @@ pub fn standard(f: &mut HashMap<Arc<String>, PreludeFunction>) {
         ret: Type::Any
     });
     sarg(f, "reverse(mut)", Type::array(), Type::Void);
+    f.insert(Arc::new("swap(mut,_,_)".into()), PreludeFunction {
+        lts: vec![Lt::Default; 3],
+        tys: vec![Type::array(), Type::F64, Type::F64],
+        ret: Type::Void
+    });
     sarg(f, "trim", Type::Text, Type::Text);
     sarg(f, "trim_left", Type::Text, Type::Text);
     sarg(f, "trim_right", Type::Text, Type::Text);
@@ -461,6 +466,41 @@ pub fn call_standard(
             if let Variable::Ref(ind) = v {
                 let ok = if let Variable::Array(ref mut arr) = rt.stack[ind] {
                     Arc::make_mut(arr).reverse();
+                    true
+                } else {
+                    false
+                };
+                if !ok {
+                    return Err(module.error(call.args[0].source_range(),
+                        &format!("{}\nExpected reference to array",
+                            rt.stack_trace())));
+                }
+            } else {
+                return Err(module.error(call.args[0].source_range(),
+                    &format!("{}\nExpected reference to array",
+                        rt.stack_trace())));
+            }
+            rt.pop_fn(call.name.clone());
+            Expect::Nothing
+        }
+        "swap(mut,_,_)" => {
+            rt.push_fn(call.name.clone(), None, st, lc);
+            let j = rt.stack.pop().expect(TINVOTS);
+            let i = rt.stack.pop().expect(TINVOTS);
+            let j = match rt.resolve(&j) {
+                &Variable::F64(val) => val,
+                x => return Err(module.error(call.args[2].source_range(),
+                    &rt.expected(x, "number")))
+            };
+            let i = match rt.resolve(&i) {
+                &Variable::F64(val) => val,
+                x => return Err(module.error(call.args[1].source_range(),
+                    &rt.expected(x, "number")))
+            };
+            let v = rt.stack.pop().expect(TINVOTS);
+            if let Variable::Ref(ind) = v {
+                let ok = if let Variable::Array(ref mut arr) = rt.stack[ind] {
+                    Arc::make_mut(arr).swap(i as usize, j as usize);
                     true
                 } else {
                     false

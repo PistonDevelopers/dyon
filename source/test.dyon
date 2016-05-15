@@ -1,26 +1,13 @@
 fn main() {
-    list := [
-        "https://raw.githubusercontent.com/PistonDevelopers/dyon/master/assets/test_data.txt",
-        "https://raw.githubusercontent.com/PistonDevelopers/dyon/master/assets/test_meta.txt"
-    ]
-    names := [
-        "1.txt",
-        "2.txt"
-    ]
-    threads := sift i len(list) {
-        go download(url: list[i], file: names[i])
-    }
-    results := sift i len(threads) {
-        unwrap(join(thread: pop(mut threads)))
-    }
-    reverse(mut results)
-    println(results)
+    list := sift i 10 { i + 1 }
+    println(list)
+    reverse2(mut list)
+    println(list)
 }
 
-// Alternative that clones entire array.
-fn reverse(arr) -> {
-    copy := []
-    n := len(arr)
-    for i n { push_ref(mut copy, arr[n-i-1]) }
-    return clone(copy)
+fn reverse2(mut list) {
+    n := len(list)
+    for i n/2 {
+        swap(mut list, n-i-1, i)
+    }
 }
