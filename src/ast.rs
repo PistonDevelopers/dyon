@@ -53,7 +53,7 @@ impl Function {
         let mut args: Vec<Arg> = vec![];
         let mut block: Option<Block> = None;
         let mut expr: Option<Expression> = None;
-        let mut ret = Type::Void;
+        let mut ret: Option<Type> = None;
         loop {
             if let Ok(range) = convert.end_node(node) {
                 convert.update(range);
@@ -65,15 +65,13 @@ impl Function {
                     convert, ignored) {
                 convert.update(range);
                 args.push(val);
-            } else if let Ok((range, _val)) = convert.meta_bool("returns") {
+            } else if let Ok((range, val)) = convert.meta_bool("returns") {
                 convert.update(range);
-                if let Type::Void = ret {
-                    ret = Type::Any;
-                }
+                ret = Some(if val { Type::Any } else { Type::Void })
             } else if let Ok((range, val)) = Type::from_meta_data(
                     "ret_type", convert, ignored) {
                 convert.update(range);
-                ret = val;
+                ret = Some(val);
             } else if let Ok((range, val)) = Block::from_meta_data(
                 "block", convert, ignored) {
                 convert.update(range);
@@ -82,6 +80,7 @@ impl Function {
                 "expr", convert, ignored) {
                 convert.update(range);
                 expr = Some(val);
+                ret = Some(Type::Any);
             } else {
                 let range = convert.ignore();
                 convert.update(range);
@@ -93,7 +92,6 @@ impl Function {
         let block = match expr {
             None => try!(block.ok_or(())),
             Some(expr) => {
-                ret = Type::Any;
                 let source_range = expr.source_range();
                 Block {
                     expressions: vec![Expression::Return(Box::new(expr))],
@@ -114,6 +112,7 @@ impl Function {
             name_plus_args.push(')');
             name = Arc::new(name_plus_args);
         }
+        let ret = try!(ret.ok_or(()));
         Ok((convert.subtract(start), Function {
             name: name,
             file: file,

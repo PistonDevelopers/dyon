@@ -1,7 +1,4 @@
-
-fn sum_n(i: f64, n: f64) -> f64 {
-    return ∑ j n { i * n + j + 1 }
-}
+sum_n(i: f64, n: f64) = ∑ j n { i * n + j + 1 }
 
 fn results(mut threads: [thr[f64]]) -> res[f64] {
     return ok(∑ _ len(threads) {
@@ -16,7 +13,7 @@ fn main() {
     threads := sift i t { go sum_n(i, n / t) }
     println(unwrap(results(mut threads)))
 
-    join(thread: go sum_n(0, 100))
+    println(join(thread: go sum_n(0, 100)))
 
     // println(sum_n(0, n))
     // println("hi")

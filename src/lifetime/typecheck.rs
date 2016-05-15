@@ -22,6 +22,12 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                         }
                     }
                 }
+                Kind::Fn => {
+                    if let Some(ch) = nodes[i].find_child_by_kind(nodes, Kind::Expr) {
+                        // Infer return type from body of function.
+                        this_ty = nodes[ch].ty.clone();
+                    }
+                }
                 Kind::CallArg => {
                     if nodes[i].children.len() == 0 || nodes[i].item_try_or_ids() {
                         continue 'node;
@@ -94,6 +100,10 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                             Kind::Any | Kind::All | Kind::Sift => {
                                 // All indices are numbers.
                                 this_ty = Some(Type::F64);
+                            }
+                            Kind::Arg => {
+                                this_ty = Some(nodes[decl].ty.as_ref()
+                                    .unwrap_or(&Type::Any).clone());
                             }
                             _ => {
                                 if let Some(ref ty) = nodes[decl].ty {
@@ -225,7 +235,6 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
         let kind = nodes[i].kind;
         match kind {
             Kind::Fn => {
-                // TODO: Infer type from body when written as mathematical expression.
                 if let Some(ref ty) = nodes[i].ty {
                     try!(check_fn(i, nodes, ty))
                 } else {
