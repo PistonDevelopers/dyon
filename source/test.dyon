@@ -1,13 +1,12 @@
-fn main() {
-    list := sift i 10 { i + 1 }
-    println(list)
-    reverse2(mut list)
-    println(list)
-}
 
-fn reverse2(mut list) {
-    n := len(list)
-    for i n/2 {
-        swap(mut list, n-i-1, i)
+fn main() {
+    for i 2 {
+        dir :=
+            if i == 0 { 0 }
+            else {
+                len := 0
+                0
+            }
+        println(i)
     }
 }

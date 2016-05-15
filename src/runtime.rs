@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::cell::Cell;
 use std::collections::HashMap;
 use rand;
 use range::Range;
@@ -339,6 +340,7 @@ impl Runtime {
                 // Assign return value and then break the flow.
                 let item = Expression::Item(Item {
                         name: self.ret.clone(),
+                        stack_id: Cell::new(None),
                         try: false,
                         ids: vec![],
                         try_ids: vec![],
@@ -508,6 +510,7 @@ impl Runtime {
         module: &Module
     ) -> Result<(Expect, Flow), String> {
         let mut expect = Expect::Nothing;
+        let st = self.stack.len();
         let lc = self.local_stack.len();
         for e in &block.expressions {
             expect = match try!(self.expression(e, Side::Right, module)) {
@@ -515,6 +518,16 @@ impl Runtime {
                 x => { return Ok(x); }
             }
         }
+
+        if expect == Expect::Something {
+            // Truncate stack to keep later locals at fixed length from end of stack.
+            let v = self.stack.pop().expect("There is no value on the stack");
+            self.stack.truncate(st);
+            self.stack.push(v);
+        } else {
+            self.stack.truncate(st);
+        }
+
         self.local_stack.truncate(lc);
         Ok((expect, Flow::Continue))
     }
@@ -647,12 +660,8 @@ impl Runtime {
                     self.local_stack.push((self.ret.clone(), st - 1));
                 }
                 for (i, arg) in f.args.iter().enumerate() {
-                    let j = st + i;
-                    let j = match &self.stack[j] {
-                        &Variable::Ref(ind) => ind,
-                        _ => j
-                    };
-                    self.local_stack.push((arg.name.clone(), j));
+                    // Do not resolve locals to keep fixed length from end of stack.
+                    self.local_stack.push((arg.name.clone(), st + i));
                 }
                 match try!(self.block(&f.block, module)) {
                     (x, flow) => {
@@ -1262,49 +1271,68 @@ impl Runtime {
 
         use ast::Id;
 
-        if item.ids.len() == 0 {
-            let name: &str = &**item.name;
-            let locals = self.local_stack.len() - self.call_stack.last().unwrap().local_len;
-            for &(ref n, id) in self.local_stack.iter().rev().take(locals) {
-                if &**n == name {
-                    if item.try {
-                        // Check for `err(_)` or unwrap when `?` follows item.
-                        let v = match self.resolve(&self.stack[id]) {
-                            &Variable::Result(ref res) => res.clone(),
-                            &Variable::Option(ref opt) => {
-                                match opt {
-                                    &Some(ref some) => Ok(some.clone()),
-                                    &None => Err(Box::new(Error {
-                                        message: Variable::Text(Arc::new(
-                                            "Expected `some(_)`, found `none()`"
-                                            .into())),
-                                        trace: vec![]
-                                    }))
-                                }
-                            }
-                            _ => {
-                                return Err(module.error(item.source_range,
-                                    &format!("{}\nExpected `ok(_)` or `err(_)`",
-                                        self.stack_trace())));
-                            }
-                        };
-                        return try(&mut self.stack, &self.call_stack, v, locals,
-                                   item.source_range, module);
+        let locals = self.local_stack.len() - self.call_stack.last().unwrap().local_len;
+        let stack_id = {
+            match item.stack_id.get() {
+                Some(val) => self.stack.len() - val,
+                None => {
+                    let name: &str = &**item.name;
+                    let mut found = false;
+                    for &(ref n, id) in self.local_stack.iter().rev().take(locals) {
+                        if &**n == name {
+                            item.stack_id.set(Some(self.stack.len() - id));
+                            found = true;
+                            break;
+                        }
+                    }
+                    if found {
+                        self.stack.len() - item.stack_id.get().unwrap()
+                    } else if name == "return" {
+                        return Err(module.error(item.source_range, &format!(
+                            "{}\nRequires `->` on function `{}`",
+                            self.stack_trace(),
+                            &self.call_stack.last().unwrap().fn_name)));
                     } else {
-                        self.stack.push(Variable::Ref(id));
-                        return Ok(Flow::Continue);
+                        return Err(module.error(item.source_range, &format!(
+                            "{}\nCould not find local variable `{}`",
+                                self.stack_trace(), name)));
                     }
                 }
             }
-            if name == "return" {
-                return Err(module.error(item.source_range, &format!(
-                    "{}\nRequires `->` on function `{}`",
-                    self.stack_trace(),
-                    &self.call_stack.last().unwrap().fn_name)));
+        };
+
+        let stack_id = if let &Variable::Ref(ref_id) = &self.stack[stack_id] {
+                ref_id
             } else {
-                return Err(module.error(item.source_range, &format!(
-                    "{}\nCould not find local variable `{}`",
-                        self.stack_trace(), name)));
+                stack_id
+            };
+        if item.ids.len() == 0 {
+            if item.try {
+                // Check for `err(_)` or unwrap when `?` follows item.
+                let v = match &self.stack[stack_id] {
+                    &Variable::Result(ref res) => res.clone(),
+                    &Variable::Option(ref opt) => {
+                        match opt {
+                            &Some(ref some) => Ok(some.clone()),
+                            &None => Err(Box::new(Error {
+                                message: Variable::Text(Arc::new(
+                                    "Expected `some(_)`, found `none()`"
+                                    .into())),
+                                trace: vec![]
+                            }))
+                        }
+                    }
+                    _ => {
+                        return Err(module.error(item.source_range,
+                            &format!("{}\nExpected `ok(_)` or `err(_)`",
+                                self.stack_trace())));
+                    }
+                };
+                return try(&mut self.stack, &self.call_stack, v, locals,
+                           item.source_range, module);
+            } else {
+                self.stack.push(Variable::Ref(stack_id));
+                return Ok(Flow::Continue);
             }
         }
 
@@ -1329,36 +1357,95 @@ impl Runtime {
         } = self;
         let locals = local_stack.len() - call_stack.last().unwrap().local_len;
         let mut expr_j = 0;
-        let name = &**item.name;
         let insert = match side {
             Side::Right => false,
             Side::LeftInsert(insert) => insert,
         };
-        for &(ref n, id) in local_stack.iter().rev().take(locals) {
-            if &**n != name { continue; }
-            let v = {
-                // Resolve reference of local variable.
-                let id = if let &Variable::Ref(ref_id) = &stack[id] {
-                        ref_id
-                    } else {
-                        id
-                    };
-                let item_len = item.ids.len();
-                // Get the first variable (a.x).y
-                let mut var: *mut Variable = try!(item_lookup(
+
+        let v = {
+            let item_len = item.ids.len();
+            // Get the first variable (a.x).y
+            let mut var: *mut Variable = try!(item_lookup(
+                module,
+                &mut stack[stack_id],
+                stack,
+                call_stack,
+                &item.ids[0],
+                start_stack_len,
+                &mut expr_j,
+                insert,
+                item_len == 1
+            ));
+            let mut try_id_ind = 0;
+            if item.try_ids.len() > 0 && item.try_ids[try_id_ind] == 0 {
+                // Check for error on `?` for first id.
+                let v = unsafe {match *var {
+                    Variable::Result(ref res) => res.clone(),
+                    Variable::Option(ref opt) => {
+                        match opt {
+                            &Some(ref some) => Ok(some.clone()),
+                            &None => Err(Box::new(Error {
+                                message: Variable::Text(Arc::new(
+                                    "Expected `some(_)`, found `none()`"
+                                    .into())),
+                                trace: vec![]
+                            }))
+                        }
+                    }
+                    _ => {
+                        return Err(module.error(item.ids[0].source_range(),
+                            &format!("{}\nExpected `ok(_)` or `err(_)`",
+                                stack_trace(call_stack))));
+                    }
+                }};
+                match v {
+                    Ok(ref ok) => unsafe {
+                        *var = (**ok).clone();
+                        try_id_ind += 1;
+                    },
+                    Err(ref err) => {
+                        let ind = stack.len() - locals;
+                        if let Variable::Return = stack[ind] {}
+                        else {
+                            return Err(module.error(
+                                item.ids[0].source_range(),
+                                &format!("{}\nRequires `->` on function `{}`",
+                                stack_trace(call_stack),
+                                &call_stack.last().unwrap().fn_name)));
+                        }
+                        let mut err = err.clone();
+                        let call = call_stack.last().unwrap();
+                        let file = match call.file.as_ref() {
+                            None => "".into(),
+                            Some(f) => format!(" ({})", f)
+                        };
+                        err.trace.push(module.error(
+                            item.ids[0].source_range(),
+                            &format!("In function `{}`{}",
+                                &call.fn_name, file)));
+                        stack[ind] = Variable::Result(Err(err));
+                        return Ok(Flow::Return);
+                    }
+                }
+            }
+            // Get the rest of the variables.
+            for (i, prop) in item.ids[1..].iter().enumerate() {
+                var = try!(item_lookup(
                     module,
-                    &mut stack[id],
+                    unsafe { &mut *var },
                     stack,
                     call_stack,
-                    &item.ids[0],
+                    prop,
                     start_stack_len,
                     &mut expr_j,
                     insert,
-                    item_len == 1
+                    // `i` skips first index.
+                    i + 2 == item_len
                 ));
-                let mut try_id_ind = 0;
-                if item.try_ids.len() > 0 && item.try_ids[try_id_ind] == 0 {
-                    // Check for error on `?` for first id.
+
+                if item.try_ids.len() > try_id_ind &&
+                   item.try_ids[try_id_ind] == i + 1 {
+                    // Check for error on `?` for rest of ids.
                     let v = unsafe {match *var {
                         Variable::Result(ref res) => res.clone(),
                         Variable::Option(ref opt) => {
@@ -1373,7 +1460,7 @@ impl Runtime {
                             }
                         }
                         _ => {
-                            return Err(module.error(item.ids[0].source_range(),
+                            return Err(module.error(prop.source_range(),
                                 &format!("{}\nExpected `ok(_)` or `err(_)`",
                                     stack_trace(call_stack))));
                         }
@@ -1388,10 +1475,10 @@ impl Runtime {
                             if let Variable::Return = stack[ind] {}
                             else {
                                 return Err(module.error(
-                                    item.ids[0].source_range(),
+                                    prop.source_range(),
                                     &format!("{}\nRequires `->` on function `{}`",
-                                    stack_trace(call_stack),
-                                    &call_stack.last().unwrap().fn_name)));
+                                        stack_trace(call_stack),
+                                        &call_stack.last().unwrap().fn_name)));
                             }
                             let mut err = err.clone();
                             let call = call_stack.last().unwrap();
@@ -1400,7 +1487,7 @@ impl Runtime {
                                 Some(f) => format!(" ({})", f)
                             };
                             err.trace.push(module.error(
-                                item.ids[0].source_range(),
+                                prop.source_range(),
                                 &format!("In function `{}`{}",
                                     &call.fn_name, file)));
                             stack[ind] = Variable::Result(Err(err));
@@ -1408,84 +1495,15 @@ impl Runtime {
                         }
                     }
                 }
-                // Get the rest of the variables.
-                for (i, prop) in item.ids[1..].iter().enumerate() {
-                    var = try!(item_lookup(
-                        module,
-                        unsafe { &mut *var },
-                        stack,
-                        call_stack,
-                        prop,
-                        start_stack_len,
-                        &mut expr_j,
-                        insert,
-                        // `i` skips first index.
-                        i + 2 == item_len
-                    ));
+            }
 
-                    if item.try_ids.len() > try_id_ind &&
-                       item.try_ids[try_id_ind] == i + 1 {
-                        // Check for error on `?` for rest of ids.
-                        let v = unsafe {match *var {
-                            Variable::Result(ref res) => res.clone(),
-                            Variable::Option(ref opt) => {
-                                match opt {
-                                    &Some(ref some) => Ok(some.clone()),
-                                    &None => Err(Box::new(Error {
-                                        message: Variable::Text(Arc::new(
-                                            "Expected `some(_)`, found `none()`"
-                                            .into())),
-                                        trace: vec![]
-                                    }))
-                                }
-                            }
-                            _ => {
-                                return Err(module.error(prop.source_range(),
-                                    &format!("{}\nExpected `ok(_)` or `err(_)`",
-                                        stack_trace(call_stack))));
-                            }
-                        }};
-                        match v {
-                            Ok(ref ok) => unsafe {
-                                *var = (**ok).clone();
-                                try_id_ind += 1;
-                            },
-                            Err(ref err) => {
-                                let ind = stack.len() - locals;
-                                if let Variable::Return = stack[ind] {}
-                                else {
-                                    return Err(module.error(
-                                        prop.source_range(),
-                                        &format!("{}\nRequires `->` on function `{}`",
-                                            stack_trace(call_stack),
-                                            &call_stack.last().unwrap().fn_name)));
-                                }
-                                let mut err = err.clone();
-                                let call = call_stack.last().unwrap();
-                                let file = match call.file.as_ref() {
-                                    None => "".into(),
-                                    Some(f) => format!(" ({})", f)
-                                };
-                                err.trace.push(module.error(
-                                    prop.source_range(),
-                                    &format!("In function `{}`{}",
-                                        &call.fn_name, file)));
-                                stack[ind] = Variable::Result(Err(err));
-                                return Ok(Flow::Return);
-                            }
-                        }
-                    }
-                }
-
-                match side {
-                    Side::Right => unsafe {&*var}.clone(),
-                    Side::LeftInsert(_) => Variable::UnsafeRef(var)
-                }
-            };
-            stack.truncate(start_stack_len);
-            stack.push(v);
-            break;
-        }
+            match side {
+                Side::Right => unsafe {&*var}.clone(),
+                Side::LeftInsert(_) => Variable::UnsafeRef(var)
+            }
+        };
+        stack.truncate(start_stack_len);
+        stack.push(v);
         return Ok(Flow::Continue);
     }
 

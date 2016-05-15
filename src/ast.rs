@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::cell::Cell;
 use range::Range;
 use piston_meta::bootstrap::Convert;
 use piston_meta::MetaData;
@@ -913,6 +914,7 @@ impl Id {
 #[derive(Debug, Clone)]
 pub struct Item {
     pub name: Arc<String>,
+    pub stack_id: Cell<Option<usize>>,
     pub try: bool,
     pub ids: Vec<Id>,
     // Stores indices of ids that should propagate errors.
@@ -924,6 +926,7 @@ impl Item {
     pub fn from_variable(name: Arc<String>, source_range: Range) -> Item {
         Item {
             name: name,
+            stack_id: Cell::new(None),
             try: false,
             ids: vec![],
             try_ids: vec![],
@@ -985,6 +988,7 @@ impl Item {
         let name = try!(name.ok_or(()));
         Ok((convert.subtract(start), Item {
             name: name,
+            stack_id: Cell::new(None),
             try: try,
             ids: ids,
             try_ids: try_ids,
