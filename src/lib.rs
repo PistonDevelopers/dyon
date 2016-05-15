@@ -258,7 +258,13 @@ pub fn load(source: &str, module: &mut Module) -> Result<(), String> {
 
     // Check that lifetime checking succeeded.
     match handle.join().unwrap() {
-        Ok(()) => {}
+        Ok(refined_rets) => {
+            for (name, ty) in &refined_rets {
+                module.functions.get_mut(name).map(|f| {
+                    Arc::make_mut(f).ret = ty.clone();
+                });
+            }
+        }
         Err(err_msg) => {
             let (range, msg) = err_msg.decouple();
             return Err(format!("In `{}`:\n{}", source, module.error(range, &msg)))
