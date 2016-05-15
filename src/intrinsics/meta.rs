@@ -105,3 +105,32 @@ pub fn load_meta_url(meta: &str, url: &str) -> Result<Vec<Variable>, String> {
     let d = try!(load_text_file_from_url(url));
     load_metarules_data(meta, &s, url, &d)
 }
+
+// Downloads a file from url.
+pub fn download_url_to_file(url: &str, file: &str) -> Result<String, String> {
+    use hyper::client::Client;
+    use hyper::{Url};
+    use hyper::status::StatusCode;
+    use std::io::copy;
+    use std::fs::File;
+
+    let url_address = try!(Url::parse(url)
+        .map_err(|e| format!("Error parsing url:\n`{}`\n", e)));
+    let client = Client::new();
+    let request = client.get(url_address);
+    let mut response = try!(request.send()
+        .map_err(|e| format!("Error fetching file over http `{}`:\n{}\n",
+                             url, e.to_string())));
+    if response.status == StatusCode::Ok {
+        let mut f = try!(File::create(file).map_err(|err| {
+            format!("Could not create file `{}`:\n{}", file, err.description())
+        }));
+        try!(copy(&mut response, &mut f)
+            .map_err(|e| format!("Error fetching file over http `{}`:\n{}\n",
+                                 url, e.to_string())));
+        Ok(file.into())
+    } else {
+        Err(format!("Error fetching file over http `{}:\n{}\n",
+                    url, response.status))
+    }
+}

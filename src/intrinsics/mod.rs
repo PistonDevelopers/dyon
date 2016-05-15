@@ -137,6 +137,11 @@ pub fn standard(f: &mut HashMap<Arc<String>, PreludeFunction>) {
         tys: vec![Type::Text; 2],
         ret: Type::Result(Box::new(Type::array()))
     });
+    f.insert(Arc::new("download_url_file".into()), PreludeFunction {
+        lts: vec![Lt::Default; 2],
+        tys: vec![Type::Text; 2],
+        ret: Type::Result(Box::new(Type::Text))
+    });
     sarg(f, "join_thread", Type::thread(), Type::Result(Box::new(Type::Any)));
 }
 
@@ -1142,6 +1147,32 @@ pub fn call_standard(
             let res = meta::load_meta_url(&**meta, &**url);
             rt.stack.push(Variable::Result(match res {
                 Ok(res) => Ok(Box::new(Variable::Array(Arc::new(res)))),
+                Err(err) => Err(Box::new(Error {
+                    message: Variable::Text(Arc::new(err)),
+                    trace: vec![]
+                }))
+            }));
+            rt.pop_fn(call.name.clone());
+            Expect::Something
+        }
+        "download_url_file" => {
+            rt.push_fn(call.name.clone(), None, st + 1, lc);
+            let file = rt.stack.pop().expect(TINVOTS);
+            let url = rt.stack.pop().expect(TINVOTS);
+            let file = match rt.resolve(&file) {
+                &Variable::Text(ref file) => file.clone(),
+                x => return Err(module.error(call.args[1].source_range(),
+                                &rt.expected(x, "str")))
+            };
+            let url = match rt.resolve(&url) {
+                &Variable::Text(ref url) => url.clone(),
+                x => return Err(module.error(call.args[0].source_range(),
+                                &rt.expected(x, "str")))
+            };
+
+            let res = meta::download_url_to_file(&**url, &**file);
+            rt.stack.push(Variable::Result(match res {
+                Ok(res) => Ok(Box::new(Variable::Text(Arc::new(res)))),
                 Err(err) => Err(Box::new(Error {
                     message: Variable::Text(Arc::new(err)),
                     trace: vec![]

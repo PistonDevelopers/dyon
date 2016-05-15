@@ -1,7 +1,17 @@
-sum_n(i: f64, n: f64) = ∑ j n { i * n + j + 1 }
-
 fn main() {
-    n := 100_000
-    x := sum_n(0, n)
-    println(x)
+    list := [
+        "https://raw.githubusercontent.com/PistonDevelopers/dyon/master/assets/test_data.txt",
+        "https://raw.githubusercontent.com/PistonDevelopers/dyon/master/assets/test_meta.txt"
+    ]
+    names := [
+        "1.txt",
+        "2.txt"
+    ]
+    threads := sift i len(list) {
+        go download(url: list[i], file: names[i])
+    }
+    results := sift i len(threads) {
+        unwrap(join(thread: pop(mut threads)))
+    }
+    println(results)
 }
