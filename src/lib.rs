@@ -375,4 +375,14 @@ mod tests {
     fn bench_primes_trad(b: &mut Bencher) {
         b.iter(|| run_bench("source/bench/primes_trad.dyon"));
     }
+
+    #[bench]
+    fn bench_threads_no_go(b: &mut Bencher) {
+        b.iter(|| run_bench("source/bench/threads_no_go.dyon"));
+    }
+
+    #[bench]
+    fn bench_threads_go(b: &mut Bencher) {
+        b.iter(|| run_bench("source/bench/threads_go.dyon"));
+    }
 }

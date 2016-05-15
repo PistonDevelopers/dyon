@@ -1,0 +1,15 @@
+sum_n(i: f64, n: f64) = ∑ j n { i * n + j + 1 }
+
+fn results(mut threads: [thr[f64]]) -> res[f64] {
+    return ok(∑ _ len(threads) {
+        join(thread: pop(mut threads))?
+    })
+}
+
+fn main() {
+    n := 100_000
+
+    t := 2
+    threads := sift i t { go sum_n(i, n / t) }
+    x := unwrap(results(mut threads))
+}
