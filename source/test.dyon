@@ -13,5 +13,14 @@ fn main() {
     results := sift i len(threads) {
         unwrap(join(thread: pop(mut threads)))
     }
+    reverse(mut results)
     println(results)
+}
+
+// Alternative that clones entire array.
+fn reverse(arr) -> {
+    copy := []
+    n := len(arr)
+    for i n { push_ref(mut copy, arr[n-i-1]) }
+    return clone(copy)
 }
