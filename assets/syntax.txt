@@ -84,8 +84,8 @@ _seps: "(){}[],.:;=<>*·+-/%^?|&∧∨!¬∑∃∀\n"
 24 if = ["if" .w! expr:"cond" ?w block:"true_block"
          .r?([?w "else" w "if" ?w expr:"else_if_cond" ?w block:"else_if_block"])
          ?[?w "else" ?w block:"else_block"]]
-25 call = [.._seps!:"name" ?w "(" .s?.(, arg_expr:"call_arg") ?w ")"]
-26 named_call = [.._seps!:"word" ?w "(" ?w
+25 call = [.._seps!:"name" wn "(" .s?.(, arg_expr:"call_arg") ?w ")"]
+26 named_call = [.._seps!:"word" wn "(" ?w
     .s?.(, [.._seps!:"word" ?w ":" ?w arg_expr:"call_arg" ?w]) ")"]
 27 go = ["go" ?w {call:"call" named_call:"named_call"}]
 28 assign = [lexpr:"left" ?w assign_op ?w expr:"right"]
@@ -102,6 +102,8 @@ _seps: "(){}[],.:;=<>*·+-/%^?|&∧∨!¬∑∃∀\n"
 45 items = {vec4:"vec4" ["(" ?w expr ?w ")"] unop:"unop"
             text go:"go" call:"call" named_call:"named_call"
             num bool color item:"item"}
+// Allow whitespace, but no new line.
+46 wn = .r?({" " "\t" "\r"})
 
 50 short_loops = {sum:"sum" min:"min" max:"max" sift:"sift" any:"any" all:"all"}
 51 sum = [label {"sum" "∑"} short_body]
@@ -131,7 +133,7 @@ _seps: "(){}[],.:;=<>*·+-/%^?|&∧∨!¬∑∃∀\n"
 102 - = [?w "-":"-" ?w]
 // Allow whitespace before multiplication sign, but no new line.
 // This prevents `x` on a new line from being interpreted as multiplication sign.
-103 * = [.r?({" " "\t" "\r"}) {
+103 * = [wn {
     "*.":"*." "·":"*."
     "x":"x" "⨯":"x"
     "*":"*" "&&":"*" "∧":"*" "and":"*"
