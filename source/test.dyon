@@ -1,4 +1,4 @@
-/*
+
 fn sum_n(i: f64, n: f64) -> f64 {
     return ∑ j n { i * n + j + 1 }
 }
@@ -20,14 +20,4 @@ fn main() {
 
     // println(sum_n(0, n))
     // println("hi")
-}
-*/
-
-fn foo() -> f64 {
-    3 + 4
-    return 7
-}
-
-fn main() {
-    println(foo())
 }

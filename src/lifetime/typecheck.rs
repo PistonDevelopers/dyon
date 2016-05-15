@@ -113,12 +113,13 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                 }
                 Kind::Return | Kind::Val | Kind::Expr
                 | Kind::Cond | Kind::Exp | Kind::Base | Kind::Right => {
-                    for &ch in &nodes[i].children {
-                        if nodes[ch].item_try_or_ids() { continue 'node; }
-                        if let Some(ref ty) = nodes[ch].ty {
-                            this_ty = Some(ty.clone());
-                            break;
-                        }
+                    if nodes[i].children.len() == 0 { continue 'node; }
+                    let ch = nodes[i].children[0];
+                    if nodes[ch].item_try_or_ids() { continue 'node; }
+                    if nodes[ch].kind == Kind::Return {
+                        this_ty = Some(Type::Void);
+                    } else if let Some(ref ty) = nodes[ch].ty {
+                        this_ty = Some(ty.clone());
                     }
                 }
                 Kind::Add => {
@@ -253,12 +254,31 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                 try!(check_if(i, nodes))
             }
             Kind::Block => {
-                // TODO: If the block is the body of a function or for loop,
-                // then the last child node should be checked too.
                 // Make sure all results are used.
-                if nodes[i].children.len() <= 1 { continue }
-                for j in 0..nodes[i].children.len() - 1 {
-                    let ch = nodes[i].children[j];
+                // TODO: If the block is the body of a for loop,
+                // then the last child node should be checked too.
+                let n = nodes[i].children.len();
+                if n == 0 { continue; }
+                let children = if let Some(parent) = nodes[i].parent {
+                        match nodes[parent].kind {
+                            Kind::Fn => {
+                                match &nodes[parent].ty {
+                                    &Some(Type::Void) => &nodes[i].children,
+                                    &None => continue,
+                                    _ => &nodes[i].children[0..n - 1]
+                                }
+                            }
+                            _ => &nodes[i].children[0..n - 1]
+                        }
+                    } else {
+                        &nodes[i].children[0..n - 1]
+                    };
+                for j in 0..children.len() {
+                    let ch = children[j];
+                    match nodes[ch].kind {
+                        Kind::Return => continue,
+                        _ => {}
+                    };
                     if let Some(ref ty) = nodes[ch].ty {
                         if ty != &Type::Void {
                             return Err(nodes[ch].source.wrap(
