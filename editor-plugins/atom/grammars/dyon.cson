@@ -74,7 +74,7 @@
   'core_types': {
     'comment': 'Built-in/core type'
     'name': 'storage.type.core.dyon'
-    'match': '\\b(bool|f64|vec4|str|opt|res)\\b'
+    'match': '\\b(bool|f64|vec4|str|opt|res|thr)\\b'
   }
   'core_vars': {
     'comment': 'Core type variant'

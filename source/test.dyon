@@ -2,7 +2,7 @@ fn sum_n(i: f64, n: f64) -> f64 {
     return ∑ j n { i * n + j + 1 }
 }
 
-fn results(mut threads: [f64]) -> res[f64] {
+fn results(mut threads: [thr[f64]]) -> res[f64] {
     return ok(∑ _ len(threads) {
         join(thread: pop(mut threads))?
     })
