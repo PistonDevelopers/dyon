@@ -22,53 +22,48 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                         }
                     }
                 }
-                Kind::Call => {
-                    if let Some(decl) = nodes[i].declaration {
-                        let mut missing = false;
-                        for j in 0..nodes[i].children.len() {
-                            let ch = nodes[i].children[j];
-                            if nodes[ch].item_try_or_ids() { continue 'node; }
+                Kind::CallArg => {
+                    if nodes[i].children.len() == 0 || nodes[i].item_try_or_ids() {
+                        continue 'node;
+                    }
+                    let expr_type = nodes[nodes[i].children[0]].ty.clone();
+                    if let Some(parent) = nodes[i].parent {
+                        let j = nodes[parent].children.iter().position(|&ch| ch == i);
+                        let j = if let Some(j) = j { j } else { continue 'node };
+                        if let Some(decl) = nodes[parent].declaration {
                             let arg = nodes[decl].children[j];
-                            match (&nodes[ch].ty, &nodes[arg].ty) {
+                            match (&expr_type, &nodes[arg].ty) {
                                 (&Some(ref ch_ty), &Some(ref arg_ty)) => {
                                     if !ch_ty.goes_with(arg_ty) {
-                                        return Err(nodes[ch].source.wrap(
+                                        return Err(nodes[i].source.wrap(
                                             format!("Type mismatch: Expected `{}`, found `{}`",
                                                 arg_ty.description(), ch_ty.description())));
                                     }
                                 }
-                                (&None, _) | (_, &None) => {
-                                    missing = true;
-                                }
+                                (&None, _) | (_, &None) => {}
                             }
-                        }
-                        if !missing {
-                            if let Some(ref ty) = nodes[decl].ty {
-                                this_ty = Some(ty.clone());
+                        } else if let Some(ref f) = prelude.functions.get(
+                                nodes[parent].name.as_ref().unwrap()) {
+                            if let Some(ref ty) = expr_type {
+                                if !ty.goes_with(&f.tys[j]) {
+                                    return Err(nodes[i].source.wrap(
+                                        format!("Type mismatch: Expected `{}`, found `{}`",
+                                            f.tys[j].description(), ty.description())
+                                    ))
+                                }
                             }
                         }
                     }
-                    if this_ty.is_none() {
-                        if let Some(ref f) = prelude.functions.get(
-                            nodes[i].name.as_ref().unwrap()) {
-                            let mut missing = false;
-                            for j in 0..nodes[i].children.len() {
-                                let ch = nodes[i].children[j];
-                                if nodes[ch].item_try_or_ids() { continue 'node; }
-                                if let &Some(ref ch_ty) = &nodes[ch].ty {
-                                    if !ch_ty.goes_with(&f.tys[j]) {
-                                        return Err(nodes[ch].source.wrap(
-                                            format!("Type mismatch: Expected `{}`, found `{}`",
-                                                f.tys[j].description(), ch_ty.description())));
-                                    }
-                                } else {
-                                    missing = true;
-                                }
-                            }
-                            if !missing {
-                                this_ty = Some(f.ret.clone());
-                            }
+                    this_ty = expr_type;
+                }
+                Kind::Call => {
+                    if let Some(decl) = nodes[i].declaration {
+                        if let Some(ref ty) = nodes[decl].ty {
+                            this_ty = Some(ty.clone());
                         }
+                    } else if let Some(ref f) = prelude.functions.get(
+                            nodes[i].name.as_ref().unwrap()) {
+                        this_ty = Some(f.ret.clone());
                     }
                 }
                 Kind::Assign => {
@@ -116,7 +111,7 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                        }
                     }
                 }
-                Kind::Return | Kind::Val | Kind::CallArg | Kind::Expr
+                Kind::Return | Kind::Val | Kind::Expr
                 | Kind::Cond | Kind::Exp | Kind::Base | Kind::Right => {
                     for &ch in &nodes[i].children {
                         if nodes[ch].item_try_or_ids() { continue 'node; }
@@ -258,6 +253,8 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                 try!(check_if(i, nodes))
             }
             Kind::Block => {
+                // TODO: If the block is the body of a function or for loop,
+                // then the last child node should be checked too.
                 // Make sure all results are used.
                 if nodes[i].children.len() <= 1 { continue }
                 for j in 0..nodes[i].children.len() - 1 {

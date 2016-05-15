@@ -1,0 +1,8 @@
+fn foo() -> f64 {
+    3 + 4
+    return 7
+}
+
+fn main() {
+    println(foo())
+}

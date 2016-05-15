@@ -43,7 +43,7 @@ pub fn standard(f: &mut HashMap<Arc<String>, PreludeFunction>) {
     f.insert(Arc::new("random".into()), PreludeFunction {
         lts: vec![],
         tys: vec![],
-        ret: Type::Void
+        ret: Type::F64
     });
     sarg(f, "read_number", Type::Text, Type::Any);
     f.insert(Arc::new("read_line".into()), PreludeFunction {
