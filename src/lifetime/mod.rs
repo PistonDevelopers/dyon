@@ -11,15 +11,19 @@ use self::lt::{arg_lifetime, compare_lifetimes, Lifetime};
 
 use prelude::{Lt, Prelude};
 
+use Type;
+
 mod kind;
 pub mod node;
 mod lt;
 mod typecheck;
 
+/// Checks lifetime constraints and does type checking.
+/// Returns refined return types of functions to put in AST.
 pub fn check(
     data: &[Range<MetaData>],
     prelude: &Prelude
-) -> Result<(), Range<String>> {
+) -> Result<HashMap<Arc<String>, Type>, Range<String>> {
     let mut nodes: Vec<Node> = vec![];
     try!(convert_meta_data(&mut nodes, data));
 
@@ -348,6 +352,42 @@ pub fn check(
         }
     }
 
+    // Check that `go` functions does not have lifetime constraints.
+    for &c in &calls {
+        let call = &nodes[c];
+        if let Some(parent) = call.parent {
+            if nodes[parent].kind != Kind::Go { continue }
+        } else {
+            continue;
+        }
+        if let Some(declaration) = call.declaration {
+            let function = &nodes[declaration];
+            for (i, &a) in function.children.iter()
+                .enumerate()
+                .filter(|&(_, &i)| nodes[i].kind == Kind::Arg)  {
+                let arg = &nodes[a];
+                if arg.lifetime.is_some() {
+                    return Err(nodes[call.children[i]].source.wrap(
+                        format!("Can not use `go` because this argument has a lifetime constraint")));
+                }
+            }
+        } else {
+            // Check that call to intrinsic satisfy the declared constraints.
+            for ((i, &lt), _) in
+            call.lts.iter().enumerate()
+                .zip(call.children.iter()
+                .filter(|&&n| nodes[n].kind == Kind::CallArg)) {
+                match lt {
+                    Lt::Default => {}
+                    _ => {
+                        return Err(nodes[call.children[i]].source.wrap(
+                            format!("Can not use `go` because this argument has a lifetime constraint")));
+                    }
+                }
+            }
+        }
+    }
+
     // Check that calls satisfy the lifetime constraints of arguments.
     for &c in &calls {
         let call = &nodes[c];
@@ -486,7 +526,15 @@ pub fn check(
 
     try!(typecheck::run(&mut nodes, prelude));
 
-    Ok(())
+    // Copy refined return types to use in AST.
+    let mut refined_rets: HashMap<Arc<String>, Type> = HashMap::new();
+    for (name, &ind) in &function_lookup {
+        if let Some(ref ty) = nodes[functions[ind]].ty {
+            refined_rets.insert(name.clone(), ty.clone());
+        }
+    }
+
+    Ok(refined_rets)
 }
 
 // Search for suggestions using matching function signature.

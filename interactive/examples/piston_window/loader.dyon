@@ -4,18 +4,10 @@ fn main() {
     println("Reset with R.")
     println("You can modify \"source/piston_window/snake.rs\" while running.")
 
-    {
-        println("External functions:")
-        println("===================")
-        functions := unwrap(load("examples/common/functions.dyon"))
-        list := functions()
-        call(functions, "print_functions", [list])
-        println("===================")
-    }
-
     render := unwrap(load("examples/piston_window/render.dyon"))
     source := "examples/piston_window/snake.dyon"
     m := unwrap(load(source: source, imports: [render]))
+    call(m, "init", [])
 
     settings := call_ret(m, "settings", [])
     data := call_ret(m, "init_data", [settings])

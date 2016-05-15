@@ -74,7 +74,7 @@
   'core_types': {
     'comment': 'Built-in/core type'
     'name': 'storage.type.core.dyon'
-    'match': '\\b(bool|f64|vec4|str|opt|res)\\b'
+    'match': '\\b(bool|f64|vec4|str|opt|res|thr)\\b'
   }
   'core_vars': {
     'comment': 'Core type variant'
@@ -140,7 +140,7 @@
   {
     'comment': 'Keyword'
     'name': 'keyword.other.dyon'
-    'match': '\\b(sum|min|max|any|all|sift|and|or)\\b'
+    'match': '\\b(sum|min|max|any|all|sift|and|or|go)\\b'
   }
   { 'include': '#self' }
   { 'include': '#mut' }

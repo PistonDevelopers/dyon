@@ -133,6 +133,7 @@ impl Node {
         let mut call_arg_ind = 0;
         for &c in &self.children {
             match (self.kind, nodes[c].kind) {
+                (_, Kind::Go) => {}
                 (_, Kind::ForN) => {}
                 (_, Kind::Continue) => {}
                 (_, Kind::Sift) => {}
@@ -255,19 +256,11 @@ pub fn convert_meta_data(
                     }
                 }
 
-                if kind == Kind::Expr {
-                    let parent = *parents.last().unwrap();
-                    if nodes[parent].kind == Kind::Fn {
-                        // Function returns a value.
-                        nodes[parent].ty = Some(Type::Any);
-                    }
-                }
-
                 let ty = match kind {
-                    Kind::Fn => Some(Type::Void),
                     Kind::Array | Kind::ArrayFill => Some(Type::array()),
                     Kind::Vec4 => Some(Type::Vec4),
                     Kind::Object => Some(Type::object()),
+                    Kind::Sum => Some(Type::F64),
                     _ => None
                 };
 
@@ -364,7 +357,11 @@ pub fn convert_meta_data(
                         // Assuming this will be overwritten when
                         // type is parsed or inferred.
                         let i = *parents.last().unwrap();
-                        nodes[i].ty = Some(Type::Any);
+                        if _val {
+                            nodes[i].ty = Some(Type::Any);
+                        } else {
+                            nodes[i].ty = Some(Type::Void);
+                        }
                     }
                     "return_void" => {
                         // There is no sub node, so we need change kind of parent.

@@ -1,0 +1,6 @@
+sum_n(i: f64, n: f64) = ∑ j n { i * n + j + 1 }
+
+fn main() {
+    n := 100_000
+    x := sum_n(0, n)
+}

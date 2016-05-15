@@ -53,7 +53,7 @@ impl Function {
         let mut args: Vec<Arg> = vec![];
         let mut block: Option<Block> = None;
         let mut expr: Option<Expression> = None;
-        let mut ret = Type::Void;
+        let mut ret: Option<Type> = None;
         loop {
             if let Ok(range) = convert.end_node(node) {
                 convert.update(range);
@@ -65,15 +65,13 @@ impl Function {
                     convert, ignored) {
                 convert.update(range);
                 args.push(val);
-            } else if let Ok((range, _val)) = convert.meta_bool("returns") {
+            } else if let Ok((range, val)) = convert.meta_bool("returns") {
                 convert.update(range);
-                if let Type::Void = ret {
-                    ret = Type::Any;
-                }
+                ret = Some(if val { Type::Any } else { Type::Void })
             } else if let Ok((range, val)) = Type::from_meta_data(
                     "ret_type", convert, ignored) {
                 convert.update(range);
-                ret = val;
+                ret = Some(val);
             } else if let Ok((range, val)) = Block::from_meta_data(
                 "block", convert, ignored) {
                 convert.update(range);
@@ -82,6 +80,7 @@ impl Function {
                 "expr", convert, ignored) {
                 convert.update(range);
                 expr = Some(val);
+                ret = Some(Type::Any);
             } else {
                 let range = convert.ignore();
                 convert.update(range);
@@ -93,7 +92,6 @@ impl Function {
         let block = match expr {
             None => try!(block.ok_or(())),
             Some(expr) => {
-                ret = Type::Any;
                 let source_range = expr.source_range();
                 Block {
                     expressions: vec![Expression::Return(Box::new(expr))],
@@ -114,6 +112,7 @@ impl Function {
             name_plus_args.push(')');
             name = Arc::new(name_plus_args);
         }
+        let ret = try!(ret.ok_or(()));
         Ok((convert.subtract(start), Function {
             name: name,
             file: file,
@@ -233,6 +232,7 @@ pub enum Expression {
     Break(Break),
     Continue(Continue),
     Block(Block),
+    Go(Box<Go>),
     Call(Call),
     Item(Item),
     BinOp(Box<BinOpExpression>),
@@ -255,6 +255,9 @@ pub enum Expression {
     Variable(Range, Variable),
     Try(Box<Expression>),
 }
+
+// Required because the `Sync` impl of `Variable` is unsafe.
+unsafe impl Sync for Expression {}
 
 impl Expression {
     pub fn from_meta_data(
@@ -347,6 +350,10 @@ impl Expression {
                 } else {
                     return Err(());
                 }
+            } else if let Ok((range, val)) = Go::from_meta_data(
+                    convert, ignored) {
+                convert.update(range);
+                result = Some(Expression::Go(Box::new(val)));
             } else if let Ok((range, val)) = Call::from_meta_data(
                     convert, ignored) {
                 convert.update(range);
@@ -433,6 +440,7 @@ impl Expression {
             Break(ref br) => br.source_range,
             Continue(ref c) => c.source_range,
             Block(ref bl) => bl.source_range,
+            Go(ref go) => go.source_range,
             Call(ref call) => call.source_range,
             Item(ref it) => it.source_range,
             BinOp(ref binop) => binop.source_range,
@@ -980,6 +988,48 @@ impl Item {
             try: try,
             ids: ids,
             try_ids: try_ids,
+            source_range: convert.source(start).unwrap(),
+        }))
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Go {
+    pub call: Call,
+    pub source_range: Range,
+}
+
+impl Go {
+    pub fn from_meta_data(
+        mut convert: Convert,
+        ignored: &mut Vec<Range>
+    ) -> Result<(Range, Go), ()> {
+        let start = convert.clone();
+        let node = "go";
+        let start_range = try!(convert.start_node(node));
+        convert.update(start_range);
+
+        let mut call: Option<Call> = None;
+        loop {
+            if let Ok(range) = convert.end_node(node) {
+                convert.update(range);
+                break;
+            } else if let Ok((range, val)) = Call::from_meta_data(convert, ignored) {
+                convert.update(range);
+                call = Some(val);
+            } else if let Ok((range, val)) = Call::named_from_meta_data(convert, ignored) {
+                convert.update(range);
+                call = Some(val);
+            } else {
+                let range = convert.ignore();
+                convert.update(range);
+                ignored.push(range);
+            }
+        }
+
+        let call = try!(call.ok_or(()));
+        Ok((convert.subtract(start), Go {
+            call: call,
             source_range: convert.source(start).unwrap(),
         }))
     }

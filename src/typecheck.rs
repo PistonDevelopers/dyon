@@ -16,6 +16,7 @@ pub enum Type {
     // Rust(Arc<String>),
     Option(Box<Type>),
     Result(Box<Type>),
+    Thread(Box<Type>),
 }
 
 impl Type {
@@ -60,6 +61,16 @@ impl Type {
                     res
                 }
             }
+            &Thread(ref ty) => {
+                if let Any = **ty {
+                    "thr".into()
+                } else {
+                    let mut res = String::from("thr[");
+                    res.push_str(&ty.description());
+                    res.push(']');
+                    res
+                }
+            }
         }
     }
 
@@ -77,6 +88,10 @@ impl Type {
 
     pub fn result() -> Type {
         Type::Result(Box::new(Type::Any))
+    }
+
+    pub fn thread() -> Type {
+        Type::Thread(Box::new(Type::Any))
     }
 
     pub fn goes_with(&self, other: &Type) -> bool {
@@ -114,6 +129,15 @@ impl Type {
             &Result(ref res) => {
                 if let &Result(ref other_res) = other {
                     res.goes_with(other_res)
+                } else if let &Any = other {
+                    true
+                } else {
+                    false
+                }
+            }
+            &Thread(ref thr) => {
+                if let &Thread(ref other_thr) = other {
+                    thr.goes_with(other_thr)
                 } else if let &Any = other {
                     true
                 } else {
@@ -214,6 +238,9 @@ impl Type {
             } else if let Ok((range, _)) = convert.meta_bool("obj_any") {
                 convert.update(range);
                 ty = Some(Type::Object);
+            } else if let Ok((range, _)) = convert.meta_bool("thr_any") {
+                convert.update(range);
+                ty = Some(Type::Thread(Box::new(Type::Any)));
             } else if let Ok((range, val)) = Type::from_meta_data(
                     "opt", convert, ignored) {
                 convert.update(range);
@@ -226,6 +253,10 @@ impl Type {
                     "arr", convert, ignored) {
                 convert.update(range);
                 ty = Some(Type::Array(Box::new(val)));
+            } else if let Ok((range, val)) = Type::from_meta_data(
+                    "thr", convert, ignored) {
+                convert.update(range);
+                ty = Some(Type::Thread(Box::new(val)));
             } else {
                 let range = convert.ignore();
                 convert.update(range);

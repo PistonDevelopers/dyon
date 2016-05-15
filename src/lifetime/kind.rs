@@ -61,6 +61,7 @@ pub enum Kind {
     Res,
     RetType,
     ReturnVoid,
+    Go,
 }
 
 impl Kind {
@@ -127,6 +128,7 @@ impl Kind {
             "res" => Kind::Res,
             "ret_type" => Kind::RetType,
             "return_void" => Kind::ReturnVoid,
+            "go" => Kind::Go,
             _ => return None
         })
     }

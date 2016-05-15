@@ -63,7 +63,7 @@ impl Prelude {
     pub fn from_module(module: &Module) -> Prelude {
         let mut functions = HashMap::new();
         intrinsics::standard(&mut functions);
-        for (key, &(_, ref val)) in &module.ext_prelude {
+        for (key, &(_, ref val)) in &*module.ext_prelude {
             functions.insert(key.clone(), val.clone());
         }
         for f in module.functions.values() {

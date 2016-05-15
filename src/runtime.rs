@@ -54,7 +54,7 @@ pub struct Runtime {
     pub call_stack: Vec<Call>,
     pub local_stack: Vec<(Arc<String>, usize)>,
     pub ret: Arc<String>,
-    pub rng: rand::ThreadRng,
+    pub rng: rand::StdRng,
     pub text_type: Variable,
     pub f64_type: Variable,
     pub vec4_type: Variable,
@@ -67,6 +67,7 @@ pub struct Runtime {
     pub rust_object_type: Variable,
     pub option_type: Variable,
     pub result_type: Variable,
+    pub thread_type: Variable,
 }
 
 fn resolve<'a>(stack: &'a Vec<Variable>, var: &'a Variable) -> &'a Variable {
@@ -202,7 +203,7 @@ impl Runtime {
             call_stack: vec![],
             local_stack: vec![],
             ret: Arc::new("return".into()),
-            rng: rand::thread_rng(),
+            rng: rand::StdRng::new().unwrap(),
             text_type: Variable::Text(Arc::new("string".into())),
             f64_type: Variable::Text(Arc::new("number".into())),
             vec4_type: Variable::Text(Arc::new("vec4".into())),
@@ -215,6 +216,7 @@ impl Runtime {
             rust_object_type: Variable::Text(Arc::new("rust_object".into())),
             option_type: Variable::Text(Arc::new("option".into())),
             result_type: Variable::Text(Arc::new("result".into())),
+            thread_type: Variable::Text(Arc::new("thread".into())),
         }
     }
 
@@ -352,6 +354,7 @@ impl Runtime {
             Break(ref b) => Ok((Expect::Nothing, Flow::Break(b.label.clone()))),
             Continue(ref b) => Ok((Expect::Nothing,
                                    Flow::ContinueLoop(b.label.clone()))),
+            Go(ref go) => self.go(go, module),
             Call(ref call) => self.call(call, module),
             Item(ref item) => {
                 let flow = try!(self.item(item, side, module));
@@ -514,6 +517,71 @@ impl Runtime {
         }
         self.local_stack.truncate(lc);
         Ok((expect, Flow::Continue))
+    }
+
+    pub fn go(&mut self, go: &ast::Go, module: &Module) -> Result<(Expect, Flow), String> {
+        use std::thread::{self, JoinHandle};
+        use Thread;
+
+        let n = go.call.args.len();
+        let mut stack = vec![];
+        let mut fake_call = ast::Call {
+            name: go.call.name.clone(),
+            args: Vec::with_capacity(n),
+            source_range: go.call.source_range,
+        };
+        // Evaluate the arguments and put a deep clone on the new stack.
+        // This prevents the arguments from containing any reference to other variables.
+        for (i, arg) in go.call.args.iter().enumerate() {
+            match try!(self.expression(arg, Side::Right, module)) {
+                (x, Flow::Return) => { return Ok((x, Flow::Return)); }
+                (Expect::Something, Flow::Continue) => {}
+                _ => return Err(module.error(arg.source_range(),
+                                &format!("{}\nExpected something. \
+                                Expression did not return a value.",
+                                self.stack_trace())))
+            };
+            let v = self.stack.pop().expect("There is no value on the stack");
+            stack.push(v.deep_clone(&self.stack));
+            fake_call.args.push(ast::Expression::Variable(
+                go.call.args[i].source_range(), Variable::Ref(n-i-1)));
+        }
+        stack.reverse();
+        let new_rt = Runtime {
+            stack: stack,
+            local_stack: vec![],
+            call_stack: vec![],
+            rng: self.rng.clone(),
+            ret: self.ret.clone(),
+            ref_type: self.ref_type.clone(),
+            option_type: self.option_type.clone(),
+            array_type: self.array_type.clone(),
+            bool_type: self.bool_type.clone(),
+            object_type: self.object_type.clone(),
+            text_type: self.text_type.clone(),
+            f64_type: self.f64_type.clone(),
+            thread_type: self.thread_type.clone(),
+            unsafe_ref_type: self.unsafe_ref_type.clone(),
+            return_type: self.return_type.clone(),
+            rust_object_type: self.rust_object_type.clone(),
+            vec4_type: self.vec4_type.clone(),
+            result_type: self.result_type.clone(),
+        };
+        let new_module: Module = module.clone();
+        let handle: JoinHandle<Result<Variable, String>> = thread::spawn(move || {
+            let mut new_rt = new_rt;
+            let new_module = new_module;
+            let fake_call = fake_call;
+            match new_rt.call(&fake_call, &new_module) {
+                Err(err) => return Err(err),
+                Ok(_) => {}
+            };
+
+            let v = new_rt.stack.pop().expect("There is no value on the stack");
+            Ok(v.deep_clone(&new_rt.stack))
+        });
+        self.stack.push(Variable::Thread(Thread::new(handle)));
+        Ok((Expect::Something, Flow::Continue))
     }
 
     pub fn call(
@@ -840,7 +908,7 @@ impl Runtime {
                             }
                             r
                         }
-                        x => panic!("Expected reference, found `{:?}`", x)
+                        x => panic!("Expected reference, found `{}`", self.typeof_var(&x))
                     };
 
                     match self.resolve(&b) {
@@ -1435,6 +1503,7 @@ impl Runtime {
             &Variable::RustObject(_) => self.rust_object_type.clone(),
             &Variable::Option(_) => self.option_type.clone(),
             &Variable::Result(_) => self.result_type.clone(),
+            &Variable::Thread(_) => self.thread_type.clone(),
         };
         match v {
             Variable::Text(v) => v,

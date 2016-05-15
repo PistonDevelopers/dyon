@@ -43,7 +43,7 @@ pub fn standard(f: &mut HashMap<Arc<String>, PreludeFunction>) {
     f.insert(Arc::new("random".into()), PreludeFunction {
         lts: vec![],
         tys: vec![],
-        ret: Type::Void
+        ret: Type::F64
     });
     sarg(f, "read_number", Type::Text, Type::Any);
     f.insert(Arc::new("read_line".into()), PreludeFunction {
@@ -99,7 +99,7 @@ pub fn standard(f: &mut HashMap<Arc<String>, PreludeFunction>) {
     f.insert(Arc::new("call".into()), PreludeFunction {
         lts: vec![Lt::Default; 3],
         tys: vec![Type::Any, Type::Text, Type::array()],
-        ret: Type::Any
+        ret: Type::Void
     });
     f.insert(Arc::new("call_ret".into()), PreludeFunction {
         lts: vec![Lt::Default; 3],
@@ -132,6 +132,17 @@ pub fn standard(f: &mut HashMap<Arc<String>, PreludeFunction>) {
         tys: vec![Type::Text; 2],
         ret: Type::Result(Box::new(Type::array()))
     });
+    f.insert(Arc::new("load_meta_url".into()), PreludeFunction {
+        lts: vec![Lt::Default; 2],
+        tys: vec![Type::Text; 2],
+        ret: Type::Result(Box::new(Type::array()))
+    });
+    f.insert(Arc::new("download_url_file".into()), PreludeFunction {
+        lts: vec![Lt::Default; 2],
+        tys: vec![Type::Text; 2],
+        ret: Type::Result(Box::new(Type::Text))
+    });
+    sarg(f, "join_thread", Type::thread(), Type::Result(Box::new(Type::Any)));
 }
 
 enum EscapeString {
@@ -231,7 +242,11 @@ fn write_variable<W>(
                 }
             }
         }
-        ref x => panic!("Could not print out `{:?}`", x)
+        Variable::Thread(_) => try!(write!(w, "_thread")),
+        Variable::Return => try!(write!(w, "_return")),
+        Variable::UnsafeRef(_) => try!(write!(w, "_unsafe_ref")),
+        Variable::RustObject(_) => try!(write!(w, "_rust_object")),
+        // ref x => panic!("Could not print out `{:?}`", x)
     }
     Ok(())
 }
@@ -636,6 +651,7 @@ pub fn call_standard(
                 &Variable::RustObject(_) => rt.rust_object_type.clone(),
                 &Variable::Option(_) => rt.option_type.clone(),
                 &Variable::Result(_) => rt.result_type.clone(),
+                &Variable::Thread(_) => rt.thread_type.clone(),
             };
             rt.stack.push(v);
             rt.pop_fn(call.name.clone());
@@ -662,7 +678,7 @@ pub fn call_standard(
             let v = match rt.resolve(&v) {
                 &Variable::Text(ref text) => {
                     let mut m = Module::new();
-                    for (key, &(ref f, ref ext)) in &module.ext_prelude {
+                    for (key, &(ref f, ref ext)) in &*module.ext_prelude {
                         m.add(key.clone(), *f, ext.clone());
                     }
                     if let Err(err) = load(text, &mut m) {
@@ -692,7 +708,7 @@ pub fn call_standard(
             let modules = rt.stack.pop().expect(TINVOTS);
             let source = rt.stack.pop().expect(TINVOTS);
             let mut new_module = Module::new();
-            for (key, &(ref f, ref ext)) in &module.ext_prelude {
+            for (key, &(ref f, ref ext)) in &*module.ext_prelude {
                 new_module.add(key.clone(), *f, ext.clone());
             }
             match rt.resolve(&modules) {
@@ -870,6 +886,7 @@ pub fn call_standard(
             let name: Arc<String> = Arc::new("name".into());
             let arguments: Arc<String> = Arc::new("arguments".into());
             let returns: Arc<String> = Arc::new("returns".into());
+            let takes: Arc<String> = Arc::new("takes".into());
             let lifetime: Arc<String> = Arc::new("lifetime".into());
             let ret_lifetime: Arc<String> = Arc::new("return".into());
             let ty: Arc<String> = Arc::new("type".into());
@@ -881,7 +898,7 @@ pub fn call_standard(
             for (f_name, f) in &intrinsics {
                 let mut obj = HashMap::new();
                 obj.insert(name.clone(), Variable::Text(f_name.clone()));
-                obj.insert(returns.clone(), Variable::Bool(f.returns()));
+                obj.insert(returns.clone(), Variable::Text(Arc::new(f.ret.description())));
                 obj.insert(ty.clone(), Variable::Text(intrinsic.clone()));
                 let mut args = vec![];
                 for (i, lt) in f.lts.iter().enumerate() {
@@ -899,15 +916,17 @@ pub fn call_standard(
                                 Box::new(Variable::Text(ret_lifetime.clone()))
                             )),
                     });
+                    obj_arg.insert(takes.clone(),
+                        Variable::Text(Arc::new(f.tys[i].description())));
                     args.push(Variable::Object(Arc::new(obj_arg)));
                 }
                 obj.insert(arguments.clone(), Variable::Array(Arc::new(args)));
                 functions.push(Variable::Object(Arc::new(obj)));
             }
-            for (f_name, &(_, ref f)) in &module.ext_prelude {
+            for (f_name, &(_, ref f)) in &*module.ext_prelude {
                 let mut obj = HashMap::new();
                 obj.insert(name.clone(), Variable::Text(f_name.clone()));
-                obj.insert(returns.clone(), Variable::Bool(f.returns()));
+                obj.insert(returns.clone(), Variable::Text(Arc::new(f.ret.description())));
                 obj.insert(ty.clone(), Variable::Text(external.clone()));
                 let mut args = vec![];
                 for (i, lt) in f.lts.iter().enumerate() {
@@ -925,6 +944,8 @@ pub fn call_standard(
                                 Box::new(Variable::Text(ret_lifetime.clone()))
                             )),
                     });
+                    obj_arg.insert(takes.clone(),
+                        Variable::Text(Arc::new(f.tys[i].description())));
                     args.push(Variable::Object(Arc::new(obj_arg)));
                 }
                 obj.insert(arguments.clone(), Variable::Array(Arc::new(args)));
@@ -933,7 +954,7 @@ pub fn call_standard(
             for f in module.functions.values() {
                 let mut obj = HashMap::new();
                 obj.insert(name.clone(), Variable::Text(f.name.clone()));
-                obj.insert(returns.clone(), Variable::Bool(f.returns()));
+                obj.insert(returns.clone(), Variable::Text(Arc::new(f.ret.description())));
                 obj.insert(ty.clone(), Variable::Text(loaded.clone()));
                 let mut args = vec![];
                 for arg in &f.args {
@@ -948,6 +969,8 @@ pub fn call_standard(
                                 )))
                         }
                     );
+                    obj_arg.insert(takes.clone(),
+                        Variable::Text(Arc::new(arg.ty.description())));
                     args.push(Variable::Object(Arc::new(obj_arg)));
                 }
                 obj.insert(arguments.clone(), Variable::Array(Arc::new(args)));
@@ -1106,7 +1129,92 @@ pub fn call_standard(
             }));
             rt.pop_fn(call.name.clone());
             Expect::Something
+        }
+        "load_meta_url" => {
+            rt.push_fn(call.name.clone(), None, st + 1, lc);
+            let url = rt.stack.pop().expect(TINVOTS);
+            let meta = rt.stack.pop().expect(TINVOTS);
+            let url = match rt.resolve(&url) {
+                &Variable::Text(ref url) => url.clone(),
+                x => return Err(module.error(call.args[1].source_range(),
+                                &rt.expected(x, "str")))
+            };
+            let meta = match rt.resolve(&meta) {
+                &Variable::Text(ref meta) => meta.clone(),
+                x => return Err(module.error(call.args[0].source_range(),
+                                &rt.expected(x, "str")))
+            };
+            let res = meta::load_meta_url(&**meta, &**url);
+            rt.stack.push(Variable::Result(match res {
+                Ok(res) => Ok(Box::new(Variable::Array(Arc::new(res)))),
+                Err(err) => Err(Box::new(Error {
+                    message: Variable::Text(Arc::new(err)),
+                    trace: vec![]
+                }))
+            }));
+            rt.pop_fn(call.name.clone());
+            Expect::Something
+        }
+        "download_url_file" => {
+            rt.push_fn(call.name.clone(), None, st + 1, lc);
+            let file = rt.stack.pop().expect(TINVOTS);
+            let url = rt.stack.pop().expect(TINVOTS);
+            let file = match rt.resolve(&file) {
+                &Variable::Text(ref file) => file.clone(),
+                x => return Err(module.error(call.args[1].source_range(),
+                                &rt.expected(x, "str")))
+            };
+            let url = match rt.resolve(&url) {
+                &Variable::Text(ref url) => url.clone(),
+                x => return Err(module.error(call.args[0].source_range(),
+                                &rt.expected(x, "str")))
+            };
 
+            let res = meta::download_url_to_file(&**url, &**file);
+            rt.stack.push(Variable::Result(match res {
+                Ok(res) => Ok(Box::new(Variable::Text(Arc::new(res)))),
+                Err(err) => Err(Box::new(Error {
+                    message: Variable::Text(Arc::new(err)),
+                    trace: vec![]
+                }))
+            }));
+            rt.pop_fn(call.name.clone());
+            Expect::Something
+        }
+        "join_thread" => {
+            use Thread;
+
+            rt.push_fn(call.name.clone(), None, st + 1, lc);
+            let thread = rt.stack.pop().expect(TINVOTS);
+            let handle_res = Thread::invalidate_handle(rt, thread);
+            rt.stack.push(Variable::Result({
+                match handle_res {
+                    Ok(handle) => {
+                        match handle.join() {
+                            Ok(res) => match res {
+                                Ok(res) => Ok(Box::new(res)),
+                                Err(err) => Err(Box::new(Error {
+                                    message: Variable::Text(Arc::new(err)),
+                                    trace: vec![]
+                                }))
+                            },
+                            Err(_err) => Err(Box::new(Error {
+                                message: Variable::Text(Arc::new(
+                                    "Thread did not exit successfully".into())),
+                                trace: vec![]
+                            }))
+                        }
+                    }
+                    Err(err) => {
+                        Err(Box::new(Error {
+                            message: Variable::Text(Arc::new(err)),
+                            trace: vec![]
+                        }))
+                    }
+                }
+            }));
+            rt.pop_fn(call.name.clone());
+            Expect::Something
         }
         _ => return Err(module.error(call.source_range,
             &format!("{}\nUnknown function `{}`", rt.stack_trace(), call.name)))

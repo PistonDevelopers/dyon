@@ -1,4 +1,17 @@
 fn main() {
-    data := unwrap(load(meta: "assets/test_meta.txt", file: "assets/test_data.txt"))
-    println(data)
+    list := [
+        "https://raw.githubusercontent.com/PistonDevelopers/dyon/master/assets/test_data.txt",
+        "https://raw.githubusercontent.com/PistonDevelopers/dyon/master/assets/test_meta.txt"
+    ]
+    names := [
+        "1.txt",
+        "2.txt"
+    ]
+    threads := sift i len(list) {
+        go download(url: list[i], file: names[i])
+    }
+    results := sift i len(threads) {
+        unwrap(join(thread: pop(mut threads)))
+    }
+    println(results)
 }
