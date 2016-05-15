@@ -881,6 +881,7 @@ pub fn call_standard(
             let name: Arc<String> = Arc::new("name".into());
             let arguments: Arc<String> = Arc::new("arguments".into());
             let returns: Arc<String> = Arc::new("returns".into());
+            let takes: Arc<String> = Arc::new("takes".into());
             let lifetime: Arc<String> = Arc::new("lifetime".into());
             let ret_lifetime: Arc<String> = Arc::new("return".into());
             let ty: Arc<String> = Arc::new("type".into());
@@ -892,7 +893,7 @@ pub fn call_standard(
             for (f_name, f) in &intrinsics {
                 let mut obj = HashMap::new();
                 obj.insert(name.clone(), Variable::Text(f_name.clone()));
-                obj.insert(returns.clone(), Variable::Bool(f.returns()));
+                obj.insert(returns.clone(), Variable::Text(Arc::new(f.ret.description())));
                 obj.insert(ty.clone(), Variable::Text(intrinsic.clone()));
                 let mut args = vec![];
                 for (i, lt) in f.lts.iter().enumerate() {
@@ -910,6 +911,8 @@ pub fn call_standard(
                                 Box::new(Variable::Text(ret_lifetime.clone()))
                             )),
                     });
+                    obj_arg.insert(takes.clone(),
+                        Variable::Text(Arc::new(f.tys[i].description())));
                     args.push(Variable::Object(Arc::new(obj_arg)));
                 }
                 obj.insert(arguments.clone(), Variable::Array(Arc::new(args)));
@@ -918,7 +921,7 @@ pub fn call_standard(
             for (f_name, &(_, ref f)) in &*module.ext_prelude {
                 let mut obj = HashMap::new();
                 obj.insert(name.clone(), Variable::Text(f_name.clone()));
-                obj.insert(returns.clone(), Variable::Bool(f.returns()));
+                obj.insert(returns.clone(), Variable::Text(Arc::new(f.ret.description())));
                 obj.insert(ty.clone(), Variable::Text(external.clone()));
                 let mut args = vec![];
                 for (i, lt) in f.lts.iter().enumerate() {
@@ -936,6 +939,8 @@ pub fn call_standard(
                                 Box::new(Variable::Text(ret_lifetime.clone()))
                             )),
                     });
+                    obj_arg.insert(takes.clone(),
+                        Variable::Text(Arc::new(f.tys[i].description())));
                     args.push(Variable::Object(Arc::new(obj_arg)));
                 }
                 obj.insert(arguments.clone(), Variable::Array(Arc::new(args)));
@@ -944,7 +949,7 @@ pub fn call_standard(
             for f in module.functions.values() {
                 let mut obj = HashMap::new();
                 obj.insert(name.clone(), Variable::Text(f.name.clone()));
-                obj.insert(returns.clone(), Variable::Bool(f.returns()));
+                obj.insert(returns.clone(), Variable::Text(Arc::new(f.ret.description())));
                 obj.insert(ty.clone(), Variable::Text(loaded.clone()));
                 let mut args = vec![];
                 for arg in &f.args {
@@ -959,6 +964,8 @@ pub fn call_standard(
                                 )))
                         }
                     );
+                    obj_arg.insert(takes.clone(),
+                        Variable::Text(Arc::new(arg.ty.description())));
                     args.push(Variable::Object(Arc::new(obj_arg)));
                 }
                 obj.insert(arguments.clone(), Variable::Array(Arc::new(args)));

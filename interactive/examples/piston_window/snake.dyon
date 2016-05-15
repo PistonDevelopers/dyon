@@ -1,5 +1,19 @@
 title() = "Snake!"
 
+fn init() {
+    functions := unwrap(load("examples/common/functions.dyon"))
+    list := functions()
+    println("===================")
+    println("External functions:")
+    println("===================")
+    call(functions, "print_functions_type", [list, "external"])
+    println("===================")
+    println("Loaded functions:")
+    println("===================")
+    call(functions, "print_functions_type", [list, "loaded"])
+    println("===================")
+}
+
 settings() = {
     background_color: #e5d6a1,
     reload_interval: 0.25,
