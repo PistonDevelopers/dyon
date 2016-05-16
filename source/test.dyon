@@ -1,13 +1,6 @@
-fn main() {
-    list := sift i 10 { i + 1 }
-    println(list)
-    reverse2(mut list)
-    println(list)
-}
 
-fn reverse2(mut list) {
-    n := len(list)
-    for i n/2 {
-        swap(mut list, n-i-1, i)
-    }
+fn main() {
+    y := [1, 2, 3]
+    x := pop(mut y)
+    println(x)
 }

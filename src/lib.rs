@@ -168,25 +168,61 @@ impl PartialEq for Variable {
     }
 }
 
+#[derive(Clone, Copy, Debug)]
+pub enum FnIndex {
+    None,
+    Loaded(usize),
+    External(usize),
+}
+
+pub struct FnExternal {
+    pub name: Arc<String>,
+    pub f: fn(&mut Runtime) -> Result<(), String>,
+    pub p: PreludeFunction,
+}
+
+impl Clone for FnExternal {
+    fn clone(&self) -> FnExternal {
+        FnExternal {
+            name: self.name.clone(),
+            f: self.f,
+            p: self.p.clone(),
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct Module {
     pub source: Option<String>,
-    pub functions: HashMap<Arc<String>, Arc<ast::Function>>,
-    pub ext_prelude: Arc<HashMap<Arc<String>,
-        (fn(&mut Runtime) -> Result<(), String>, PreludeFunction)>>,
+    pub functions: Vec<ast::Function>,
+    pub ext_prelude: Vec<FnExternal>,
 }
 
 impl Module {
     pub fn new() -> Module {
         Module {
             source: None,
-            functions: HashMap::new(),
-            ext_prelude: Arc::new(HashMap::new()),
+            functions: vec![],
+            ext_prelude: vec![],
         }
     }
 
-    pub fn register(&mut self, function: Arc<ast::Function>) {
-        self.functions.insert(function.name.clone(), function);
+    pub fn register(&mut self, function: ast::Function) {
+        self.functions.push(function);
+    }
+
+    pub fn find_function(&self, name: &Arc<String>) -> FnIndex {
+        for (i, f) in self.functions.iter().enumerate() {
+            if &f.name == name {
+                return FnIndex::Loaded(i);
+            }
+        }
+        for (i, f) in self.ext_prelude.iter().enumerate() {
+            if &f.name == name {
+                return FnIndex::External(i);
+            }
+        }
+        FnIndex::None
     }
 
     pub fn error(&self, range: Range, msg: &str) -> String {
@@ -206,10 +242,11 @@ impl Module {
         f: fn(&mut Runtime) -> Result<(), String>,
         prelude_function: PreludeFunction
     ) {
-        Arc::get_mut(&mut self.ext_prelude)
-            .expect("Can not add prelude function when there is \
-                     more than one reference to the module")
-            .insert(name.clone(), (f, prelude_function));
+        self.ext_prelude.push(FnExternal {
+            name: name.clone(),
+            f: f,
+            p: prelude_function,
+        });
     }
 }
 
@@ -260,9 +297,10 @@ pub fn load(source: &str, module: &mut Module) -> Result<(), String> {
     match handle.join().unwrap() {
         Ok(refined_rets) => {
             for (name, ty) in &refined_rets {
-                module.functions.get_mut(name).map(|f| {
-                    Arc::make_mut(f).ret = ty.clone();
-                });
+                if let FnIndex::Loaded(f_index) = module.find_function(name) {
+                    let f = &mut module.functions[f_index];
+                    f.ret = ty.clone();
+                }
             }
         }
         Err(err_msg) => {

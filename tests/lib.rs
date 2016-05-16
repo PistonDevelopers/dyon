@@ -74,6 +74,7 @@ fn test_syntax() {
     test_src("source/syntax/min_max.dyon");
     test_src("source/syntax/vec4.dyon");
     test_src("source/syntax/color.dyon");
+    test_src("source/syntax/parens.dyon");
 }
 
 #[test]
