@@ -1,5 +1,4 @@
 use std::sync::Arc;
-use std::cell::Cell;
 use std::collections::HashMap;
 use rand;
 use range::Range;
@@ -334,19 +333,9 @@ impl Runtime {
                 Ok((Expect::Something, flow))
             }
             Block(ref block) => self.block(block, module),
-            Return(ref ret) => {
-                use ast::{AssignOp, Expression, Item};
-
+            Return(ref item, ref ret) => {
                 // Assign return value and then break the flow.
-                let item = Expression::Item(Item {
-                        name: self.ret.clone(),
-                        stack_id: Cell::new(None),
-                        try: false,
-                        ids: vec![],
-                        try_ids: vec![],
-                        source_range: ret.source_range(),
-                    });
-                let _flow = try!(self.assign_specific(AssignOp::Set,
+                let _flow = try!(self.assign_specific(ast::AssignOp::Set,
                     &item, ret, module));
                 Ok((Expect::Something, Flow::Return))
             }
@@ -801,6 +790,7 @@ impl Runtime {
                             &format!("{}\nExpected something",
                                 self.stack_trace())))
         };
+        let fill: Variable = self.stack.pop().expect("Expected fill");
         match try!(self.expression(&array_fill.n, Side::Right, module)) {
             (_, Flow::Return) => { return Ok(Flow::Return); }
             (Expect::Something, Flow::Continue) => {}
@@ -809,7 +799,6 @@ impl Runtime {
                                 self.stack_trace())))
         };
         let n: Variable = self.stack.pop().expect("Expected n");
-        let fill: Variable = self.stack.pop().expect("Expected fill");
         let v = match (self.resolve(&fill), self.resolve(&n)) {
             (x, &Variable::F64(n)) => {
                 Variable::Array(Arc::new(vec![x.clone(); n as usize]))
@@ -1273,33 +1262,68 @@ impl Runtime {
 
         let locals = self.local_stack.len() - self.call_stack.last().unwrap().local_len;
         let stack_id = {
-            match item.stack_id.get() {
-                Some(val) => self.stack.len() - val,
-                None => {
-                    let name: &str = &**item.name;
-                    let mut found = false;
-                    for &(ref n, id) in self.local_stack.iter().rev().take(locals) {
-                        if &**n == name {
-                            item.stack_id.set(Some(self.stack.len() - id));
-                            found = true;
-                            break;
+            if cfg!(not(feature = "debug_resolve")) {
+                self.stack.len() - item.static_stack_id.read().unwrap().unwrap()
+            } else {
+                let val = {
+                    *item.stack_id.read().unwrap()
+                };
+                match val {
+                    Some(val) => self.stack.len() - val,
+                    None => {
+                        let name: &str = &**item.name;
+                        let mut found = false;
+                        for &(ref n, id) in self.local_stack.iter().rev().take(locals) {
+                            if &**n == name {
+                                let new_val = Some(self.stack.len() - id);
+                                *item.stack_id.write().unwrap() = new_val;
+
+                                let static_stack_id = *item.static_stack_id.read().unwrap();
+                                if new_val != static_stack_id {
+                                    return Err(module.error(item.source_range,
+                                        &format!(
+                                            "DEBUG: resolved not same for {} `{:?}` vs static `{:?}`",
+                                            name,
+                                            new_val,
+                                            static_stack_id
+                                        )));
+                                }
+
+                                found = true;
+                                break;
+                            }
                         }
-                    }
-                    if found {
-                        self.stack.len() - item.stack_id.get().unwrap()
-                    } else if name == "return" {
-                        return Err(module.error(item.source_range, &format!(
-                            "{}\nRequires `->` on function `{}`",
-                            self.stack_trace(),
-                            &self.call_stack.last().unwrap().fn_name)));
-                    } else {
-                        return Err(module.error(item.source_range, &format!(
-                            "{}\nCould not find local variable `{}`",
-                                self.stack_trace(), name)));
+                        if found {
+                            self.stack.len() - item.stack_id.read().unwrap().unwrap()
+                        } else if name == "return" {
+                            return Err(module.error(item.source_range, &format!(
+                                "{}\nRequires `->` on function `{}`",
+                                self.stack_trace(),
+                                &self.call_stack.last().unwrap().fn_name)));
+                        } else {
+                            return Err(module.error(item.source_range, &format!(
+                                "{}\nCould not find local variable `{}`",
+                                    self.stack_trace(), name)));
+                        }
                     }
                 }
             }
         };
+
+        if cfg!(feature = "debug_resolve") {
+            for &(ref n, id) in self.local_stack.iter().rev().take(locals) {
+                if &**n == &**item.name {
+                    if stack_id != id {
+                        return Err(module.error(item.source_range,
+                            &format!("DEBUG: Not same for {} stack_id `{:?}` vs id `{:?}`",
+                                item.name,
+                                stack_id,
+                                id)));
+                    }
+                    break;
+                }
+            }
+        }
 
         let stack_id = if let &Variable::Ref(ref_id) = &self.stack[stack_id] {
                 ref_id
@@ -1838,9 +1862,6 @@ impl Runtime {
             start
         } else { 0.0 };
 
-        // Initialize counter.
-        self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
-        self.stack.push(Variable::F64(start));
         // Evaluate end such that it's on the stack.
         match try!(self.expression(&for_n_expr.end, Side::Right, module)) {
             (_, Flow::Return) => { return Ok(Flow::Return); }
@@ -1855,6 +1876,11 @@ impl Runtime {
             x => return Err(module.error(for_n_expr.end.source_range(),
                             &self.expected(x, "number")))
         };
+
+        // Initialize counter.
+        self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
+        self.stack.push(Variable::F64(start));
+
         let st = self.stack.len();
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
@@ -1943,9 +1969,6 @@ impl Runtime {
             start
         } else { 0.0 };
 
-        // Initialize counter.
-        self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
-        self.stack.push(Variable::F64(start));
         // Evaluate end such that it's on the stack.
         match try!(self.expression(&for_n_expr.end, Side::Right, module)) {
             (_, Flow::Return) => { return Ok(Flow::Return); }
@@ -1960,6 +1983,11 @@ impl Runtime {
             x => return Err(module.error(for_n_expr.end.source_range(),
                             &self.expected(x, "number")))
         };
+
+        // Initialize counter.
+        self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
+        self.stack.push(Variable::F64(start));
+
         let st = self.stack.len();
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
@@ -2059,10 +2087,6 @@ impl Runtime {
             start
         } else { 0.0 };
 
-        let mut min: Option<(f64, f64)> = None;
-        // Initialize counter.
-        self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
-        self.stack.push(Variable::F64(start));
         // Evaluate end such that it's on the stack.
         match try!(self.expression(&for_n_expr.end, Side::Right, module)) {
             (_, Flow::Return) => { return Ok(Flow::Return); }
@@ -2077,6 +2101,11 @@ impl Runtime {
             x => return Err(module.error(for_n_expr.end.source_range(),
                             &self.expected(x, "number")))
         };
+
+        let mut min: Option<(f64, f64)> = None;
+        // Initialize counter.
+        self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
+        self.stack.push(Variable::F64(start));
         let st = self.stack.len();
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
@@ -2191,10 +2220,6 @@ impl Runtime {
             start
         } else { 0.0 };
 
-        let mut max: Option<(f64, f64)> = None;
-        // Initialize counter.
-        self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
-        self.stack.push(Variable::F64(start));
         // Evaluate end such that it's on the stack.
         match try!(self.expression(&for_n_expr.end, Side::Right, module)) {
             (_, Flow::Return) => { return Ok(Flow::Return); }
@@ -2209,6 +2234,12 @@ impl Runtime {
             x => return Err(module.error(for_n_expr.end.source_range(),
                             &self.expected(x, "number")))
         };
+
+        let mut max: Option<(f64, f64)> = None;
+        // Initialize counter.
+        self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
+        self.stack.push(Variable::F64(start));
+
         let st = self.stack.len();
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
@@ -2323,10 +2354,6 @@ impl Runtime {
             start
         } else { 0.0 };
 
-        let mut any = false;
-        // Initialize counter.
-        self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
-        self.stack.push(Variable::F64(start));
         // Evaluate end such that it's on the stack.
         match try!(self.expression(&for_n_expr.end, Side::Right, module)) {
             (_, Flow::Return) => { return Ok(Flow::Return); }
@@ -2341,6 +2368,12 @@ impl Runtime {
             x => return Err(module.error(for_n_expr.end.source_range(),
                             &self.expected(x, "number")))
         };
+
+        let mut any = false;
+        // Initialize counter.
+        self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
+        self.stack.push(Variable::F64(start));
+
         let st = self.stack.len();
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
@@ -2445,10 +2478,6 @@ impl Runtime {
             start
         } else { 0.0 };
 
-        let mut any = true;
-        // Initialize counter.
-        self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
-        self.stack.push(Variable::F64(start));
         // Evaluate end such that it's on the stack.
         match try!(self.expression(&for_n_expr.end, Side::Right, module)) {
             (_, Flow::Return) => { return Ok(Flow::Return); }
@@ -2463,6 +2492,12 @@ impl Runtime {
             x => return Err(module.error(for_n_expr.end.source_range(),
                             &self.expected(x, "number")))
         };
+
+        let mut any = true;
+        // Initialize counter.
+        self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
+        self.stack.push(Variable::F64(start));
+
         let st = self.stack.len();
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
@@ -2568,10 +2603,6 @@ impl Runtime {
             start
         } else { 0.0 };
 
-        // Initialize counter.
-        self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
-        self.stack.push(Variable::F64(start));
-
         // Evaluate end such that it's on the stack.
         match try!(self.expression(&for_n_expr.end, Side::Right, module)) {
             (_, Flow::Return) => { return Ok(Flow::Return); }
@@ -2586,6 +2617,11 @@ impl Runtime {
             x => return Err(module.error(for_n_expr.end.source_range(),
                             &self.expected(x, "number")))
         };
+
+        // Initialize counter.
+        self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
+        self.stack.push(Variable::F64(start));
+
         let st = self.stack.len();
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;

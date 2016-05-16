@@ -1,5 +1,4 @@
-use std::sync::Arc;
-use std::cell::Cell;
+use std::sync::{Arc, RwLock};
 use range::Range;
 use piston_meta::bootstrap::Convert;
 use piston_meta::MetaData;
@@ -26,6 +25,9 @@ pub fn convert(
             break;
         }
     }
+    for f in module.functions.values() {
+        f.resolve_locals(module);
+    }
     Ok(())
 }
 
@@ -36,6 +38,7 @@ pub struct Function {
     pub args: Vec<Arg>,
     pub block: Block,
     pub ret: Type,
+    pub resolved: Arc<RwLock<bool>>,
     pub source_range: Range,
 }
 
@@ -94,8 +97,17 @@ impl Function {
             None => try!(block.ok_or(())),
             Some(expr) => {
                 let source_range = expr.source_range();
+                let item = Expression::Item(Item {
+                        name: Arc::new("return".into()),
+                        stack_id: Arc::new(RwLock::new(None)),
+                        static_stack_id: Arc::new(RwLock::new(None)),
+                        try: false,
+                        ids: vec![],
+                        try_ids: vec![],
+                        source_range: source_range,
+                    });
                 Block {
-                    expressions: vec![Expression::Return(Box::new(expr))],
+                    expressions: vec![Expression::Return(Box::new(item), Box::new(expr))],
                     source_range: source_range
                 }
             }
@@ -115,6 +127,7 @@ impl Function {
         }
         let ret = try!(ret.ok_or(()));
         Ok((convert.subtract(start), Function {
+            resolved: Arc::new(RwLock::new(false)),
             name: name,
             file: file,
             args: args,
@@ -125,6 +138,19 @@ impl Function {
     }
 
     pub fn returns(&self) -> bool { self.ret != Type::Void }
+
+    pub fn resolve_locals(&self, module: &Module) {
+        if *self.resolved.read().unwrap() { return; }
+        let mut stack: Vec<Option<Arc<String>>> = vec![];
+        if self.returns() {
+            stack.push(Some(Arc::new("return".into())));
+        }
+        for arg in &self.args {
+            stack.push(Some(arg.name.clone()));
+        }
+        self.block.resolve_locals(&mut stack, module);
+        *self.resolved.write().unwrap() = true;
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -221,6 +247,14 @@ impl Block {
             source_range: convert.source(start).unwrap(),
         }))
     }
+
+    pub fn resolve_locals(&self, stack: &mut Vec<Option<Arc<String>>>, module: &Module) {
+        let st = stack.len();
+        for expr in &self.expressions {
+            expr.resolve_locals(stack, module);
+        }
+        stack.truncate(st);
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -228,7 +262,7 @@ pub enum Expression {
     Object(Box<Object>),
     Array(Box<Array>),
     ArrayFill(Box<ArrayFill>),
-    Return(Box<Expression>),
+    Return(Box<Expression>, Box<Expression>),
     ReturnVoid(Range),
     Break(Break),
     Continue(Continue),
@@ -293,7 +327,16 @@ impl Expression {
             } else if let Ok((range, val)) = Expression::from_meta_data(
                 "return", convert, ignored) {
                 convert.update(range);
-                result = Some(Expression::Return(Box::new(val)));
+                let item = Expression::Item(Item {
+                        name: Arc::new("return".into()),
+                        stack_id: Arc::new(RwLock::new(None)),
+                        static_stack_id: Arc::new(RwLock::new(None)),
+                        try: false,
+                        ids: vec![],
+                        try_ids: vec![],
+                        source_range: val.source_range(),
+                    });
+                result = Some(Expression::Return(Box::new(item), Box::new(val)));
             } else if let Ok((range, _)) = convert.meta_bool("return_void") {
                 convert.update(range);
                 result = Some(Expression::ReturnVoid(
@@ -436,7 +479,7 @@ impl Expression {
             Object(ref obj) => obj.source_range,
             Array(ref arr) => arr.source_range,
             ArrayFill(ref arr_fill) => arr_fill.source_range,
-            Return(ref expr) => expr.source_range(),
+            Return(_, ref expr) => expr.source_range(),
             ReturnVoid(range) => range,
             Break(ref br) => br.source_range,
             Continue(ref c) => c.source_range,
@@ -463,6 +506,50 @@ impl Expression {
             UnOp(ref unop) => unop.source_range,
             Variable(range, _) => range,
             Try(ref expr) => expr.source_range(),
+        }
+    }
+
+    pub fn resolve_locals(&self, stack: &mut Vec<Option<Arc<String>>>, module: &Module) {
+        use self::Expression::*;
+
+        match *self {
+            Object(ref obj) => obj.resolve_locals(stack, module),
+            Array(ref arr) => arr.resolve_locals(stack, module),
+            ArrayFill(ref arr_fill) => arr_fill.resolve_locals(stack, module),
+            Return(ref item, ref expr) => {
+                let st = stack.len();
+                expr.resolve_locals(stack, module);
+                stack.truncate(st);
+                stack.push(None);
+                item.resolve_locals(stack, module);
+                stack.truncate(st);
+            }
+            ReturnVoid(_) => {}
+            Break(_) => {}
+            Continue(_) => {}
+            Block(ref bl) => bl.resolve_locals(stack, module),
+            Go(ref go) => go.resolve_locals(stack, module),
+            Call(ref call) => call.resolve_locals(stack, module),
+            Item(ref it) => it.resolve_locals(stack, module),
+            BinOp(ref binop) => binop.resolve_locals(stack, module),
+            Assign(ref assign) => assign.resolve_locals(stack, module),
+            Text(_) => {}
+            Number(_) => {}
+            Vec4(ref vec4) => vec4.resolve_locals(stack, module),
+            Bool(_) => {}
+            For(ref for_expr) => for_expr.resolve_locals(stack, module),
+            ForN(ref for_n_expr) => for_n_expr.resolve_locals(stack, module),
+            Sum(ref for_n_expr) => for_n_expr.resolve_locals(stack, module),
+            Min(ref for_n_expr) => for_n_expr.resolve_locals(stack, module),
+            Max(ref for_n_expr) => for_n_expr.resolve_locals(stack, module),
+            Sift(ref for_n_expr) => for_n_expr.resolve_locals(stack, module),
+            Any(ref for_n_expr) => for_n_expr.resolve_locals(stack, module),
+            All(ref for_n_expr) => for_n_expr.resolve_locals(stack, module),
+            If(ref if_expr) => if_expr.resolve_locals(stack, module),
+            Compare(ref comp) => comp.resolve_locals(stack, module),
+            UnOp(ref unop) => unop.resolve_locals(stack, module),
+            Variable(_, _) => {}
+            Try(ref expr) => expr.resolve_locals(stack, module),
         }
     }
 }
@@ -538,6 +625,14 @@ impl Object {
         let value = try!(value.ok_or(()));
         Ok((convert.subtract(start), (key, value)))
     }
+
+    pub fn resolve_locals(&self, stack: &mut Vec<Option<Arc<String>>>, module: &Module) {
+        let st = stack.len();
+        for &(_, ref expr) in &self.key_values {
+            expr.resolve_locals(stack, module);
+            stack.truncate(st);
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -576,6 +671,14 @@ impl Array {
             items: items,
             source_range: convert.source(start).unwrap(),
         }))
+    }
+
+    pub fn resolve_locals(&self, stack: &mut Vec<Option<Arc<String>>>, module: &Module) {
+        let st = stack.len();
+        for item in &self.items {
+            item.resolve_locals(stack, module);
+            stack.truncate(st);
+        }
     }
 }
 
@@ -624,6 +727,14 @@ impl ArrayFill {
             n: n,
             source_range: convert.source(start).unwrap(),
         }))
+    }
+
+    pub fn resolve_locals(&self, stack: &mut Vec<Option<Arc<String>>>, module: &Module) {
+        let st = stack.len();
+        self.fill.resolve_locals(stack, module);
+        stack.truncate(st);
+        self.n.resolve_locals(stack, module);
+        stack.truncate(st);
     }
 }
 
@@ -909,12 +1020,26 @@ impl Id {
             Id::Expression(ref expr) => expr.source_range(),
         }
     }
+
+    pub fn resolve_locals(&self, stack: &mut Vec<Option<Arc<String>>>, module: &Module) -> bool {
+        match *self {
+            Id::String(_, _) => false,
+            Id::F64(_, _) => false,
+            Id::Expression(ref expr) => {
+                let st = stack.len();
+                expr.resolve_locals(stack, module);
+                stack.truncate(st);
+                true
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
 pub struct Item {
     pub name: Arc<String>,
-    pub stack_id: Cell<Option<usize>>,
+    pub stack_id: Arc<RwLock<Option<usize>>>,
+    pub static_stack_id: Arc<RwLock<Option<usize>>>,
     pub try: bool,
     pub ids: Vec<Id>,
     // Stores indices of ids that should propagate errors.
@@ -926,7 +1051,8 @@ impl Item {
     pub fn from_variable(name: Arc<String>, source_range: Range) -> Item {
         Item {
             name: name,
-            stack_id: Cell::new(None),
+            stack_id: Arc::new(RwLock::new(None)),
+            static_stack_id: Arc::new(RwLock::new(None)),
             try: false,
             ids: vec![],
             try_ids: vec![],
@@ -988,12 +1114,33 @@ impl Item {
         let name = try!(name.ok_or(()));
         Ok((convert.subtract(start), Item {
             name: name,
-            stack_id: Cell::new(None),
+            stack_id: Arc::new(RwLock::new(None)),
+            static_stack_id: Arc::new(RwLock::new(None)),
             try: try,
             ids: ids,
             try_ids: try_ids,
             source_range: convert.source(start).unwrap(),
         }))
+    }
+
+    pub fn resolve_locals(&self, stack: &mut Vec<Option<Arc<String>>>, module: &Module) {
+        // println!("TEST item resolve {} {:?}", self.name, stack);
+        let st = stack.len();
+        for (i, n) in stack.iter().rev().enumerate() {
+            if let &Some(ref n) = n {
+                if &**n == &**self.name {
+                    // println!("TEST set {} {}", self.name, i + 1);
+                    *self.static_stack_id.write().unwrap() = Some(i + 1);
+                    break;
+                }
+            }
+        }
+        for id in &self.ids {
+            if id.resolve_locals(stack, module) {
+                stack.push(None);
+            }
+        }
+        stack.truncate(st);
     }
 }
 
@@ -1036,6 +1183,16 @@ impl Go {
             call: call,
             source_range: convert.source(start).unwrap(),
         }))
+    }
+
+    pub fn resolve_locals(&self, stack: &mut Vec<Option<Arc<String>>>, module: &Module) {
+        let st = stack.len();
+        for arg in &self.call.args {
+            let st = stack.len();
+            arg.resolve_locals(stack, module);
+            stack.truncate(st);
+        }
+        stack.truncate(st);
     }
 }
 
@@ -1165,6 +1322,26 @@ impl Call {
             source_range: convert.source(start).unwrap(),
         }))
     }
+
+    pub fn resolve_locals(&self, stack: &mut Vec<Option<Arc<String>>>, module: &Module) {
+        let st = stack.len();
+        if let Some(f) = module.functions.get(&self.name) {
+            if f.returns() {
+                stack.push(Some(Arc::new("return".into())));
+            }
+        } else if let Some(f) = module.ext_prelude.get(&self.name) {
+            if f.1.returns() {
+                stack.push(Some(Arc::new("return".into())));
+            }
+        }
+        for arg in &self.args {
+            let arg_st = stack.len();
+            arg.resolve_locals(stack, module);
+            stack.truncate(arg_st);
+            stack.push(None);
+        }
+        stack.truncate(st);
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -1173,6 +1350,17 @@ pub struct BinOpExpression {
     pub left: Expression,
     pub right: Expression,
     pub source_range: Range,
+}
+
+impl BinOpExpression {
+    pub fn resolve_locals(&self, stack: &mut Vec<Option<Arc<String>>>, module: &Module) {
+        let st = stack.len();
+        self.left.resolve_locals(stack, module);
+        stack.truncate(st);
+        stack.push(None);
+        self.right.resolve_locals(stack, module);
+        stack.truncate(st);
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -1225,6 +1413,12 @@ impl UnOpExpression {
             expr: expr,
             source_range: convert.source(start).unwrap()
         }))
+    }
+
+    pub fn resolve_locals(&self, stack: &mut Vec<Option<Arc<String>>>, module: &Module) {
+        let st = stack.len();
+        self.expr.resolve_locals(stack, module);
+        stack.truncate(st);
     }
 }
 
@@ -1301,6 +1495,28 @@ impl Assign {
             right: right,
             source_range: convert.source(start).unwrap(),
         }))
+    }
+
+    pub fn resolve_locals(&self, stack: &mut Vec<Option<Arc<String>>>, module: &Module) {
+        // Declared locals in right expressions are popped from the stack.
+        let st = stack.len();
+        self.right.resolve_locals(stack, module);
+        stack.truncate(st);
+
+        // Declare new local when there is an item with no extra.
+        if let Expression::Item(ref item) = self.left {
+            if item.ids.len() == 0 && self.op == AssignOp::Assign {
+                stack.push(Some(item.name.clone()));
+                return;
+            }
+        }
+        // Or else, just resolve normally.
+        if self.op != AssignOp::Assign {
+            // Item is resolved before popping right value.
+            stack.push(None);
+        }
+        self.left.resolve_locals(stack, module);
+        stack.truncate(st);
     }
 }
 
@@ -1390,6 +1606,17 @@ impl Vec4 {
             source_range: convert.source(start).unwrap(),
         }))
     }
+
+    pub fn resolve_locals(&self, stack: &mut Vec<Option<Arc<String>>>, module: &Module) {
+        let st = stack.len();
+        for arg in &self.args {
+            let arg_st = stack.len();
+            arg.resolve_locals(stack, module);
+            stack.truncate(arg_st);
+            stack.push(None);
+        }
+        stack.truncate(st);
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -1472,6 +1699,18 @@ impl For {
             source_range: convert.source(start).unwrap(),
         }))
     }
+
+    pub fn resolve_locals(&self, stack: &mut Vec<Option<Arc<String>>>, module: &Module) {
+        let st = stack.len();
+        self.init.resolve_locals(stack, module);
+        let after_init = stack.len();
+        self.cond.resolve_locals(stack, module);
+        stack.truncate(after_init);
+        self.step.resolve_locals(stack, module);
+        stack.truncate(after_init);
+        self.block.resolve_locals(stack, module);
+        stack.truncate(st);
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -1539,6 +1778,19 @@ impl ForN {
             label: label,
             source_range: convert.source(start).unwrap(),
         }))
+    }
+
+    pub fn resolve_locals(&self, stack: &mut Vec<Option<Arc<String>>>, module: &Module) {
+        let st = stack.len();
+        if let Some(ref start) = self.start {
+            start.resolve_locals(stack, module);
+            stack.truncate(st);
+        }
+        self.end.resolve_locals(stack, module);
+        stack.truncate(st);
+        stack.push(Some(self.name.clone()));
+        self.block.resolve_locals(stack, module);
+        stack.truncate(st);
     }
 }
 
@@ -1752,6 +2004,28 @@ impl If {
             source_range: convert.source(start).unwrap(),
         }))
     }
+
+    pub fn resolve_locals(&self, stack: &mut Vec<Option<Arc<String>>>, module: &Module) {
+        let st = stack.len();
+        self.cond.resolve_locals(stack, module);
+        stack.truncate(st);
+        self.true_block.resolve_locals(stack, module);
+        stack.truncate(st);
+        // Does not matter that conditions are resolved before blocks,
+        // since the stack gets truncated anyway.
+        for else_if_cond in &self.else_if_conds {
+            else_if_cond.resolve_locals(stack, module);
+            stack.truncate(st);
+        }
+        for else_if_block in &self.else_if_blocks {
+            else_if_block.resolve_locals(stack, module);
+            stack.truncate(st);
+        }
+        if let Some(ref else_block) = self.else_block {
+            else_block.resolve_locals(stack, module);
+            stack.truncate(st);
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -1821,6 +2095,15 @@ impl Compare {
             right: right,
             source_range: convert.source(start).unwrap(),
         }))
+    }
+
+    pub fn resolve_locals(&self, stack: &mut Vec<Option<Arc<String>>>, module: &Module) {
+        let st = stack.len();
+        self.left.resolve_locals(stack, module);
+        stack.truncate(st);
+        stack.push(None);
+        self.right.resolve_locals(stack, module);
+        stack.truncate(st);
     }
 }
 

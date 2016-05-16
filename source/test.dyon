@@ -1,12 +1,11 @@
+fn init_data() -> {} {
+    data := {
+        snake_body: []
+    }
+    data.next_snake_body := data.snake_body
+    return clone(data)
+}
 
 fn main() {
-    for i 2 {
-        dir :=
-            if i == 0 { 0 }
-            else {
-                len := 0
-                0
-            }
-        println(i)
-    }
+    x := init_data()
 }
