@@ -12,7 +12,7 @@ homepage = "https://github.com/pistondevelopers/dyon/interactive"
 name = "dyon_interactive"
 
 [dependencies.dyon]
-version = "0.6.1"
+version = "0.7.0"
 path = ".."
 
 [dependencies]
