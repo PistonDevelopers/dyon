@@ -510,9 +510,11 @@ impl Runtime {
 
         if expect == Expect::Something {
             // Truncate stack to keep later locals at fixed length from end of stack.
-            let v = self.stack.pop().expect("There is no value on the stack");
-            self.stack.truncate(st);
-            self.stack.push(v);
+            if self.stack.len() - st != 1 {
+                let v = self.stack.pop().expect("There is no value on the stack");
+                self.stack.truncate(st);
+                self.stack.push(v);
+            }
         } else {
             self.stack.truncate(st);
         }
