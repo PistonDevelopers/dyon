@@ -26,7 +26,7 @@ pub fn convert(
             break;
         }
     }
-    for f in module.functions.values() {
+    for f in &module.functions {
         f.resolve_locals(module);
     }
     Ok(())
@@ -1201,6 +1201,7 @@ impl Go {
 pub struct Call {
     pub name: Arc<String>,
     pub args: Vec<Expression>,
+    pub f_index: Cell<Option<usize>>,
     pub source_range: Range,
 }
 
@@ -1262,6 +1263,7 @@ impl Call {
         Ok((convert.subtract(start), Call {
             name: name,
             args: args,
+            f_index: Cell::new(None),
             source_range: convert.source(start).unwrap(),
         }))
     }
@@ -1320,14 +1322,16 @@ impl Call {
         Ok((convert.subtract(start), Call {
             name: Arc::new(name),
             args: args,
+            f_index: Cell::new(None),
             source_range: convert.source(start).unwrap(),
         }))
     }
 
     pub fn resolve_locals(&self, stack: &mut Vec<Option<Arc<String>>>, module: &Module) {
         let st = stack.len();
-        if let Some(f) = module.functions.get(&self.name) {
-            if f.returns() {
+        if let Some(f_index) = module.find_loaded_function(&self.name) {
+            self.f_index.set(Some(f_index));
+            if module.functions[f_index].returns() {
                 stack.push(Some(Arc::new("return".into())));
             }
         } else if let Some(f) = module.ext_prelude.get(&self.name) {

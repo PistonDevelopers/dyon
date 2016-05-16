@@ -66,7 +66,7 @@ impl Prelude {
         for (key, &(_, ref val)) in &*module.ext_prelude {
             functions.insert(key.clone(), val.clone());
         }
-        for f in module.functions.values() {
+        for f in &module.functions {
             functions.insert(f.name.clone(), PreludeFunction::new(f));
         }
         Prelude {

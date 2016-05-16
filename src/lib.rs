@@ -171,7 +171,7 @@ impl PartialEq for Variable {
 #[derive(Clone)]
 pub struct Module {
     pub source: Option<String>,
-    pub functions: HashMap<Arc<String>, ast::Function>,
+    pub functions: Vec<ast::Function>,
     pub ext_prelude: Arc<HashMap<Arc<String>,
         (fn(&mut Runtime) -> Result<(), String>, PreludeFunction)>>,
 }
@@ -180,13 +180,22 @@ impl Module {
     pub fn new() -> Module {
         Module {
             source: None,
-            functions: HashMap::new(),
+            functions: vec![],
             ext_prelude: Arc::new(HashMap::new()),
         }
     }
 
     pub fn register(&mut self, function: ast::Function) {
-        self.functions.insert(function.name.clone(), function);
+        self.functions.push(function);
+    }
+
+    pub fn find_loaded_function(&self, name: &Arc<String>) -> Option<usize> {
+        for (i, f) in self.functions.iter().enumerate() {
+            if &f.name == name {
+                return Some(i);
+            }
+        }
+        None
     }
 
     pub fn error(&self, range: Range, msg: &str) -> String {
@@ -260,7 +269,9 @@ pub fn load(source: &str, module: &mut Module) -> Result<(), String> {
     match handle.join().unwrap() {
         Ok(refined_rets) => {
             for (name, ty) in &refined_rets {
-                module.functions.get_mut(name).map(|f| {
+
+                module.find_loaded_function(name).map(|f_index| {
+                    let f = &mut module.functions[f_index];
                     f.ret = ty.clone();
                 });
             }

@@ -474,13 +474,18 @@ impl Runtime {
     }
 
     pub fn run(&mut self, module: &Module) -> Result<(), String> {
+        use std::cell::Cell;
+
+        let name: Arc<String> = Arc::new("main".into());
         let call = ast::Call {
-            name: Arc::new("main".into()),
+            name: name.clone(),
+            f_index: Cell::new(module.find_loaded_function(&name)),
             args: vec![],
             source_range: Range::empty(0),
         };
-        match module.functions.get(&call.name) {
-            Some(f) => {
+        match call.f_index.get() {
+            Some(f_index) => {
+                let f = &module.functions[f_index];
                 if f.args.len() != 0 {
                     return Err(module.error(f.args[0].source_range,
                                "`main` should not have arguments"))
@@ -525,12 +530,14 @@ impl Runtime {
 
     pub fn go(&mut self, go: &ast::Go, module: &Module) -> Result<(Expect, Flow), String> {
         use std::thread::{self, JoinHandle};
+        use std::cell::Cell;
         use Thread;
 
         let n = go.call.args.len();
         let mut stack = vec![];
         let mut fake_call = ast::Call {
             name: go.call.name.clone(),
+            f_index: Cell::new(module.find_loaded_function(&go.call.name)),
             args: Vec::with_capacity(n),
             source_range: go.call.source_range,
         };
@@ -593,7 +600,7 @@ impl Runtime {
         call: &ast::Call,
         module: &Module
     ) -> Result<(Expect, Flow), String> {
-        match module.functions.get(&call.name) {
+        match call.f_index.get() {
             None => {
                 match module.ext_prelude.get(&call.name) {
                     None => {
@@ -620,7 +627,8 @@ impl Runtime {
                     }
                 }
             }
-            Some(ref f) => {
+            Some(f_index) => {
+                let f = &module.functions[f_index];
                 if call.args.len() != f.args.len() {
                     return Err(module.error(call.source_range,
                         &format!("{}\nExpected {} arguments but found {}",

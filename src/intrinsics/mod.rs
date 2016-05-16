@@ -782,7 +782,7 @@ pub fn call_standard(
                             &Variable::RustObject(ref obj) => {
                                 match obj.lock().unwrap().downcast_ref::<Module>() {
                                     Some(m) => {
-                                        for f in m.functions.values() {
+                                        for f in &m.functions {
                                             new_module.register(f.clone())
                                         }
                                     }
@@ -848,8 +848,12 @@ pub fn call_standard(
             match obj.lock().unwrap()
                 .downcast_ref::<Module>() {
                 Some(m) => {
-                    match m.functions.get(&fn_name) {
-                        Some(ref f) => {
+                    use std::cell::Cell;
+
+                    let f_index = m.find_loaded_function(&fn_name);
+                    match f_index {
+                        Some(f_index) => {
+                            let f = &m.functions[f_index];
                             if f.args.len() != args.len() {
                                 return Err(module.error(
                                     call.args[2].source_range(),
@@ -868,6 +872,7 @@ pub fn call_standard(
                     }
                     let call = ast::Call {
                         name: fn_name.clone(),
+                        f_index: Cell::new(f_index),
                         args: args.iter().map(|arg|
                             ast::Expression::Variable(
                                 call.source_range, arg.clone())).collect(),
@@ -908,8 +913,12 @@ pub fn call_standard(
             match obj.lock().unwrap()
                 .downcast_ref::<Module>() {
                 Some(m) => {
-                    match m.functions.get(&fn_name) {
-                        Some(ref f) => {
+                    use std::cell::Cell;
+
+                    let f_index = m.find_loaded_function(&fn_name);
+                    match f_index {
+                        Some(f_index) => {
+                            let f = &m.functions[f_index];
                             if f.args.len() != args.len() {
                                 return Err(module.error(
                                     call.args[2].source_range(),
@@ -928,6 +937,7 @@ pub fn call_standard(
                     }
                     let call = ast::Call {
                         name: fn_name.clone(),
+                        f_index: Cell::new(f_index),
                         args: args.iter().map(|arg|
                             ast::Expression::Variable(
                                 call.source_range, arg.clone())).collect(),
@@ -1015,7 +1025,7 @@ pub fn call_standard(
                 obj.insert(arguments.clone(), Variable::Array(Arc::new(args)));
                 functions.push(Variable::Object(Arc::new(obj)));
             }
-            for f in module.functions.values() {
+            for f in &module.functions {
                 let mut obj = HashMap::new();
                 obj.insert(name.clone(), Variable::Text(f.name.clone()));
                 obj.insert(returns.clone(), Variable::Text(Arc::new(f.ret.description())));
