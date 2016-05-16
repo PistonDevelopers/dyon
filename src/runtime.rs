@@ -7,8 +7,9 @@ use ast;
 use intrinsics;
 use embed;
 
-use Variable;
+use FnIndex;
 use Module;
+use Variable;
 
 /// Which side an expression is evalutated.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -479,12 +480,12 @@ impl Runtime {
         let name: Arc<String> = Arc::new("main".into());
         let call = ast::Call {
             name: name.clone(),
-            f_index: Cell::new(module.find_loaded_function(&name)),
+            f_index: Cell::new(module.find_function(&name)),
             args: vec![],
             source_range: Range::empty(0),
         };
         match call.f_index.get() {
-            Some(f_index) => {
+            FnIndex::Loaded(f_index) => {
                 let f = &module.functions[f_index];
                 if f.args.len() != 0 {
                     return Err(module.error(f.args[0].source_range,
@@ -493,7 +494,7 @@ impl Runtime {
                 try!(self.call(&call, &module));
                 Ok(())
             }
-            None => return Err(module.error(call.source_range,
+            _ => return Err(module.error(call.source_range,
                                "Could not find function `main`"))
         }
     }
@@ -537,7 +538,7 @@ impl Runtime {
         let mut stack = vec![];
         let mut fake_call = ast::Call {
             name: go.call.name.clone(),
-            f_index: Cell::new(module.find_loaded_function(&go.call.name)),
+            f_index: Cell::new(module.find_function(&go.call.name)),
             args: Vec::with_capacity(n),
             source_range: go.call.source_range,
         };
@@ -601,33 +602,30 @@ impl Runtime {
         module: &Module
     ) -> Result<(Expect, Flow), String> {
         match call.f_index.get() {
-            None => {
-                match module.ext_prelude.get(&call.name) {
-                    None => {
-                        intrinsics::call_standard(self, call, module)
-                    }
-                    Some(&(ref f, ref pr)) => {
-                        for arg in &call.args {
-                            match try!(self.expression(arg, Side::Right, module)) {
-                                (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-                                (Expect::Something, Flow::Continue) => {}
-                                _ => return Err(module.error(arg.source_range(),
-                                                &format!("{}\nExpected something. \
-                                                Expression did not return a value.",
-                                                self.stack_trace())))
-                            };
-                        }
-                        try!(f(self).map_err(|err|
-                            module.error(call.source_range, &err)));
-                        if pr.returns() {
-                            return Ok((Expect::Something, Flow::Continue));
-                        } else {
-                            return Ok((Expect::Nothing, Flow::Continue));
-                        }
-                    }
+            FnIndex::None => {
+                intrinsics::call_standard(self, call, module)
+            }
+            FnIndex::External(f_index) => {
+                let f = &module.ext_prelude[f_index];
+                for arg in &call.args {
+                    match try!(self.expression(arg, Side::Right, module)) {
+                        (x, Flow::Return) => { return Ok((x, Flow::Return)); }
+                        (Expect::Something, Flow::Continue) => {}
+                        _ => return Err(module.error(arg.source_range(),
+                                        &format!("{}\nExpected something. \
+                                        Expression did not return a value.",
+                                        self.stack_trace())))
+                    };
+                }
+                try!((f.f)(self).map_err(|err|
+                    module.error(call.source_range, &err)));
+                if f.p.returns() {
+                    return Ok((Expect::Something, Flow::Continue));
+                } else {
+                    return Ok((Expect::Nothing, Flow::Continue));
                 }
             }
-            Some(f_index) => {
+            FnIndex::Loaded(f_index) => {
                 let f = &module.functions[f_index];
                 if call.args.len() != f.args.len() {
                     return Err(module.error(call.source_range,

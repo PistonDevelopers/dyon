@@ -1,11 +1,6 @@
-fn init_data() -> {} {
-    data := {
-        snake_body: []
-    }
-    data.next_snake_body := data.snake_body
-    return clone(data)
-}
 
 fn main() {
-    x := init_data()
+    y := [1, 2, 3]
+    x := pop(mut y)
+    println(x)
 }

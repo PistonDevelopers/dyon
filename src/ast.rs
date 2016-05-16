@@ -4,9 +4,10 @@ use range::Range;
 use piston_meta::bootstrap::Convert;
 use piston_meta::MetaData;
 
-use Variable;
+use FnIndex;
 use Module;
 use Type;
+use Variable;
 
 pub fn convert(
     file: Arc<String>,
@@ -1201,7 +1202,7 @@ impl Go {
 pub struct Call {
     pub name: Arc<String>,
     pub args: Vec<Expression>,
-    pub f_index: Cell<Option<usize>>,
+    pub f_index: Cell<FnIndex>,
     pub source_range: Range,
 }
 
@@ -1263,7 +1264,7 @@ impl Call {
         Ok((convert.subtract(start), Call {
             name: name,
             args: args,
-            f_index: Cell::new(None),
+            f_index: Cell::new(FnIndex::None),
             source_range: convert.source(start).unwrap(),
         }))
     }
@@ -1322,22 +1323,28 @@ impl Call {
         Ok((convert.subtract(start), Call {
             name: Arc::new(name),
             args: args,
-            f_index: Cell::new(None),
+            f_index: Cell::new(FnIndex::None),
             source_range: convert.source(start).unwrap(),
         }))
     }
 
     pub fn resolve_locals(&self, stack: &mut Vec<Option<Arc<String>>>, module: &Module) {
         let st = stack.len();
-        if let Some(f_index) = module.find_loaded_function(&self.name) {
-            self.f_index.set(Some(f_index));
-            if module.functions[f_index].returns() {
-                stack.push(Some(Arc::new("return".into())));
+        let f_index = module.find_function(&self.name);
+        self.f_index.set(f_index);
+        match f_index {
+            FnIndex::Loaded(f_index) => {
+                if module.functions[f_index].returns() {
+                    stack.push(Some(Arc::new("return".into())));
+                }
             }
-        } else if let Some(f) = module.ext_prelude.get(&self.name) {
-            if f.1.returns() {
-                stack.push(Some(Arc::new("return".into())));
+            FnIndex::External(f_index) => {
+                let f = &module.ext_prelude[f_index];
+                if f.p.returns() {
+                    stack.push(Some(Arc::new("return".into())));
+                }
             }
+            FnIndex::None => {}
         }
         for arg in &self.args {
             let arg_st = stack.len();

@@ -7,11 +7,12 @@ use piston_meta::json;
 use runtime::{Expect, Flow, Runtime, Side};
 use ast;
 use prelude::{Lt, PreludeFunction};
-use Type;
 
-use Variable;
-use Module;
+use FnIndex;
 use Error;
+use Module;
+use Variable;
+use Type;
 
 mod meta;
 
@@ -742,8 +743,8 @@ pub fn call_standard(
             let v = match rt.resolve(&v) {
                 &Variable::Text(ref text) => {
                     let mut m = Module::new();
-                    for (key, &(ref f, ref ext)) in &*module.ext_prelude {
-                        m.add(key.clone(), *f, ext.clone());
+                    for f in &module.ext_prelude {
+                        m.add(f.name.clone(), f.f, f.p.clone());
                     }
                     if let Err(err) = load(text, &mut m) {
                         Variable::Result(Err(Box::new(Error {
@@ -772,8 +773,8 @@ pub fn call_standard(
             let modules = rt.stack.pop().expect(TINVOTS);
             let source = rt.stack.pop().expect(TINVOTS);
             let mut new_module = Module::new();
-            for (key, &(ref f, ref ext)) in &*module.ext_prelude {
-                new_module.add(key.clone(), *f, ext.clone());
+            for f in &module.ext_prelude {
+                new_module.add(f.name.clone(), f.f, f.p.clone());
             }
             match rt.resolve(&modules) {
                 &Variable::Array(ref array) => {
@@ -850,9 +851,9 @@ pub fn call_standard(
                 Some(m) => {
                     use std::cell::Cell;
 
-                    let f_index = m.find_loaded_function(&fn_name);
+                    let f_index = m.find_function(&fn_name);
                     match f_index {
-                        Some(f_index) => {
+                        FnIndex::Loaded(f_index) => {
                             let f = &m.functions[f_index];
                             if f.args.len() != args.len() {
                                 return Err(module.error(
@@ -863,7 +864,7 @@ pub fn call_standard(
                                         f.args.len(), args.len())))
                             }
                         }
-                        None => return Err(module.error(
+                        FnIndex::None | FnIndex::External(_) => return Err(module.error(
                                     call.args[1].source_range(),
                                     &format!(
                                         "{}\nCould not find function `{}`",
@@ -915,9 +916,9 @@ pub fn call_standard(
                 Some(m) => {
                     use std::cell::Cell;
 
-                    let f_index = m.find_loaded_function(&fn_name);
+                    let f_index = m.find_function(&fn_name);
                     match f_index {
-                        Some(f_index) => {
+                        FnIndex::Loaded(f_index) => {
                             let f = &m.functions[f_index];
                             if f.args.len() != args.len() {
                                 return Err(module.error(
@@ -928,12 +929,13 @@ pub fn call_standard(
                                         f.args.len(), args.len())))
                             }
                         }
-                        None => return Err(module.error(
-                                    call.args[1].source_range(),
-                                    &format!(
-                                        "{}\nCould not find function `{}`",
-                                        rt.stack_trace(),
-                                        fn_name)))
+                        FnIndex::None | FnIndex::External(_) =>
+                            return Err(module.error(
+                                call.args[1].source_range(),
+                                &format!(
+                                    "{}\nCould not find function `{}`",
+                                    rt.stack_trace(),
+                                    fn_name)))
                     }
                     let call = ast::Call {
                         name: fn_name.clone(),
@@ -997,13 +999,13 @@ pub fn call_standard(
                 obj.insert(arguments.clone(), Variable::Array(Arc::new(args)));
                 functions.push(Variable::Object(Arc::new(obj)));
             }
-            for (f_name, &(_, ref f)) in &*module.ext_prelude {
+            for f in &*module.ext_prelude {
                 let mut obj = HashMap::new();
-                obj.insert(name.clone(), Variable::Text(f_name.clone()));
-                obj.insert(returns.clone(), Variable::Text(Arc::new(f.ret.description())));
+                obj.insert(name.clone(), Variable::Text(f.name.clone()));
+                obj.insert(returns.clone(), Variable::Text(Arc::new(f.p.ret.description())));
                 obj.insert(ty.clone(), Variable::Text(external.clone()));
                 let mut args = vec![];
-                for (i, lt) in f.lts.iter().enumerate() {
+                for (i, lt) in f.p.lts.iter().enumerate() {
                     let mut obj_arg = HashMap::new();
                     obj_arg.insert(name.clone(),
                         Variable::Text(Arc::new(format!("arg{}", i).into())));
@@ -1019,7 +1021,7 @@ pub fn call_standard(
                             )),
                     });
                     obj_arg.insert(takes.clone(),
-                        Variable::Text(Arc::new(f.tys[i].description())));
+                        Variable::Text(Arc::new(f.p.tys[i].description())));
                     args.push(Variable::Object(Arc::new(obj_arg)));
                 }
                 obj.insert(arguments.clone(), Variable::Array(Arc::new(args)));
