@@ -1265,12 +1265,9 @@ impl Runtime {
         let locals = self.local_stack.len() - self.call_stack.last().unwrap().local_len;
         let stack_id = {
             if cfg!(not(feature = "debug_resolve")) {
-                self.stack.len() - item.static_stack_id.read().unwrap().unwrap()
+                self.stack.len() - item.static_stack_id.get().unwrap()
             } else {
-                let val = {
-                    *item.stack_id.read().unwrap()
-                };
-                match val {
+                match item.stack_id.get() {
                     Some(val) => self.stack.len() - val,
                     None => {
                         let name: &str = &**item.name;
@@ -1278,9 +1275,9 @@ impl Runtime {
                         for &(ref n, id) in self.local_stack.iter().rev().take(locals) {
                             if &**n == name {
                                 let new_val = Some(self.stack.len() - id);
-                                *item.stack_id.write().unwrap() = new_val;
+                                item.stack_id.set(new_val);
 
-                                let static_stack_id = *item.static_stack_id.read().unwrap();
+                                let static_stack_id = item.static_stack_id.get();
                                 if new_val != static_stack_id {
                                     return Err(module.error(item.source_range,
                                         &format!(
@@ -1296,7 +1293,7 @@ impl Runtime {
                             }
                         }
                         if found {
-                            self.stack.len() - item.stack_id.read().unwrap().unwrap()
+                            self.stack.len() - item.stack_id.get().unwrap()
                         } else if name == "return" {
                             return Err(module.error(item.source_range, &format!(
                                 "{}\nRequires `->` on function `{}`",

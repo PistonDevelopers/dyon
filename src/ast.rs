@@ -1,4 +1,5 @@
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use std::cell::Cell;
 use range::Range;
 use piston_meta::bootstrap::Convert;
 use piston_meta::MetaData;
@@ -18,7 +19,7 @@ pub fn convert(
         if let Ok((range, function)) =
         Function::from_meta_data(file.clone(), convert, ignored) {
             convert.update(range);
-            module.register(Arc::new(function));
+            module.register(function);
         } else if convert.remaining_data_len() > 0 {
             return Err(());
         } else {
@@ -38,7 +39,7 @@ pub struct Function {
     pub args: Vec<Arg>,
     pub block: Block,
     pub ret: Type,
-    pub resolved: Arc<RwLock<bool>>,
+    pub resolved: Cell<bool>,
     pub source_range: Range,
 }
 
@@ -99,8 +100,8 @@ impl Function {
                 let source_range = expr.source_range();
                 let item = Expression::Item(Item {
                         name: Arc::new("return".into()),
-                        stack_id: Arc::new(RwLock::new(None)),
-                        static_stack_id: Arc::new(RwLock::new(None)),
+                        stack_id: Cell::new(None),
+                        static_stack_id: Cell::new(None),
                         try: false,
                         ids: vec![],
                         try_ids: vec![],
@@ -127,7 +128,7 @@ impl Function {
         }
         let ret = try!(ret.ok_or(()));
         Ok((convert.subtract(start), Function {
-            resolved: Arc::new(RwLock::new(false)),
+            resolved: Cell::new(false),
             name: name,
             file: file,
             args: args,
@@ -140,7 +141,7 @@ impl Function {
     pub fn returns(&self) -> bool { self.ret != Type::Void }
 
     pub fn resolve_locals(&self, module: &Module) {
-        if *self.resolved.read().unwrap() { return; }
+        if self.resolved.get() { return; }
         let mut stack: Vec<Option<Arc<String>>> = vec![];
         if self.returns() {
             stack.push(Some(Arc::new("return".into())));
@@ -149,7 +150,7 @@ impl Function {
             stack.push(Some(arg.name.clone()));
         }
         self.block.resolve_locals(&mut stack, module);
-        *self.resolved.write().unwrap() = true;
+        self.resolved.set(true);
     }
 }
 
@@ -329,8 +330,8 @@ impl Expression {
                 convert.update(range);
                 let item = Expression::Item(Item {
                         name: Arc::new("return".into()),
-                        stack_id: Arc::new(RwLock::new(None)),
-                        static_stack_id: Arc::new(RwLock::new(None)),
+                        stack_id: Cell::new(None),
+                        static_stack_id: Cell::new(None),
                         try: false,
                         ids: vec![],
                         try_ids: vec![],
@@ -1038,8 +1039,8 @@ impl Id {
 #[derive(Debug, Clone)]
 pub struct Item {
     pub name: Arc<String>,
-    pub stack_id: Arc<RwLock<Option<usize>>>,
-    pub static_stack_id: Arc<RwLock<Option<usize>>>,
+    pub stack_id: Cell<Option<usize>>,
+    pub static_stack_id: Cell<Option<usize>>,
     pub try: bool,
     pub ids: Vec<Id>,
     // Stores indices of ids that should propagate errors.
@@ -1051,8 +1052,8 @@ impl Item {
     pub fn from_variable(name: Arc<String>, source_range: Range) -> Item {
         Item {
             name: name,
-            stack_id: Arc::new(RwLock::new(None)),
-            static_stack_id: Arc::new(RwLock::new(None)),
+            stack_id: Cell::new(None),
+            static_stack_id: Cell::new(None),
             try: false,
             ids: vec![],
             try_ids: vec![],
@@ -1114,8 +1115,8 @@ impl Item {
         let name = try!(name.ok_or(()));
         Ok((convert.subtract(start), Item {
             name: name,
-            stack_id: Arc::new(RwLock::new(None)),
-            static_stack_id: Arc::new(RwLock::new(None)),
+            stack_id: Cell::new(None),
+            static_stack_id: Cell::new(None),
             try: try,
             ids: ids,
             try_ids: try_ids,
@@ -1130,7 +1131,7 @@ impl Item {
             if let &Some(ref n) = n {
                 if &**n == &**self.name {
                     // println!("TEST set {} {}", self.name, i + 1);
-                    *self.static_stack_id.write().unwrap() = Some(i + 1);
+                    self.static_stack_id.set(Some(i + 1));
                     break;
                 }
             }
