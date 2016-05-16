@@ -27,31 +27,36 @@ Dyon script files ends with ".dyon".
 - Functions without return `fn foo() { ... }`
 - Functions with return `fn foo() -> { ... return x }`
 - Functions as mathematical expresisons `f(x) = x / (x - 1)`
-- Lifetime checker (no garbage collector is needed) `fn foo(mut a, b: 'a) { a.x = b }`
-- Mutability checker `fn foo(mut a) { bar(mut a) }`
-- Return lifetime `fn id(x: 'return) -> { return x }`
-- Checks type at runtime when mutating variable `a = 2.0 // ERROR: Expected assigning to number`
-- Objects inserts new key with `a.x := 0` and checks existence and type with `a.x = 0`
-- Named argument syntax based on snake case `foo(bar: b)` is equal to `foo_bar(b)`
+- [Lifetime checker](https://github.com/PistonDevelopers/dyon/issues/173) (no garbage collector is needed) `fn foo(mut a, b: 'a) { a.x = b }`
+- [Mutability checker](https://github.com/PistonDevelopers/dyon/issues/112) `fn foo(mut a) { bar(mut a) }`
+- [Return lifetime](https://github.com/PistonDevelopers/dyon/issues/173) `fn id(x: 'return) -> { return x }`
+- [Checks type at runtime when mutating variable](https://github.com/PistonDevelopers/dyon/issues/19) `a = 2.0 // ERROR: Expected assigning to number`
+- [Objects inserts new key](https://github.com/PistonDevelopers/dyon/issues/19) with `a.x := 0` and checks existence and type with `a.x = 0`
+- [Named argument syntax](https://github.com/PistonDevelopers/dyon/issues/26) based on snake case `foo(bar: b)` is equal to `foo_bar(b)`
 - If expression `a := if b < c { 0 } else { 1 }`
 - For loop `for i := 0; i < 10; i += 1 { ... }`
-- Short For loop `for i 10 { ... }`
-- Short For loop with offset `for i [2, 10) { ... }`
-- `∑`/`sum`, `min`, `max`, `sift`, `∃`/`any`, `∀`/`all` loops
+- [Short For loop](https://github.com/PistonDevelopers/dyon/issues/116) `for i 10 { ... }`
+- [Short For loop](https://github.com/PistonDevelopers/dyon/issues/116) with offset `for i [2, 10) { ... }`
+- [`∑`/`sum`, `min`, `max`, `sift`, `∃`/`any`, `∀`/`all` loops](https://github.com/PistonDevelopers/dyon/issues/119)
 - Infinite loop `loop { ... }`
 - Unlabeled break `loop { break }`
 - Unlabled continue `loop { continue }`
 - Labeled break `'a: loop { break 'a }`
 - Labeled continue `'a: loop { continue 'a }`
-- Use `return` as a variable without exiting `return = 8`
-- Dynamic modules `m := unwrap(load("script.dyon"))` then `call(m, "main", [])`
-- Import to module prelude `m := unwrap(load(source: "script.dyon", imports: [window, graphics]))`
-- Add a custom Rust function using `Module::add`
-- Option values with `none()` or `some(x)`
-- Result values with `ok(x)` or `err(x)`
-- `?` operator to propagate errors, e.g. `x := foo()?`, maps option to result automatically
-- `unwrap(x)` prints trace of propagated error
+- [Use `return` as a variable without exiting `return = 8`](https://github.com/PistonDevelopers/dyon/issues/169)
+- [Dynamic modules](https://github.com/PistonDevelopers/dyon/issues/170) `m := unwrap(load("script.dyon"))` then `call(m, "main", [])`
+- [Import to module prelude](https://github.com/PistonDevelopers/dyon/issues/170) `m := unwrap(load(source: "script.dyon", imports: [window, graphics]))`
+- [Add a custom Rust function](https://github.com/PistonDevelopers/dyon/issues/171) using `Module::add`
+- [Option values](https://github.com/PistonDevelopers/dyon/issues/172) with `none()` or `some(x)`
+- [Result values](https://github.com/PistonDevelopers/dyon/issues/82) with `ok(x)` or `err(x)`
+- `?` operator to propagate errors, e.g. `x := foo()?`, [maps option to result automatically](https://github.com/PistonDevelopers/dyon/issues/172)
+- `unwrap(x)` [prints trace of propagated error](https://github.com/PistonDevelopers/dyon/issues/82)
 - `functions()` returns sorted list of all available functions in a module
+- [Optional type system](https://github.com/PistonDevelopers/dyon/issues/84)
+- [Go-like coroutines with `go`](https://github.com/PistonDevelopers/dyon/issues/84)
+- [4D vectors with `f32` precision `(x, y, z, w)`](https://github.com/PistonDevelopers/dyon/issues/144)
+- [HTML hex colors](https://github.com/PistonDevelopers/dyon/issues/167)
+- [Meta parsing](https://github.com/PistonDevelopers/dyon/issues/168)
 
 ### Why the name Dyon?
 
