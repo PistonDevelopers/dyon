@@ -63,10 +63,21 @@ impl Node {
         return None
     }
 
-    pub fn item_try_or_ids(&self) -> bool {
-        if self.try { true }
-        else if self.kind == Kind::Item && self.children.len() > 0 { true }
+    pub fn item_ids(&self) -> bool {
+        if self.kind == Kind::Item && self.children.len() > 0 { true }
         else { false }
+    }
+
+    pub fn inner_type(&self, ty: &Type) -> Type {
+        if self.try {
+            match ty {
+                &Type::Option(ref ty) => (**ty).clone(),
+                &Type::Result(ref ty) => (**ty).clone(),
+                x => x.clone()
+            }
+        } else {
+            ty.clone()
+        }
     }
 
     pub fn lifetime(
@@ -345,7 +356,7 @@ pub fn convert_meta_data(
                         let i = *parents.last().unwrap();
                         nodes[i].mutable = _val;
                     }
-                    "try_item" => {
+                    "try" | "try_item" => {
                         let i = *parents.last().unwrap();
                         nodes[i].try = _val;
                     }
