@@ -13,7 +13,7 @@ Dyon script files ends with ".dyon".
 
 ### Editor-plugins
 
-[Dyon for the Atom Editor](./editor-plugins/atom/README.md)
+[Dyon for the Atom Editor](https://github.com/PistonDevelopers/atom-language-dyon)
 
 ![coding](./images/code.png)
 
