@@ -1,0 +1,88 @@
+fn __pos_data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
+    start := index
+    i := index
+    if name != none() {
+        node := start_node(data: data, index: i, name: unwrap(name))
+        if node == none() { err("Expected `" + unwrap(name) + "`")? }
+        i += unwrap(node)
+    }
+    _x := none()
+    _y := none()
+    _z := none()
+    loop {
+        if i >= len(data) { err("Unexpected end")? }
+        i_x := read_f64(data: data, index: i, name: "x")
+        if i_x != none() {
+            i_x := unwrap(i_x)
+            i += i_x[0]
+            _x = some(i_x[1])
+            continue
+        }
+        i_y := read_f64(data: data, index: i, name: "y")
+        if i_y != none() {
+            i_y := unwrap(i_y)
+            i += i_y[0]
+            _y = some(i_y[1])
+            continue
+        }
+        i_z := read_f64(data: data, index: i, name: "z")
+        if i_z != none() {
+            i_z := unwrap(i_z)
+            i += i_z[0]
+            _z = some(i_z[1])
+            continue
+        }
+        i += ignore(data: data, index: i)
+        break
+    }
+    if name != none() {
+        i += end_node(data: data, index: i, name: unwrap(name))?
+    }
+    x := if _x != none() {
+        unwrap(_x)
+    } else {
+        err("Could find `x`")?
+    }
+    y := if _y != none() {
+        unwrap(_y)
+    } else {
+        err("Could find `y`")?
+    }
+    z := if _z != none() {
+        unwrap(_z)
+    } else {
+        err("Could find `z`")?
+    }
+    return ok([i - start, (x, y)])
+}
+
+fn __doc_data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
+    start := index
+    i := index
+    if name != none() {
+        node := start_node(data: data, index: i, name: unwrap(name))
+        if node == none() { err("Expected `" + unwrap(name) + "`")? }
+        i += unwrap(node)
+    }
+    arr := []
+    loop {
+        _pos := __pos(data: data, index: i, name: some("pos"))
+        if is_err(_pos) {
+            break
+        } else {
+            i_pos := unwrap(_pos)
+            i += i_pos[0]
+            push(mut arr, i_pos[1])
+        }
+    }
+    if name != none() {
+        i += end_node(data: data, index: i, name: unwrap(name))?
+    }
+    return ok([i - start, arr])
+}
+
+fn convert(data) -> res {
+    i := 0
+    r := __doc(data: data, index: i, name: none())?
+    return ok(r[1])
+}

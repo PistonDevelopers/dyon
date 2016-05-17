@@ -151,7 +151,7 @@ pub fn json_from_meta_data(data: &Vec<Variable>) -> Result<String, io::Error> {
     fn is_end_node(v: &Variable) -> bool {
         if let &Variable::Array(ref arr) = v {
             if let &Variable::Text(ref t) = &arr[2] {
-                &**t == "start"
+                &**t == "end"
             } else {
                 false
             }

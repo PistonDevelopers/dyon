@@ -1,0 +1,29 @@
+
+fn main() {
+    // Test the generated code.
+    test := true
+
+    generator := unwrap(load("meta/generator.dyon"))
+
+    if test {
+        output := unwrap(load(
+            source: "meta/output.dyon",
+            imports: [generator]
+        ))
+
+        meta_data := load(meta: "assets/test_meta.txt",
+                          file: "assets/test_data.txt")
+        data := unwrap(meta_data)
+        println(json_from(meta_data: data))
+        data := call_ret(output, "convert", [data])
+        println(data)
+    } else {
+        meta_data := load(meta: "meta/syntax.txt",
+                          file: "meta/test_1.txt")
+        data := unwrap(meta_data)
+        // println(json_from_meta_data(data))
+
+        code := unwrap(call_ret(generator, "to_code", [data]))
+        println(code)
+    }
+}

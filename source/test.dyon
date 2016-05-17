@@ -1,6 +1,3 @@
-
 fn main() {
-    meta_data := load(meta: "assets/test_meta.txt", file: "assets/test_data.txt")
-    // println(meta_data)
-    println(json_from_meta(data: unwrap(meta_data)))
+    println("hello world!")
 }

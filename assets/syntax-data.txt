@@ -1,0 +1,25 @@
+_seps: "(){}[],.:;=<>*·+-/%^?|&∧∨!¬∑∃∀\n"
+
+200 multi_line_comment = ["/*" ..."*/"? .r?({
+    [!"*/" "*" ..."*/"?] [multi_line_comment ..."*/"?] ["/" ..."*/"?]
+}) "*/"]
+201 comment = {multi_line_comment ["//" ..."\n"?]}
+202 w = .r!({.w! comment})
+
+1 expr = {
+    object:"object"
+    array:"array"
+    vec4:"vec4"
+    .t?:"text"
+    .$_:"num"
+    {"true":"bool" "false":!"bool"}
+    ["#" .._seps!:"color"]
+}
+2 object = ["{" ?w .s?.(, key_value) ?w "}"]
+3 key_value = [.._seps!:"key" ?w ":" ?w expr]
+4 array = ["[" ?w .s?.(, expr) ?w "]"]
+5 vec4 = ["(" ?w .$_:"x" , .$_:"y" ?[, .$_:"z" ?[, .$_:"w"]] ?w ")"]
+
+40 , = [?w "," ?w]
+
+1000 document = .l({expr comment})
