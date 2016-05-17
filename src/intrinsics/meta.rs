@@ -134,3 +134,104 @@ pub fn download_url_to_file(url: &str, file: &str) -> Result<String, String> {
                     url, response.status))
     }
 }
+
+pub fn json_from_meta_data(data: &Vec<Variable>) -> Result<String, io::Error> {
+    fn is_start_node(v: &Variable) -> bool {
+        if let &Variable::Array(ref arr) = v {
+            if let &Variable::Text(ref t) = &arr[2] {
+                &**t == "start"
+            } else {
+                false
+            }
+        } else {
+            false
+        }
+    }
+
+    fn is_end_node(v: &Variable) -> bool {
+        if let &Variable::Array(ref arr) = v {
+            if let &Variable::Text(ref t) = &arr[2] {
+                &**t == "end"
+            } else {
+                false
+            }
+        } else {
+            false
+        }
+    }
+
+    use std::cmp::{ min, max };
+    use std::io::Write;
+    use piston_meta::json::write_string;
+
+    let indent_offset = 0;
+    let mut w: Vec<u8> = vec![];
+
+    // Start indention such that it balances off to zero.
+    let starts = data.iter()
+        .filter(|x| is_start_node(x))
+        .count() as u32;
+    let ends = data.iter()
+        .filter(|x| is_end_node(x))
+        .count() as u32;
+    let mut indent: u32 = max(starts, ends) - min(starts, ends);
+    let mut first = true;
+    for (i, d) in data.iter().enumerate() {
+        let is_end = if is_end_node(d) {
+            indent -= 1;
+            true
+        } else { false };
+        let print_comma = !first && !is_end;
+        if print_comma {
+            try!(writeln!(w, ","));
+        } else if i != 0 {
+            try!(writeln!(w, ""));
+        }
+        first = false;
+        for _ in 0 .. indent_offset + indent {
+            try!(write!(w, " "));
+        }
+        if let &Variable::Array(ref arr) = d {
+            let name = if let &Variable::Text(ref t) = &arr[3] {
+                t
+            } else {
+                ""
+            };
+            if let &Variable::Text(ref t) = &arr[2] {
+                match &***t {
+                    "start" => {
+                        first = true;
+                        try!(write_string(&mut w, name));
+                        try!(write!(w, ":{}", "{"));
+                        indent += 1;
+                    }
+                    "end" => {
+                        try!(write!(w, "{}", "}"));
+                    }
+                    "bool" => {
+                        if let &Variable::Bool(val) = &arr[4] {
+                            try!(write_string(&mut w, name));
+                            try!(write!(w, ":{}", val));
+                        }
+                    }
+                    "f64" => {
+                        if let &Variable::F64(val) = &arr[4] {
+                            try!(write_string(&mut w, name));
+                            try!(write!(w, ":{}", val));
+                        }
+                    }
+                    "str" => {
+                        if let &Variable::Text(ref val) = &arr[4] {
+                            try!(write_string(&mut w, name));
+                            try!(write!(w, ":"));
+                            try!(write_string(&mut w, val));
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+    }
+    try!(writeln!(w, ""));
+    Ok(String::from_utf8(w).unwrap())
+}

@@ -1,0 +1,210 @@
+
+fn to_code(syntax: [[]]) -> res[str] {
+    code := ""
+    i := 0
+    i_var := read_str(data: syntax, index: i, name: "var")?
+    i += i_var[0]
+
+    i += start_node(data: syntax, index: i, name: "rules")?
+
+    loop {
+        decl := start_node(data: syntax, index: i, name: "decl")
+        if decl == none() { break }
+        i += unwrap(decl)
+
+        i_name := read_str(data: syntax, index: i, name: "name")?
+        i += i_name[0]
+        name := i_name[1]
+        code += "fn __" + to_string(name) + "_data_index_name" +
+                "(data: [[]], index: f64, name: opt[str]) -> res {\n"
+        i += start_node(data: syntax, index: i, name: "rule")?
+
+        code += "    start := index\n"
+        code += "    i := index\n"
+        code += "    if name != none() {\n"
+        code += "        node := start_node(data: data, index: i, name: unwrap(name))\n"
+        code += "        if node == none() { err(\"Expected `\" + unwrap(name) + \"`\")? }\n"
+        code += "        i += unwrap(node)\n"
+        code += "    }\n"
+
+        fields := start_node(data: syntax, index: i, name: "fields")
+        if fields != none() {
+            i += unwrap(fields)
+            gen_fields := []
+            loop {
+                field := start_node(data: syntax, index: i, name: "field")
+                if field == none() { break }
+                i += unwrap(field)
+
+                i_name := read_str(data: syntax, index: i, name: "name")?
+                i += i_name[0]
+
+                i_ty := read_type(data: syntax, index: i)?
+                i += i_ty[0]
+                push(mut gen_fields, [i_name[1], i_ty[1]])
+
+                i += end_node(data: syntax, index: i, name: "field")?
+            }
+            for i len(gen_fields) {
+                code += "    _" + gen_fields[i][0] + " := none()\n"
+            }
+            code += "    loop {\n"
+            code += "        if i >= len(data) { err(\"Unexpected end\")? }\n"
+            for i len(gen_fields) {
+                name := gen_fields[i][0]
+                ty := gen_fields[i][1]
+                code += "        i_" + name + " := "
+                code += "read_" + ty + "(data: data, index: i, name: \"" + name + "\")\n"
+                code += "        if i_" + name + " != none() {\n"
+                code += "            i_" + name + " := unwrap(i_" + name + ")\n"
+                code += "            i += i_" + name + "[0]\n"
+                code += "            _" + name + " = some(i_" + name + "[1])\n"
+                code += "            continue\n"
+                code += "        }\n"
+            }
+            code += "        i += ignore(data: data, index: i)\n"
+            code += "        break\n"
+            code += "    }\n"
+            code += "    if name != none() {\n"
+            code += "        i += end_node(data: data, index: i, name: unwrap(name))?\n"
+            code += "    }\n"
+            for i len(gen_fields) {
+                name := gen_fields[i][0]
+                code += "    " + name + " := if _" + name + " != none() {\n"
+                code += "        unwrap(_" + name + ")\n"
+                code += "    } else {\n"
+                code += "        err(\"Could find `" + name + "`\")?\n"
+                code += "    }\n"
+            }
+            i += start_node(data: syntax, index: i, name: "expr")?
+            expr := read_str(data: syntax, index: i, name: "code")?
+            i += expr[0]
+            code += "    return ok([i - start, " + expr[1] + "])\n"
+
+            i += end_node(data: syntax, index: i, name: "expr")?
+            i += end_node(data: syntax, index: i, name: "fields")?
+        }
+
+        repeat := start_node(data: syntax, index: i, name: "repeat")
+        if repeat != none() {
+            i += unwrap(repeat)
+            i_rule := read_str(data: syntax, index: i, name: "rule")?
+            i += i_rule[0]
+            rule := i_rule[1]
+
+            as := read_str(data: syntax, index: i, name: "as")
+
+            code += "    arr := []\n"
+            code += "    loop {\n"
+            if as == none() {
+                err("Not yet implemented")?
+            } else {
+                i_as := unwrap(as)
+                i += i_as[0]
+                name := i_as[1]
+
+                code += "        _" + name + " := __" + rule + "(data: data, index: i, name: some(\"" + name + "\"))\n"
+                code += "        if is_err(_" + name + ") {\n"
+                code += "            break\n"
+                code += "        } else {\n"
+                code += "            i_" + name + " := unwrap(_" + name + ")\n"
+                code += "            i += i_" + name + "[0]\n"
+                code += "            push(mut arr, i_" + name + "[1])\n"
+                code += "        }\n"
+            }
+            code += "    }\n"
+            code += "    if name != none() {\n"
+            code += "        i += end_node(data: data, index: i, name: unwrap(name))?\n"
+            code += "    }\n"
+            code += "    return ok([i - start, arr])\n"
+
+            i += end_node(data: syntax, index: i, name: "repeat")?
+        }
+
+        code += "}\n\n"
+        i += end_node(data: syntax, index: i, name: "rule")?
+        i += end_node(data: syntax, index: i, name: "decl")?
+    }
+
+    i += end_node(data: syntax, index: i, name: "rules")?
+
+    i_start := read_str(data: syntax, index: i, name: "start")?
+    i += i_start[0]
+
+    code += "fn convert(data) -> res {\n"
+    code += "    i := 0\n"
+    code += "    r := __" + i_start[1] + "(data: data, index: i, name: none())?\n"
+    code += "    return ok(r[1])\n"
+    code += "}\n\n"
+
+    return ok(code)
+}
+
+fn read_type_data_index(data: [[]], index: f64) -> opt[[]] {
+    tbool := read_bool(data: data, index: index, name: "bool")
+    if tbool != none() { return some([1, "bool"]) }
+    tf64 := read_bool(data: data, index: index, name: "f64")
+    if tf64 != none() { return some([1, "f64"]) }
+    tstr := read_str(data: data, index: index, name: "str")
+    if tstr != none() { return some([1, "str"]) }
+    none()
+}
+
+fn read_f64_data_index_name(data: [[]], index: f64, name: str) -> opt[[]] {
+    if index >= len(data) { return none() }
+    return if (data[index][2] == "f64") && (data[index][3] == name) {
+        some([1, data[index][4]])
+    } else {
+        none()
+    }
+}
+
+fn read_bool_data_index_name(data: [[]], index: f64, name: str) -> opt[[]] {
+    if index >= len(data) { return none() }
+    return if (data[index][2] == "bool") && (data[index][3] == name) {
+        some([1, data[index][4]])
+    } else {
+        none()
+    }
+}
+
+fn read_str_data_index_name(data: [[]], index: f64, name: str) -> opt[[]] {
+    if index >= len(data) { return none() }
+    return if (data[index][2] == "str") && (data[index][3] == name) {
+        some([1, data[index][4]])
+    } else {
+        none()
+    }
+}
+
+fn start_node_data_index_name(data: [[]], index: f64, name: str) -> opt[f64] {
+    if index >= len(data) { return none() }
+    return if (data[index][2] == "start") && (data[index][3] == name) {
+        some(1)
+    } else {
+        none()
+    }
+}
+
+fn end_node_data_index_name(data: [[]], index: f64, name: str) -> opt[f64] {
+    if index >= len(data) { return none() }
+    return if (data[index][2] == "end") && (data[index][3] == name) {
+        some(1)
+    } else {
+        none()
+    }
+}
+
+fn ignore_data_index(data: [[]], index: f64) -> f64 {
+    level := 0
+    i := index
+    for i [index, len(data)) {
+        if data[i][2] == "start" {
+            level += 1
+        } else if data[i][2] == "end" {
+            if level == 0 { return i - index }
+            level -= 1
+        }
+    }
+    return len(data) - index
+}

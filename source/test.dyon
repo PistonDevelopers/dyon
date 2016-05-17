@@ -1,12 +1,3 @@
-
-fn bar(x: f64) -> opt {
-    return some(clone(x))
-}
-
-fn foo() -> res {
-    return ok(bar(ok(3)?)?)
-}
-
 fn main() {
-    println(foo())
+    println("hello world!")
 }
