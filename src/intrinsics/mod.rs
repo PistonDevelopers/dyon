@@ -137,7 +137,7 @@ pub fn standard(f: &mut HashMap<Arc<String>, PreludeFunction>) {
     f.insert(Arc::new("load_meta_file".into()), PreludeFunction {
         lts: vec![Lt::Default; 2],
         tys: vec![Type::Text; 2],
-        ret: Type::Result(Box::new(Type::array()))
+        ret: Type::Result(Box::new(Type::Array(Box::new(Type::array()))))
     });
     f.insert(Arc::new("load_meta_url".into()), PreludeFunction {
         lts: vec![Lt::Default; 2],
@@ -155,6 +155,7 @@ pub fn standard(f: &mut HashMap<Arc<String>, PreludeFunction>) {
         tys: vec![Type::Any, Type::Text],
         ret: Type::Result(Box::new(Type::Text))
     });
+    sarg(f, "json_from_meta_data", Type::Array(Box::new(Type::array())), Type::Text);
 }
 
 enum EscapeString {
@@ -1330,6 +1331,26 @@ pub fn call_standard(
                 }
             };
             rt.stack.push(Variable::Result(res));
+            rt.pop_fn(call.name.clone());
+            Expect::Something
+        }
+        "json_from_meta_data" => {
+            use std::error::Error;
+
+            rt.push_fn(call.name.clone(), None, st + 1, lc);
+            let meta_data = rt.stack.pop().expect(TINVOTS);
+            let json = match rt.resolve(&meta_data) {
+                &Variable::Array(ref arr) => {
+                    try!(meta::json_from_meta_data(arr).map_err(|err| {
+                        format!("{}\nError when generating JSON:\n{}",
+                                rt.stack_trace(),
+                                err.description())
+                    }))
+                }
+                x => return Err(module.error(call.args[0].source_range(),
+                                &rt.expected(x, "array")))
+            };
+            rt.stack.push(Variable::Text(Arc::new(json)));
             rt.pop_fn(call.name.clone());
             Expect::Something
         }

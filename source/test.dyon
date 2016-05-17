@@ -1,12 +1,6 @@
 
-fn bar(x: f64) -> opt {
-    return some(clone(x))
-}
-
-fn foo() -> res {
-    return ok(bar(ok(3)?)?)
-}
-
 fn main() {
-    println(foo())
+    meta_data := load(meta: "assets/test_meta.txt", file: "assets/test_data.txt")
+    // println(meta_data)
+    println(json_from_meta(data: unwrap(meta_data)))
 }
