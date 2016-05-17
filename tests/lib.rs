@@ -102,6 +102,7 @@ fn test_typechk() {
     test_fail_src("source/typechk/threads.dyon");
     test_fail_src("source/typechk/unused_result.dyon");
     test_fail_src("source/typechk/unused_result_2.dyon");
+    test_src("source/typechk/res.dyon");
 }
 
 #[test]

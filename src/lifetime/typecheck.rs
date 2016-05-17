@@ -29,10 +29,11 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                     }
                 }
                 Kind::CallArg => {
-                    if nodes[i].children.len() == 0 || nodes[i].item_try_or_ids() {
+                    if nodes[i].children.len() == 0 || nodes[i].item_ids() {
                         continue 'node;
                     }
-                    let expr_type = nodes[nodes[i].children[0]].ty.clone();
+                    let ch = nodes[i].children[0];
+                    let expr_type = nodes[ch].ty.as_ref().map(|ty| nodes[i].inner_type(&ty));
                     if let Some(parent) = nodes[i].parent {
                         let j = nodes[parent].children.iter().position(|&ch| ch == i);
                         let j = if let Some(j) = j { j } else { continue 'node };
@@ -81,7 +82,7 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                         None => continue,
                         Some(x) => x
                     };
-                    if nodes[right].item_try_or_ids() { continue 'node; }
+                    if nodes[right].item_ids() { continue 'node; }
                     nodes[left].ty = match (&nodes[left].ty, &nodes[right].ty) {
                         (&None, &Some(ref right_ty)) => {
                             // Make assign return void since there is no more need for checking.
@@ -93,21 +94,25 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                     changed = true;
                 }
                 Kind::Item => {
-                    if nodes[i].item_try_or_ids() { continue 'node; }
+                    if nodes[i].item_ids() { continue 'node; }
                     if let Some(decl) = nodes[i].declaration {
                         match nodes[decl].kind {
                             Kind::Sum | Kind::Min | Kind::Max |
                             Kind::Any | Kind::All | Kind::Sift => {
+                                if nodes[i].try {
+                                    return Err(nodes[i].source.wrap(
+                                        "Can not use `?` with a number".into()));
+                                }
                                 // All indices are numbers.
                                 this_ty = Some(Type::F64);
                             }
                             Kind::Arg => {
-                                this_ty = Some(nodes[decl].ty.as_ref()
-                                    .unwrap_or(&Type::Any).clone());
+                                this_ty = Some(nodes[i].inner_type(nodes[decl].ty.as_ref()
+                                    .unwrap_or(&Type::Any)));
                             }
                             _ => {
                                 if let Some(ref ty) = nodes[decl].ty {
-                                    this_ty = Some(ty.clone());
+                                    this_ty = Some(nodes[i].inner_type(ty));
                                 }
                             }
                         }
@@ -125,18 +130,18 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                 | Kind::Cond | Kind::Exp | Kind::Base | Kind::Right => {
                     if nodes[i].children.len() == 0 { continue 'node; }
                     let ch = nodes[i].children[0];
-                    if nodes[ch].item_try_or_ids() { continue 'node; }
+                    if nodes[ch].item_ids() { continue 'node; }
                     if nodes[ch].kind == Kind::Return {
                         this_ty = Some(Type::Void);
                     } else if let Some(ref ty) = nodes[ch].ty {
-                        this_ty = Some(ty.clone());
+                        this_ty = Some(nodes[i].inner_type(ty));
                     }
                 }
                 Kind::Add => {
                     // Require type to be inferred from all children.
                     let mut it_ty: Option<Type> = None;
                     for &ch in &nodes[i].children {
-                        if nodes[ch].item_try_or_ids() { continue 'node; }
+                        if nodes[ch].item_ids() { continue 'node; }
                         if let Some(ref ty) = nodes[ch].ty {
                             it_ty = if let Some(ref it) = it_ty {
                                 match it.add(ty) {
@@ -158,7 +163,7 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                     // Require type to be inferred from all children.
                     let mut it_ty: Option<Type> = None;
                     for &ch in &nodes[i].children {
-                        if nodes[ch].item_try_or_ids() { continue 'node; }
+                        if nodes[ch].item_ids() { continue 'node; }
                         if let Some(ref ty) = nodes[ch].ty {
                             it_ty = if let Some(ref it) = it_ty {
                                 match it.mul(ty) {
@@ -185,7 +190,7 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                         None => continue 'node,
                         Some(x) => x
                     };
-                    if nodes[base].item_try_or_ids() || nodes[exp].item_try_or_ids() {
+                    if nodes[base].item_ids() || nodes[exp].item_ids() {
                         continue 'node;
                     }
                     match (&nodes[base].ty, &nodes[exp].ty) {
@@ -204,9 +209,9 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                 }
                 Kind::Block => {
                     for &ch in nodes[i].children.last() {
-                        if nodes[ch].item_try_or_ids() { continue 'node; }
+                        if nodes[ch].item_ids() { continue 'node; }
                         if let Some(ref ty) = nodes[ch].ty {
-                            this_ty = Some(ty.clone());
+                            this_ty = Some(nodes[i].inner_type(ty));
                             break;
                         }
                     }
