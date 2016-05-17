@@ -150,6 +150,11 @@ pub fn standard(f: &mut HashMap<Arc<String>, PreludeFunction>) {
         ret: Type::Result(Box::new(Type::Text))
     });
     sarg(f, "join_thread", Type::thread(), Type::Result(Box::new(Type::Any)));
+    f.insert(Arc::new("save_data_file".into()), PreludeFunction {
+        lts: vec![Lt::Default; 2],
+        tys: vec![Type::Any, Type::Text],
+        ret: Type::Result(Box::new(Type::Text))
+    });
 }
 
 enum EscapeString {
@@ -1289,6 +1294,42 @@ pub fn call_standard(
                     }
                 }
             }));
+            rt.pop_fn(call.name.clone());
+            Expect::Something
+        }
+        "save_data_file" => {
+            use std::error::Error;
+            use std::fs::File;
+
+            rt.push_fn(call.name.clone(), None, st + 1, lc);
+            let file = rt.stack.pop().expect(TINVOTS);
+            let file = match rt.resolve(&file) {
+                &Variable::Text(ref t) => t.clone(),
+                x => return Err(module.error(call.args[1].source_range(),
+                                &rt.expected(x, "string")))
+            };
+            let data = rt.stack.pop().expect(TINVOTS);
+
+            let mut f = match File::create(&**file) {
+                Ok(f) => f,
+                Err(err) => {
+                    return Err(module.error(call.args[0].source_range(),
+                               &format!("{}\nError when creating file `{}`:\n{}",
+                                rt.stack_trace(), file, err.description())))
+                }
+            };
+            let res = match write_variable(&mut f, rt, &data, EscapeString::Json) {
+                Ok(()) => Ok(Box::new(Variable::Text(file.clone()))),
+                Err(err) => {
+                    Err(Box::new(super::Error {
+                        message: Variable::Text(Arc::new(format!(
+                                    "Error when writing to file `{}`:\n{}",
+                                    file, err.description()))),
+                        trace: vec![]
+                    }))
+                }
+            };
+            rt.stack.push(Variable::Result(res));
             rt.pop_fn(call.name.clone());
             Expect::Something
         }

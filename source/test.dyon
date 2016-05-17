@@ -1,6 +1,15 @@
 
 fn main() {
-    y := [1, 2, 3]
-    x := pop(mut y)
-    println(x)
+    i := 0
+    loop {
+        debug()
+        if i == 1 {
+            x := 2
+            i += 1
+            continue
+        }
+
+        i += 1
+        if i > 3 { break }
+    }
 }

@@ -510,7 +510,21 @@ impl Runtime {
         for e in &block.expressions {
             expect = match try!(self.expression(e, Side::Right, module)) {
                 (x, Flow::Continue) => x,
-                x => { return Ok(x); }
+                x => {
+                    if let (Expect::Something, _) = x {
+                        // Truncate stack to keep later locals at fixed length from end of stack.
+                        if self.stack.len() - st != 1 {
+                            let v = self.stack.pop().expect("There is no value on the stack");
+                            self.stack.truncate(st);
+                            self.stack.push(v);
+                        }
+                    } else {
+                        self.stack.truncate(st);
+                    }
+                    
+                    self.local_stack.truncate(lc);
+                    return Ok(x);
+                }
             }
         }
 
