@@ -3,7 +3,15 @@
   "version": "0.0.1",
   "description": "Syntax highlighting for Dyon",
   "engines": {
-    "atom": "*",
-    "node": "*"
+    "atom": ">0.50.0 <2.0.0"
+  },
+  "dependencies": {},
+  "homepage": "https://github.com/PistonDevelopers/dyon/tree/master/editor-plugins/atom",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/PistonDevelopers/dyon.git"
+  },
+  "bugs": {
+    "url": "https://github.com/PistonDevelopers/dyon/issues"
   }
 }
