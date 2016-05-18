@@ -52,6 +52,8 @@ fn infer_expr(
                                     return None;
                                 }
                             }
+                            let res = infer_expr(expr, name, decls);
+                            if res.is_some() { return res; }
                         }
                     } else {
                         // Can not lift more advanced expressions.
