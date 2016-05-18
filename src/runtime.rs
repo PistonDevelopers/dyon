@@ -521,7 +521,7 @@ impl Runtime {
                     } else {
                         self.stack.truncate(st);
                     }
-                    
+
                     self.local_stack.truncate(lc);
                     return Ok(x);
                 }
@@ -2121,7 +2121,7 @@ impl Runtime {
                             &self.expected(x, "number")))
         };
 
-        let mut min: Option<(f64, f64)> = None;
+        let mut min: Option<(f64, f64, Option<Vec<Variable>>)> = None;
         // Initialize counter.
         self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
         self.stack.push(Variable::F64(start));
@@ -2144,22 +2144,46 @@ impl Runtime {
                     match self.resolve(self.stack.last()
                               .expect("There is no value on the stack")) {
                         &Variable::F64(val) => {
-                            if let Some((ref mut min_arg, ref mut min_val)) = min {
+                            if let Some((ref mut min_arg, ref mut min_val, ref mut tail_arg)) = min {
                                 if *min_val > val {
                                     *min_arg = ind;
+                                    *tail_arg = None;
                                     *min_val = val;
                                 }
                             } else {
-                                min = Some((ind, val));
+                                min = Some((ind, val, None));
                             }
                         },
+                        &Variable::Option(Some(ref arr)) => {
+                            match **arr {
+                                Variable::Array(ref arr) => {
+                                    if let Variable::F64(val) = arr[0] {
+                                        if let Some((ref mut min_arg, ref mut min_val, ref mut tail_arg)) = min {
+                                            if *min_val > val {
+                                                *min_arg = ind;
+                                                *tail_arg = Some((arr[1..]).into());
+                                                *min_val = val;
+                                            }
+                                        } else {
+                                            min = Some((ind, val, Some(arr[1..].into())));
+                                        }
+                                    } else {
+                                        return Err(module.error(for_n_expr.block.source_range,
+                                                &self.expected(&arr[0], "number")))
+                                    }
+                                }
+                                ref x => return Err(module.error(for_n_expr.block.source_range,
+                                        &self.expected(x, "array")))
+                            }
+                        }
+                        &Variable::Option(None) => {}
                         x => return Err(module.error(for_n_expr.block.source_range,
-                                &self.expected(x, "number")))
+                                &self.expected(x, "number or option")))
                     };
                 }
                 (Expect::Nothing, Flow::Continue) => {
                     return Err(module.error(for_n_expr.block.source_range,
-                                "Expected `number`"))
+                                "Expected `number or option`"))
                 }
                 (_, Flow::Break(x)) => {
                     match x {
@@ -2207,9 +2231,13 @@ impl Runtime {
         self.local_stack.truncate(prev_lc);
         self.stack.push(match min {
             None => Variable::Option(None),
-            Some((arg, val)) => Variable::Option(Some(Box::new(
-                Variable::Array(Arc::new(vec![Variable::F64(arg), Variable::F64(val)]))
-            )))
+            Some((arg, val, ref tail)) => Variable::Option(Some(Box::new({
+                let mut res = vec![Variable::F64(val), Variable::F64(arg)];
+                if let &Some(ref tail) = tail {
+                    res.extend_from_slice(tail);
+                }
+                Variable::Array(Arc::new(res))
+            })))
         });
         Ok(flow)
     }
@@ -2254,7 +2282,7 @@ impl Runtime {
                             &self.expected(x, "number")))
         };
 
-        let mut max: Option<(f64, f64)> = None;
+        let mut max: Option<(f64, f64, Option<Vec<Variable>>)> = None;
         // Initialize counter.
         self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
         self.stack.push(Variable::F64(start));
@@ -2278,15 +2306,39 @@ impl Runtime {
                     match self.resolve(self.stack.last()
                               .expect("There is no value on the stack")) {
                         &Variable::F64(val) => {
-                            if let Some((ref mut max_arg, ref mut max_val)) = max {
+                            if let Some((ref mut max_arg, ref mut max_val, ref mut tail_arg)) = max {
                                 if *max_val < val {
                                     *max_arg = ind;
                                     *max_val = val;
+                                    *tail_arg = None;
                                 }
                             } else {
-                                max = Some((ind, val));
+                                max = Some((ind, val, None));
                             }
                         },
+                        &Variable::Option(Some(ref arr)) => {
+                            match **arr {
+                                Variable::Array(ref arr) => {
+                                    if let Variable::F64(val) = arr[0] {
+                                        if let Some((ref mut max_arg, ref mut max_val, ref mut tail_arg)) = max {
+                                            if *max_val < val {
+                                                *max_arg = ind;
+                                                *tail_arg = Some((arr[1..]).into());
+                                                *max_val = val;
+                                            }
+                                        } else {
+                                            max = Some((ind, val, Some(arr[1..].into())));
+                                        }
+                                    } else {
+                                        return Err(module.error(for_n_expr.block.source_range,
+                                                &self.expected(&arr[0], "number")))
+                                    }
+                                }
+                                ref x => return Err(module.error(for_n_expr.block.source_range,
+                                        &self.expected(x, "array")))
+                            }
+                        }
+                        &Variable::Option(None) => {}
                         x => return Err(module.error(for_n_expr.block.source_range,
                                 &self.expected(x, "number")))
                     };
@@ -2341,9 +2393,13 @@ impl Runtime {
         self.local_stack.truncate(prev_lc);
         self.stack.push(match max {
             None => Variable::Option(None),
-            Some((arg, val)) => Variable::Option(Some(Box::new(
-                Variable::Array(Arc::new(vec![Variable::F64(arg), Variable::F64(val)]))
-            )))
+            Some((arg, val, ref tail)) => Variable::Option(Some(Box::new({
+                let mut res = vec![Variable::F64(val), Variable::F64(arg)];
+                if let &Some(ref tail) = tail {
+                    res.extend_from_slice(tail);
+                }
+                Variable::Array(Arc::new(res))
+            })))
         });
         Ok(flow)
     }

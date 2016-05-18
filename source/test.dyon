@@ -1,14 +1,62 @@
 fn main() {
-    x := [[[2; 4]; 3]; 10]
-    for i {
-        for j {
-            for k {
-                println("i j k " +
-                    to_string(i) + " " +
-                    to_string(j) + " " +
-                    to_string(k))
-                x[i][j][k] *= 2
-            }
-        }
-    }
+    x := [[[2; 10]; 10]; 10]
+    println(sum(x))
+    println(any(x))
+    println(min(x))
+    println(max(x))
+    // println(sift(x))
+    x := [[3, 2], [7, 6], [3, 5]]
+    mi := unwrap(min i { min j { x[i][j] }})
+    ma := unwrap(max i { max j { x[i][j] }})
+    println(x[mi[1]][mi[2]] == mi[0])
+    println(x[ma[1]][ma[2]] == ma[0])
+    println(min i { min j {
+        x[i][j]
+    }})
+    println(max i { max j {
+        x[i][j]
+    }})
+}
+
+fn sum(x: [[[f64]]]) -> f64 {
+    return sum i { sum j { sum k {
+        x[i][j][k]
+    }}}
+}
+
+/*
+fn sum2(x: [[[f64]]]) -> f64 {
+    return sum i, j, k { x[i][j][k] }
+}
+*/
+
+fn any(x: [[[f64]]]) -> bool {
+    return any i { any j { any k {
+        x[i][j][k] == 0
+    }}}
+}
+
+/*
+fn any2(x: [[[f64]]]) -> bool {
+    return any i, j, k { x[i][j][k] }
+}
+*/
+
+fn sift(x: 'return [[[f64]]]) -> [[[f64]]] {
+    return sift i { sift j { sift k {
+        x[i][j][k] + random() * 0.001
+    }}}
+}
+
+
+fn min(x: [[[f64]]]) -> [f64] {
+    return min i { min j { min k {
+        x[i][j][k]
+    }}}
+}
+
+fn max(x: [[[f64]]]) -> [f64] {
+    return max i { max j { max k {
+        x[i][j][k]
+    }}}
 }
