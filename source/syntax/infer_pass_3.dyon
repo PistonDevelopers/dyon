@@ -1,0 +1,76 @@
+fn main() {
+    x := [[[2; 3]; 3]; 3]
+    println(sum(x))
+    println(sum2(x))
+    println(any(x))
+    println(any2(x))
+    println(all(x))
+    println(all2(x))
+    println(min(x))
+    println(min2(x))
+    println(max(x))
+    println(max2(x))
+    println(sift(x))
+    println(sift2(x))
+}
+
+fn sum(x: [[[f64]]]) -> f64 {
+    return sum i { sum j { sum k {
+        x[i][j][k]
+    }}}
+}
+
+
+fn sum2(x: [[[f64]]]) -> f64 {
+    return sum i, j, k { x[i][j][k] }
+}
+
+fn any(x: [[[f64]]]) -> bool {
+    return any i { any j { any k {
+        x[i][j][k] == 0
+    }}}
+}
+
+fn any2(x: [[[f64]]]) -> bool {
+    return any i, j, k { x[i][j][k] == 0 }
+}
+
+fn all(x: [[[f64]]]) -> bool {
+    return all i { all j { all k {
+        x[i][j][k] == 0
+    }}}
+}
+
+fn all2(x: [[[f64]]]) -> bool {
+    return all i, j, k { x[i][j][k] == 0 }
+}
+
+fn sift(x: 'return [[[f64]]]) -> [[[f64]]] {
+    return sift i { sift j { sift k {
+        x[i][j][k] + random() * 0.001
+    }}}
+}
+
+fn sift2(x: 'return [[[f64]]]) -> [[[f64]]] {
+    return sift i, j, k { x[i][j][k] + random() * 0.001 }
+}
+
+fn min(x: [[[f64]]]) -> [f64] {
+    return min i { min j { min k {
+        x[i][j][k]
+    }}}
+}
+
+fn min2(x: [[[f64]]]) -> [f64] {
+    return min i, j, k { x[i][j][k] }
+}
+
+fn max(x: [[[f64]]]) -> [f64] {
+    return max i { max j { max k {
+        x[i][j][k]
+    }}}
+}
+
+fn max2(x: [[[f64]]]) -> [f64] {
+    return max i, j, k { x[i][j][k] }
+}

@@ -94,8 +94,11 @@ _seps: "(){}[],.:;=<>*·+-/%^?|&∧∨!¬∑∃∀\n"
 31 compare_op = {"==":"==" "!=":"!=" "¬=":"!=" "<=":"<=" "<":"<" ">=":">=" ">":">"}
 
 40 label = ?["'" .._seps!:"label" ?w ":" ?w]
-41 short_body = [.w! .._seps!:"name" ?w {["[" ?w expr:"start" , expr:"end" ?w ")"]
-                 expr:"end"} ?w block:"block"]
+41 short_body = [.w! .s!.(, [.._seps!:"name" ?w
+    ?{
+        ["[" ?w expr:"start" , expr:"end" ?w ")"]
+        [!"{" expr:"end"]
+    }]) ?w block:"block"]
 42 try = ?[?w "?":"try"]
 43 , = [?w "," ?w]
 44 arr = {array:"array" array_fill:"array_fill"}

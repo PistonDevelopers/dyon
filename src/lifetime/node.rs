@@ -13,8 +13,8 @@ use Type;
 pub struct Node {
     /// The kind of node.
     pub kind: Kind,
-    /// The name.
-    pub name: Option<Arc<String>>,
+    /// The names associated with a node.
+    pub names: Vec<Arc<String>>,
     /// The type.
     pub ty: Option<Type>,
     /// Whether the argument or call argument is mutable.
@@ -46,9 +46,14 @@ pub struct Node {
 }
 
 impl Node {
+    pub fn name(&self) -> Option<&Arc<String>> {
+        if self.names.len() == 0 { None }
+        else { Some(&self.names[0]) }
+    }
+
     pub fn print(&self, nodes: &[Node], indent: u32) {
         for _ in 0..indent { print!(" ") }
-        println!("kind: {:?}, name: {:?}, type: {:?} {{", self.kind, self.name, self.ty);
+        println!("kind: {:?}, name: {:?}, type: {:?} {{", self.kind, self.name(), self.ty);
         for &c in &self.children {
             nodes[c].print(nodes, indent + 1);
         }
@@ -135,7 +140,7 @@ impl Node {
                     return None;
                 }
             } else if self.kind == Kind::Item
-                && self.name.as_ref().map(|n| &**n == "return") == Some(true) {
+                && self.name().map(|n| &**n == "return") == Some(true) {
                 return Some(Lifetime::Return(vec![]));
             }
         }
@@ -146,6 +151,7 @@ impl Node {
         let mut call_arg_ind = 0;
         for &c in &self.children {
             match (self.kind, nodes[c].kind) {
+                (_, Kind::Loop) => {}
                 (_, Kind::Go) => {}
                 (_, Kind::For) => {}
                 (_, Kind::ForN) => {}
@@ -283,7 +289,7 @@ pub fn convert_meta_data(
                 parents.push(nodes.len());
                 nodes.push(Node {
                     kind: kind,
-                    name: None,
+                    names: vec![],
                     ty: ty,
                     mutable: false,
                     try: false,
@@ -317,18 +323,17 @@ pub fn convert_meta_data(
                 match &***n {
                     "name" => {
                         let i = *parents.last().unwrap();
-                        nodes[i].name = Some(val.clone());
+                        nodes[i].names.push(val.clone());
                     }
                     "word" => {
                         // Put words together to name.
                         let i = *parents.last().unwrap();
-                        let ref mut name = nodes[i].name;
-                        if let &mut Some(ref mut name) = name {
+                        if nodes[i].names.len() == 0 {
+                            nodes[i].names.push(val.clone());
+                        } else if let Some(ref mut name) = nodes[i].names.get_mut(0) {
                             let name = Arc::make_mut(name);
                             name.push('_');
                             name.push_str(val);
-                        } else {
-                            *name = Some(val.clone());
                         }
                     }
                     "lifetime" => {

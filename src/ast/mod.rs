@@ -9,6 +9,8 @@ use Module;
 use Type;
 use Variable;
 
+mod infer_len;
+
 pub fn convert(
     file: Arc<String>,
     data: &[Range<MetaData>],
@@ -1062,6 +1064,26 @@ impl Item {
         }
     }
 
+    /// Truncates item extra to a given length.
+    pub fn trunc(&self, n: usize) -> Item {
+        Item {
+            name: self.name.clone(),
+            stack_id: Cell::new(None),
+            static_stack_id: Cell::new(None),
+            try: self.try,
+            ids: self.ids.iter().take(n).map(|id| id.clone()).collect(),
+            try_ids: {
+                let mut try_ids = vec![];
+                for &ind in &self.try_ids {
+                    if ind >= n { break }
+                    try_ids.push(ind);
+                }
+                try_ids
+            },
+            source_range: self.source_range
+        }
+    }
+
     pub fn from_meta_data(
         mut convert: Convert,
         ignored: &mut Vec<Range>)
@@ -1745,9 +1767,7 @@ impl ForN {
         let start_range = try!(convert.start_node(node));
         convert.update(start_range);
 
-        let mut name: Option<Arc<String>> = None;
-        let mut start_expr: Option<Expression> = None;
-        let mut end_expr: Option<Expression> = None;
+        let mut indices: Vec<(Arc<String>, Option<Expression>, Option<Expression>)> = vec![];
         let mut block: Option<Block> = None;
         let mut label: Option<Arc<String>> = None;
         loop {
@@ -1763,15 +1783,19 @@ impl ForN {
                 label = Some(val);
             } else if let Ok((range, val)) = convert.meta_string("name") {
                 convert.update(range);
-                name = Some(val);
-            } else if let Ok((range, val)) = Expression::from_meta_data(
-                "start", convert, ignored) {
-                convert.update(range);
-                start_expr = Some(val);
-            } else if let Ok((range, val)) = Expression::from_meta_data(
-                "end", convert, ignored) {
-                convert.update(range);
-                end_expr = Some(val);
+                let mut start_expr: Option<Expression> = None;
+                let mut end_expr: Option<Expression> = None;
+                if let Ok((range, val)) = Expression::from_meta_data(
+                    "start", convert, ignored) {
+                    convert.update(range);
+                    start_expr = Some(val);
+                }
+                if let Ok((range, val)) = Expression::from_meta_data(
+                    "end", convert, ignored) {
+                    convert.update(range);
+                    end_expr = Some(val);
+                }
+                indices.push((val, start_expr, end_expr));
             } else {
                 let range = convert.ignore();
                 convert.update(range);
@@ -1779,16 +1803,69 @@ impl ForN {
             }
         }
 
-        let name = try!(name.ok_or(()));
-        let end_expr = try!(end_expr.ok_or(()));
+        ForN::create(
+            node,
+            convert.subtract(start),
+            convert.source(start).unwrap(),
+            label,
+            &indices,
+            block
+        )
+    }
+
+    fn create(
+        node: &str,
+        range: Range,
+        source_range: Range,
+        label: Option<Arc<String>>,
+        indices: &[(Arc<String>, Option<Expression>, Option<Expression>)],
+        mut block: Option<Block>
+    ) -> Result<(Range, ForN), ()> {
+        if indices.len() == 0 { return Err(()); }
+
+        let name: Arc<String> = indices[0].0.clone();
+        let start_expr = indices[0].1.clone();
+        let mut end_expr = indices[0].2.clone();
+
+        if indices.len() > 1 {
+            let (_, new_for_n) = try!(ForN::create(
+                node,
+                range,
+                source_range,
+                None,
+                &indices[1..],
+                block
+            ));
+            block = Some(Block {
+                source_range: source_range,
+                expressions: vec![match node {
+                    "for_n" => Expression::ForN(Box::new(new_for_n)),
+                    "sum" => Expression::Sum(Box::new(new_for_n)),
+                    "any" => Expression::Any(Box::new(new_for_n)),
+                    "all" => Expression::All(Box::new(new_for_n)),
+                    "min" => Expression::Min(Box::new(new_for_n)),
+                    "max" => Expression::Max(Box::new(new_for_n)),
+                    "sift" => Expression::Sift(Box::new(new_for_n)),
+                    _ => return Err(())
+                }]
+            });
+        }
+
         let block = try!(block.ok_or(()));
-        Ok((convert.subtract(start), ForN {
+
+        // Infer list length from index.
+        if end_expr.is_none() {
+            end_expr = infer_len::infer(&block, &name);
+        }
+
+        let end_expr = try!(end_expr.ok_or(()));
+        Ok((range, ForN {
             name: name,
             start: start_expr,
             end: end_expr,
             block: block,
             label: label,
-            source_range: convert.source(start).unwrap(),
+            source_range: source_range,
         }))
     }
 

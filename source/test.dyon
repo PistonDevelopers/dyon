@@ -1,13 +1,8 @@
-/*
 fn main() {
-    meta_data := load(meta: "meta/test_2/syntax.txt",
-                      file: "meta/test_2/data.txt")
-    println(json_from(meta_data: unwrap(meta_data)))
-}
-*/
-
-fn main() {
-    x := [1, 30, 2]
-    println(max(x)-min(x))
-    println(is_ok(ok(3)))
+    x := {
+        a := [[1, 2], [3, 4]]
+        sum i, j {
+            a[i][j]
+        }
+    }
 }

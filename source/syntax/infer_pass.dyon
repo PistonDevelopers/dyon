@@ -1,0 +1,49 @@
+
+fn main() {
+    x := [1, 2, 3]
+    println(sum i { x[i] })
+    println(sum i { x[i]^2 })
+    println(sum i {
+        y := x[i]
+        y + 5
+    })
+    println(sum i {
+        y := {a: x[i]}
+        y.a + 5
+    })
+    println(sum i {
+        y := [x[i]]
+        y[0] + 5
+    })
+    println(sum i {
+        y := [x[i]; 1]
+        y[0] + 5
+    })
+    println(sum i {
+        y := [1; x[i]]
+        y[0] + 5
+    })
+    println(foo(x))
+    println(sum i {
+        {
+            y := x[i]
+            y + 5
+        }
+    })
+    println(sum i {
+        if true {
+            x[i]
+        }
+        5
+    })
+    println(sum i {
+        y := 5 < x[i]
+        if y { 3 } else { 2 }
+    })
+}
+
+fn foo(x: 'return) -> {
+    println(sum i {
+        return x[i]
+    })
+}

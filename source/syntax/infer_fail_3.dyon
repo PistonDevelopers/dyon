@@ -1,0 +1,9 @@
+fn main() {
+    x := [[1, 2], [3, 4]]
+    for i {
+        for j {
+            // Fails because len(x[j]) is not valid.
+            x[j][i] = 0
+        }
+    }
+}
