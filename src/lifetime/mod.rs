@@ -66,12 +66,31 @@ pub fn check(
     let returns: Vec<usize> = nodes.iter().enumerate()
         .filter(|&(_, n)| n.kind == Kind::Return).map(|(i, _)| i).collect();
 
+    // Collect indices to expressions at end of blocks.
+    let end_of_blocks: Vec<usize> = nodes.iter().enumerate()
+        .filter(|&(i, n)| {
+            if n.kind == Kind::Expr &&
+               n.children.len() == 1 {
+                 let ch = n.children[0];
+                 if !nodes[ch].has_lifetime() { return false }
+            }
+            if let Some(parent) = n.parent {
+                if !nodes[parent].kind.is_block() { return false }
+                if *nodes[parent].children.last().unwrap() != i { return false }
+                true
+            } else {
+                false
+            }
+        }).map(|(i, _)| i).collect();
+
     // Collect indices to declared locals.
     // Stores assign node, item node.
     let locals: Vec<(usize, usize)> = nodes.iter().enumerate()
-        .filter(|&(_, n)| n.op == Some(Op::Assign)
+        .filter(|&(_, n)| {
+            n.op == Some(Op::Assign)
             && n.children.len() > 0
-            && nodes[n.children[0]].children.len() > 0)
+            && nodes[n.children[0]].children.len() > 0
+        })
         .map(|(i, n)| {
                 // Left argument.
                 let j = n.children[0];
@@ -87,7 +106,9 @@ pub fn check(
     // Collect indices to mutated locals.
     // Stores assign node, item node.
     let mutated_locals: Vec<(usize, usize)> = nodes.iter().enumerate()
-        .filter(|&(_, n)| n.op == Some(Op::Set))
+        .filter(|&(_, n)| {
+            n.op == Some(Op::Set)
+        })
         .map(|(i, n)| {
                 // Left argument.
                 let j = n.children[0];
@@ -337,6 +358,16 @@ pub fn check(
             &Some(Lifetime::Return(vec![])), lifetime_right, &nodes)
                 .map_err(|err| nodes[right].source.wrap(err))
         );
+    }
+
+    // Check the lifetime of expressions at end of blocks.
+    for &i in &end_of_blocks {
+        let parent = nodes[i].parent.unwrap();
+        // Fake a local variable.
+        let ref lifetime_left = Some(Lifetime::Local(parent));
+        let ref lifetime_right = nodes[i].lifetime(&nodes, &arg_names);
+        try!(compare_lifetimes(lifetime_left, lifetime_right, &nodes)
+                .map_err(|err| nodes[i].source.wrap(err)));
     }
 
     // Check that calls do not have arguments with shorter lifetime than the call.

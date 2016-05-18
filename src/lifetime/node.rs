@@ -80,21 +80,23 @@ impl Node {
         }
     }
 
+    pub fn has_lifetime(&self) -> bool {
+        use super::kind::Kind::*;
+
+        match self.kind {
+            Pow | Sum | Min | Max | Any | All | Vec4 |
+            Assign | For | ForN => false,
+            Add | Mul | Compare => self.children.len() == 1,
+            _ => true
+        }
+    }
+
     pub fn lifetime(
         &self,
         nodes: &[Node],
         arg_names: &ArgNames
     ) -> Option<Lifetime> {
-        match self.kind {
-            Kind::Add | Kind::Mul | Kind::Pow | Kind::Compare
-            | Kind::Sum | Kind::Min | Kind::Max | Kind::Any | Kind::All
-            | Kind::Vec4 => {
-                if self.children.len() > 1 {
-                    return None;
-                }
-            }
-            _ => {}
-        }
+        if !self.has_lifetime() { return None; }
         if let Some(declaration) = self.declaration {
             if self.kind == Kind::Item {
                 let arg = &nodes[declaration];
@@ -145,7 +147,9 @@ impl Node {
         for &c in &self.children {
             match (self.kind, nodes[c].kind) {
                 (_, Kind::Go) => {}
+                (_, Kind::For) => {}
                 (_, Kind::ForN) => {}
+                (_, Kind::Break) => {}
                 (_, Kind::Continue) => {}
                 (_, Kind::Sift) => {}
                 (_, Kind::Sum) => {}

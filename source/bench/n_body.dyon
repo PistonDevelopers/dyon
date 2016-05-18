@@ -120,7 +120,7 @@ fn energy(bodies: [{}]) -> f64 {
             m += bodies[j].mass / |bodies[i].pos - bodies[j].pos|
         }
         e -= bodies[i].mass * m
-        e
+        clone(e)
     }
 }
 
