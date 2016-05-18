@@ -2,8 +2,8 @@ fn main() {
     x := [[1, 2], [3, 4]]
     for i {
         for j {
-            // `i` is not declared.
-            x[i][j] = 0
+            // Fails because len(x[j]) is not valid.
+            x[j][i] = 0
         }
     }
 }

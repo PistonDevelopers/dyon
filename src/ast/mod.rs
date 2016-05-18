@@ -9,6 +9,8 @@ use Module;
 use Type;
 use Variable;
 
+mod infer_len;
+
 pub fn convert(
     file: Arc<String>,
     data: &[Range<MetaData>],
@@ -1780,8 +1782,14 @@ impl ForN {
         }
 
         let name = try!(name.ok_or(()));
-        let end_expr = try!(end_expr.ok_or(()));
         let block = try!(block.ok_or(()));
+
+        // Infer list length from index.
+        if end_expr.is_none() {
+            end_expr = infer_len::infer(&block, &name);
+        }
+
+        let end_expr = try!(end_expr.ok_or(()));
         Ok((convert.subtract(start), ForN {
             name: name,
             start: start_expr,

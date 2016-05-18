@@ -76,6 +76,10 @@ fn test_syntax() {
     test_src("source/syntax/vec4.dyon");
     test_src("source/syntax/color.dyon");
     test_src("source/syntax/parens.dyon");
+    test_src("source/syntax/infer_pass.dyon");
+    test_fail_src("source/syntax/infer_fail_1.dyon");
+    test_fail_src("source/syntax/infer_fail_2.dyon");
+    test_fail_src("source/syntax/infer_fail_3.dyon");
 }
 
 #[test]

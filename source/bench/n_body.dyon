@@ -69,7 +69,7 @@ fn pairwise_diffs_bodies_diff(bodies: [{}], mut diff: [vec4]) {
 
 /// Computes the magnitude of the force between each pair of planets.
 fn magnitudes_diff_dt_mag(diff: [vec4], dt: f64, mut mag: [f64]) {
-    for i len(diff) {
+    for i {
         mag[i] = dt / |diff[i]|^3
     }
 }
@@ -105,7 +105,7 @@ fn advance_bodies_dt_diff_mag(
     mut bodies: [{}], dt: f64, mut diff: [vec4], mut mag: [f64]
 ) {
     update_velocities(bodies: mut bodies, dt: dt, diff: mut diff, mag: mut mag)
-    for i len(bodies) {
+    for i {
         bodies[i].pos += bodies[i].vel * dt
     }
 }
@@ -127,7 +127,7 @@ fn energy(bodies: [{}]) -> f64 {
 /// Offsets the sun's velocity to make the overall momentum of the system zero.
 fn offset_momentum(mut bodies: [{}]) {
     p := (0, 0, 0)
-    for i len(bodies) {
+    for i {
         p += bodies[i].vel * bodies[i].mass
     }
     bodies[0].vel = p * (-1.0 / bodies[0].mass)
