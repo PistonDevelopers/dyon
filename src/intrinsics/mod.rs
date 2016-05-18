@@ -128,7 +128,10 @@ pub fn standard(f: &mut HashMap<Arc<String>, PreludeFunction>) {
     sarg(f, "some", Type::Any, Type::option());
     sarg(f, "ok", Type::Any, Type::result());
     sarg(f, "err", Type::Any, Type::result());
-    sarg(f, "is_err", Type::Any, Type::Bool);
+    sarg(f, "is_err", Type::result(), Type::Bool);
+    sarg(f, "is_ok", Type::result(), Type::Bool);
+    sarg(f, "min", Type::Array(Box::new(Type::F64)), Type::F64);
+    sarg(f, "max", Type::Array(Box::new(Type::F64)), Type::F64);
     sarg(f, "x", Type::Vec4, Type::F64);
     sarg(f, "y", Type::Vec4, Type::F64);
     sarg(f, "z", Type::Vec4, Type::F64);
@@ -1114,10 +1117,77 @@ pub fn call_standard(
                 &Variable::Result(Ok(_)) => Variable::Bool(false),
                 x => {
                     return Err(module.error(call.args[0].source_range(),
-                        &rt.expected(x, "option")));
+                        &rt.expected(x, "result")));
                 }
             };
             rt.stack.push(v);
+            rt.pop_fn(call.name.clone());
+            Expect::Something
+        }
+        "is_ok" => {
+            rt.push_fn(call.name.clone(), None, st + 1, lc);
+            let v = rt.stack.pop().expect(TINVOTS);
+            let v = match rt.resolve(&v) {
+                &Variable::Result(Err(_)) => Variable::Bool(false),
+                &Variable::Result(Ok(_)) => Variable::Bool(true),
+                x => {
+                    return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(x, "result")));
+                }
+            };
+            rt.stack.push(v);
+            rt.pop_fn(call.name.clone());
+            Expect::Something
+        }
+        "min" => {
+            rt.push_fn(call.name.clone(), None, st + 1, lc);
+            let v = rt.stack.pop().expect(TINVOTS);
+            let v = match rt.resolve(&v) {
+                &Variable::Array(ref arr) => {
+                    if arr.len() == 0 {
+                        return Err(module.error(call.args[0].source_range(),
+                            &format!("{}\nExpected non-empty array", rt.stack_trace())));
+                    }
+                    let mut min: f64 = ::std::f64::MAX;
+                    for v in &**arr {
+                        if let &Variable::F64(val) = v {
+                            if val < min { min = val }
+                        }
+                    }
+                    min
+                }
+                x => {
+                    return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(x, "array")));
+                }
+            };
+            rt.stack.push(Variable::F64(v));
+            rt.pop_fn(call.name.clone());
+            Expect::Something
+        }
+        "max" => {
+            rt.push_fn(call.name.clone(), None, st + 1, lc);
+            let v = rt.stack.pop().expect(TINVOTS);
+            let v = match rt.resolve(&v) {
+                &Variable::Array(ref arr) => {
+                    if arr.len() == 0 {
+                        return Err(module.error(call.args[0].source_range(),
+                            &format!("{}\nExpected non-empty array", rt.stack_trace())));
+                    }
+                    let mut max: f64 = ::std::f64::MIN;
+                    for v in &**arr {
+                        if let &Variable::F64(val) = v {
+                            if val > max { max = val }
+                        }
+                    }
+                    max
+                }
+                x => {
+                    return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(x, "array")));
+                }
+            };
+            rt.stack.push(Variable::F64(v));
             rt.pop_fn(call.name.clone());
             Expect::Something
         }

@@ -6,27 +6,8 @@ fn main() {
 }
 */
 
-/*
-fn foo() -> {
-    ph := ["1"]
-    ok({
-        photo: {
-            buf := ph[0]
-            buf
-        }
-    })
-}
-
 fn main() {
-    println(foo())
-}
-*/
-
-fn main() {
-    x := {x: {x: 0}}
-    x := sum i 2 {
-        y := 5
-        y
-    }
-    println(x)
+    x := [1, 30, 2]
+    println(max(x)-min(x))
+    println(is_ok(ok(3)))
 }
