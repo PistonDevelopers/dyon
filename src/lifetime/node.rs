@@ -89,7 +89,7 @@ impl Node {
         use super::kind::Kind::*;
 
         match self.kind {
-            Pow | Sum | Min | Max | Any | All | Vec4 |
+            Pow | Sum | SumVec4 | Min | Max | Any | All | Vec4 |
             Assign | For | ForN => false,
             Add | Mul | Compare => self.children.len() == 1,
             _ => true
@@ -158,6 +158,7 @@ impl Node {
                 (_, Kind::Break) => {}
                 (_, Kind::Continue) => {}
                 (_, Kind::Sift) => {}
+                (_, Kind::SumVec4) => {}
                 (_, Kind::Sum) => {}
                 (_, Kind::Min) => {}
                 (_, Kind::Max) => {}
@@ -234,7 +235,8 @@ impl Node {
                     }
                     call_arg_ind += 1;
                 }
-                x => panic!("Unimplemented `{:?}`", x),
+                x => panic!("Unimplemented `{:?}`. \
+                        Perhaps you need add something to `Node::has_lifetime`?", x),
             }
             let lifetime = match nodes[c].lifetime(nodes, arg_names) {
                 Some(lifetime) => lifetime,

@@ -14,7 +14,8 @@ _seps: "(){}[],.:;=<>*·+-/%^?|&∧∨!¬∑∃∀\n"
     [.."("!:"name" ?w "(" ?w args ?w ")" ?w "=" ?w expr:"expr"]
 }
 1 args = .s?.(, arg:"arg")
-2 arg = [?"mut":"mut" ?w .._seps!:"name" ?[?w ":" ?w ?["'" ?w .._seps!:"lifetime"] ?w ?type:"type"]]
+2 arg = [?"mut":"mut" ?w .._seps!:"name" ?[?w ":" ?w
+         ?["'" ?w .._seps!:"lifetime"] ?w ?type:"type"]]
 // Support both multi-line expressions and single line.
 3 block = ["{" ?w {.l([?w expr:"expr" ?w]) [?w expr:"expr"]} ?w "}"]
 4 expr = [{
@@ -108,13 +109,15 @@ _seps: "(){}[],.:;=<>*·+-/%^?|&∧∨!¬∑∃∀\n"
 // Allow whitespace, but no new line.
 46 wn = .r?({" " "\t" "\r"})
 
-50 short_loops = {sum:"sum" min:"min" max:"max" sift:"sift" any:"any" all:"all"}
+50 short_loops = {sum:"sum" sum_vec4:"sum_vec4" min:"min" max:"max" sift:"sift"
+    any:"any" all:"all"}
 51 sum = [label {"sum" "∑"} short_body]
 52 min = [label "min" short_body]
 52 max = [label "max" short_body]
 53 sift = [label "sift" short_body]
 54 any = [label {"any" "∃"} short_body]
 55 all = [label {"all" "∀"} short_body]
+56 sum_vec4 = [label {"sum_vec4" "∑vec4"} short_body]
 
 60 type = {
     "bool":"bool"

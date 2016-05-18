@@ -283,6 +283,7 @@ pub enum Expression {
     For(Box<For>),
     ForN(Box<ForN>),
     Sum(Box<ForN>),
+    SumVec4(Box<ForN>),
     Min(Box<ForN>),
     Max(Box<ForN>),
     Sift(Box<ForN>),
@@ -427,6 +428,10 @@ impl Expression {
                 convert.update(range);
                 result = Some(Expression::Sum(Box::new(val)));
             } else if let Ok((range, val)) = ForN::from_meta_data(
+                    "sum_vec4", convert, ignored) {
+                convert.update(range);
+                result = Some(Expression::SumVec4(Box::new(val)));
+            } else if let Ok((range, val)) = ForN::from_meta_data(
                     "min", convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::Min(Box::new(val)));
@@ -500,6 +505,7 @@ impl Expression {
             For(ref for_expr) => for_expr.source_range,
             ForN(ref for_n_expr) => for_n_expr.source_range,
             Sum(ref for_n_expr) => for_n_expr.source_range,
+            SumVec4(ref for_n_expr) => for_n_expr.source_range,
             Min(ref for_n_expr) => for_n_expr.source_range,
             Max(ref for_n_expr) => for_n_expr.source_range,
             Sift(ref for_n_expr) => for_n_expr.source_range,
@@ -544,6 +550,7 @@ impl Expression {
             For(ref for_expr) => for_expr.resolve_locals(stack, module),
             ForN(ref for_n_expr) => for_n_expr.resolve_locals(stack, module),
             Sum(ref for_n_expr) => for_n_expr.resolve_locals(stack, module),
+            SumVec4(ref for_n_expr) => for_n_expr.resolve_locals(stack, module),
             Min(ref for_n_expr) => for_n_expr.resolve_locals(stack, module),
             Max(ref for_n_expr) => for_n_expr.resolve_locals(stack, module),
             Sift(ref for_n_expr) => for_n_expr.resolve_locals(stack, module),

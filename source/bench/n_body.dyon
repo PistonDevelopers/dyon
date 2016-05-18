@@ -104,9 +104,7 @@ fn advance_bodies_dt_diff_mag(
     mut mag: [f64]
 ) {
     update_velocities(bodies: mut bodies, dt: dt, diff: mut diff, mag: mut mag)
-    for i {
-        bodies[i].pos += bodies[i].vel * dt
-    }
+    for i { bodies[i].pos += bodies[i].vel * dt }
 }
 
 /// Computes the total energy of the solar system.
@@ -122,10 +120,7 @@ fn energy(bodies: [{}]) -> f64 {
 
 /// Offsets the sun's velocity to make the overall momentum of the system zero.
 fn offset_momentum(mut bodies: [{}]) {
-    p := (0, 0, 0)
-    for i {
-        p += bodies[i].vel * bodies[i].mass
-    }
+    p := ∑vec4 i { bodies[i].vel * bodies[i].mass }
     bodies[0].vel = p * (-1.0 / bodies[0].mass)
 }
 
