@@ -87,9 +87,9 @@ pub fn check(
     // Stores assign node, item node.
     let locals: Vec<(usize, usize)> = nodes.iter().enumerate()
         .filter(|&(_, n)| {
-            n.op == Some(Op::Assign)
-            && n.children.len() > 0
-            && nodes[n.children[0]].children.len() > 0
+            n.op == Some(Op::Assign) &&
+            n.children.len() > 0 &&
+            nodes[n.children[0]].children.len() > 0
         })
         .map(|(i, n)| {
                 // Left argument.
@@ -122,8 +122,17 @@ pub fn check(
     // Collect indices to references that are not declared.
     let items: Vec<usize> = nodes.iter().enumerate()
         .filter(|&(i, n)| {
-            n.kind == Kind::Item
-            && locals.binary_search_by(|&(_, it)| it.cmp(&i)).is_err()
+            n.kind == Kind::Item &&
+            locals.binary_search_by(|&(_, it)| it.cmp(&i)).is_err()
+        })
+        .map(|(i, _)| i)
+        .collect();
+
+    // Collect indices to inferred ranges.
+    let inferred: Vec<usize> = nodes.iter().enumerate()
+        .filter(|&(_, n)| {
+            n.kind.is_decl_loop() &&
+            n.find_child_by_kind(&nodes, Kind::End).is_none()
         })
         .map(|(i, _)| i)
         .collect();
@@ -205,6 +214,36 @@ pub fn check(
                             nodes[i].name().expect("Expected name"))));
                     }
                 }
+            }
+        }
+    }
+
+    // Report ranges that can not be inferred.
+    for &inf in &inferred {
+        for name in &nodes[inf].names {
+            let mut found = false;
+            'item: for &i in &items {
+                if nodes[i].declaration != Some(inf) { continue 'item; }
+                if nodes[i].name() != Some(name) { continue 'item; }
+                let mut ch = i;
+                while let Some(parent) = nodes[ch].parent {
+                    if nodes[parent].kind == Kind::Pow { continue 'item; }
+                    if nodes[parent].kind == Kind::Mul &&
+                       nodes[parent].children.len() > 1 { continue 'item; }
+                    if nodes[parent].kind == Kind::Add &&
+                       nodes[parent].children.len() > 1 { continue 'item; }
+                    if nodes[parent].kind == Kind::Id {
+                        found = true;
+                        break 'item;
+                    }
+                    ch = parent;
+                }
+                break;
+            }
+
+            if !found {
+                return Err(nodes[inf].source.wrap(
+                    format!("Can not infer range from body, use `list[i]` syntax")));
             }
         }
     }

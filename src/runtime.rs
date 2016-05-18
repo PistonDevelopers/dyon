@@ -2151,12 +2151,12 @@ impl Runtime {
                             }
                         }
                         x => return Err(module.error(for_n_expr.block.source_range,
-                                &self.expected(x, "number")))
+                                &self.expected(x, "vec4")))
                     };
                 }
                 (Expect::Nothing, Flow::Continue) => {
                     return Err(module.error(for_n_expr.block.source_range,
-                                "Expected `number`"))
+                                "Expected `vec4`"))
                 }
                 (_, Flow::Break(x)) => {
                     match x {

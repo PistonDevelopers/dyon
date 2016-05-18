@@ -83,6 +83,7 @@ fn test_syntax() {
     test_fail_src("source/syntax/infer_fail_2.dyon");
     test_fail_src("source/syntax/infer_fail_3.dyon");
     test_fail_src("source/syntax/infer_fail_4.dyon");
+    test_fail_src("source/syntax/infer_fail_5.dyon");
 }
 
 #[test]
