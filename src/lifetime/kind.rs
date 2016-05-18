@@ -134,9 +134,21 @@ impl Kind {
     }
 
     pub fn is_decl_loop(&self) -> bool {
+        use self::Kind::*;
+
         match *self {
-            Kind::ForN | Kind::Sum | Kind::Min | Kind::Max | Kind::Sift
-            | Kind::Any | Kind::All => true,
+            ForN | Sum | Min | Max | Sift
+            | Any | All => true,
+            _ => false
+        }
+    }
+
+    pub fn is_block(&self) -> bool {
+        use self::Kind::*;
+
+        match *self {
+            Block | ElseIfBlock |
+            TrueBlock | ElseBlock => true,
             _ => false
         }
     }

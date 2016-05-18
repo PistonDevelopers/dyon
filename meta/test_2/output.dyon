@@ -132,7 +132,13 @@ fn __person_data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
             first_name: first_name,
             last_name: last_name,
             age: age,
-            photo: ph
+            photo: {
+                buf := ""
+                for i len(ph) {
+                    buf += ph[i] + "\n"
+                }
+                clone(buf)
+            }
         }])
 }
 

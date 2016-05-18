@@ -1,0 +1,13 @@
+fn foo() -> {
+    ph := ["1"]
+    ok({
+        photo: {
+            buf := ph[0]
+            buf
+        }
+    })
+}
+
+fn main() {
+    println(foo())
+}

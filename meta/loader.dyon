@@ -20,14 +20,15 @@ fn main() {
 
         if folder == "test_2" {
             for i len(data) {
-                for j len(data[i].photo) {
-                    println(data[i].photo[j])
-                }
+                println(data[i].first_name + " " +
+                        data[i].last_name + ":")
+                println("=================")
+                println(data[i].photo)
                 println("")
             }
+        } else {
+            println(data)
         }
-
-        println(data)
     } else {
         meta_data := load(meta: "meta/syntax.txt",
                           file: "meta/" + folder + "/convert.txt")

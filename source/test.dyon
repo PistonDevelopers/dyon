@@ -1,5 +1,32 @@
+/*
 fn main() {
     meta_data := load(meta: "meta/test_2/syntax.txt",
                       file: "meta/test_2/data.txt")
     println(json_from(meta_data: unwrap(meta_data)))
+}
+*/
+
+/*
+fn foo() -> {
+    ph := ["1"]
+    ok({
+        photo: {
+            buf := ph[0]
+            buf
+        }
+    })
+}
+
+fn main() {
+    println(foo())
+}
+*/
+
+fn main() {
+    x := {x: {x: 0}}
+    x := sum i 2 {
+        y := 5
+        y
+    }
+    println(x)
 }
