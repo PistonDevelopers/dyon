@@ -1,9 +1,14 @@
 fn main() {
-    x := [[1, 2], [3, 4]]
+    x := [[[2; 4]; 3]; 10]
     for i {
         for j {
-            // `i` is not declared.
-            x[i][j] = 0
+            for k {
+                println("i j k " +
+                    to_string(i) + " " +
+                    to_string(j) + " " +
+                    to_string(k))
+                x[i][j][k] *= 2
+            }
         }
     }
 }

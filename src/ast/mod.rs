@@ -1064,6 +1064,26 @@ impl Item {
         }
     }
 
+    /// Truncates item extra to a given length.
+    pub fn trunc(&self, n: usize) -> Item {
+        Item {
+            name: self.name.clone(),
+            stack_id: Cell::new(None),
+            static_stack_id: Cell::new(None),
+            try: self.try,
+            ids: self.ids.iter().take(n).map(|id| id.clone()).collect(),
+            try_ids: {
+                let mut try_ids = vec![];
+                for &ind in &self.try_ids {
+                    if ind >= n { break }
+                    try_ids.push(ind);
+                }
+                try_ids
+            },
+            source_range: self.source_range
+        }
+    }
+
     pub fn from_meta_data(
         mut convert: Convert,
         ignored: &mut Vec<Range>)

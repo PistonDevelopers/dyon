@@ -1,0 +1,11 @@
+fn main() {
+    x := [[1, 2], [3, 4], [5, 6]]
+    for i {
+        for j 1 {
+            println("i j " + to_string(i) + " " + to_string(i))
+            // `k` is before `i`, so it should fail.
+            k := 0
+            x[k][i] = clone(k)
+        }
+    }
+}
