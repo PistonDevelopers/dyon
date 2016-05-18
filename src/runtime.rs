@@ -379,6 +379,8 @@ impl Runtime {
                                      try!(self.for_n_expr(for_n_expr, module)))),
             Sum(ref for_n_expr) => Ok((Expect::Something,
                                      try!(self.sum_n_expr(for_n_expr, module)))),
+            SumVec4(ref for_n_expr) => Ok((Expect::Something,
+                                     try!(self.sum_vec4_n_expr(for_n_expr, module)))),
             Min(ref for_n_expr) => Ok((Expect::Something,
                                      try!(self.min_n_expr(for_n_expr, module)))),
             Max(ref for_n_expr) => Ok((Expect::Something,
@@ -2078,6 +2080,129 @@ impl Runtime {
         self.stack.truncate(prev_st);
         self.local_stack.truncate(prev_lc);
         self.stack.push(Variable::F64(sum));
+        Ok(flow)
+    }
+    fn sum_vec4_n_expr(
+        &mut self,
+        for_n_expr: &ast::ForN,
+        module: &Module
+    ) -> Result<Flow, String> {
+        let prev_st = self.stack.len();
+        let prev_lc = self.local_stack.len();
+        let mut sum: [f32; 4] = [0.0; 4];
+
+        let start = if let Some(ref start) = for_n_expr.start {
+            // Evaluate start such that it's on the stack.
+            match try!(self.expression(start, Side::Right, module)) {
+                (_, Flow::Return) => { return Ok(Flow::Return); }
+                (Expect::Something, Flow::Continue) => {}
+                _ => return Err(module.error(for_n_expr.end.source_range(),
+                    &format!("{}\nExpected number from for start",
+                        self.stack_trace())))
+            };
+            let start = self.stack.pop().expect("There is no value on the stack");
+            let start = match self.resolve(&start) {
+                &Variable::F64(val) => val,
+                x => return Err(module.error(for_n_expr.end.source_range(),
+                                &self.expected(x, "number")))
+            };
+            start
+        } else { 0.0 };
+
+        // Evaluate end such that it's on the stack.
+        match try!(self.expression(&for_n_expr.end, Side::Right, module)) {
+            (_, Flow::Return) => { return Ok(Flow::Return); }
+            (Expect::Something, Flow::Continue) => {}
+            _ => return Err(module.error(for_n_expr.end.source_range(),
+                &format!("{}\nExpected number from for end",
+                    self.stack_trace())))
+        };
+        let end = self.stack.pop().expect("There is no value on the stack");
+        let end = match self.resolve(&end) {
+            &Variable::F64(val) => val,
+            x => return Err(module.error(for_n_expr.end.source_range(),
+                            &self.expected(x, "number")))
+        };
+
+        // Initialize counter.
+        self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
+        self.stack.push(Variable::F64(start));
+
+        let st = self.stack.len();
+        let lc = self.local_stack.len();
+        let mut flow = Flow::Continue;
+        loop {
+            match &self.stack[st - 1] {
+                &Variable::F64(val) => {
+                    if val < end {}
+                    else { break }
+                }
+                x => return Err(module.error(for_n_expr.source_range,
+                                &self.expected(x, "number")))
+            };
+            match try!(self.block(&for_n_expr.block, module)) {
+                (_, Flow::Return) => { return Ok(Flow::Return); }
+                (Expect::Something, Flow::Continue) => {
+                    match self.resolve(self.stack.last()
+                              .expect("There is no value on the stack")) {
+                        &Variable::Vec4(val) => {
+                            for i in 0..4 {
+                                sum[i] += val[i]
+                            }
+                        }
+                        x => return Err(module.error(for_n_expr.block.source_range,
+                                &self.expected(x, "number")))
+                    };
+                }
+                (Expect::Nothing, Flow::Continue) => {
+                    return Err(module.error(for_n_expr.block.source_range,
+                                "Expected `number`"))
+                }
+                (_, Flow::Break(x)) => {
+                    match x {
+                        Some(label) => {
+                            let same =
+                            if let Some(ref for_label) = for_n_expr.label {
+                                &label == for_label
+                            } else { false };
+                            if !same {
+                                flow = Flow::Break(Some(label))
+                            }
+                        }
+                        None => {}
+                    }
+                    break;
+                }
+                (_, Flow::ContinueLoop(x)) => {
+                    match x {
+                        Some(label) => {
+                            let same =
+                            if let Some(ref for_label) = for_n_expr.label {
+                                &label == for_label
+                            } else { false };
+                            if !same {
+                                flow = Flow::ContinueLoop(Some(label));
+                                break;
+                            }
+                        }
+                        None => {}
+                    }
+                }
+            }
+            let error = if let Variable::F64(ref mut val) = self.stack[st - 1] {
+                *val += 1.0;
+                false
+            } else { true };
+            if error {
+                return Err(module.error(for_n_expr.source_range,
+                           &self.expected(&self.stack[st - 1], "number")))
+            }
+            self.stack.truncate(st);
+            self.local_stack.truncate(lc);
+        };
+        self.stack.truncate(prev_st);
+        self.local_stack.truncate(prev_lc);
+        self.stack.push(Variable::Vec4(sum));
         Ok(flow)
     }
     fn min_n_expr(

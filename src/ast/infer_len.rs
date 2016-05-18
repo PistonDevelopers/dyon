@@ -124,32 +124,28 @@ fn infer_expr(
             if res.is_some() { return res; }
         }
         ForN(ref for_n_expr) => {
-            let res = infer_for_n(for_n_expr, name, decls);
-            if res.is_some() { return res; }
+            return infer_for_n(for_n_expr, name, decls)
         }
         Sum(ref for_n_expr) => {
-            let res = infer_for_n(for_n_expr, name, decls);
-            if res.is_some() { return res; }
+            return infer_for_n(for_n_expr, name, decls)
+        }
+        SumVec4(ref for_n_expr) => {
+            return infer_for_n(for_n_expr, name, decls)
         }
         Min(ref for_n_expr) => {
-            let res = infer_for_n(for_n_expr, name, decls);
-            if res.is_some() { return res; }
+            return infer_for_n(for_n_expr, name, decls)
         }
         Max(ref for_n_expr) => {
-            let res = infer_for_n(for_n_expr, name, decls);
-            if res.is_some() { return res; }
+            return infer_for_n(for_n_expr, name, decls)
         }
         Sift(ref for_n_expr) => {
-            let res = infer_for_n(for_n_expr, name, decls);
-            if res.is_some() { return res; }
+            return infer_for_n(for_n_expr, name, decls)
         }
         Any(ref for_n_expr) => {
-            let res = infer_for_n(for_n_expr, name, decls);
-            if res.is_some() { return res; }
+            return infer_for_n(for_n_expr, name, decls)
         }
         All(ref for_n_expr) => {
-            let res = infer_for_n(for_n_expr, name, decls);
-            if res.is_some() { return res; }
+            return infer_for_n(for_n_expr, name, decls)
         }
         If(ref if_expr) => {
             let res = infer_expr(&if_expr.cond, name, decls);
