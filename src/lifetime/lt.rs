@@ -107,11 +107,11 @@ pub fn compare_lifetimes(
                     match r {
                         &Lifetime::Local(r) => {
                             return Err(format!("`{}` does not live long enough",
-                                nodes[r].name.as_ref().expect("Expected name")));
+                                nodes[r].name().expect("Expected name")));
                         }
                         &Lifetime::Argument(ref r) => {
                             return Err(format!("`{}` does not live long enough",
-                                nodes[r[0]].name.as_ref().expect("Expected name")));
+                                nodes[r[0]].name().expect("Expected name")));
                         }
                         _ => unimplemented!()
                     }
@@ -121,17 +121,17 @@ pub fn compare_lifetimes(
                         (&Lifetime::Argument(ref l), &Lifetime::Argument(ref r)) => {
                             // TODO: Report function name for other cases.
                             let func = nodes[nodes[r[0]].parent.unwrap()]
-                                .name.as_ref().unwrap();
+                                .name().unwrap();
                             return Err(format!("Function `{}` requires `{}: '{}`",
                                 func,
-                                nodes[r[0]].name.as_ref().expect("Expected name"),
-                                nodes[l[0]].name.as_ref().expect("Expected name")));
+                                nodes[r[0]].name().expect("Expected name"),
+                                nodes[l[0]].name().expect("Expected name")));
                         }
                         (&Lifetime::Argument(ref l), &Lifetime::Return(ref r)) => {
                             if r.len() > 0 {
                                 return Err(format!("Requires `{}: '{}`",
-                                    nodes[r[0]].name.as_ref().expect("Expected name"),
-                                    nodes[l[0]].name.as_ref().expect("Expected name")));
+                                    nodes[r[0]].name().expect("Expected name"),
+                                    nodes[l[0]].name().expect("Expected name")));
                             } else {
                                 unimplemented!();
                             }
@@ -139,8 +139,8 @@ pub fn compare_lifetimes(
                         (&Lifetime::Return(ref l), &Lifetime::Return(ref r)) => {
                             if l.len() > 0 && r.len() > 0 {
                                 return Err(format!("Requires `{}: '{}`",
-                                    nodes[r[0]].name.as_ref().expect("Expected name"),
-                                    nodes[l[0]].name.as_ref().expect("Expected name")));
+                                    nodes[r[0]].name().expect("Expected name"),
+                                    nodes[l[0]].name().expect("Expected name")));
                             } else {
                                 unimplemented!();
                             }
@@ -149,7 +149,7 @@ pub fn compare_lifetimes(
                             if l.len() == 0 {
                                 let last = *r.last().expect("Expected argument index");
                                 return Err(format!("Requires `{}: 'return`",
-                                    nodes[last].name.as_ref().expect("Expected name")));
+                                    nodes[last].name().expect("Expected name")));
                             } else {
                                 unimplemented!();
                             }

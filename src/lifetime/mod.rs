@@ -35,7 +35,7 @@ pub fn check(
         };
         let mutable_args = nodes[i].children.iter().any(|&arg| nodes[arg].mutable);
         if mutable_args {
-            let mut name_plus_args = String::from(&***nodes[i].name.as_ref().unwrap());
+            let mut name_plus_args = String::from(&***nodes[i].name().unwrap());
             name_plus_args.push('(');
             let mut first = true;
             for &arg in nodes[i].children.iter()
@@ -47,7 +47,7 @@ pub fn check(
                 first = false;
             }
             name_plus_args.push(')');
-            nodes[i].name = Some(Arc::new(name_plus_args));
+            nodes[i].names = vec![Arc::new(name_plus_args)];
         }
     }
 
@@ -131,7 +131,7 @@ pub fn check(
     // Link items to their declaration.
     for &i in &items {
         // When `return` is used as variable one does not need to link.
-        if nodes[i].name.as_ref().map(|n| &**n == "return") == Some(true) {
+        if nodes[i].name().map(|n| &**n == "return") == Some(true) {
             continue;
         }
 
@@ -141,10 +141,14 @@ pub fn check(
         let mut it: Option<usize> = None;
 
         'search: loop {
-            if nodes[parent].kind.is_decl_loop() &&
-               nodes[parent].name == nodes[i].name {
-               it = Some(parent);
-               break 'search;
+            if nodes[parent].kind.is_decl_loop() {
+                let my_name = nodes[i].name().unwrap();
+                for name in &nodes[parent].names {
+                    if name == my_name {
+                        it = Some(parent);
+                        break 'search;
+                    }
+                }
             }
 
             let me = nodes[parent].children.binary_search(&child)
@@ -157,7 +161,7 @@ pub fn check(
                 if nodes[j].kind != Kind::Assign { continue; }
                 let left = nodes[j].children[0];
                 let item = nodes[left].children[0];
-                if nodes[item].name == nodes[i].name {
+                if nodes[item].name() == nodes[i].name() {
                     it = Some(item);
                     break 'search;
                 }
@@ -177,7 +181,7 @@ pub fn check(
                 if nodes[parent].kind != Kind::Fn {
                     panic!("Top parent is not a function");
                 }
-                if nodes[i].name.is_none() {
+                if nodes[i].name().is_none() {
                     panic!("Item has no name");
                 }
 
@@ -186,8 +190,8 @@ pub fn check(
                 for &j in &nodes[parent].children {
                     let arg = &nodes[j];
                     if arg.kind != Kind::Arg { continue; }
-                    if Some(true) == arg.name.as_ref().map(|n|
-                        &**n == &**nodes[i].name.as_ref().unwrap()) {
+                    if Some(true) == arg.name().map(|n|
+                        &**n == &**nodes[i].name().unwrap()) {
                         found = Some(j);
                     }
                 }
@@ -198,7 +202,7 @@ pub fn check(
                     None => {
                         return Err(nodes[i].source.wrap(
                             format!("Could not find declaration of `{}`",
-                            nodes[i].name.as_ref().expect("Expected name"))));
+                            nodes[i].name().expect("Expected name"))));
                     }
                 }
             }
@@ -211,7 +215,7 @@ pub fn check(
         arg_names.clear();
         let mut n = 0;
         for &i in nodes[f].children.iter().filter(|&&i| nodes[i].kind == Kind::Arg) {
-            let name = nodes[i].name.as_ref().expect("Expected name");
+            let name = nodes[i].name().expect("Expected name");
             if arg_names.contains(name) {
                 return Err(nodes[i].source.wrap(
                     format!("Duplicate argument `{}`", name)));
@@ -226,7 +230,7 @@ pub fn check(
     // Check for duplicate functions and build name to index map.
     let mut function_lookup: HashMap<Arc<String>, usize> = HashMap::new();
     for (i, &f) in functions.iter().enumerate() {
-        let name = nodes[f].name.as_ref().expect("Expected name");
+        let name = nodes[f].name().expect("Expected name");
         if function_lookup.contains_key(name) {
             return Err(nodes[f].source.wrap(
                 format!("Duplicate function `{}`", name)));
@@ -244,12 +248,12 @@ pub fn check(
         };
 
         let node = &mut nodes[c];
-        let name = node.name.as_ref().expect("Expected name");
-        let i = match function_lookup.get(name) {
+        let name = node.name().expect("Expected name").clone();
+        let i = match function_lookup.get(&name) {
             Some(&i) => i,
             None => {
                 // Check whether it is a prelude function.
-                match prelude.functions.get(name) {
+                match prelude.functions.get(&name) {
                     Some(pf) => {
                         node.lts = pf.lts.clone();
                         if node.lts.len() != n {
@@ -283,7 +287,7 @@ pub fn check(
         for (j, &c) in function.children.iter()
             .filter(|&&c| nodes[c].kind == Kind::Arg)
             .enumerate() {
-            let name = nodes[c].name.as_ref().expect("Expected name");
+            let name = nodes[c].name().expect("Expected name");
             arg_names.insert((f, name.clone()), (c, j));
         }
         // Check that all lifetimes except `'return` points to another argument.
@@ -517,7 +521,7 @@ pub fn check(
             if nodes[decl].kind == Kind::Arg {
                 if !nodes[decl].mutable {
                     return Err(nodes[i].source.wrap(
-                        format!("Requires `mut {}`", nodes[i].name.as_ref().unwrap())
+                        format!("Requires `mut {}`", nodes[i].name().unwrap())
                     ));
                 }
             }
@@ -547,7 +551,7 @@ pub fn check(
                 if let Some(decl) = nodes[n].declaration {
                    if nodes[decl].kind == Kind::Arg && !nodes[decl].mutable {
                        return Err(nodes[n].source.wrap(
-                           format!("Requires `mut {}`", nodes[n].name.as_ref().unwrap())
+                           format!("Requires `mut {}`", nodes[n].name().unwrap())
                        ));
                    }
                }

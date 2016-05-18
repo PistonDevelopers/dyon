@@ -59,11 +59,9 @@ fn bodies() -> [{}] {
 fn pairwise_diffs_bodies_diff(bodies: [{}], mut diff: [vec4]) {
     n := len(bodies)
     k := 0
-    for i n {
-        for j [i+1, n) {
-            diff[k] = bodies[i].pos - bodies[j].pos
-            k += 1
-        }
+    for i n, j [i+1, n) {
+        diff[k] = bodies[i].pos - bodies[j].pos
+        k += 1
     }
 }
 
@@ -84,13 +82,11 @@ fn update_velocities_bodies_dt_diff_mag(
 
     n := len(bodies)
     k := 0
-    for i n {
-        for j [i+1, n) {
-            diff := diff[k] * mag[k]
-            bodies[i].vel -= diff * bodies[j].mass
-            bodies[j].vel += diff * bodies[i].mass
-            k += 1
-        }
+    for i n, j [i+1, n) {
+        diff := diff[k] * mag[k]
+        bodies[i].vel -= diff * bodies[j].mass
+        bodies[j].vel += diff * bodies[i].mass
+        k += 1
     }
 }
 
@@ -102,7 +98,10 @@ fn update_velocities_bodies_dt_diff_mag(
 /// provided as arguments to avoid re-zeroing them every time `advance` is
 /// called.
 fn advance_bodies_dt_diff_mag(
-    mut bodies: [{}], dt: f64, mut diff: [vec4], mut mag: [f64]
+    mut bodies: [{}],
+    dt: f64,
+    mut diff: [vec4],
+    mut mag: [f64]
 ) {
     update_velocities(bodies: mut bodies, dt: dt, diff: mut diff, mag: mut mag)
     for i {
@@ -114,13 +113,10 @@ fn advance_bodies_dt_diff_mag(
 fn energy(bodies: [{}]) -> f64 {
     n := len(bodies)
     return ∑ i n {
-        e := bodies[i].vel · bodies[i].vel * bodies[i].mass / 2.0
-        m := 0
-        for j [i+1, n) {
-            m += bodies[j].mass / |bodies[i].pos - bodies[j].pos|
+        bodies[i].vel · bodies[i].vel * bodies[i].mass / 2.0 -
+        bodies[i].mass * ∑ j [i+1, n) {
+            bodies[j].mass / |bodies[i].pos - bodies[j].pos|
         }
-        e -= bodies[i].mass * m
-        clone(e)
     }
 }
 

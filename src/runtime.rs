@@ -2473,12 +2473,12 @@ impl Runtime {
                             }
                         },
                         x => return Err(module.error(for_n_expr.block.source_range,
-                                &self.expected(x, "booleal")))
+                                &self.expected(x, "boolean")))
                     };
                 }
                 (Expect::Nothing, Flow::Continue) => {
                     return Err(module.error(for_n_expr.block.source_range,
-                                "Expected `booleal`"))
+                                "Expected `boolean`"))
                 }
                 (_, Flow::Break(x)) => {
                     match x {
@@ -2597,12 +2597,12 @@ impl Runtime {
                             }
                         },
                         x => return Err(module.error(for_n_expr.block.source_range,
-                                &self.expected(x, "booleal")))
+                                &self.expected(x, "boolean")))
                     };
                 }
                 (Expect::Nothing, Flow::Continue) => {
                     return Err(module.error(for_n_expr.block.source_range,
-                                "Expected `booleal`"))
+                                "Expected `boolean`"))
                 }
                 (_, Flow::Break(x)) => {
                     match x {

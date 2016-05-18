@@ -50,7 +50,7 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                                 (&None, _) | (_, &None) => {}
                             }
                         } else if let Some(ref f) = prelude.functions.get(
-                                nodes[parent].name.as_ref().unwrap()) {
+                                nodes[parent].name().unwrap()) {
                             if let Some(ref ty) = expr_type {
                                 if !ty.goes_with(&f.tys[j]) {
                                     return Err(nodes[i].source.wrap(
@@ -69,7 +69,7 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                             this_ty = Some(ty.clone());
                         }
                     } else if let Some(ref f) = prelude.functions.get(
-                            nodes[i].name.as_ref().unwrap()) {
+                            nodes[i].name().unwrap()) {
                         this_ty = Some(f.ret.clone());
                     }
                 }
@@ -245,7 +245,7 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                 } else {
                     return Err(nodes[i].source.wrap(
                         format!("Could not infer type of function `{}`",
-                        nodes[i].name.as_ref().unwrap())
+                        nodes[i].name().unwrap())
                     ));
                 }
             }
@@ -256,7 +256,7 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                             None | Some(Type::Void) => {
                                 return Err(nodes[i].source.wrap(
                                     format!("Requires `->` on `{}`",
-                                    nodes[decl].name.as_ref().unwrap())
+                                    nodes[decl].name().unwrap())
                                 ));
                             }
                             _ => {}
