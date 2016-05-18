@@ -2,16 +2,21 @@ _seps:".:;,[]{}()?!=<>"
 
 1 , = [.w? "," .w?]
 
-2 expr = ..."\n"!:"code"
+2 expr = ...";"!:"code"
 
-96 type = {"bool":"bool" "f64":"f64" "str":"str"}
-97 field = [.._seps!:"name" .w? ":" .w? type]
+95 ref = [.._seps!:"rule" ?[.w? ":" .t!:"as"]]
+96 type = {
+    "bool":"bool"
+    "f64":"f64"
+    "str":"str"
+}
+97 field = [.._seps!:"name" .w?
+            {[":" .w? type] ["<-" .w? ref]}]
 98 fields = ["[" .w? .s!.(, field:"field") .w? "]" .w?
              "=>" .w? expr:"expr"]
-99 repeat = ["repeat" .w! .._seps!:"rule"
-             ?[.w? ":" .t!:"as"]]
+99 repeat = ["repeat" .w! ref]
 100 rule = {fields:"fields" repeat:"repeat"}
-200 decl = [.._seps!:"name" .w? ":=" .w? rule:"rule" .w?]
+200 decl = [.._seps!:"name" .w? ":=" .w? rule:"rule" .w? ";" .w?]
 300 decls = .l(decl:"decl")
 1000 body = [.w? decls:"rules" .w?
             "--" .r!("-") .w? .._seps!:"start" .w?]

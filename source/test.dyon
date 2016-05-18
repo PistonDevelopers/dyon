@@ -1,3 +1,5 @@
 fn main() {
-    println("hello world!")
+    meta_data := load(meta: "meta/test_2/syntax.txt",
+                      file: "meta/test_2/data.txt")
+    println(json_from(meta_data: unwrap(meta_data)))
 }

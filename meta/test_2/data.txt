@@ -1,0 +1,42 @@
+{
+  first_name: "Homer",
+  last_name: "Simpson",
+  age: 48,
+  photo:
+````````````
+   ___  doh!
+  (M Oo) /
+  ()   P
+   \  e)
+    |  |
+````````````
+}
+
+{
+  first_name: "Marge",
+  last_name: "Simpson",
+  age: 36,
+  photo:
+````````````
+  ooo   hmm!
+   ooo  /
+ W_ ooo _W
+ \\ ooo //
+```````````
+}
+
+{
+  first_name: "Bart",
+  last_name: "Simpson",
+  age: 10,
+  photo:
+``````````````````
+ay caramba! AAAA
+        \_ |o.O|
+    #%$%   (_-_)
+  #$@#23@# / \__)
+   2#v#2  /___/
+   WvWvW o|  ))
+    WvW o | | |
+``````````````````
+}

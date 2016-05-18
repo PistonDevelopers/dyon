@@ -2,28 +2,40 @@
 fn main() {
     // Test the generated code.
     test := true
+    folder := "test_2"
 
     generator := unwrap(load("meta/generator.dyon"))
 
     if test {
         output := unwrap(load(
-            source: "meta/output.dyon",
+            source: "meta/" + folder + "/output.dyon",
             imports: [generator]
         ))
 
-        meta_data := load(meta: "assets/test_meta.txt",
-                          file: "assets/test_data.txt")
+        meta_data := load(meta: "meta/" + folder + "/syntax.txt",
+                          file: "meta/" + folder + "/data.txt")
         data := unwrap(meta_data)
         println(json_from(meta_data: data))
-        data := call_ret(output, "convert", [data])
+        data := unwrap(call_ret(output, "convert", [data]))
+
+        if folder == "test_2" {
+            for i len(data) {
+                for j len(data[i].photo) {
+                    println(data[i].photo[j])
+                }
+                println("")
+            }
+        }
+
         println(data)
     } else {
         meta_data := load(meta: "meta/syntax.txt",
-                          file: "meta/test_1.txt")
+                          file: "meta/" + folder + "/convert.txt")
         data := unwrap(meta_data)
-        // println(json_from_meta_data(data))
+        println(json_from_meta_data(data))
 
         code := unwrap(call_ret(generator, "to_code", [data]))
+
         println(code)
     }
 }

@@ -11,6 +11,9 @@ fn __pos_data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
     _z := none()
     loop {
         if i >= len(data) { err("Unexpected end")? }
+        if (_x != none()) &&
+           (_y != none()) &&
+           (_z != none()) { break }
         i_x := read_f64(data: data, index: i, name: "x")
         if i_x != none() {
             i_x := unwrap(i_x)

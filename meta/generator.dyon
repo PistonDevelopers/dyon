@@ -39,9 +39,32 @@ fn to_code(syntax: [[]]) -> res[str] {
                 i_name := read_str(data: syntax, index: i, name: "name")?
                 i += i_name[0]
 
-                i_ty := read_type(data: syntax, index: i)?
-                i += i_ty[0]
-                push(mut gen_fields, [i_name[1], i_ty[1]])
+                i_ty := read_type(data: syntax, index: i)
+                ty := if i_ty != none() {
+                    i_ty := unwrap(i_ty)
+                    i += i_ty[0]
+                    some(i_ty[1])
+                } else {
+                    none()
+                }
+
+                i_rule := read_str(data: syntax, index: i, name: "rule")
+                rule :=
+                    if i_rule != none() {
+                        i_rule := unwrap(i_rule)
+                        i += i_rule[0]
+                        some(i_rule[1])
+                    } else { none() }
+
+                i_as := read_str(data: syntax, index: i, name: "as")
+                as :=
+                    if i_as != none() {
+                        i_as := unwrap(i_as)
+                        i += i_as[0]
+                        some(i_as[1])
+                    } else { none() }
+
+                push(mut gen_fields, [i_name[1], ty, rule, as])
 
                 i += end_node(data: syntax, index: i, name: "field")?
             }
@@ -50,12 +73,35 @@ fn to_code(syntax: [[]]) -> res[str] {
             }
             code += "    loop {\n"
             code += "        if i >= len(data) { err(\"Unexpected end\")? }\n"
+            code += "        if "
+            for i len(gen_fields) {
+                code += "(_" + gen_fields[i][0] + " != none())"
+                if (i + 1) != len(gen_fields) {
+                    code += " &&\n           "
+                }
+            }
+            code += " { break }\n"
             for i len(gen_fields) {
                 name := gen_fields[i][0]
                 ty := gen_fields[i][1]
+                rule := gen_fields[i][2]
+                as := gen_fields[i][3]
                 code += "        i_" + name + " := "
-                code += "read_" + ty + "(data: data, index: i, name: \"" + name + "\")\n"
-                code += "        if i_" + name + " != none() {\n"
+                if rule != none() {
+                    code += "__" + unwrap(rule) + "(data: data, index: i, name: "
+                    if as != none() {
+                        code += "some(\"" + unwrap(as) + "\"))\n"
+                    } else {
+                        code += "none())\n"
+                    }
+                } else {
+                    code += "read_" + unwrap(ty) + "(data: data, index: i, name: \"" + name + "\")\n"
+                }
+                if rule != none() {
+                    code += "        if !is_err(i_" + name + ") {\n"
+                } else {
+                    code += "        if i_" + name + " != none() {\n"
+                }
                 code += "            i_" + name + " := unwrap(i_" + name + ")\n"
                 code += "            i += i_" + name + "[0]\n"
                 code += "            _" + name + " = some(i_" + name + "[1])\n"
@@ -97,7 +143,16 @@ fn to_code(syntax: [[]]) -> res[str] {
             code += "    arr := []\n"
             code += "    loop {\n"
             if as == none() {
-                err("Not yet implemented")?
+                name := rule
+
+                code += "        _" + name + " := __" + rule + "(data: data, index: i, name: none())\n"
+                code += "        if is_err(_" + name + ") {\n"
+                code += "            break\n"
+                code += "        } else {\n"
+                code += "            i_" + name + " := unwrap(_" + name + ")\n"
+                code += "            i += i_" + name + "[0]\n"
+                code += "            push(mut arr, i_" + name + "[1])\n"
+                code += "        }\n"
             } else {
                 i_as := unwrap(as)
                 i += i_as[0]
@@ -145,9 +200,9 @@ fn read_type_data_index(data: [[]], index: f64) -> opt[[]] {
     if tbool != none() { return some([1, "bool"]) }
     tf64 := read_bool(data: data, index: index, name: "f64")
     if tf64 != none() { return some([1, "f64"]) }
-    tstr := read_str(data: data, index: index, name: "str")
+    tstr := read_bool(data: data, index: index, name: "str")
     if tstr != none() { return some([1, "str"]) }
-    none()
+    return none()
 }
 
 fn read_f64_data_index_name(data: [[]], index: f64, name: str) -> opt[[]] {
