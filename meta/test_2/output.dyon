@@ -1,0 +1,168 @@
+fn __line_data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
+    start := index
+    i := index
+    if name != none() {
+        node := start_node(data: data, index: i, name: unwrap(name))
+        if node == none() { err("Expected `" + unwrap(name) + "`")? }
+        i += unwrap(node)
+    }
+    _line := none()
+    loop {
+        if i >= len(data) { err("Unexpected end")? }
+        if (_line != none()) { break }
+        i_line := read_str(data: data, index: i, name: "line")
+        if i_line != none() {
+            i_line := unwrap(i_line)
+            i += i_line[0]
+            _line = some(i_line[1])
+            continue
+        }
+        i += ignore(data: data, index: i)
+        break
+    }
+    if name != none() {
+        i += end_node(data: data, index: i, name: unwrap(name))?
+    }
+    line := if _line != none() {
+        unwrap(_line)
+    } else {
+        err("Could find `line`")?
+    }
+    return ok([i - start, line])
+}
+
+fn __photo_data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
+    start := index
+    i := index
+    if name != none() {
+        node := start_node(data: data, index: i, name: unwrap(name))
+        if node == none() { err("Expected `" + unwrap(name) + "`")? }
+        i += unwrap(node)
+    }
+    arr := []
+    loop {
+        _line := __line(data: data, index: i, name: none())
+        if is_err(_line) {
+            break
+        } else {
+            i_line := unwrap(_line)
+            i += i_line[0]
+            push(mut arr, i_line[1])
+        }
+    }
+    if name != none() {
+        i += end_node(data: data, index: i, name: unwrap(name))?
+    }
+    return ok([i - start, arr])
+}
+
+fn __person_data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
+    start := index
+    i := index
+    if name != none() {
+        node := start_node(data: data, index: i, name: unwrap(name))
+        if node == none() { err("Expected `" + unwrap(name) + "`")? }
+        i += unwrap(node)
+    }
+    _first_name := none()
+    _last_name := none()
+    _age := none()
+    _ph := none()
+    loop {
+        if i >= len(data) { err("Unexpected end")? }
+        if (_first_name != none()) &&
+           (_last_name != none()) &&
+           (_age != none()) &&
+           (_ph != none()) { break }
+        i_first_name := read_str(data: data, index: i, name: "first_name")
+        if i_first_name != none() {
+            i_first_name := unwrap(i_first_name)
+            i += i_first_name[0]
+            _first_name = some(i_first_name[1])
+            continue
+        }
+        i_last_name := read_str(data: data, index: i, name: "last_name")
+        if i_last_name != none() {
+            i_last_name := unwrap(i_last_name)
+            i += i_last_name[0]
+            _last_name = some(i_last_name[1])
+            continue
+        }
+        i_age := read_f64(data: data, index: i, name: "age")
+        if i_age != none() {
+            i_age := unwrap(i_age)
+            i += i_age[0]
+            _age = some(i_age[1])
+            continue
+        }
+        i_ph := __photo(data: data, index: i, name: some("photo"))
+        if !is_err(i_ph) {
+            i_ph := unwrap(i_ph)
+            i += i_ph[0]
+            _ph = some(i_ph[1])
+            continue
+        }
+        i += ignore(data: data, index: i)
+        break
+    }
+    if name != none() {
+        i += end_node(data: data, index: i, name: unwrap(name))?
+    }
+    first_name := if _first_name != none() {
+        unwrap(_first_name)
+    } else {
+        err("Could find `first_name`")?
+    }
+    last_name := if _last_name != none() {
+        unwrap(_last_name)
+    } else {
+        err("Could find `last_name`")?
+    }
+    age := if _age != none() {
+        unwrap(_age)
+    } else {
+        err("Could find `age`")?
+    }
+    ph := if _ph != none() {
+        unwrap(_ph)
+    } else {
+        err("Could find `ph`")?
+    }
+    return ok([i - start, {
+            first_name: first_name,
+            last_name: last_name,
+            age: age,
+            photo: ph
+        }])
+}
+
+fn __doc_data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
+    start := index
+    i := index
+    if name != none() {
+        node := start_node(data: data, index: i, name: unwrap(name))
+        if node == none() { err("Expected `" + unwrap(name) + "`")? }
+        i += unwrap(node)
+    }
+    arr := []
+    loop {
+        _person := __person(data: data, index: i, name: some("person"))
+        if is_err(_person) {
+            break
+        } else {
+            i_person := unwrap(_person)
+            i += i_person[0]
+            push(mut arr, i_person[1])
+        }
+    }
+    if name != none() {
+        i += end_node(data: data, index: i, name: unwrap(name))?
+    }
+    return ok([i - start, arr])
+}
+
+fn convert(data) -> res {
+    i := 0
+    r := __doc(data: data, index: i, name: none())?
+    return ok(r[1])
+}

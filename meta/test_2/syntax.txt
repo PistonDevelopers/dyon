@@ -1,0 +1,14 @@
+1 , = [.w? "," .w?]
+2 c = [.w? ":" .w?]
+
+99 photo = ["``" .r!("`") ..."\n"? "\n"
+  .s!("\n" [!"`" ..."\n"?:"line"])
+  "``" .r!("`")
+]
+100 person = ["{" .w?
+  "first_name" c .t!:"first_name" ,
+  "last_name" c .t!:"last_name" ,
+  "age" c .$:"age" ,
+  "photo" c photo:"photo"
+.w? "}"]
+1000 doc = [.w? .l(person:"person") .w?]

@@ -1,0 +1,18 @@
+meta r {
+    line := [line: str] => line;
+    photo := repeat line;
+    person := [
+            first_name: str,
+            last_name: str,
+            age: f64,
+            ph <- photo:"photo",
+        ] => {
+            first_name: first_name,
+            last_name: last_name,
+            age: age,
+            photo: ph
+        };
+    doc := repeat person:"person";
+    -------------------------------
+    doc
+}
