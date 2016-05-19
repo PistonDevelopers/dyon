@@ -60,13 +60,13 @@ pub fn add_functions<W: Any + AdvancedWindow>(module: &mut Module) {
         press_keyboard_key, PreludeFunction {
             lts: vec![],
             tys: vec![],
-            ret: Type::F64
+            ret: Type::Option(Box::new(Type::F64))
         });
     module.add(Arc::new("release_keyboard_key".into()),
         release_keyboard_key, PreludeFunction {
             lts: vec![],
             tys: vec![],
-            ret: Type::F64
+            ret: Type::Option(Box::new(Type::F64))
         });
 }
 
