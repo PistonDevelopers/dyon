@@ -46,17 +46,17 @@ pub fn standard(f: &mut HashMap<Arc<String>, PreludeFunction>) {
         tys: vec![],
         ret: Type::F64
     });
-    sarg(f, "read_number", Type::Text, Type::Any);
+    sarg(f, "read_number", Type::Text, Type::F64);
     f.insert(Arc::new("read_line".into()), PreludeFunction {
         lts: vec![],
         tys: vec![],
-        ret: Type::Any
+        ret: Type::Text
     });
     sarg(f, "len", Type::array(), Type::F64);
     f.insert(Arc::new("push_ref(mut,_)".into()), PreludeFunction {
         lts: vec![Lt::Default, Lt::Arg(0)],
         tys: vec![Type::array(), Type::Any],
-        ret: Type::F64
+        ret: Type::Void
     });
     f.insert(Arc::new("push(mut,_)".into()), PreludeFunction {
         lts: vec![Lt::Default; 2],
@@ -123,9 +123,9 @@ pub fn standard(f: &mut HashMap<Arc<String>, PreludeFunction>) {
         tys: vec![],
         ret: Type::option()
     });
+    sarg(f, "some", Type::Any, Type::option());
     sarg(f, "unwrap", Type::Any, Type::Any);
     sarg(f, "unwrap_err", Type::Any, Type::Any);
-    sarg(f, "some", Type::Any, Type::option());
     sarg(f, "ok", Type::Any, Type::result());
     sarg(f, "err", Type::Any, Type::result());
     sarg(f, "is_err", Type::result(), Type::Bool);
@@ -539,6 +539,7 @@ pub fn call_standard(
                 Err(error) => Some(error)
             };
             if let Some(error) = error {
+                // TODO: Return error instead.
                 rt.stack.push(Variable::RustObject(
                     Arc::new(Mutex::new(error))));
             } else {
@@ -566,6 +567,7 @@ pub fn call_standard(
                 match stdin.read_line(&mut input) {
                     Ok(_) => {}
                     Err(error) => {
+                        // TODO: Return error instead.
                         rt.stack.push(Variable::RustObject(
                             Arc::new(Mutex::new(error))));
                         break;
