@@ -1,0 +1,209 @@
+/// Prints out variable to standard output, adding newline character.
+fn println(var: any) { ... }
+
+/// Prints out variable to standard output.
+fn print(var: any) { ... }
+
+/// Clones the variable and all references it contains.
+fn clone(var: any) -> any { ... }
+
+/// Prints out the state of stack and local stack.
+fn debug() { ... }
+
+/// Prints out call stack.
+fn backtrace() { ... }
+
+/// Sleeps for a given amount of seconds.
+fn sleep(seconds: f64) { ... }
+
+/// Returns a random number between 0 and 1.
+fn random() -> f64 { ... }
+
+/// Reads a number from standard input with a message to the user.
+/// If the input is in invalid format, it reports the error to the user,
+/// and then asks again.
+fn read_number(message: str) -> f64 { ... }
+
+/// Reads a line from standard input.
+fn read_line() -> str { ... }
+
+/// Returns the length of array.
+fn len(array: [any]) -> f64 { ... }
+
+/// Appends an item at end of array.
+fn push_ref(mut array: [any], item: 'array any) { ... }
+
+/// Appends a deep clone of an item at end of array.
+fn push(mut array: [any], item: any) { ... }
+
+/// Removes last item from array.
+fn pop(mut array: 'return [any]) -> any { ... }
+
+/// Reverses the items in array.
+fn reverse(mut array: [any]) { ... }
+
+/// Swaps two items in array.
+fn swap(mut array: [any], i: f64, j: f64) { ... }
+
+/// Returns a string with removed whitespace on both sides.
+fn trim(text: str) -> str { ... }
+
+/// Returns a string with removed whitespace at left side.
+fn trim_left(text: str) -> str { ... }
+
+/// Returns a string with removed whitespace at right side.
+fn trim_right(text: str) -> str { ... }
+
+/// Returns a string representation of variable.
+fn to_string(var: any) -> str { ... }
+
+/// Returns a HTML hex color string.
+/// The vector is clamped in range `(0, 0, 0, 0)` to `(1, 1, 1, 1).
+fn to_string_color(color: vec4) -> str { ... }
+
+/// Converts from sRGB color space to linear color space.
+/// This is used before mathematical operations on colors.
+fn srgb_to_linear_color(color: vec4) -> vec4 { ... }
+
+/// Converts from linear color space to sRGB.
+/// This is used after mathematical operations on colors.
+fn linear_to_srgb_color(color: vec4) -> vec4 { ... }
+
+/// Returns simple description of variable type.
+fn typeof(var: any) -> str { ... }
+
+/// Rounds number, e.g. `round(0.5) == 1.0`.
+fn round(v: f64) -> f64 { ... }
+
+/// Returns absolute value, e.g. `abs(-3) == 3`.
+fn abs(v: f64) -> f64 { ... }
+
+/// Returns the highest smaller integer, e.g. `floor(3.2) == 3.0`.
+fn floor(v: f64) -> f64 { ... }
+
+/// Returns the smallest higher integer, e.g. `ceil(3.2) == 4.0`.
+fn ceil(v: f64) -> f64 { ... }
+
+/// Returns the square root of number.
+fn sqrt(v: f64) -> f64 { ... }
+
+/// Returns the sinus of number.
+fn sin(v: f64) -> f64 { ... }
+
+/// Returns the inverse sinus of number.
+fn asin(v: f64) -> f64 { ... }
+
+/// Returns the cosinus of number.
+fn cos(v: f64) -> f64 { ... }
+
+/// Returns the inverse cosinus of number.
+fn acos(v: f64) -> f64 { ... }
+
+/// Returns the tangent of number in radians.
+fn tan(v: f64) -> f64 { ... }
+
+// TODO: Add atan2.
+
+/// Returns the inverse tangent of number in radians.
+fn atan(v: f64) -> f64 { ... }
+
+/// Returns the natural exponential of number.
+/// In mathematics this is often written as `e^x`.
+fn exp(v: f64) -> f64 { ... }
+
+/// Returns the natural logarithm of number.
+fn ln(v: f64) -> f64 { ... }
+
+/// Returns the logarithm of number with base 2.
+fn log2(v: f64) -> f64 { ... }
+
+/// Returns the logarithm of number with base 10.
+fn log10(v: f64) -> f64 { ... }
+
+/// Loads module from source.
+/// Returns `ok(module)` if the loading succeeds.
+fn load(source: str) -> res[any] { ... }
+
+/// Loads module from source, using imports as dependencies.
+/// Returns `ok(module)` if the loading succeeds.
+fn load_source_imports(source: str, imports: [any]) -> res[any] { ... }
+
+/// Calls function in module with arguments.
+fn call(module: any, function: str, arguments: [any]) { ... }
+
+/// Calls function in module with arguments and returns the result.
+fn call_ret(module: any, function: str, arguments: [any]) -> any { ... }
+
+/// Returns list of available functions, sorted by name.
+fn functions() -> any { ... }
+
+/// Creates `none()` variant of option values.
+fn none() -> opt[any] { ... }
+
+/// Creates `some(var)` variant of option values.
+fn some(var: any) -> opt[any] { ... }
+
+/// Unwraps value of `some(x)` or `ok(x)`.
+fn unwrap(var: any) -> any { ... }
+
+/// Unwraps error from `err(x)`.
+fn unwrap_err(var: any) -> any { ... }
+
+/// Creates `ok(var)` variant of option values.
+fn ok(var: any) -> res[any] { ... }
+
+/// Creates `err(var)` variant of result values.
+fn err(var: any) -> res[any] { ... }
+
+/// Returns `true` if `err(x)`.
+fn is_err(var: res[any]) -> bool { ... }
+
+/// Returns `true` if `ok(x)`.
+fn is_ok(var: res[any]) -> bool { ... }
+
+/// Returns smallest number in non-empty array.
+fn min(array: [f64]) -> f64 { ... }
+
+/// Returns highest number in non-empty array.
+fn max(array: [f64]) -> f64 { ... }
+
+/// Returns x component of 4D vector.
+fn x(v: vec4) -> f64 { ... }
+
+/// Returns y component of 4D vector.
+fn y(v: vec4) -> f64 { ... }
+
+/// Returns z component of 4D vector.
+fn z(v: vec4) -> f64 { ... }
+
+/// Returns w component of 4D vector.
+fn w(v: vec4) -> f64 { ... }
+
+/// Returns 4D vector with length 1,
+/// pointing in the direction when starting at `(1, 0)`
+/// and rotating around the z axis.
+fn dir_angle(angle: f64) -> vec4 { ... }
+
+/// Loads meta data from a file, using a meta syntax to parse the document.
+/// The meta language used is [Piston-Meta](https://github.com/PistonDevelopers/meta).
+fn load_meta_file(meta_file: str, file: str) -> res[[[any]]] { ... }
+
+/// Loads meta data from an url, using a meta syntax to parse the document.
+/// The meta language used is [Piston-Meta](https://github.com/PistonDevelopers/meta)
+fn load_meta_url(meta_file: str, url: str) -> res[[any]] { ... }
+
+/// Downloads a file from an url.
+/// Returns `ok(file)` if the downloading succeeded.
+/// Designed to be easy to use with threads.
+fn download_url_file(url: str, file: str) -> res[str] { ... }
+
+/// Waits for thread to finish and returns the result.
+fn join_thread(t: thr[any]) -> res[any] { ... }
+
+/// Saves data to file, replacing any existing file.
+/// Returns `ok(file)` if saving succeeded.
+/// Designed to be easy to use with threads.
+fn save_data_file(data: any, file: str) -> res[str] { ... }
+
+/// Generates JSON data from meta data.
+fn json_from_meta_data(meta_data: [[any]]) -> str { ... }

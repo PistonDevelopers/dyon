@@ -42,7 +42,7 @@ pub fn add_functions<W: Any + AdvancedWindow>(module: &mut Module) {
     module.add(Arc::new("focus_arg".into()), focus_arg, PreludeFunction {
         lts: vec![],
         tys: vec![],
-        ret: Type::Bool,
+        ret: Type::Option(Box::new(Bool)),
     });
     module.add(Arc::new("set_title".into()),
         set_title::<W>, PreludeFunction {
@@ -54,7 +54,7 @@ pub fn add_functions<W: Any + AdvancedWindow>(module: &mut Module) {
         update_dt, PreludeFunction {
             lts: vec![],
             tys: vec![],
-            ret: Type::F64
+            ret: Type::Option(Box::new(F64))
         });
     module.add(Arc::new("press_keyboard_key".into()),
         press_keyboard_key, PreludeFunction {

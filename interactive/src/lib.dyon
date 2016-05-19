@@ -1,0 +1,33 @@
+
+/// Returns `true` when time to render.
+fn render() -> bool { ... }
+
+/// Returns `true` when time to update.
+fn update() -> bool { ... }
+
+/// Returns `true` when pressing a button.
+fn press() -> bool { ... }
+
+/// Returns `true` when releasing a button.
+fn release() -> bool { ... }
+
+/// Returns `true` when window receives or loses focus.
+fn focus() -> bool { ... }
+
+/// Returns:
+/// - `some(true)` when window received focus.
+/// - `some(false)` when window looses focus.
+/// - `none` when there is no focus event.
+fn focus_args() -> opt[bool] { ... }
+
+/// Sets title of window.
+fn set_title(text: str) { ... }
+
+/// Returns the delta time for update event.
+fn update_dt() -> opt[f64] { ... }
+
+/// Returns the keyboard key for press event.
+fn press_keyboard_key() -> opt[f64] { ... }
+
+/// Returns the keyboard key for release event.
+fn release_keyboard_key() -> opt[f64] { ... }
