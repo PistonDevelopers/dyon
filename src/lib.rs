@@ -291,7 +291,7 @@ pub fn load(source: &str, module: &mut Module) -> Result<(), String> {
 
     // Convert to AST.
     let mut ignored = vec![];
-    ast::convert(Arc::new(source.into()), &data, &mut ignored, module).unwrap();
+    let conv_res = ast::convert(Arc::new(source.into()), &data, &mut ignored, module);
 
     // Check that lifetime checking succeeded.
     match handle.join().unwrap() {
@@ -309,16 +309,21 @@ pub fn load(source: &str, module: &mut Module) -> Result<(), String> {
         }
     }
 
-    if ignored.len() > 0 {
+    if ignored.len() > 0 || conv_res.is_err() {
         use std::io::Write;
 
         let mut buf: Vec<u8> = vec![];
-        writeln!(&mut buf, "Some meta data was ignored in the syntax").unwrap();
-        writeln!(&mut buf, "START IGNORED").unwrap();
-        for r in &ignored {
-            json::write(&mut buf, &data[r.iter()]).unwrap();
+        if ignored.len() > 0 {
+            writeln!(&mut buf, "Some meta data was ignored in the syntax").unwrap();
+            writeln!(&mut buf, "START IGNORED").unwrap();
+            json::write(&mut buf, &data[ignored[0].iter()]).unwrap();
+            writeln!(&mut buf, "END IGNORED").unwrap();
+            writeln!(&mut buf, "In `{}`:\n{}", source, module.error(ignored[0],
+                "Could not understand this")).unwrap();
         }
-        writeln!(&mut buf, "END IGNORED").unwrap();
+        if let Err(()) = conv_res {
+            writeln!(&mut buf, "Conversion error").unwrap();
+        }
         return Err(String::from_utf8(buf).unwrap());
     }
 

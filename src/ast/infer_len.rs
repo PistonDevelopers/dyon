@@ -113,7 +113,12 @@ fn infer_expr(
             if res.is_some() { return res; }
         }
         Text(_) => {}
-        Vec4(_) => {}
+        Vec4(ref vec4_expr) => {
+            for expr in &vec4_expr.args {
+                let res = infer_expr(expr, name, decls);
+                if res.is_some() { return res; }
+            }
+        }
         Bool(_) => {}
         For(ref for_expr) => {
             let res = infer_expr(&for_expr.init, name, decls);
