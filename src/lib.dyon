@@ -179,6 +179,9 @@ fn z(v: vec4) -> f64 { ... }
 /// Returns w component of 4D vector.
 fn w(v: vec4) -> f64 { ... }
 
+/// Returns component scalar of 4D vector by index.
+fn s(v: vec4, ind: f64) -> f64 { ... }
+
 /// Returns 4D vector with length 1,
 /// pointing in the direction when starting at `(1, 0)`
 /// and rotating around the z axis.

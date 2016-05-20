@@ -136,6 +136,11 @@ pub fn standard(f: &mut HashMap<Arc<String>, PreludeFunction>) {
     sarg(f, "y", Type::Vec4, Type::F64);
     sarg(f, "z", Type::Vec4, Type::F64);
     sarg(f, "w", Type::Vec4, Type::F64);
+    f.insert(Arc::new("s".into()), PreludeFunction {
+        lts: vec![Lt::Default; 2],
+        tys: vec![Type::Vec4, Type::F64],
+        ret: Type::F64
+    });
     sarg(f, "dir_angle", Type::F64, Type::Vec4);
     f.insert(Arc::new("load_meta_file".into()), PreludeFunction {
         lts: vec![Lt::Default; 2],
@@ -306,6 +311,33 @@ pub fn call_standard(
         "y" => try!(vec4_comp(rt, module, call, 1)),
         "z" => try!(vec4_comp(rt, module, call, 2)),
         "w" => try!(vec4_comp(rt, module, call, 3)),
+        "s" => {
+            rt.push_fn(call.name.clone(), None, st + 1, lc);
+            let ind = rt.stack.pop().expect(TINVOTS);
+            let ind = match rt.resolve(&ind) {
+                &Variable::F64(val) => val,
+                x => return Err(module.error(call.args[1].source_range(),
+                                &rt.expected(x, "number")))
+            };
+            let v = rt.stack.pop().expect(TINVOTS);
+            let s = match rt.resolve(&v) {
+                &Variable::Vec4(ref v) => {
+                    match v.get(ind as usize) {
+                        Some(&s) => s as f64,
+                        None => {
+                            return Err(module.error(call.source_range,
+                                &format!("{}\nIndex out of bounds `{}`",
+                                    rt.stack_trace(), ind)))
+                        }
+                    }
+                }
+                x => return Err(module.error(call.args[0].source_range(),
+                                &rt.expected(x, "vec4")))
+            };
+            rt.stack.push(Variable::F64(s));
+            rt.pop_fn(call.name.clone());
+            Expect::Something
+        }
         "clone" => {
             rt.push_fn(call.name.clone(), None, st + 1, lc);
             let v = rt.stack.pop().expect(TINVOTS);
