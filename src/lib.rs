@@ -318,7 +318,8 @@ pub fn load(source: &str, module: &mut Module) -> Result<(), String> {
             writeln!(&mut buf, "START IGNORED").unwrap();
             json::write(&mut buf, &data[ignored[0].iter()]).unwrap();
             writeln!(&mut buf, "END IGNORED").unwrap();
-            writeln!(&mut buf, "In `{}`:\n{}", source, module.error(ignored[0],
+            writeln!(&mut buf, "In `{}`:\n{}", source,
+                module.error(data[ignored[0].iter()][0].range(),
                 "Could not understand this")).unwrap();
         }
         if let Err(()) = conv_res {
