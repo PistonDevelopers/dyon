@@ -150,4 +150,4 @@ _seps: "(){}[],.:;=<>*·+-/%^?|&∧∨!¬∑∃∀\n"
 108 mul = .s!({* / %} {pow:"pow" lexpr:"val"})
 109 add = .s!({+ -} mul:"mul")
 
-1000 document = .l({fn:"fn" comment})
+1000 document = .l({[.w? fn:"fn"] comment})

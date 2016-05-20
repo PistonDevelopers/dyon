@@ -1,28 +1,5 @@
-fn init() -> {
-    return {
-        spaceship: {
-            pos: (300, 300),
-            vel: (10, 0),
-        },
-        objects_to_move: ["spaceship"]
-    }
-}
-
-fn update_world_dt(mut world, dt) {
-    objs := world.objects_to_move
-    for i {
-        world[objs[i]].pos = move(obj: world[objs[i]], dt: dt)
-    }
-}
-
-fn move_obj_dt(obj, dt) -> vec4 {
-    return obj.pos + dt * obj.vel
-}
+ foo() = 3
 
 fn main() {
-    world := init()
-    println(world)
-    dt := 0.1
-    update(world: mut world, dt: dt)
-    println(world)
+    println(foo())
 }
