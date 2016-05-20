@@ -150,7 +150,8 @@ pub fn check(
         let mut it: Option<usize> = None;
 
         'search: loop {
-            if nodes[parent].kind.is_decl_loop() {
+            if nodes[parent].kind.is_decl_loop() ||
+               nodes[parent].kind.is_decl_un_loop() {
                 let my_name = nodes[i].name().unwrap();
                 for name in &nodes[parent].names {
                     if name == my_name {

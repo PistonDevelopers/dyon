@@ -10,6 +10,7 @@ use Type;
 use Variable;
 
 mod infer_len;
+mod replace;
 
 pub fn convert(
     file: Arc<String>,
@@ -382,6 +383,10 @@ impl Expression {
                     convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::Vec4(val));
+            } else if let Ok((range, val)) = Vec4UnLoop::from_meta_data(
+                    convert, ignored) {
+                convert.update(range);
+                result = Some(val.to_expression());
             } else if let Ok((range, val)) = convert.meta_bool("bool") {
                 convert.update(range);
                 result = Some(Expression::Bool(Bool {
@@ -1657,6 +1662,65 @@ impl Vec4 {
             stack.push(None);
         }
         stack.truncate(st);
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Vec4UnLoop {
+    pub name: Arc<String>,
+    pub expr: Expression,
+    pub source_range: Range,
+}
+
+impl Vec4UnLoop {
+    pub fn from_meta_data(
+        mut convert: Convert,
+        ignored: &mut Vec<Range>)
+    -> Result<(Range, Vec4UnLoop), ()> {
+        let start = convert.clone();
+        let node = "vec4_un_loop";
+        let start_range = try!(convert.start_node(node));
+        convert.update(start_range);
+
+        let mut name: Option<Arc<String>> = None;
+        let mut expr: Option<Expression> = None;
+        loop {
+            if let Ok(range) = convert.end_node(node) {
+                convert.update(range);
+                break;
+            } else if let Ok((range, val)) = convert.meta_string("name") {
+                convert.update(range);
+                name = Some(val);
+            } else if let Ok((range, val)) = Expression::from_meta_data(
+                "expr", convert, ignored) {
+                convert.update(range);
+                expr = Some(val);
+            } else {
+                let range = convert.ignore();
+                convert.update(range);
+                ignored.push(range);
+            }
+        }
+
+        let name = try!(name.ok_or(()));
+        let expr = try!(expr.ok_or(()));
+        Ok((convert.subtract(start), Vec4UnLoop {
+            name: name,
+            expr: expr,
+            source_range: convert.source(start).unwrap(),
+        }))
+    }
+
+    pub fn to_expression(self) -> Expression {
+        let replace_0 = replace::number(&self.expr, &self.name, 0.0);
+        let replace_1 = replace::number(&self.expr, &self.name, 1.0);
+        let replace_2 = replace::number(&self.expr, &self.name, 2.0);
+        let replace_3 = replace::number(&self.expr, &self.name, 3.0);
+        let source_range = self.source_range;
+        Expression::Vec4(Vec4 {
+            args: vec![replace_0, replace_1, replace_2, replace_3],
+            source_range: source_range,
+        })
     }
 }
 

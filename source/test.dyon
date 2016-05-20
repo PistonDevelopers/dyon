@@ -1,3 +1,49 @@
 fn main() {
-    println((1, 0, 0, 1,))
+    println(vec4 _ 2)
+    println(vec4 _ 2 + 2)
+    println(vec4 i i)
+    println(vec4 i i * 2)
+    println(vec4 i {
+        i := 3
+        2 + i
+    })
+    println(vec4 i {
+        a := {x: i * 2}
+        clone(a.x)
+    })
+    println(vec4 i {
+        a := [i]
+        clone(a[0])
+    })
+    println(vec4 i {
+        a := [i; 4]
+        clone(a[i])
+    })
+    println(vec4 i {
+        a := (i, 0)
+        x(a)
+    })
+    println(vec4 i {
+        s := 0
+        for i := 0; i < 1; i += 1 {
+            s += i + 5
+        }
+        clone(s)
+    })
+    println(vec4 i {
+        s := 0
+        for i 1 {
+            s += i + 5
+        }
+        clone(s)
+    })
+    println(vec4 i {
+        if i < 2 { 0 } else { 1 }
+    })
+    println(vec4 i -i)
+    println(unwrap(try_vec4()))
+}
+
+fn try_vec4() -> res {
+    return ok(vec4 i some(i)?)
 }

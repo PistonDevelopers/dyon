@@ -89,7 +89,8 @@ impl Node {
         use super::kind::Kind::*;
 
         match self.kind {
-            Pow | Sum | SumVec4 | Min | Max | Any | All | Vec4 |
+            Pow | Sum | SumVec4 | Min | Max | Any | All |
+            Vec4 | Vec4UnLoop |
             Assign | For | ForN => false,
             Add | Mul | Compare => self.children.len() == 1,
             _ => true
@@ -164,6 +165,7 @@ impl Node {
                 (_, Kind::Max) => {}
                 (_, Kind::Any) => {}
                 (_, Kind::All) => {}
+                (_, Kind::Vec4UnLoop) => {}
                 (_, Kind::Vec4) => {}
                 (_, Kind::Start) => { continue }
                 (_, Kind::End) => { continue }

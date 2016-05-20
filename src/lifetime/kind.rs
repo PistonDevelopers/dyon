@@ -35,6 +35,7 @@ pub enum Kind {
     Sift,
     Any,
     All,
+    Vec4UnLoop,
     Start,
     End,
     Init,
@@ -104,6 +105,7 @@ impl Kind {
             "start" => Kind::Start,
             "any" => Kind::Any,
             "all" => Kind::All,
+            "vec4_un_loop" => Kind::Vec4UnLoop,
             "end" => Kind::End,
             "init" => Kind::Init,
             "cond" => Kind::Cond,
@@ -135,12 +137,21 @@ impl Kind {
         })
     }
 
+    /// A loop can infer range from the body using variable.
     pub fn is_decl_loop(&self) -> bool {
         use self::Kind::*;
 
         match *self {
             ForN | Sum | SumVec4 | Min | Max | Sift
             | Any | All => true,
+            _ => false
+        }
+    }
+
+    /// An un-loop has fixed range and replaces variable in body.
+    pub fn is_decl_un_loop(&self) -> bool {
+        match *self {
+            Kind::Vec4UnLoop => true,
             _ => false
         }
     }
