@@ -1,0 +1,6 @@
+50 person = {
+    "John":"john"
+    "Peter":"peter"
+}
+100 people = .l(["hi" .w! person:"person" .w? "!"])
+1000 doc = [.w? people .w?]

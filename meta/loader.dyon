@@ -2,7 +2,7 @@
 fn main() {
     // Test the generated code.
     test := true
-    folder := "test_2"
+    folder := "test_3"
 
     generator := unwrap(load("meta/generator.dyon"))
 

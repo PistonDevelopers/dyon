@@ -1,4 +1,4 @@
-meta r {
+meta {
     line := [line: str] => line;
     photo := repeat line;
     person := [
