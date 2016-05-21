@@ -2,8 +2,6 @@
 fn to_code(syntax: [[]]) -> res[str] {
     code := ""
     i := 0
-    i_var := read_str(data: syntax, index: i, name: "var")?
-    i += i_var[0]
 
     i += start_node(data: syntax, index: i, name: "rules")?
 
@@ -174,6 +172,57 @@ fn to_code(syntax: [[]]) -> res[str] {
             code += "    return ok([i - start, arr])\n"
 
             i += end_node(data: syntax, index: i, name: "repeat")?
+        }
+
+        select := start_node(data: syntax, index: i, name: "select")
+        if select != none() {
+            i += unwrap(select)
+
+            rules := []
+            loop {
+                ref := start_node(data: syntax, index: i, name: "ref")
+                if ref == none() { break }
+                i += unwrap(ref)
+
+                i_rule := read_str(data: syntax, index: i, name:"rule")?
+                i += i_rule[0]
+                rule := i_rule[1]
+                push(mut rules, rule)
+
+                as := read_str(data: syntax, index: i, name: "as")
+                if as != none() {
+                    i_as := unwrap(as)
+                    i += i_as[0]
+                    as := i_as[1]
+
+                    code += "    _" + rule + " := __" + rule +
+                            "(data: data, index: i, name: some(\"" + as + "\"))\n"
+                } else {
+                    code += "    _" + rule + " := __" + rule +
+                            "(data: data, index: i, name: none())\n"
+                }
+                code += "    if is_ok(_" + rule + ") {\n"
+                code += "        i_" + rule + " := unwrap(_" + rule + ")\n"
+                code += "        i += i_" + rule + "[0]\n"
+                code += "        if name != none() {\n"
+                code += "            i += end_node(data: data, index: i, name: unwrap(name))?\n"
+                code += "        }\n"
+                code += "        return ok([i - start, i_" + rule + "[1]])\n"
+                code += "    }\n"
+
+                i += end_node(data: syntax, index: i, name: "ref")?
+            }
+
+            code += "    err(\"Expected one of "
+            for i {
+                code += "`" + rules[i] + "`"
+                if (i + 1) < len(rules) {
+                    code += ", "
+                }
+            }
+            code += "\")?\n"
+
+            i += end_node(data: syntax, index: i, name: "select")?
         }
 
         code += "}\n\n"

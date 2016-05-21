@@ -1,0 +1,8 @@
+meta {
+    john := [john: bool] => {first_name: "John"};
+    peter := [peter: bool] => {first_name: "Peter"};
+    person := select {john, peter};
+    people := repeat person:"person";
+    ------------------------------------------------
+    people
+}

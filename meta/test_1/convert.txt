@@ -1,4 +1,4 @@
-meta r {
+meta {
   pos := [x: f64, y: f64, z: f64] => (x, y);
   doc := repeat pos:"pos";
   -----------------------
