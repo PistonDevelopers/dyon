@@ -1,8 +1,9 @@
-_seps:".:;,[]{}()?!=<>"
+_seps:".:;,[]{}()?!=<>\""
 
 1 , = [.w? "," .w?]
 
-2 expr = ...";"!:"code"
+2 expr = {.t!:"code" ...";"!:"code"}
+3 reserved = [!"i" !"start"]
 
 95 ref = [.._seps!:"rule" ?[.w? ":" .t!:"as"]]
 96 type = {
@@ -10,7 +11,7 @@ _seps:".:;,[]{}()?!=<>"
     "f64":"f64"
     "str":"str"
 }
-97 field = [.._seps!:"name" .w?
+97 field = [reserved .._seps!:"name" .w?
             {[":" .w? type] ["<-" .w? ref]}]
 
 98 fields = ["[" .w? .s!.(, field:"field") .w? "]" .w?
