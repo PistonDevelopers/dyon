@@ -478,6 +478,26 @@ pub fn check(
     // Check that calls satisfy the lifetime constraints of arguments.
     for &c in &calls {
         let call = &nodes[c];
+        let map_arg_call_arg_index = |i: usize| {
+            // Map `i` to the call arg taking swizzling into account.
+            let mut j = 0;
+            let mut new_i = 0;
+            for &ch in &call.children {
+                if let Some(sw) = nodes[ch].find_child_by_kind(&nodes, Kind::Swizzle) {
+                    for &ch in &nodes[sw].children {
+                        j += match nodes[ch].kind {
+                            Kind::Sw0 | Kind::Sw1 | Kind::Sw2 | Kind::Sw3 => 1,
+                            _ => 0
+                        }
+                    };
+                } else {
+                    j += 1;
+                }
+                if j > i { break; }
+                new_i += 1;
+            }
+            new_i
+        };
         let is_reference = |i: usize| {
             let mut n: usize = call.children[i];
             let mut can_be_item = true;
@@ -501,7 +521,8 @@ pub fn check(
             let function = &nodes[declaration];
             for (i, &a) in function.children.iter()
                 .enumerate()
-                .filter(|&(_, &i)| nodes[i].kind == Kind::Arg)  {
+                .filter(|&(_, &i)| nodes[i].kind == Kind::Arg)
+                .map(|(i, a)| (map_arg_call_arg_index(i), a)) {
                 let arg = &nodes[a];
                 if let Some(ref lt) = arg.lifetime {
                     // When arguments should outlive the return value,
@@ -534,11 +555,10 @@ pub fn check(
             }
         } else {
             // Check that call to intrinsic satisfy the declared constraints.
-            for ((i, &lt), &call_arg) in
+            for (i, &lt) in
             call.lts.iter().enumerate()
-                .zip(call.children.iter()
-                .filter(|&&n| nodes[n].kind == Kind::CallArg)) {
-                let arg = &nodes[call_arg];
+                .map(|(i, a)| (map_arg_call_arg_index(i), a)) {
+                let arg = &nodes[call.children[i]];
                 match lt {
                     Lt::Default => {}
                     Lt::Return => {
