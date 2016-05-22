@@ -1,9 +1,9 @@
 fn main() {
-    a := (10, 2)
-    c := [1, 2, 3]
-    println(foo(xy a, c))
+    a := (10, 2, 7, 3)
+    c := false
+    foo(xy a, c, zw a)
 }
 
-fn foo(a, b, c: 'return) -> {
-    return c
+fn foo(a: f64, b: f64, c: bool, d: f64, e: f64) {
+    println(b)
 }

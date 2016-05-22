@@ -287,6 +287,7 @@ pub fn convert_meta_data(
                     Kind::Vec4 => Some(Type::Vec4),
                     Kind::Object => Some(Type::object()),
                     Kind::Sum => Some(Type::F64),
+                    Kind::Swizzle => Some(Type::F64),
                     _ => None
                 };
 

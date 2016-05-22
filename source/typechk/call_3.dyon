@@ -1,0 +1,8 @@
+fn main() {
+    a := (10, 2)
+    foo(xy a)
+}
+
+fn foo(a: f64, b: bool) {
+    println(b)
+}
