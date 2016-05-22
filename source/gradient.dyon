@@ -1,0 +1,63 @@
+fn main() {
+    n := 10000
+    s := 0.1 / n
+    freq := [0; n]
+    for x := 0.0; x < 1; x += 0.001 {
+        res := min k n {
+            eps := s + k * s
+            v := (x, 0, 0, 0)
+            // grad := (vec4 j f(vec4 i s(v, i) + (if i == j { eps } else { 0 })) - f(v)) / eps
+
+            /*
+            lapl := vec4 j {
+                g := f(vec4 i s(v, i) + (if i == j { eps } else { 0 }))
+                l := f(vec4 i s(v, i) + (if i == j { eps + eps^2 } else { 0 }))
+                ((l - g)/eps - g + f(v))*2/eps^2
+            }
+            */
+
+            lapl := {
+                g := f(x + eps)
+                l := f(x + eps + eps^2)
+                ((l - g)/eps - g + f(x))*2/eps^2
+            }
+
+            d2 := exp(x)
+            err := abs(lapl - d2)
+            // println(err)
+            // {return}
+            some([err, eps])
+        }
+        res := unwrap(res)
+        println("min: " + to_string(res))
+        freq[res[1]] += 1
+    }
+    println(freq)
+    m := unwrap(max i { freq[i] })
+    println(s + m[1] * s)
+}
+
+
+// f64:
+// sin(x), -sin(x) -> 0.0001 / 0.0001
+// cos(x), -cos(x) -> 0.0001 / 0.00011
+// exp(x), exp(x) -> 0.0001 / 0.00009
+
+// f32:
+// x^2 -> 0.004600000000000001 / 0.00602
+// x^3 -> 0.0067 / 0.009130000000000001
+// sin(x) -> 0.0094 / 0.00496
+// cos(x) -> 0.0023 / 0.00134
+// exp(x) -> 0.005900000000000001 / 0.01282
+// ln(x) -> 0.0047
+// 2*sin(x) -> 0.0094
+
+/*
+fn f(v: vec4) -> f64 {
+    return exp(x(v))
+}
+*/
+
+fn f(x: f64) -> f64 {
+    return exp(x)
+}
