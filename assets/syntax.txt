@@ -39,6 +39,7 @@ _seps: "(){}[],.:;=<>*·+-/%^?|&∧∨!¬∑∃∀\n"
 // Interprets "return" as variable, does not expect loops or assignment.
 5 arg_expr = {
     ["mut":"mut" ?w item:"item"]
+    swizzle:"swizzle"
     [{
         object:"object"
         arr
@@ -62,7 +63,8 @@ _seps: "(){}[],.:;=<>*·+-/%^?|&∧∨!¬∑∃∀\n"
 9 array_fill = ["[" ?w expr:"fill" ?w ";" ?w expr:"n" ?w "]"]
 10 key_value = [.._seps!:"key" ?w ":" ?w expr:"val"]
 11 num = .$_:"num"
-12 vec4 = ["(" ?w expr:"x" , expr:"y" ?[, expr:"z" ?[, expr:"w"]] ?, ?w ")"]
+12 vec4 = ["(" ?w arg_expr:"x" , ?arg_expr:"y"
+           ?[, arg_expr:"z" ?[, arg_expr:"w"]] ?, ?w ")"]
 13 color = ["#" .._seps!:"color"]
 14 text = .t?:"text"
 15 bool = {"true":"bool" "false":!"bool"}
@@ -120,6 +122,8 @@ _seps: "(){}[],.:;=<>*·+-/%^?|&∧∨!¬∑∃∀\n"
 56 sum_vec4 = [label {"sum_vec4" "∑vec4"} short_body]
 57 vec4_un_loop = ["vec" {"4":"4" "3":"3" "2":"2"}
                    w .._seps!:"name" w expr:"expr"]
+58 swizzle = [sw:"sw0" sw:"sw1" ?sw:"sw2" ?sw:"sw3" w expr:"expr"]
+59 sw = {"x":"x" "y":"y" "z":"z" "w":"w"}
 
 60 type = {
     "bool":"bool"

@@ -64,6 +64,11 @@ pub enum Kind {
     RetType,
     ReturnVoid,
     Go,
+    Swizzle,
+    Sw0,
+    Sw1,
+    Sw2,
+    Sw3,
 }
 
 impl Kind {
@@ -133,6 +138,11 @@ impl Kind {
             "ret_type" => Kind::RetType,
             "return_void" => Kind::ReturnVoid,
             "go" => Kind::Go,
+            "swizzle" => Kind::Swizzle,
+            "sw0" => Kind::Sw0,
+            "sw1" => Kind::Sw1,
+            "sw2" => Kind::Sw2,
+            "sw3" => Kind::Sw3,
             _ => return None
         })
     }

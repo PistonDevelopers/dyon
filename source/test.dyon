@@ -1,8 +1,7 @@
 fn main() {
-    a := vec2 i i + 1
-    println(a)
-    a := vec3 i i + 1
-    println(a)
-    a := vec4 i i + 1
-    println(a)
+    a := (1, 2, 3, 4)
+    // b := (3,)
+    c := (xy a, yx a)
+    // debug()
+    println(c)
 }

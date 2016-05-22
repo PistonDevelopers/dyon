@@ -187,6 +187,10 @@ fn infer_expr(
             let res = infer_expr(try_expr, name, decls);
             if res.is_some() { return res; }
         }
+        Swizzle(ref swizzle_expr) => {
+            let res = infer_expr(&swizzle_expr.expr, name, decls);
+            if res.is_some() { return res; }
+        }
     };
     None
 }
