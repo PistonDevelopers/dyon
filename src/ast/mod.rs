@@ -1669,6 +1669,7 @@ impl Vec4 {
 pub struct Vec4UnLoop {
     pub name: Arc<String>,
     pub expr: Expression,
+    pub len: u8,
     pub source_range: Range,
 }
 
@@ -1684,10 +1685,20 @@ impl Vec4UnLoop {
 
         let mut name: Option<Arc<String>> = None;
         let mut expr: Option<Expression> = None;
+        let mut len: u8 = 4;
         loop {
             if let Ok(range) = convert.end_node(node) {
                 convert.update(range);
                 break;
+            } else if let Ok((range, _)) = convert.meta_bool("4") {
+                convert.update(range);
+                len = 4;
+            } else if let Ok((range, _)) = convert.meta_bool("3") {
+                convert.update(range);
+                len = 3;
+            } else if let Ok((range, _)) = convert.meta_bool("2") {
+                convert.update(range);
+                len = 2;
             } else if let Ok((range, val)) = convert.meta_string("name") {
                 convert.update(range);
                 name = Some(val);
@@ -1707,16 +1718,30 @@ impl Vec4UnLoop {
         Ok((convert.subtract(start), Vec4UnLoop {
             name: name,
             expr: expr,
+            len: len,
             source_range: convert.source(start).unwrap(),
         }))
     }
 
     pub fn to_expression(self) -> Expression {
+        let source_range = self.source_range;
+
+        let zero = || Expression::Number(
+            Number { num: 0.0, source_range: source_range });
+
         let replace_0 = replace::number(&self.expr, &self.name, 0.0);
         let replace_1 = replace::number(&self.expr, &self.name, 1.0);
-        let replace_2 = replace::number(&self.expr, &self.name, 2.0);
-        let replace_3 = replace::number(&self.expr, &self.name, 3.0);
-        let source_range = self.source_range;
+        let replace_2 = if self.len > 2 {
+                replace::number(&self.expr, &self.name, 2.0)
+            } else {
+                zero()
+            };
+        let replace_3 = if self.len > 3 {
+                replace::number(&self.expr, &self.name, 3.0)
+            } else {
+                zero()
+            };
+
         Expression::Vec4(Vec4 {
             args: vec![replace_0, replace_1, replace_2, replace_3],
             source_range: source_range,
