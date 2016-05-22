@@ -1391,9 +1391,32 @@ impl Call {
             let arg_st = stack.len();
             arg.resolve_locals(stack, module);
             stack.truncate(arg_st);
-            stack.push(None);
+            match *arg {
+                Expression::Swizzle(ref swizzle) => {
+                    for _ in 0..swizzle.len() {
+                        stack.push(None);
+                    }
+                }
+                _ => {
+                    stack.push(None);
+                }
+            }
         }
         stack.truncate(st);
+    }
+
+    /// Computes number of arguments including swizzles.
+    pub fn arg_len(&self) -> usize {
+        let mut sum = 0;
+        for arg in &self.args {
+            match *arg {
+                Expression::Swizzle(ref swizzle) => {
+                    sum += swizzle.len();
+                }
+                _ => { sum += 1; }
+            }
+        }
+        sum
     }
 }
 

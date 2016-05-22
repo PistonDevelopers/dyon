@@ -282,9 +282,21 @@ pub fn check(
     // Link call nodes to functions.
     for &c in &calls {
         let n = {
-            nodes[c].children.iter()
-            .filter(|&&i| nodes[i].kind == Kind::CallArg)
-            .count()
+            let mut sum = 0;
+            for &ch in nodes[c].children.iter()
+                .filter(|&&i| nodes[i].kind == Kind::CallArg) {
+                if let Some(sw) = nodes[ch].find_child_by_kind(&nodes, Kind::Swizzle) {
+                    sum += nodes[sw].children.iter()
+                        .filter(|&&i| match nodes[i].kind {
+                            Kind::Sw0 | Kind::Sw1 | Kind::Sw2 | Kind::Sw3 => true,
+                            _ => false
+                        })
+                        .count();
+                } else {
+                    sum += 1;
+                }
+            }
+            sum
         };
 
         let node = &mut nodes[c];

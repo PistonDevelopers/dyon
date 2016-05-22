@@ -646,7 +646,7 @@ impl Runtime {
             }
             FnIndex::Loaded(f_index) => {
                 let f = &module.functions[f_index];
-                if call.args.len() != f.args.len() {
+                if call.arg_len() != f.args.len() {
                     return Err(module.error(call.source_range,
                         &format!("{}\nExpected {} arguments but found {}",
                         self.stack_trace(),
