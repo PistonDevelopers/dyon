@@ -295,6 +295,7 @@ pub enum Expression {
     UnOp(Box<UnOpExpression>),
     Variable(Range, Variable),
     Try(Box<Expression>),
+    Swizzle(Box<Swizzle>),
 }
 
 // Required because the `Sync` impl of `Variable` is unsafe.
@@ -475,6 +476,10 @@ impl Expression {
             } else if let Ok((range, _)) = convert.meta_bool("try") {
                 convert.update(range);
                 result = Some(Expression::Try(Box::new(result.unwrap())));
+            } else if let Ok((range, val)) = Swizzle::from_meta_data(
+                    convert, ignored) {
+                convert.update(range);
+                result = Some(Expression::Swizzle(Box::new(val)));
             } else {
                 let range = convert.ignore();
                 convert.update(range);
@@ -521,6 +526,7 @@ impl Expression {
             UnOp(ref unop) => unop.source_range,
             Variable(range, _) => range,
             Try(ref expr) => expr.source_range(),
+            Swizzle(ref swizzle) => swizzle.source_range,
         }
     }
 
@@ -566,6 +572,7 @@ impl Expression {
             UnOp(ref unop) => unop.resolve_locals(stack, module),
             Variable(_, _) => {}
             Try(ref expr) => expr.resolve_locals(stack, module),
+            Swizzle(ref swizzle) => swizzle.expr.resolve_locals(stack, module),
         }
     }
 }
@@ -1384,9 +1391,32 @@ impl Call {
             let arg_st = stack.len();
             arg.resolve_locals(stack, module);
             stack.truncate(arg_st);
-            stack.push(None);
+            match *arg {
+                Expression::Swizzle(ref swizzle) => {
+                    for _ in 0..swizzle.len() {
+                        stack.push(None);
+                    }
+                }
+                _ => {
+                    stack.push(None);
+                }
+            }
         }
         stack.truncate(st);
+    }
+
+    /// Computes number of arguments including swizzles.
+    pub fn arg_len(&self) -> usize {
+        let mut sum = 0;
+        for arg in &self.args {
+            match *arg {
+                Expression::Swizzle(ref swizzle) => {
+                    sum += swizzle.len();
+                }
+                _ => { sum += 1; }
+            }
+        }
+        sum
     }
 }
 
@@ -1640,7 +1670,9 @@ impl Vec4 {
         }
 
         let x = try!(x.ok_or(()));
-        let y = try!(y.ok_or(()));
+        let y = y.unwrap_or(Expression::Number(
+            Number { num: 0.0, source_range: Range::empty(0) }
+        ));
         let z = z.unwrap_or(Expression::Number(
             Number { num: 0.0, source_range: Range::empty(0) }
         ));
@@ -1659,7 +1691,16 @@ impl Vec4 {
             let arg_st = stack.len();
             arg.resolve_locals(stack, module);
             stack.truncate(arg_st);
-            stack.push(None);
+            match *arg {
+                Expression::Swizzle(ref swizzle) => {
+                    for _ in 0..swizzle.len() {
+                        stack.push(None);
+                    }
+                }
+                _ => {
+                    stack.push(None);
+                }
+            }
         }
         stack.truncate(st);
     }
@@ -1746,6 +1787,130 @@ impl Vec4UnLoop {
             args: vec![replace_0, replace_1, replace_2, replace_3],
             source_range: source_range,
         })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Swizzle {
+    pub sw0: usize,
+    pub sw1: usize,
+    pub sw2: Option<usize>,
+    pub sw3: Option<usize>,
+    pub expr: Expression,
+    pub source_range: Range,
+}
+
+impl Swizzle {
+    pub fn from_meta_data(
+        mut convert: Convert,
+        ignored: &mut Vec<Range>)
+    -> Result<(Range, Swizzle), ()> {
+        let start = convert.clone();
+        let node = "swizzle";
+        let start_range = try!(convert.start_node(node));
+        convert.update(start_range);
+
+        let mut sw0: Option<usize> = None;
+        let mut sw1: Option<usize> = None;
+        let mut sw2: Option<usize> = None;
+        let mut sw3: Option<usize> = None;
+        let mut expr: Option<Expression> = None;
+        loop {
+            if let Ok(range) = convert.end_node(node) {
+                convert.update(range);
+                break;
+            } else if let Ok((range, val)) = Sw::from_meta_data(
+                "sw0", convert, ignored) {
+                convert.update(range);
+                sw0 = Some(val.ind);
+            } else if let Ok((range, val)) = Sw::from_meta_data(
+                "sw1", convert, ignored) {
+                convert.update(range);
+                sw1 = Some(val.ind);
+            } else if let Ok((range, val)) = Sw::from_meta_data(
+                "sw2", convert, ignored) {
+                convert.update(range);
+                sw2 = Some(val.ind);
+            } else if let Ok((range, val)) = Sw::from_meta_data(
+                "sw3", convert, ignored) {
+                convert.update(range);
+                sw3 = Some(val.ind);
+            } else if let Ok((range, val)) = Expression::from_meta_data(
+                "expr", convert, ignored) {
+                convert.update(range);
+                expr = Some(val);
+            } else {
+                let range = convert.ignore();
+                convert.update(range);
+                ignored.push(range);
+            }
+        }
+
+        let sw0 = try!(sw0.ok_or(()));
+        let sw1 = try!(sw1.ok_or(()));
+        let expr = try!(expr.ok_or(()));
+        Ok((convert.subtract(start), Swizzle {
+            sw0: sw0,
+            sw1: sw1,
+            sw2: sw2,
+            sw3: sw3,
+            expr: expr,
+            source_range: convert.source(start).unwrap(),
+        }))
+    }
+
+    pub fn len(&self) -> usize {
+        return 2 +
+            if self.sw2.is_some() { 1 } else { 0 } +
+            if self.sw3.is_some() { 1 } else { 0 }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Sw {
+    pub ind: usize,
+    pub source_range: Range,
+}
+
+impl Sw {
+    pub fn from_meta_data(
+        node: &str,
+        mut convert: Convert,
+        ignored: &mut Vec<Range>)
+    -> Result<(Range, Sw), ()> {
+        let start = convert.clone();
+        let start_range = try!(convert.start_node(node));
+        convert.update(start_range);
+
+        let mut ind: Option<usize> = None;
+        loop {
+            if let Ok(range) = convert.end_node(node) {
+                convert.update(range);
+                break;
+            } else if let Ok((range, _)) = convert.meta_bool("x") {
+                convert.update(range);
+                ind = Some(0);
+            } else if let Ok((range, _)) = convert.meta_bool("y") {
+                convert.update(range);
+                ind = Some(1);
+            } else if let Ok((range, _)) = convert.meta_bool("z") {
+                convert.update(range);
+                ind = Some(2);
+            } else if let Ok((range, _)) = convert.meta_bool("w") {
+                convert.update(range);
+                ind = Some(3);
+            } else {
+                let range = convert.ignore();
+                convert.update(range);
+                ignored.push(range);
+            }
+        }
+
+        let ind = try!(ind.ok_or(()));
+        Ok((convert.subtract(start), Sw {
+            ind: ind,
+            source_range: convert.source(start).unwrap(),
+        }))
     }
 }
 

@@ -401,6 +401,9 @@ impl Runtime {
             Try(ref expr) => {
                 self.try(expr, side, module)
             }
+            Swizzle(ref sw) => {
+                Ok((Expect::Something, try!(self.swizzle(sw, module))))
+            }
         }
     }
 
@@ -643,7 +646,7 @@ impl Runtime {
             }
             FnIndex::Loaded(f_index) => {
                 let f = &module.functions[f_index];
-                if call.args.len() != f.args.len() {
+                if call.arg_len() != f.args.len() {
                     return Err(module.error(call.source_range,
                         &format!("{}\nExpected {} arguments but found {}",
                         self.stack_trace(),
@@ -747,6 +750,31 @@ impl Runtime {
                 }
             }
         }
+    }
+
+    fn swizzle(&mut self, sw: &ast::Swizzle, module: &Module) -> Result<Flow, String> {
+        match try!(self.expression(&sw.expr, Side::Right, module)) {
+            (_, Flow::Return) => { return Ok(Flow::Return); }
+            (Expect::Something, Flow::Continue) => {}
+            _ => return Err(module.error(sw.expr.source_range(),
+                            &format!("{}\nExpected something",
+                                self.stack_trace())))
+        };
+        let v = self.stack.pop().expect("There is no value on the stack");
+        let v = match self.resolve(&v) {
+            &Variable::Vec4(v) => v,
+            x => return Err(module.error(sw.source_range,
+                    &self.expected(x, "vec4")))
+        };
+        self.stack.push(Variable::F64(v[sw.sw0] as f64));
+        self.stack.push(Variable::F64(v[sw.sw1] as f64));
+        if let Some(ind) = sw.sw2 {
+            self.stack.push(Variable::F64(v[ind] as f64));
+        }
+        if let Some(ind) = sw.sw3 {
+            self.stack.push(Variable::F64(v[ind] as f64));
+        }
+        Ok(Flow::Continue)
     }
 
     fn object(
@@ -2905,6 +2933,7 @@ impl Runtime {
         side: Side,
         module: &Module
     ) -> Result<Flow, String> {
+        let st = self.stack.len();
         for expr in &vec4.args {
             match try!(self.expression(expr, side, module)) {
                 (_, Flow::Return) => { return Ok(Flow::Return); }
@@ -2913,6 +2942,8 @@ impl Runtime {
                     &format!("{}\nExpected something from vec4 argument",
                         self.stack_trace())))
             };
+            // Skip the rest if swizzling pushes arguments.
+            if self.stack.len() - st > 3 { break; }
         }
         let w = self.stack.pop().expect("There is no value on the stack");
         let w = match self.resolve(&w) {

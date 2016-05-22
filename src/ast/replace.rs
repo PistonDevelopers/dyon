@@ -17,6 +17,7 @@ use super::{
     Item,
     Object,
     Number,
+    Swizzle,
     UnOpExpression,
     Vec4,
 };
@@ -225,6 +226,16 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
         }
         E::Variable(_, _) => expr.clone(),
         E::Try(ref expr) => E::Try(Box::new(number(expr, name, val))),
+        E::Swizzle(ref swizzle_expr) => {
+            E::Swizzle(Box::new(Swizzle {
+                sw0: swizzle_expr.sw0.clone(),
+                sw1: swizzle_expr.sw1.clone(),
+                sw2: swizzle_expr.sw2.clone(),
+                sw3: swizzle_expr.sw3.clone(),
+                expr: number(&swizzle_expr.expr, name, val),
+                source_range: swizzle_expr.source_range,
+            }))
+        }
     }
 }
 

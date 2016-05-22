@@ -90,7 +90,7 @@ impl Node {
 
         match self.kind {
             Pow | Sum | SumVec4 | Min | Max | Any | All |
-            Vec4 | Vec4UnLoop |
+            Vec4 | Vec4UnLoop | Swizzle |
             Assign | For | ForN => false,
             Add | Mul | Compare => self.children.len() == 1,
             _ => true
@@ -152,6 +152,7 @@ impl Node {
         let mut call_arg_ind = 0;
         for &c in &self.children {
             match (self.kind, nodes[c].kind) {
+                (_, Kind::Swizzle) => {}
                 (_, Kind::Loop) => {}
                 (_, Kind::Go) => {}
                 (_, Kind::For) => {}
@@ -286,6 +287,7 @@ pub fn convert_meta_data(
                     Kind::Vec4 => Some(Type::Vec4),
                     Kind::Object => Some(Type::object()),
                     Kind::Sum => Some(Type::F64),
+                    Kind::Swizzle => Some(Type::F64),
                     _ => None
                 };
 

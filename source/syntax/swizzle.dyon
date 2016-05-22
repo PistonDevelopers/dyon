@@ -1,0 +1,19 @@
+fn main() {
+    b := (10,)
+    println(b)
+    a := (1, 2, 3, 4)
+    c := (xy a, xx b)
+    println(c)
+
+    println(foo(xy a))
+    println(bar(x_y_z: zxy a))
+    println(bar(x_y: zx a, z: y(a)))
+}
+
+fn foo(x: f64, y: f64) -> f64 {
+    return x + y
+}
+
+fn bar_x_y_z(x: f64, y: f64, z: f64) -> f64 {
+    return x + y + z
+}

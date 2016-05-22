@@ -1,0 +1,9 @@
+fn main() {
+    a := (10, 2)
+    c := [1, 2, 3]
+    println(foo(xy a, c))
+}
+
+fn foo(a, b, c: 'return) -> {
+    return c
+}

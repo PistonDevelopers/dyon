@@ -35,28 +35,71 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                     let ch = nodes[i].children[0];
                     let expr_type = nodes[ch].ty.as_ref().map(|ty| nodes[i].inner_type(&ty));
                     if let Some(parent) = nodes[i].parent {
-                        let j = nodes[parent].children.iter().position(|&ch| ch == i);
-                        let j = if let Some(j) = j { j } else { continue 'node };
-                        if let Some(decl) = nodes[parent].declaration {
-                            let arg = nodes[decl].children[j];
-                            match (&expr_type, &nodes[arg].ty) {
-                                (&Some(ref ch_ty), &Some(ref arg_ty)) => {
-                                    if !ch_ty.goes_with(arg_ty) {
+                        // Take into account swizzling for the declared argument position.
+                        let j = {
+                            let mut sum = 0;
+                            for &p_ch in &nodes[parent].children {
+                                if p_ch == i { break; }
+                                if let Some(sw) = nodes[p_ch]
+                                    .find_child_by_kind(nodes, Kind::Swizzle) {
+                                    for &sw_ch in &nodes[sw].children {
+                                        match nodes[sw_ch].kind {
+                                            Kind::Sw0 | Kind::Sw1 | Kind::Sw2 | Kind::Sw3 => {
+                                                sum += 1;
+                                            }
+                                            _ => {}
+                                        }
+                                    }
+                                } else {
+                                    sum += 1;
+                                }
+                            }
+                            sum
+                        };
+
+                        // Check type against all arguments covered by swizzle.
+                        let js = if nodes[ch].kind == Kind::Swizzle {
+                            let mut sum = 0;
+                            for &sw_ch in &nodes[ch].children {
+                                match nodes[sw_ch].kind {
+                                    Kind::Sw0 | Kind::Sw1 | Kind::Sw2 | Kind::Sw3 => {
+                                        sum += 1;
+                                    }
+                                    _ => {}
+                                }
+                            }
+
+                            let mut js = vec![];
+                            for i in 0..sum {
+                                js.push(j + i)
+                            }
+                            js
+                        } else {
+                            vec![j]
+                        };
+
+                        for &j in &js {
+                            if let Some(decl) = nodes[parent].declaration {
+                                let arg = nodes[decl].children[j];
+                                match (&expr_type, &nodes[arg].ty) {
+                                    (&Some(ref ch_ty), &Some(ref arg_ty)) => {
+                                        if !ch_ty.goes_with(arg_ty) {
+                                            return Err(nodes[i].source.wrap(
+                                                format!("Type mismatch: Expected `{}`, found `{}`",
+                                                    arg_ty.description(), ch_ty.description())));
+                                        }
+                                    }
+                                    (&None, _) | (_, &None) => {}
+                                }
+                            } else if let Some(ref f) = prelude.functions.get(
+                                    nodes[parent].name().unwrap()) {
+                                if let Some(ref ty) = expr_type {
+                                    if !ty.goes_with(&f.tys[j]) {
                                         return Err(nodes[i].source.wrap(
                                             format!("Type mismatch: Expected `{}`, found `{}`",
-                                                arg_ty.description(), ch_ty.description())));
+                                                f.tys[j].description(), ty.description())
+                                        ))
                                     }
-                                }
-                                (&None, _) | (_, &None) => {}
-                            }
-                        } else if let Some(ref f) = prelude.functions.get(
-                                nodes[parent].name().unwrap()) {
-                            if let Some(ref ty) = expr_type {
-                                if !ty.goes_with(&f.tys[j]) {
-                                    return Err(nodes[i].source.wrap(
-                                        format!("Type mismatch: Expected `{}`, found `{}`",
-                                            f.tys[j].description(), ty.description())
-                                    ))
                                 }
                             }
                         }
@@ -226,6 +269,19 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                     if let Some(ref ty) = nodes[ch].ty {
                         this_ty = Some(Type::Array(Box::new(ty.clone())));
                     }
+                }
+                Kind::X | Kind::Y | Kind::Z | Kind::W => {
+                    if nodes[i].children.len() == 0 { continue 'node; }
+                    let ch = nodes[i].children[0];
+                    if nodes[ch].item_ids() { continue 'node; }
+
+                    let expr_type = nodes[ch].ty.as_ref().map(|ty| nodes[i].inner_type(&ty));
+                    if expr_type.is_some() && expr_type != Some(Type::F64) {
+                        return Err(nodes[i].source.wrap(
+                            format!("Type mismatch: Expected `f64`, found `{}`",
+                                expr_type.as_ref().unwrap().description())));
+                    }
+                    this_ty = expr_type;
                 }
                 _ => {}
             }

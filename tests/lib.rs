@@ -60,6 +60,7 @@ fn test_syntax() {
     test_src("source/syntax/lifetime_8.dyon");
     test_fail_src("source/syntax/lifetime_9.dyon");
     test_fail_src("source/syntax/lifetime_10.dyon");
+    test_src("source/syntax/lifetime_11.dyon");
     test_src("source/syntax/insert.dyon");
     test_src("source/syntax/named_call.dyon");
     test_src("source/syntax/max_min.dyon");
@@ -77,6 +78,7 @@ fn test_syntax() {
     test_src("source/syntax/vec4_2.dyon");
     test_src("source/syntax/vec4_un_loop.dyon");
     test_src("source/syntax/vec4_un_loop_2.dyon");
+    test_src("source/syntax/swizzle.dyon");
     test_src("source/syntax/color.dyon");
     test_src("source/syntax/parens.dyon");
     test_src("source/syntax/infer_pass.dyon");
@@ -112,12 +114,15 @@ fn test_typechk() {
     test_src("source/typechk/pow_2.dyon");
     test_fail_src("source/typechk/pow_3.dyon");
     test_fail_src("source/typechk/call.dyon");
+    test_fail_src("source/typechk/call_2.dyon");
+    test_src("source/typechk/call_4.dyon");
     test_src("source/typechk/obj.dyon");
     test_fail_src("source/typechk/go.dyon");
     test_fail_src("source/typechk/threads.dyon");
     test_fail_src("source/typechk/unused_result.dyon");
     test_fail_src("source/typechk/unused_result_2.dyon");
     test_src("source/typechk/res.dyon");
+    test_fail_src("source/typechk/vec4.dyon");
 }
 
 #[test]
