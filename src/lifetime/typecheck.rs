@@ -270,6 +270,19 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                         this_ty = Some(Type::Array(Box::new(ty.clone())));
                     }
                 }
+                Kind::X | Kind::Y | Kind::Z | Kind::W => {
+                    if nodes[i].children.len() == 0 { continue 'node; }
+                    let ch = nodes[i].children[0];
+                    if nodes[ch].item_ids() { continue 'node; }
+
+                    let expr_type = nodes[ch].ty.as_ref().map(|ty| nodes[i].inner_type(&ty));
+                    if expr_type.is_some() && expr_type != Some(Type::F64) {
+                        return Err(nodes[i].source.wrap(
+                            format!("Type mismatch: Expected `f64`, found `{}`",
+                                expr_type.as_ref().unwrap().description())));
+                    }
+                    this_ty = expr_type;
+                }
                 _ => {}
             }
             if this_ty.is_some() {
