@@ -76,6 +76,7 @@ fn test_syntax() {
     test_src("source/syntax/vec4.dyon");
     test_src("source/syntax/vec4_2.dyon");
     test_src("source/syntax/vec4_un_loop.dyon");
+    test_src("source/syntax/vec4_un_loop_2.dyon");
     test_src("source/syntax/color.dyon");
     test_src("source/syntax/parens.dyon");
     test_src("source/syntax/infer_pass.dyon");

@@ -118,7 +118,8 @@ _seps: "(){}[],.:;=<>*·+-/%^?|&∧∨!¬∑∃∀\n"
 54 any = [label {"any" "∃"} short_body]
 55 all = [label {"all" "∀"} short_body]
 56 sum_vec4 = [label {"sum_vec4" "∑vec4"} short_body]
-57 vec4_un_loop = ["vec4" w .._seps!:"name" w expr:"expr"]
+57 vec4_un_loop = ["vec" {"4":"4" "3":"3" "2":"2"}
+                   w .._seps!:"name" w expr:"expr"]
 
 60 type = {
     "bool":"bool"
