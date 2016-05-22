@@ -137,7 +137,7 @@ _seps: "(){}[],.:;=<>*·+-/%^?|&∧∨!¬∑∃∀\n"
 }
 
 101 + = [?w {"+":"+" "||":"+" "∨":"+" "or":"+"} ?w]
-102 - = [?w "-":"-" ?w]
+102 - = [wn "-":"-" ?w]
 // Allow whitespace before multiplication sign, but no new line.
 // This prevents `x` on a new line from being interpreted as multiplication sign.
 103 * = [wn {

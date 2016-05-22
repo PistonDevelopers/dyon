@@ -1,5 +1,7 @@
 fn main() {
-    meta_data := unwrap(load(meta: "meta/test_3/syntax.txt",
-                      file: "meta/test_3/data.txt"))
-    println(json_from(meta_data: meta_data))
+    a := {
+        b := 3 * 3
+        -2
+    }
+    println(a)
 }
