@@ -21,7 +21,7 @@ _seps: "(){}[],.:;=<>*·+-/%^?|&∧∨!¬∑∃∀\n"
 4 expr = [{
     object:"object"
     arr
-    ["return" .w! expr:"return"]
+    ["return" wn expr:"return"]
     for_n:"for_n"
     for:"for"
     loop:"loop"

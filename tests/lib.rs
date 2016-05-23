@@ -66,6 +66,7 @@ fn test_syntax() {
     test_src("source/syntax/named_call.dyon");
     test_src("source/syntax/max_min.dyon");
     test_src("source/syntax/return_void.dyon");
+    test_src("source/syntax/return_void_2.dyon");
     test_src("source/syntax/typeof.dyon");
     test_src("source/syntax/load_module.dyon");
     test_src("source/syntax/println_colon.dyon");
