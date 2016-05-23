@@ -66,6 +66,17 @@ pub fn check(
     let returns: Vec<usize> = nodes.iter().enumerate()
         .filter(|&(_, n)| n.kind == Kind::Return).map(|(i, _)| i).collect();
 
+    // Collect indices to expressions in mathematical declared functions.
+    let math_expr: Vec<usize> = nodes.iter().enumerate()
+        .filter(|&(_, n)| {
+            if n.kind != Kind::Expr { return false; }
+            if let Some(parent) = n.parent {
+                if nodes[parent].kind != Kind::Fn { return false; }
+            }
+            true
+        })
+        .map(|(i, _)| i).collect();
+
     // Collect indices to expressions at end of blocks.
     let end_of_blocks: Vec<usize> = nodes.iter().enumerate()
         .filter(|&(i, n)| {
@@ -413,6 +424,15 @@ pub fn check(
         try!(compare_lifetimes(
             &Some(Lifetime::Return(vec![])), lifetime_right, &nodes)
                 .map_err(|err| nodes[right].source.wrap(err))
+        );
+    }
+
+    // Check the lifetime of expressions that are mathematically declared.
+    for &i in &math_expr {
+        let ref lifetime_right = nodes[i].lifetime(&nodes, &arg_names);
+        try!(compare_lifetimes(
+            &Some(Lifetime::Return(vec![])), lifetime_right, &nodes)
+                .map_err(|err| nodes[i].source.wrap(err))
         );
     }
 
