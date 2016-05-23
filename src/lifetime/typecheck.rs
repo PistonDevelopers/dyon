@@ -141,7 +141,8 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                     if let Some(decl) = nodes[i].declaration {
                         match nodes[decl].kind {
                             Kind::Sum | Kind::Min | Kind::Max |
-                            Kind::Any | Kind::All | Kind::Sift => {
+                            Kind::Any | Kind::All | Kind::Sift |
+                            Kind::Vec4UnLoop => {
                                 if nodes[i].try {
                                     return Err(nodes[i].source.wrap(
                                         "Can not use `?` with a number".into()));

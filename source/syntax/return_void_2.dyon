@@ -1,6 +1,4 @@
 fn main() {
-    println("1")
     return
-    println("2")
     a := 2
 }
