@@ -180,7 +180,7 @@ fn write_variable<W>(
 ) -> Result<(), io::Error>
     where W: io::Write
 {
-    match *rt.resolve(v) {
+    match *v {
         Variable::Text(ref t) => {
             match escape_string {
                 EscapeString::Json => {
@@ -211,7 +211,7 @@ fn write_variable<W>(
             try!(write!(w, "{}", x));
         }
         Variable::Ref(ind) => {
-            print_variable(rt, &rt.stack[ind], escape_string);
+            try!(write_variable(w, rt, &rt.stack[ind], escape_string));
         }
         Variable::Object(ref obj) => {
             try!(write!(w, "{{"));
