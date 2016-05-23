@@ -149,11 +149,14 @@ pub fn set_title<W: Any + AdvancedWindow>(rt: &mut Runtime) -> Result<(), String
     Ok(())
 }
 
+/// Helper method for drawing 2D in Dyon environment.
 pub fn draw_2d<G: Graphics>(rt: &mut Runtime, c: Context, g: &mut G) -> Result<(), String> {
     use self::graphics::*;
+    use self::graphics::types::Matrix2d;
 
     let draw_list = rt.stack.pop().expect("There is no value on the stack");
     let arr = rt.resolve(&draw_list);
+    let mut transform = c.transform;
     if let &Variable::Array(ref arr) = arr {
         for it in &**arr {
             let it = rt.resolve(it);
@@ -164,18 +167,28 @@ pub fn draw_2d<G: Graphics>(rt: &mut Runtime, c: Context, g: &mut G) -> Result<(
                         let color: [f32; 4] = try!(rt.var_vec4(&it[1]));
                         clear(color, g);
                     }
+                    "transform_rx_ry" => {
+                        // Changes transform matrix.
+                        let rx: [f32; 4] = try!(rt.var_vec4(&it[1]));
+                        let ry: [f32; 4] = try!(rt.var_vec4(&it[2]));
+                        let t: Matrix2d = [
+                            [rx[0] as f64, rx[1] as f64, rx[2] as f64],
+                            [ry[0] as f64, ry[1] as f64, ry[2] as f64]
+                        ];
+                        transform = math::multiply(c.transform, t);
+                    }
                     "line_color_radius_from_to" => {
                         let color: [f32; 4] = try!(rt.var_vec4(&it[1]));
                         let radius: f64 = try!(rt.var(&it[2]));
                         let from: [f64; 2] = try!(rt.var_vec4(&it[3]));
                         let to: [f64; 2] = try!(rt.var_vec4(&it[4]));
-                        line(color, radius, [from[0], from[1], to[0], to[1]], c.transform, g);
+                        line(color, radius, [from[0], from[1], to[0], to[1]], transform, g);
                     }
                     "rectangle_color_corner_size" => {
                         let color: [f32; 4] = try!(rt.var_vec4(&it[1]));
                         let corner: [f64; 2] = try!(rt.var_vec4(&it[2]));
                         let size: [f64; 2] = try!(rt.var_vec4(&it[3]));
-                        rectangle(color, [corner[0], corner[1], size[0], size[1]], c.transform, g);
+                        rectangle(color, [corner[0], corner[1], size[0], size[1]], transform, g);
                     }
                     "ellipse_color_corner_size_resolution" => {
                         let color: [f32; 4] = try!(rt.var_vec4(&it[1]));
@@ -184,7 +197,7 @@ pub fn draw_2d<G: Graphics>(rt: &mut Runtime, c: Context, g: &mut G) -> Result<(
                         let resolution: u32 = try!(rt.var(&it[4]));
                         Ellipse::new(color)
                         .resolution(resolution as u32)
-                        .draw([corner[0], corner[1], size[0], size[1]], &c.draw_state, c.transform, g);
+                        .draw([corner[0], corner[1], size[0], size[1]], &c.draw_state, transform, g);
                     }
                     _ => {}
                 }
