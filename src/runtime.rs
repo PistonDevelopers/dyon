@@ -42,6 +42,8 @@ pub enum Flow {
 pub struct Call {
     // was .0
     pub fn_name: Arc<String>,
+    /// The index of the relative function in module.
+    pub index: usize,
     pub file: Option<Arc<String>>,
     // was .1
     pub stack_len: usize,
@@ -288,12 +290,14 @@ impl Runtime {
     pub fn push_fn(
         &mut self,
         name: Arc<String>,
+        index: usize,
         file: Option<Arc<String>>,
         st: usize,
         lc: usize
     ) {
         self.call_stack.push(Call {
             fn_name: name,
+            index: index,
             file: file,
             stack_len: st,
             local_len: lc
@@ -485,13 +489,13 @@ impl Runtime {
         let name: Arc<String> = Arc::new("main".into());
         let call = ast::Call {
             name: name.clone(),
-            f_index: Cell::new(module.find_function(&name)),
+            f_index: Cell::new(module.find_function(&name, 0)),
             args: vec![],
             source_range: Range::empty(0),
         };
         match call.f_index.get() {
             FnIndex::Loaded(f_index) => {
-                let f = &module.functions[f_index];
+                let f = &module.functions[f_index as usize];
                 if f.args.len() != 0 {
                     return Err(module.error(f.args[0].source_range,
                                "`main` should not have arguments"))
@@ -555,9 +559,10 @@ impl Runtime {
 
         let n = go.call.args.len();
         let mut stack = vec![];
+        let relative = self.call_stack.last().map(|c| c.index).unwrap();
         let mut fake_call = ast::Call {
             name: go.call.name.clone(),
-            f_index: Cell::new(module.find_function(&go.call.name)),
+            f_index: Cell::new(module.find_function(&go.call.name, relative)),
             args: Vec::with_capacity(n),
             source_range: go.call.source_range,
         };
@@ -578,10 +583,20 @@ impl Runtime {
                 go.call.args[i].source_range(), Variable::Ref(n-i-1)));
         }
         stack.reverse();
+
+        let last_call = self.call_stack.last().unwrap();
         let new_rt = Runtime {
             stack: stack,
             local_stack: vec![],
-            call_stack: vec![],
+            // Add last call because of loaded functions
+            // use relative index to the function it is calling from.
+            call_stack: vec![Call {
+                fn_name: last_call.fn_name.clone(),
+                index: last_call.index,
+                file: last_call.file.clone(),
+                stack_len: 0,
+                local_len: 0,
+            }],
             rng: self.rng.clone(),
             ret: self.ret.clone(),
             ref_type: self.ref_type.clone(),
@@ -645,13 +660,15 @@ impl Runtime {
                 }
             }
             FnIndex::Loaded(f_index) => {
-                let f = &module.functions[f_index];
+                let relative = self.call_stack.last().map(|c| c.index).unwrap_or(0);
+                let new_index = (f_index + relative as isize) as usize;
+                let f = &module.functions[new_index];
                 if call.arg_len() != f.args.len() {
                     return Err(module.error(call.source_range,
                         &format!("{}\nExpected {} arguments but found {}",
                         self.stack_trace(),
                         f.args.len(),
-                        call.args.len())));
+                        call.arg_len())));
                 }
                 // Arguments must be computed.
                 if f.returns() {
@@ -671,7 +688,7 @@ impl Runtime {
                                         self.stack_trace())))
                     };
                 }
-                self.push_fn(call.name.clone(), Some(f.file.clone()), st, lc);
+                self.push_fn(call.name.clone(), new_index, Some(f.file.clone()), st, lc);
                 if f.returns() {
                     self.local_stack.push((self.ret.clone(), st - 1));
                 }
