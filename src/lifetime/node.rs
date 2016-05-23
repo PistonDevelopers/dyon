@@ -152,6 +152,7 @@ impl Node {
         let mut call_arg_ind = 0;
         for &c in &self.children {
             match (self.kind, nodes[c].kind) {
+                (_, Kind::ReturnVoid) => {}
                 (_, Kind::Swizzle) => {}
                 (_, Kind::Loop) => {}
                 (_, Kind::Go) => {}

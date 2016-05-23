@@ -14,6 +14,16 @@ use self::graphics::{Context, Graphics};
 pub const NO_EVENT: &'static str = "No event";
 
 pub fn add_functions<W: Any + AdvancedWindow>(module: &mut Module) {
+    module.add(Arc::new("window_size".into()), window_size::<W>, PreludeFunction {
+        lts: vec![],
+        tys: vec![],
+        ret: Type::Vec4
+    });
+    module.add(Arc::new("window_draw_size".into()), window_draw_size::<W>, PreludeFunction {
+        lts: vec![],
+        tys: vec![],
+        ret: Type::Vec4
+    });
     module.add(Arc::new("render".into()), render, PreludeFunction {
         lts: vec![],
         tys: vec![],
@@ -68,6 +78,18 @@ pub fn add_functions<W: Any + AdvancedWindow>(module: &mut Module) {
             tys: vec![],
             ret: Type::Option(Box::new(Type::F64))
         });
+}
+
+pub fn window_size<W: Any + Window>(rt: &mut Runtime) -> Result<(), String> {
+    let size = unsafe { Current::<W>::new() }.size();
+    rt.push_vec4([size.width as f32, size.height as f32, 0.0, 0.0]);
+    Ok(())
+}
+
+pub fn window_draw_size<W: Any + Window>(rt: &mut Runtime) -> Result<(), String> {
+    let draw_size = unsafe { Current::<W>::new() }.draw_size();
+    rt.push_vec4([draw_size.width as f32, draw_size.height as f32, 0.0, 0.0]);
+    Ok(())
 }
 
 pub fn render(rt: &mut Runtime) -> Result<(), String> {

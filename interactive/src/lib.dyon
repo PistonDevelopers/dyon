@@ -1,3 +1,8 @@
+/// Returns the window size without border in points.
+fn window_size() -> vec4 { ... }
+
+/// Returns the frame buffer size in pixels.
+fn window_draw_size() -> vec4 { ... }
 
 /// Returns `true` when time to render.
 fn render() -> bool { ... }
