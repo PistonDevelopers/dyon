@@ -169,8 +169,9 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                        }
                     }
                 }
-                Kind::Return | Kind::Val | Kind::Expr
-                | Kind::Cond | Kind::Exp | Kind::Base | Kind::Right => {
+                Kind::Return | Kind::Val | Kind::Expr | Kind::Cond |
+                Kind::Exp | Kind::Base | Kind::Right | Kind::ElseIfCond
+                 => {
                     if nodes[i].children.len() == 0 { continue 'node; }
                     let ch = nodes[i].children[0];
                     if nodes[ch].item_ids() { continue 'node; }
@@ -250,7 +251,7 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                         _ => {}
                     }
                 }
-                Kind::Block => {
+                Kind::Block | Kind::TrueBlock | Kind::ElseIfBlock | Kind::ElseBlock => {
                     for &ch in nodes[i].children.last() {
                         if nodes[ch].item_ids() { continue 'node; }
                         if let Some(ref ty) = nodes[ch].ty {
@@ -282,6 +283,19 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                                 expr_type.as_ref().unwrap().description())));
                     }
                     this_ty = expr_type;
+                }
+                Kind::If => {
+                    let tb = match nodes[i].find_child_by_kind(nodes, Kind::TrueBlock) {
+                        None => continue 'node,
+                        Some(tb) => tb
+                    };
+                    let true_type = match nodes[tb].ty.as_ref()
+                        .map(|ty| nodes[i].inner_type(&ty)) {
+                            None => continue 'node,
+                            Some(true_type) => true_type
+                        };
+
+                    this_ty = Some(true_type);
                 }
                 _ => {}
             }
@@ -391,19 +405,51 @@ fn check_fn(n: usize, nodes: &Vec<Node>, ty: &Type) -> Result<(), Range<String>>
 }
 
 fn check_if(n: usize, nodes: &Vec<Node>) -> Result<(), Range<String>> {
-    for &ch in &nodes[n].children {
-        match nodes[ch].kind {
-            Kind::Cond => {
-                if let Some(ref cond_ty) = nodes[ch].ty {
-                    if !Type::Bool.goes_with(cond_ty) {
-                        return Err(nodes[ch].source.wrap(
-                            format!("Type mismatch: Expected `{}`, found `{}`",
-                                Type::Bool.description(), cond_ty.description())));
-                    }
-                }
+    if let Some(ch) = nodes[n].find_child_by_kind(nodes, Kind::Cond) {
+        if let Some(ref cond_ty) = nodes[ch].ty {
+            if !Type::Bool.goes_with(cond_ty) {
+                return Err(nodes[ch].source.wrap(
+                    format!("Type mismatch: Expected `{}`, found `{}`",
+                        Type::Bool.description(), cond_ty.description())));
             }
-            _ => {}
         }
     }
+
+    // The type of ifs are inferred from the true block.
+    let true_type = match nodes[n].ty {
+        None => return Ok(()),
+        Some(ref ty) => ty
+    };
+
+    for &ch in &nodes[n].children {
+        if let Kind::ElseIfCond = nodes[ch].kind {
+            if let Some(ref cond_ty) = nodes[ch].ty {
+                if !Type::Bool.goes_with(cond_ty) {
+                    return Err(nodes[ch].source.wrap(
+                        format!("Type mismatch: Expected `{}`, found `{}`",
+                            Type::Bool.description(), cond_ty.description())));
+                }
+            }
+        } else if let Kind::ElseIfBlock = nodes[ch].kind {
+            if let Some(ref else_if_type) = nodes[ch].ty {
+                if !else_if_type.goes_with(&true_type) {
+                    return Err(nodes[ch].source.wrap(
+                        format!("Type mismatch: Expected `{}`, found `{}`",
+                            true_type.description(), else_if_type.description())));
+                }
+            }
+        }
+    }
+
+    if let Some(eb) = nodes[n].find_child_by_kind(nodes, Kind::ElseBlock) {
+        if let Some(ref else_type) = nodes[eb].ty {
+            if !else_type.goes_with(&true_type) {
+                return Err(nodes[eb].source.wrap(
+                    format!("Type mismatch: Expected `{}`, found `{}`",
+                        true_type.description(), else_type.description())));
+            }
+        }
+    }
+
     Ok(())
 }

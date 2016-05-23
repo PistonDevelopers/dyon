@@ -1,0 +1,5 @@
+δ(x) = if x == 0 { 1 } else if 1 { 0 } else { 0 }
+
+fn main() {
+    println(δ(0))
+}

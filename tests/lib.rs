@@ -123,6 +123,10 @@ fn test_typechk() {
     test_fail_src("source/typechk/unused_result_2.dyon");
     test_src("source/typechk/res.dyon");
     test_fail_src("source/typechk/vec4.dyon");
+    test_src("source/typechk/if.dyon");
+    test_fail_src("source/typechk/if_2.dyon");
+    test_fail_src("source/typechk/if_3.dyon");
+    test_fail_src("source/typechk/if_4.dyon");
 }
 
 #[test]
