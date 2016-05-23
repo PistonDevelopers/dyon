@@ -1,13 +1,14 @@
-translate(x: f64, y: f64, z: f64) =
-    [
-        [1, 0, 0, x],
-        [0, 1, 0, y],
-        [0, 0, 1, z],
-        [0, 0, 0, 1],
-    ]
+transform_mat_vec(mat: [[f64]], v: vec4) = vec4 i (vec4 j mat[i][j]) *. v
+point(v: vec4) = (xyz v, 1)
 
 fn main() {
-    a := (1, 2)
-    move := translate(xyz a)
-    println(move)
+    mat := [
+        [1, 0, 0, 2],
+        [0, 1, 0, 3],
+        [0, 0, 1, 4],
+        [0, 0, 0, 1]
+    ]
+    v := (0,)
+    new_v := transform(mat: mat, vec: point(v))
+    println(new_v)
 }
