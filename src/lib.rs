@@ -171,7 +171,8 @@ impl PartialEq for Variable {
 #[derive(Clone, Copy, Debug)]
 pub enum FnIndex {
     None,
-    Loaded(usize),
+    /// Relative to function you call from.
+    Loaded(isize),
     External(usize),
 }
 
@@ -211,13 +212,14 @@ impl Module {
         self.functions.push(function);
     }
 
-    pub fn find_function(&self, name: &Arc<String>) -> FnIndex {
-        for (i, f) in self.functions.iter().enumerate() {
+    /// Find function relative another function index.
+    pub fn find_function(&self, name: &Arc<String>, relative: usize) -> FnIndex {
+        for (i, f) in self.functions.iter().enumerate().rev() {
             if &f.name == name {
-                return FnIndex::Loaded(i);
+                return FnIndex::Loaded(i as isize - relative as isize);
             }
         }
-        for (i, f) in self.ext_prelude.iter().enumerate() {
+        for (i, f) in self.ext_prelude.iter().enumerate().rev() {
             if &f.name == name {
                 return FnIndex::External(i);
             }
@@ -297,8 +299,8 @@ pub fn load(source: &str, module: &mut Module) -> Result<(), String> {
     match handle.join().unwrap() {
         Ok(refined_rets) => {
             for (name, ty) in &refined_rets {
-                if let FnIndex::Loaded(f_index) = module.find_function(name) {
-                    let f = &mut module.functions[f_index];
+                if let FnIndex::Loaded(f_index) = module.find_function(name, 0) {
+                    let f = &mut module.functions[f_index as usize];
                     f.ret = ty.clone();
                 }
             }
