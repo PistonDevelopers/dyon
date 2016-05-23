@@ -1,0 +1,6 @@
+δ(x) = if x == 0 { 1 } else { 0 }
+
+fn main() {
+    a := sift i 4 { vec4 j δ(i-j) }
+    println(a)
+}
