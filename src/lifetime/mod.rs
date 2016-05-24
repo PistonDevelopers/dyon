@@ -33,7 +33,11 @@ pub fn check(
             Kind::Fn | Kind::Call => {}
             _ => continue
         };
-        let mutable_args = nodes[i].children.iter().any(|&arg| nodes[arg].mutable);
+        let mutable_args = nodes[i].children.iter()
+            .any(|&arg|
+                (nodes[arg].kind == Kind::Arg ||
+                 nodes[arg].kind == Kind::CallArg) &&
+                nodes[arg].mutable);
         if mutable_args {
             let mut name_plus_args = String::from(&***nodes[i].name().unwrap());
             name_plus_args.push('(');
@@ -613,7 +617,8 @@ pub fn check(
     // Check that mutable locals are not immutable arguments.
     for &(_, i) in &mutated_locals {
         if let Some(decl) = nodes[i].declaration {
-            if nodes[decl].kind == Kind::Arg {
+            if nodes[decl].kind == Kind::Arg ||
+               nodes[decl].kind == Kind::Current {
                 if !nodes[decl].mutable {
                     return Err(nodes[i].source.wrap(
                         format!("Requires `mut {}`", nodes[i].name().unwrap())

@@ -7,7 +7,7 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n"
 202 w = .r!({.w! comment})
 
 0 fn = {
-    ["fn" .w! .."("!:"name" ?w "(" ?w args ?w ")" ?w ?currents {
+    ["fn" .w! .."("!:"name" ?w "(" ?w args ?w ")" ?w ?currents ?w {
         ["->":"returns" ?w ?type:"ret_type"]
         !"->":!"returns"
     } ?w block:"block"]

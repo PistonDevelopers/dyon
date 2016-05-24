@@ -12,6 +12,14 @@ pub enum Lifetime {
     Argument(Vec<usize>),
     /// Local variable.
     Local(usize),
+    /// Current variable.
+    ///
+    /// Is equal to itself and outlives local variables.
+    ///
+    /// Unknown to return because lifetime checker infers
+    /// lifetime or return value from argument, which does not work
+    /// with current objects.
+    Current(usize),
 }
 
 impl PartialOrd for Lifetime {
@@ -19,6 +27,11 @@ impl PartialOrd for Lifetime {
         use self::Lifetime::*;
 
         Some(match (self, other) {
+            (&Current(_), &Local(_)) => Ordering::Greater,
+            (&Local(_), &Current(_)) => Ordering::Less,
+            (&Current(a), &Current(b)) if a == b => Ordering::Equal,
+            (&Current(_), _) => return None,
+            (_, &Current(_)) => return None,
             (&Local(a), &Local(b)) => b.cmp(&a),
             (&Return(_), &Local(_)) => Ordering::Greater,
             (&Local(_), &Return(_)) => Ordering::Less,
@@ -113,6 +126,10 @@ pub fn compare_lifetimes(
                             return Err(format!("`{}` does not live long enough",
                                 nodes[r[0]].name().expect("Expected name")));
                         }
+                        &Lifetime::Current(r) => {
+                            return Err(format!("`{}` does not live long enough",
+                                nodes[r].name().expect("Expected name")));
+                        }
                         _ => unimplemented!()
                     }
                 }
@@ -153,6 +170,14 @@ pub fn compare_lifetimes(
                             } else {
                                 unimplemented!();
                             }
+                        }
+                        (&Lifetime::Current(n), _) => {
+                            return Err(format!("`{}` is a current object, use `clone(_)`",
+                                nodes[n].name().expect("Expected name")));
+                        }
+                        (_, &Lifetime::Current(n)) => {
+                            return Err(format!("`{}` is a current object, use `clone(_)`",
+                                nodes[n].name().expect("Expected name")));
                         }
                         x => panic!("Unknown case {:?}", x)
                     }

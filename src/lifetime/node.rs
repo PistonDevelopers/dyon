@@ -108,6 +108,8 @@ impl Node {
                 let arg = &nodes[declaration];
                 if arg.kind == Kind::Arg {
                     return arg_lifetime(declaration, &arg, nodes, arg_names);
+                } else if arg.kind == Kind::Current {
+                    return Some(Lifetime::Current(declaration));
                 } else {
                     return Some(Lifetime::Local(declaration));
                 }

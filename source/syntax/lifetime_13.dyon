@@ -1,0 +1,10 @@
+fn main() {
+    ~ foo := [[0]]
+    x := [1]
+    bar(x)
+    println(foo)
+}
+
+fn bar(x) ~ mut foo {
+    foo[0] = x
+}
