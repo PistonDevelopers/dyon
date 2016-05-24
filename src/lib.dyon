@@ -42,6 +42,9 @@ fn pop(mut array: 'return [any]) -> any { ... }
 /// Reverses the items in array.
 fn reverse(mut array: [any]) { ... }
 
+/// Removes all items from array.
+fn clear(mut array: [any]) { ... }
+
 /// Swaps two items in array.
 fn swap(mut array: [any], i: f64, j: f64) { ... }
 
