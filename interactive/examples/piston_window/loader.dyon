@@ -9,20 +9,20 @@ fn main() {
     m := unwrap(load(source: source, imports: [render]))
     call(m, "init", [])
 
-    settings := call_ret(m, "settings", [])
-    data := call_ret(m, "init_data", [settings])
+    ~ settings := call_ret(m, "settings", [])
+    ~ data := call_ret(m, "init_data", [settings])
     loader := new_loader(interval: settings.reload_interval)
     set(title: call_ret(m, "title", []))
     loop {
         if !next_event() { break }
         if render() {
-            call(m, "render", [settings, data])
+            call(m, "render", [])
         }
         if update() {
             dt := unwrap(update_dt())
             // Slow down when window is unfocused.
             dt *= if data.focused { settings.focus_speed } else { settings.unfocus_speed }
-            call(m, "update(mut,_,_)", [data, settings, dt])
+            call(m, "update", [dt])
         }
         event(loader: mut loader, source: source,
               settings: mut settings, module: mut m,

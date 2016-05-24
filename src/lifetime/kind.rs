@@ -3,6 +3,7 @@
 pub enum Kind {
     Fn,
     Arg,
+    Current,
     Block,
     Expr,
     Add,
@@ -76,6 +77,7 @@ impl Kind {
         Some(match name {
             "fn" => Kind::Fn,
             "arg" => Kind::Arg,
+            "current" => Kind::Current,
             "block" => Kind::Block,
             "expr" => Kind::Expr,
             "add" => Kind::Add,

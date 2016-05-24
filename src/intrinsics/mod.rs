@@ -284,6 +284,7 @@ pub fn call_standard(
 ) -> Result<(Expect, Flow), String> {
     let st = rt.stack.len();
     let lc = rt.local_stack.len();
+    let cu = rt.current_stack.len();
     for arg in &call.args {
         match try!(rt.expression(arg, Side::Right, module)) {
             (x, Flow::Return) => { return Ok((x, Flow::Return)); }
@@ -296,7 +297,7 @@ pub fn call_standard(
     }
     let vec4_comp = |rt: &mut Runtime, module: &Module, call: &ast::Call, i: usize|
                      -> Result<Expect, String> {
-        rt.push_fn(call.name.clone(), 0, None, st + 1, lc);
+        rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
         let v = rt.stack.pop().expect(TINVOTS);
         let v = match rt.resolve(&v) {
             &Variable::Vec4(ref vec4) => Variable::F64(vec4[i] as f64),
@@ -313,7 +314,7 @@ pub fn call_standard(
         "z" => try!(vec4_comp(rt, module, call, 2)),
         "w" => try!(vec4_comp(rt, module, call, 3)),
         "s" => {
-            rt.push_fn(call.name.clone(), 0, None, st + 1, lc);
+            rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let ind = rt.stack.pop().expect(TINVOTS);
             let ind = match rt.resolve(&ind) {
                 &Variable::F64(val) => val,
@@ -340,7 +341,7 @@ pub fn call_standard(
             Expect::Something
         }
         "clone" => {
-            rt.push_fn(call.name.clone(), 0, None, st + 1, lc);
+            rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let v = rt.stack.pop().expect(TINVOTS);
             let v = rt.resolve(&v).deep_clone(&rt.stack);
             rt.stack.push(v);
@@ -348,7 +349,7 @@ pub fn call_standard(
             Expect::Something
         }
         "println" => {
-            rt.push_fn(call.name.clone(), 0, None, st, lc);
+            rt.push_fn(call.name.clone(), 0, None, st, lc, cu);
             let x = rt.stack.pop().expect(TINVOTS);
             print_variable(rt, &x, EscapeString::None);
             println!("");
@@ -356,7 +357,7 @@ pub fn call_standard(
             Expect::Nothing
         }
         "print" => {
-            rt.push_fn(call.name.clone(), 0, None, st, lc);
+            rt.push_fn(call.name.clone(), 0, None, st, lc, cu);
             let x = rt.stack.pop().expect(TINVOTS);
             print_variable(rt, &x, EscapeString::None);
             rt.pop_fn(call.name.clone());
@@ -381,7 +382,7 @@ pub fn call_standard(
             use std::thread::sleep;
             use std::time::Duration;
 
-            rt.push_fn(call.name.clone(), 0, None, st, lc);
+            rt.push_fn(call.name.clone(), 0, None, st, lc, cu);
             let v = rt.stack.pop().expect(TINVOTS);
             let v = match rt.resolve(&v) {
                 &Variable::F64(b) => b,
@@ -395,14 +396,14 @@ pub fn call_standard(
             Expect::Nothing
         }
         "random" => {
-            rt.push_fn(call.name.clone(), 0, None, st + 1, lc);
+            rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let v = Variable::F64(rt.rng.gen());
             rt.stack.push(v);
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
         "len" => {
-            rt.push_fn(call.name.clone(), 0, None, st + 1, lc);
+            rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let v = match rt.stack.pop() {
                 Some(v) => v,
                 None => panic!(TINVOTS)
@@ -421,7 +422,7 @@ pub fn call_standard(
             Expect::Something
         }
         "push_ref(mut,_)" => {
-            rt.push_fn(call.name.clone(), 0, None, st, lc);
+            rt.push_fn(call.name.clone(), 0, None, st, lc, cu);
             let item = rt.stack.pop().expect(TINVOTS);
             let v = rt.stack.pop().expect(TINVOTS);
 
@@ -446,7 +447,7 @@ pub fn call_standard(
             Expect::Nothing
         }
         "push(mut,_)" => {
-            rt.push_fn(call.name.clone(), 0, None, st, lc);
+            rt.push_fn(call.name.clone(), 0, None, st, lc, cu);
             let item = rt.stack.pop().expect(TINVOTS);
             let item = rt.resolve(&item).deep_clone(&rt.stack);
             let v = rt.stack.pop().expect(TINVOTS);
@@ -472,7 +473,7 @@ pub fn call_standard(
             Expect::Nothing
         }
         "pop(mut)" => {
-            rt.push_fn(call.name.clone(), 0, None, st + 1, lc);
+            rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let arr = rt.stack.pop().expect(TINVOTS);
             let mut v: Option<Variable> = None;
             if let Variable::Ref(ind) = arr {
@@ -504,7 +505,7 @@ pub fn call_standard(
             Expect::Something
         }
         "reverse(mut)" => {
-            rt.push_fn(call.name.clone(), 0, None, st, lc);
+            rt.push_fn(call.name.clone(), 0, None, st, lc, cu);
             let v = rt.stack.pop().expect(TINVOTS);
             if let Variable::Ref(ind) = v {
                 let ok = if let Variable::Array(ref mut arr) = rt.stack[ind] {
@@ -527,7 +528,7 @@ pub fn call_standard(
             Expect::Nothing
         }
         "clear(mut)" => {
-            rt.push_fn(call.name.clone(), 0, None, st, lc);
+            rt.push_fn(call.name.clone(), 0, None, st, lc, cu);
             let v = rt.stack.pop().expect(TINVOTS);
             if let Variable::Ref(ind) = v {
                 let ok = if let Variable::Array(ref mut arr) = rt.stack[ind] {
@@ -550,7 +551,7 @@ pub fn call_standard(
             Expect::Nothing
         }
         "swap(mut,_,_)" => {
-            rt.push_fn(call.name.clone(), 0, None, st, lc);
+            rt.push_fn(call.name.clone(), 0, None, st, lc, cu);
             let j = rt.stack.pop().expect(TINVOTS);
             let i = rt.stack.pop().expect(TINVOTS);
             let j = match rt.resolve(&j) {
@@ -587,7 +588,7 @@ pub fn call_standard(
         "read_line" => {
             use std::io::{self, Write};
 
-            rt.push_fn(call.name.clone(), 0, None, st + 1, lc);
+            rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let mut input = String::new();
             io::stdout().flush().unwrap();
             let error = match io::stdin().read_line(&mut input) {
@@ -607,7 +608,7 @@ pub fn call_standard(
         "read_number" => {
             use std::io::{self, Write};
 
-            rt.push_fn(call.name.clone(), 0, None, st + 1, lc);
+            rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let err = rt.stack.pop().expect(TINVOTS);
             let err = match rt.resolve(&err) {
                 &Variable::Text(ref t) => t.clone(),
@@ -643,7 +644,7 @@ pub fn call_standard(
             Expect::Something
         }
         "trim" => {
-            rt.push_fn(call.name.clone(), 0, None, st + 1, lc);
+            rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let v = rt.stack.pop().expect(TINVOTS);
             let v = match rt.resolve(&v) {
                 &Variable::Text(ref t) => t.clone(),
@@ -655,7 +656,7 @@ pub fn call_standard(
             Expect::Something
         }
         "trim_left" => {
-            rt.push_fn(call.name.clone(), 0, None, st + 1, lc);
+            rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let v = rt.stack.pop().expect(TINVOTS);
             let v = match rt.resolve(&v) {
                 &Variable::Text(ref t) => t.clone(),
@@ -667,7 +668,7 @@ pub fn call_standard(
             Expect::Something
         }
         "trim_right" => {
-            rt.push_fn(call.name.clone(), 0, None, st + 1, lc);
+            rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let v = rt.stack.pop().expect(TINVOTS);
             let mut v = match rt.resolve(&v) {
                 &Variable::Text(ref t) => t.clone(),
@@ -685,7 +686,7 @@ pub fn call_standard(
             Expect::Something
         }
         "to_string" => {
-            rt.push_fn(call.name.clone(), 0, None, st + 1, lc);
+            rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let v = rt.stack.pop().expect(TINVOTS);
             let mut buf: Vec<u8> = vec![];
             write_variable(&mut buf, rt, rt.resolve(&v), EscapeString::None).unwrap();
@@ -695,7 +696,7 @@ pub fn call_standard(
             Expect::Something
         }
         "to_string_color" => {
-            rt.push_fn(call.name.clone(), 0, None, st + 1, lc);
+            rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let v = rt.stack.pop().expect(TINVOTS);
             let v = match rt.resolve(&v) {
                 &Variable::Vec4(val) => val,
@@ -728,7 +729,7 @@ pub fn call_standard(
             Expect::Something
         }
         "srgb_to_linear_color" => {
-            rt.push_fn(call.name.clone(), 0, None, st + 1, lc);
+            rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let v = rt.stack.pop().expect(TINVOTS);
             let v = match rt.resolve(&v) {
                 &Variable::Vec4(val) => val,
@@ -748,7 +749,7 @@ pub fn call_standard(
             Expect::Something
         }
         "linear_to_srgb_color" => {
-            rt.push_fn(call.name.clone(), 0, None, st + 1, lc);
+            rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let v = rt.stack.pop().expect(TINVOTS);
             let v = match rt.resolve(&v) {
                 &Variable::Vec4(val) => val,
@@ -768,7 +769,7 @@ pub fn call_standard(
             Expect::Something
         }
         "typeof" => {
-            rt.push_fn(call.name.clone(), 0, None, st + 1, lc);
+            rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let v = rt.stack.pop().expect(TINVOTS);
             let v = match rt.resolve(&v) {
                 &Variable::Text(_) => rt.text_type.clone(),
@@ -790,14 +791,15 @@ pub fn call_standard(
             Expect::Something
         }
         "debug" => {
-            rt.push_fn(call.name.clone(), 0, None, st, lc);
+            rt.push_fn(call.name.clone(), 0, None, st, lc, cu);
             println!("Stack {:#?}", rt.stack);
             println!("Locals {:#?}", rt.local_stack);
+            println!("Currents {:#?}", rt.current_stack);
             rt.pop_fn(call.name.clone());
             Expect::Nothing
         }
         "backtrace" => {
-            rt.push_fn(call.name.clone(), 0, None, st, lc);
+            rt.push_fn(call.name.clone(), 0, None, st, lc, cu);
             println!("{:#?}", rt.call_stack);
             rt.pop_fn(call.name.clone());
             Expect::Nothing
@@ -805,7 +807,7 @@ pub fn call_standard(
         "load" => {
             use load;
 
-            rt.push_fn(call.name.clone(), 0, None, st + 1, lc);
+            rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let v = rt.stack.pop().expect(TINVOTS);
             let v = match rt.resolve(&v) {
                 &Variable::Text(ref text) => {
@@ -836,7 +838,7 @@ pub fn call_standard(
         "load_source_imports" => {
             use load;
 
-            rt.push_fn(call.name.clone(), 0, None, st + 1, lc);
+            rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let modules = rt.stack.pop().expect(TINVOTS);
             let source = rt.stack.pop().expect(TINVOTS);
             let mut new_module = Module::new();
@@ -893,7 +895,7 @@ pub fn call_standard(
             Expect::Something
         }
         "call" => {
-            rt.push_fn(call.name.clone(), 0, None, st, lc);
+            rt.push_fn(call.name.clone(), 0, None, st, lc, cu);
             let args = rt.stack.pop().expect(TINVOTS);
             let fn_name = rt.stack.pop().expect(TINVOTS);
             let call_module = rt.stack.pop().expect(TINVOTS);
@@ -958,7 +960,7 @@ pub fn call_standard(
             Expect::Nothing
         }
         "call_ret" => {
-            rt.push_fn(call.name.clone(), 0, None, st + 1, lc);
+            rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let args = rt.stack.pop().expect(TINVOTS);
             let fn_name = rt.stack.pop().expect(TINVOTS);
             let call_module = rt.stack.pop().expect(TINVOTS);
@@ -1024,7 +1026,7 @@ pub fn call_standard(
         }
         "functions" => {
             // List available functions in scope.
-            rt.push_fn(call.name.clone(), 0, None, st + 1, lc);
+            rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let mut functions = vec![];
             let name: Arc<String> = Arc::new("name".into());
             let arguments: Arc<String> = Arc::new("arguments".into());
@@ -1143,7 +1145,7 @@ pub fn call_standard(
             Expect::Something
         }
         "some" => {
-            rt.push_fn(call.name.clone(), 0, None, st + 1, lc);
+            rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let v = rt.stack.pop().expect(TINVOTS);
             let v = rt.resolve(&v).deep_clone(&rt.stack);
             rt.stack.push(Variable::Option(Some(Box::new(v))));
@@ -1151,7 +1153,7 @@ pub fn call_standard(
             Expect::Something
         }
         "ok" => {
-            rt.push_fn(call.name.clone(), 0, None, st + 1, lc);
+            rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let v = rt.stack.pop().expect(TINVOTS);
             let v = rt.resolve(&v).deep_clone(&rt.stack);
             rt.stack.push(Variable::Result(Ok(Box::new(v))));
@@ -1159,7 +1161,7 @@ pub fn call_standard(
             Expect::Something
         }
         "err" => {
-            rt.push_fn(call.name.clone(), 0, None, st + 1, lc);
+            rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let v = rt.stack.pop().expect(TINVOTS);
             let v = rt.resolve(&v).deep_clone(&rt.stack);
             rt.stack.push(Variable::Result(Err(Box::new(
@@ -1168,7 +1170,7 @@ pub fn call_standard(
             Expect::Something
         }
         "is_err" => {
-            rt.push_fn(call.name.clone(), 0, None, st + 1, lc);
+            rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let v = rt.stack.pop().expect(TINVOTS);
             let v = match rt.resolve(&v) {
                 &Variable::Result(Err(_)) => Variable::Bool(true),
@@ -1183,7 +1185,7 @@ pub fn call_standard(
             Expect::Something
         }
         "is_ok" => {
-            rt.push_fn(call.name.clone(), 0, None, st + 1, lc);
+            rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let v = rt.stack.pop().expect(TINVOTS);
             let v = match rt.resolve(&v) {
                 &Variable::Result(Err(_)) => Variable::Bool(false),
@@ -1198,7 +1200,7 @@ pub fn call_standard(
             Expect::Something
         }
         "min" => {
-            rt.push_fn(call.name.clone(), 0, None, st + 1, lc);
+            rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let v = rt.stack.pop().expect(TINVOTS);
             let v = match rt.resolve(&v) {
                 &Variable::Array(ref arr) => {
@@ -1224,7 +1226,7 @@ pub fn call_standard(
             Expect::Something
         }
         "max" => {
-            rt.push_fn(call.name.clone(), 0, None, st + 1, lc);
+            rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let v = rt.stack.pop().expect(TINVOTS);
             let v = match rt.resolve(&v) {
                 &Variable::Array(ref arr) => {
@@ -1252,7 +1254,7 @@ pub fn call_standard(
         "unwrap" => {
             // Return value does not depend on lifetime of argument since
             // `ok(x)` and `some(x)` perform a deep clone.
-            rt.push_fn(call.name.clone(), 0, None, st + 1, lc);
+            rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let v = rt.stack.pop().expect(TINVOTS);
             let v = match rt.resolve(&v) {
                 &Variable::Option(Some(ref v)) => (**v).clone(),
@@ -1288,7 +1290,7 @@ pub fn call_standard(
             Expect::Something
         }
         "unwrap_err" => {
-            rt.push_fn(call.name.clone(), 0, None, st + 1, lc);
+            rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let v = rt.stack.pop().expect(TINVOTS);
             let v = match rt.resolve(&v) {
                 &Variable::Result(Err(ref err)) => err.message.clone(),
@@ -1302,7 +1304,7 @@ pub fn call_standard(
             Expect::Something
         }
         "dir_angle" => {
-            rt.push_fn(call.name.clone(), 0, None, st + 1, lc);
+            rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let v = rt.stack.pop().expect(TINVOTS);
             let v = match rt.resolve(&v) {
                 &Variable::F64(val) => Variable::Vec4([val.cos() as f32, val.sin() as f32, 0.0, 0.0]),
@@ -1316,7 +1318,7 @@ pub fn call_standard(
             Expect::Something
         }
         "load_meta_file" => {
-            rt.push_fn(call.name.clone(), 0, None, st + 1, lc);
+            rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let file = rt.stack.pop().expect(TINVOTS);
             let meta = rt.stack.pop().expect(TINVOTS);
             let file = match rt.resolve(&file) {
@@ -1341,7 +1343,7 @@ pub fn call_standard(
             Expect::Something
         }
         "load_meta_url" => {
-            rt.push_fn(call.name.clone(), 0, None, st + 1, lc);
+            rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let url = rt.stack.pop().expect(TINVOTS);
             let meta = rt.stack.pop().expect(TINVOTS);
             let url = match rt.resolve(&url) {
@@ -1366,7 +1368,7 @@ pub fn call_standard(
             Expect::Something
         }
         "download_url_file" => {
-            rt.push_fn(call.name.clone(), 0, None, st + 1, lc);
+            rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let file = rt.stack.pop().expect(TINVOTS);
             let url = rt.stack.pop().expect(TINVOTS);
             let file = match rt.resolve(&file) {
@@ -1394,7 +1396,7 @@ pub fn call_standard(
         "join_thread" => {
             use Thread;
 
-            rt.push_fn(call.name.clone(), 0, None, st + 1, lc);
+            rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let thread = rt.stack.pop().expect(TINVOTS);
             let handle_res = Thread::invalidate_handle(rt, thread);
             rt.stack.push(Variable::Result({
@@ -1430,7 +1432,7 @@ pub fn call_standard(
             use std::error::Error;
             use std::fs::File;
 
-            rt.push_fn(call.name.clone(), 0, None, st + 1, lc);
+            rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let file = rt.stack.pop().expect(TINVOTS);
             let file = match rt.resolve(&file) {
                 &Variable::Text(ref t) => t.clone(),
@@ -1465,7 +1467,7 @@ pub fn call_standard(
         "json_from_meta_data" => {
             use std::error::Error;
 
-            rt.push_fn(call.name.clone(), 0, None, st + 1, lc);
+            rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let meta_data = rt.stack.pop().expect(TINVOTS);
             let json = match rt.resolve(&meta_data) {
                 &Variable::Array(ref arr) => {

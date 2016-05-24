@@ -55,28 +55,26 @@ fn init_snake_body_parts_size(parts: f64, size: vec4) -> [] {
     return clone(body)
 }
 
-fn render(settings: {}, data: {}) {
+fn render() ~ settings: {}, data: {} {
     radius := 20
     offset := 1
     n := len(data.snake_body)
-    d := []
-    clear(dlist: mut d, color: settings.background_color)
+    ~ draw_list := []
+    clear(color: settings.background_color)
     for i n-1 {
-        line(dlist: mut d, color: #29271f, radius: 1,
+        line(color: #29271f, radius: 1,
              from: data.snake_body[i+1], to: data.snake_body[i])
     }
     for i n {
         pos := data.snake_body[i]
-        circle(dlist: mut d, color: #000000,
-               center: pos, radius: radius)
+        circle(color: #000000, center: pos, radius: radius)
     }
     if n > 0 {
         dir_len := 20
         pos := data.snake_body[0]
         dir := dir(angle: data.snake_angle)
         pos2 := pos + dir * dir_len
-        line(dlist: mut d, color: #1510dc, radius: 1,
-             from: pos, to: pos2)
+        line(color: #1510dc, radius: 1, from: pos, to: pos2)
     }
 
     normal := #38642b
@@ -90,13 +88,13 @@ fn render(settings: {}, data: {}) {
     ]
 
     for i len(walls) {
-        line(dlist: mut d, color: walls[i][0], radius: 5, from: walls[i][1], to: walls[i][2])
+        line(color: walls[i][0], radius: 5, from: walls[i][1], to: walls[i][2])
     }
 
-    draw(d)
+    draw(draw_list)
 }
 
-fn update(mut data: {}, settings: {}, dt: f64) {
+fn update(dt: f64) ~ mut data: {}, settings: {} {
     if data.pressing_left {
         data.snake_angle -= settings.turn_speed * dt
     }

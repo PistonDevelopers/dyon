@@ -1,0 +1,17 @@
+fn foo() ~ bar {
+    println(bar)
+    {
+        ~ bar := "bye!"
+        baz()
+    }
+    println(bar)
+}
+
+fn baz() ~ bar {
+    println(bar)
+}
+
+fn main() {
+    ~ bar := "hi!"
+    foo()
+}

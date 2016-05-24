@@ -1,6 +1,12 @@
 fn main() {
-    println("1")
-    return
-    println("2")
-    a := 2
+    ~ foo := ["hi"]
+    foo()
+}
+
+fn foo() ~ mut foo {
+    bar(mut foo)
+}
+
+fn bar(mut foo) {
+    println(foo)
 }

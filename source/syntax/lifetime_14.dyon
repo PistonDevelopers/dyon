@@ -1,0 +1,8 @@
+fn main() {
+    ~ foo := "hi"
+    println(foo())
+}
+
+fn foo() ~ foo {
+    return foo
+}

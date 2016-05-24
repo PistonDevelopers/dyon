@@ -56,6 +56,7 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
                 }
                 E::Item(Item {
                     name: item.name.clone(),
+                    current: item.current,
                     stack_id: item.stack_id.clone(),
                     static_stack_id: item.static_stack_id.clone(),
                     try: item.try.clone(),

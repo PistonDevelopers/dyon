@@ -41,6 +41,7 @@ pub struct Function {
     pub name: Arc<String>,
     pub file: Arc<String>,
     pub args: Vec<Arg>,
+    pub currents: Vec<Current>,
     pub block: Block,
     pub ret: Type,
     pub resolved: Cell<bool>,
@@ -60,6 +61,7 @@ impl Function {
 
         let mut name: Option<Arc<String>> = None;
         let mut args: Vec<Arg> = vec![];
+        let mut currents: Vec<Current> = vec![];
         let mut block: Option<Block> = None;
         let mut expr: Option<Expression> = None;
         let mut ret: Option<Type> = None;
@@ -74,6 +76,10 @@ impl Function {
                     convert, ignored) {
                 convert.update(range);
                 args.push(val);
+            } else if let Ok((range, val)) = Current::from_meta_data(
+                    convert, ignored) {
+                convert.update(range);
+                currents.push(val);
             } else if let Ok((range, val)) = convert.meta_bool("returns") {
                 convert.update(range);
                 ret = Some(if val { Type::Any } else { Type::Void })
@@ -104,6 +110,7 @@ impl Function {
                 let source_range = expr.source_range();
                 let item = Expression::Item(Item {
                         name: Arc::new("return".into()),
+                        current: false,
                         stack_id: Cell::new(None),
                         static_stack_id: Cell::new(None),
                         try: false,
@@ -136,6 +143,7 @@ impl Function {
             name: name,
             file: file,
             args: args,
+            currents: currents,
             block: block,
             ret: ret,
             source_range: convert.source(start).unwrap(),
@@ -212,6 +220,53 @@ impl Arg {
             name: name,
             lifetime: lifetime,
             ty: ty,
+            source_range: convert.source(start).unwrap(),
+            mutable: mutable,
+        }))
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Current {
+    pub name: Arc<String>,
+    pub source_range: Range,
+    pub mutable: bool,
+}
+
+impl Current {
+    pub fn from_meta_data(mut convert: Convert, ignored: &mut Vec<Range>)
+    -> Result<(Range, Current), ()> {
+        let start = convert.clone();
+        let node = "current";
+        let start_range = try!(convert.start_node(node));
+        convert.update(start_range);
+
+        let mut name: Option<Arc<String>> = None;
+        let mut mutable = false;
+        loop {
+            if let Ok(range) = convert.end_node(node) {
+                convert.update(range);
+                break;
+            } else if let Ok((range, val)) = convert.meta_bool("mut") {
+                convert.update(range);
+                mutable = val;
+            } else if let Ok((range, val)) = convert.meta_string("name") {
+                convert.update(range);
+                name = Some(val);
+            } else if let Ok((range, _)) = Type::from_meta_data(
+                    "type", convert, ignored) {
+                convert.update(range);
+                // Just ignore type for now.
+            } else {
+                let range = convert.ignore();
+                convert.update(range);
+                ignored.push(range);
+            }
+        }
+
+        let name = try!(name.ok_or(()));
+        Ok((convert.subtract(start), Current {
+            name: name,
             source_range: convert.source(start).unwrap(),
             mutable: mutable,
         }))
@@ -341,6 +396,7 @@ impl Expression {
                 convert.update(range);
                 let item = Expression::Item(Item {
                         name: Arc::new("return".into()),
+                        current: false,
                         stack_id: Cell::new(None),
                         static_stack_id: Cell::new(None),
                         try: false,
@@ -1088,6 +1144,7 @@ pub struct Item {
     pub name: Arc<String>,
     pub stack_id: Cell<Option<usize>>,
     pub static_stack_id: Cell<Option<usize>>,
+    pub current: bool,
     pub try: bool,
     pub ids: Vec<Id>,
     // Stores indices of ids that should propagate errors.
@@ -1099,6 +1156,7 @@ impl Item {
     pub fn from_variable(name: Arc<String>, source_range: Range) -> Item {
         Item {
             name: name,
+            current: false,
             stack_id: Cell::new(None),
             static_stack_id: Cell::new(None),
             try: false,
@@ -1112,6 +1170,7 @@ impl Item {
     pub fn trunc(&self, n: usize) -> Item {
         Item {
             name: self.name.clone(),
+            current: self.current,
             stack_id: Cell::new(None),
             static_stack_id: Cell::new(None),
             try: self.try,
@@ -1138,6 +1197,7 @@ impl Item {
         convert.update(start_range);
 
         let mut name: Option<Arc<String>> = None;
+        let mut current = false;
         let mut ids = vec![];
         let mut try_ids = vec![];
         let mut try = false;
@@ -1148,6 +1208,9 @@ impl Item {
             } else if let Ok((range, val)) = convert.meta_string("name") {
                 convert.update(range);
                 name = Some(val);
+            } else if let Ok((range, _)) = convert.meta_bool("current") {
+                convert.update(range);
+                current = true;
             } else if let Ok((range, _)) = convert.meta_bool("try_item") {
                 convert.update(range);
                 try = true;
@@ -1184,6 +1247,7 @@ impl Item {
             name: name,
             stack_id: Cell::new(None),
             static_stack_id: Cell::new(None),
+            current: current,
             try: try,
             ids: ids,
             try_ids: try_ids,
