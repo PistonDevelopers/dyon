@@ -253,6 +253,10 @@ impl Current {
             } else if let Ok((range, val)) = convert.meta_string("name") {
                 convert.update(range);
                 name = Some(val);
+            } else if let Ok((range, _)) = Type::from_meta_data(
+                    "type", convert, ignored) {
+                convert.update(range);
+                // Just ignore type for now.
             } else {
                 let range = convert.ignore();
                 convert.update(range);

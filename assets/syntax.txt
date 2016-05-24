@@ -18,7 +18,7 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n"
 2 arg = [?"mut":"mut" ?w .._seps!:"name" ?[?w ":" ?w
          ?["'" ?w .._seps!:"lifetime"] ?w ?type:"type"]]
 3 currents = ["~" ?w .s!.(, current:"current")]
-4 current = [?"mut":"mut" ?w .._seps!:"name"]
+4 current = [?"mut":"mut" ?w .._seps!:"name" ?[?w ":" ?w type:"type"]]
 // Support both multi-line expressions and single line.
 5 block = ["{" ?w {.l([?w expr:"expr" ?w]) [?w expr:"expr"]} ?w "}"]
 6 expr = [{
