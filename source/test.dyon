@@ -1,6 +1,12 @@
 fn main() {
     ~ foo := ["hi"]
-    println(foo())
+    foo()
 }
 
-foo() ~ foo = clone(foo[0])
+fn foo() ~ mut foo {
+    bar(mut foo)
+}
+
+fn bar(mut foo) {
+    println(foo)
+}

@@ -649,7 +649,9 @@ pub fn check(
         {
             if let Some(n) = reference(arg) {
                 if let Some(decl) = nodes[n].declaration {
-                   if nodes[decl].kind == Kind::Arg && !nodes[decl].mutable {
+                   if (nodes[decl].kind == Kind::Arg ||
+                       nodes[decl].kind == Kind::Current) &&
+                       !nodes[decl].mutable {
                        return Err(nodes[n].source.wrap(
                            format!("Requires `mut {}`", nodes[n].name().unwrap())
                        ));
