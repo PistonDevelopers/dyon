@@ -210,7 +210,10 @@ pub fn check(
                 let mut found: Option<usize> = None;
                 for &j in &nodes[parent].children {
                     let arg = &nodes[j];
-                    if arg.kind != Kind::Arg { continue; }
+                    match arg.kind {
+                        Kind::Arg | Kind::Current => {}
+                        _ => continue
+                    };
                     if Some(true) == arg.name().map(|n|
                         &**n == &**nodes[i].name().unwrap()) {
                         found = Some(j);

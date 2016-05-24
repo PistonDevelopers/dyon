@@ -49,6 +49,7 @@ pub struct Call {
     pub stack_len: usize,
     // was .2
     pub local_len: usize,
+    pub current_len: usize,
 }
 
 pub struct Runtime {
@@ -56,6 +57,7 @@ pub struct Runtime {
     /// name, file, stack_len, local_len.
     pub call_stack: Vec<Call>,
     pub local_stack: Vec<(Arc<String>, usize)>,
+    pub current_stack: Vec<(Arc<String>, usize)>,
     pub ret: Arc<String>,
     pub rng: rand::StdRng,
     pub text_type: Variable,
@@ -205,6 +207,7 @@ impl Runtime {
             stack: vec![],
             call_stack: vec![],
             local_stack: vec![],
+            current_stack: vec![],
             ret: Arc::new("return".into()),
             rng: rand::StdRng::new().unwrap(),
             text_type: Variable::Text(Arc::new("string".into())),
@@ -293,25 +296,28 @@ impl Runtime {
         index: usize,
         file: Option<Arc<String>>,
         st: usize,
-        lc: usize
+        lc: usize,
+        cu: usize,
     ) {
         self.call_stack.push(Call {
             fn_name: name,
             index: index,
             file: file,
             stack_len: st,
-            local_len: lc
+            local_len: lc,
+            current_len: cu,
         });
     }
     pub fn pop_fn(&mut self, name: Arc<String>) {
         match self.call_stack.pop() {
             None => panic!("Did not call `{}`", name),
-            Some(Call { fn_name, stack_len: st, local_len: lc, .. }) => {
+            Some(Call { fn_name, stack_len: st, local_len: lc, current_len: cu, .. }) => {
                 if name != fn_name {
                     panic!("Calling `{}`, did not call `{}`", fn_name, name);
                 }
                 self.stack.truncate(st);
                 self.local_stack.truncate(lc);
+                self.current_stack.truncate(cu);
             }
         }
     }
@@ -516,6 +522,7 @@ impl Runtime {
         let mut expect = Expect::Nothing;
         let st = self.stack.len();
         let lc = self.local_stack.len();
+        let cu = self.current_stack.len();
         for e in &block.expressions {
             expect = match try!(self.expression(e, Side::Right, module)) {
                 (x, Flow::Continue) => x,
@@ -532,6 +539,7 @@ impl Runtime {
                     }
 
                     self.local_stack.truncate(lc);
+                    self.current_stack.truncate(cu);
                     return Ok(x);
                 }
             }
@@ -549,6 +557,7 @@ impl Runtime {
         }
 
         self.local_stack.truncate(lc);
+        self.current_stack.truncate(cu);
         Ok((expect, Flow::Continue))
     }
 
@@ -588,6 +597,7 @@ impl Runtime {
         let new_rt = Runtime {
             stack: stack,
             local_stack: vec![],
+            current_stack: vec![],
             // Add last call because of loaded functions
             // use relative index to the function it is calling from.
             call_stack: vec![Call {
@@ -596,6 +606,7 @@ impl Runtime {
                 file: last_call.file.clone(),
                 stack_len: 0,
                 local_len: 0,
+                current_len: 0,
             }],
             rng: self.rng.clone(),
             ret: self.ret.clone(),
@@ -678,6 +689,7 @@ impl Runtime {
                 }
                 let st = self.stack.len();
                 let lc = self.local_stack.len();
+                let cu = self.current_stack.len();
                 for arg in &call.args {
                     match try!(self.expression(arg, Side::Right, module)) {
                         (x, Flow::Return) => { return Ok((x, Flow::Return)); }
@@ -688,7 +700,7 @@ impl Runtime {
                                         self.stack_trace())))
                     };
                 }
-                self.push_fn(call.name.clone(), new_index, Some(f.file.clone()), st, lc);
+                self.push_fn(call.name.clone(), new_index, Some(f.file.clone()), st, lc, cu);
                 if f.returns() {
                     self.local_stack.push((self.ret.clone(), st - 1));
                 }
@@ -933,6 +945,7 @@ impl Runtime {
                         }
                     } else {
                         self.local_stack.push((item.name.clone(), self.stack.len()));
+                        self.current_stack.push((item.name.clone(), self.stack.len()));
                         self.stack.push(v);
                     }
                     Ok(Flow::Continue)
@@ -1367,9 +1380,21 @@ impl Runtime {
                                 self.stack_trace(),
                                 &self.call_stack.last().unwrap().fn_name)));
                         } else {
-                            return Err(module.error(item.source_range, &format!(
-                                "{}\nCould not find local variable `{}`",
-                                    self.stack_trace(), name)));
+                            // Look for variable in current stack.
+                            let mut res = None;
+                            for &(ref cname, ind) in self.current_stack.iter().rev() {
+                                if &**cname == name {
+                                    res = Some(ind);
+                                    break;
+                                }
+                            }
+                            if let Some(res) = res {
+                                res
+                            } else {
+                                return Err(module.error(item.source_range, &format!(
+                                    "{}\nCould not find local or current variable `{}`",
+                                        self.stack_trace(), name)));
+                            }
                         }
                     }
                 }
