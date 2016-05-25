@@ -4,6 +4,8 @@ use range::Range;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Type {
+    /// Whether a statement is never reached.
+    Unreachable,
     Void,
     Any,
     Bool,
@@ -24,6 +26,7 @@ impl Type {
         use Type::*;
 
         match self {
+            &Unreachable => "unreachable".into(),
             &Void => "void".into(),
             &Any => "any".into(),
             &Bool => "bool".into(),
@@ -98,7 +101,12 @@ impl Type {
         use self::Type::*;
 
         match self {
-            &Any => *other != Type::Void,
+            // Unreachable goes with anything.
+            &Unreachable => true,
+            _ if *other == Unreachable => true,
+            &Any => *other != Void,
+            // Void only goes with void.
+            &Void => *other == Void,
             &Array(ref arr) => {
                 if let &Array(ref other_arr) = other {
                     arr.goes_with(other_arr)
@@ -144,7 +152,7 @@ impl Type {
                     false
                 }
             }
-            // Void, Bool, F64, Text, Vec4.
+            // Bool, F64, Text, Vec4.
             x if x == other => { true }
             _ if *other == Type::Any => { true }
             _ => { false }

@@ -3,14 +3,14 @@ fn __pos_data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
     i := index
     if name != none() {
         node := start_node(data: data, index: i, name: unwrap(name))
-        if node == none() { err("Expected `" + unwrap(name) + "`")? }
+        if node == none() { return err("Expected `" + unwrap(name) + "`")? }
         i += unwrap(node)
     }
     _x := none()
     _y := none()
     _z := none()
     loop {
-        if i >= len(data) { err("Unexpected end")? }
+        if i >= len(data) { return err("Unexpected end")? }
         if (_x != none()) &&
            (_y != none()) &&
            (_z != none()) { break }
@@ -44,17 +44,17 @@ fn __pos_data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
     x := if _x != none() {
         unwrap(_x)
     } else {
-        err("Could find `x`")?
+        return err("Could find `x`")?
     }
     y := if _y != none() {
         unwrap(_y)
     } else {
-        err("Could find `y`")?
+        return err("Could find `y`")?
     }
     z := if _z != none() {
         unwrap(_z)
     } else {
-        err("Could find `z`")?
+        return err("Could find `z`")?
     }
     return ok([i - start, (x, y)])
 }
@@ -64,7 +64,7 @@ fn __doc_data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
     i := index
     if name != none() {
         node := start_node(data: data, index: i, name: unwrap(name))
-        if node == none() { err("Expected `" + unwrap(name) + "`")? }
+        if node == none() { return err("Expected `" + unwrap(name) + "`")? }
         i += unwrap(node)
     }
     arr := []

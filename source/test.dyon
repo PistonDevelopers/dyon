@@ -1,12 +1,8 @@
 fn main() {
-    ~ foo := ["hi"]
-    foo()
+    println(foo())
 }
 
-fn foo() ~ mut foo {
-    bar(mut foo)
-}
-
-fn bar(mut foo) {
-    println(foo)
+fn foo() -> {
+    x := if true { 1 } else { return 2 }
+    return clone(x)
 }
