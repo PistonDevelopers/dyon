@@ -1,0 +1,4 @@
+fn foo() {
+    list := []
+    println(list[0])
+}

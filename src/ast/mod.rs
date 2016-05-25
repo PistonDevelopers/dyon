@@ -14,6 +14,7 @@ mod replace;
 
 pub fn convert(
     file: Arc<String>,
+    source: Arc<String>,
     data: &[Range<MetaData>],
     ignored: &mut Vec<Range>,
     module: &mut Module
@@ -21,7 +22,7 @@ pub fn convert(
     let mut convert = Convert::new(data);
     loop {
         if let Ok((range, function)) =
-        Function::from_meta_data(file.clone(), convert, ignored) {
+        Function::from_meta_data(file.clone(), source.clone(), convert, ignored) {
             convert.update(range);
             module.register(function);
         } else if convert.remaining_data_len() > 0 {
@@ -40,6 +41,7 @@ pub fn convert(
 pub struct Function {
     pub name: Arc<String>,
     pub file: Arc<String>,
+    pub source: Arc<String>,
     pub args: Vec<Arg>,
     pub currents: Vec<Current>,
     pub block: Block,
@@ -51,6 +53,7 @@ pub struct Function {
 impl Function {
     pub fn from_meta_data(
         file: Arc<String>,
+        source: Arc<String>,
         mut convert: Convert,
         ignored: &mut Vec<Range>
     ) -> Result<(Range, Function), ()> {
@@ -142,6 +145,7 @@ impl Function {
             resolved: Cell::new(false),
             name: name,
             file: file,
+            source: source,
             args: args,
             currents: currents,
             block: block,
