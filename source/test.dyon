@@ -1,8 +1,6 @@
 fn main() {
-    println(foo())
-}
-
-fn foo() -> {
-    x := if true { 1 } else { return 2 }
-    return clone(x)
+    test_load := unwrap(load("source/test_load.dyon"))
+    test_load_2 := unwrap(load(source: "source/test_load_2.dyon",
+                               imports: [test_load]))
+    call(test_load_2, "bar", [])
 }

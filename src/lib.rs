@@ -194,7 +194,6 @@ impl Clone for FnExternal {
 
 #[derive(Clone)]
 pub struct Module {
-    pub source: Option<String>,
     pub functions: Vec<ast::Function>,
     pub ext_prelude: Vec<FnExternal>,
 }
@@ -202,7 +201,6 @@ pub struct Module {
 impl Module {
     pub fn new() -> Module {
         Module {
-            source: None,
             functions: vec![],
             ext_prelude: vec![],
         }
@@ -227,11 +225,16 @@ impl Module {
         FnIndex::None
     }
 
-    pub fn error(&self, range: Range, msg: &str) -> String {
+    pub fn error(&self, range: Range, msg: &str, rt: &Runtime) -> String {
+        self.error_fnindex(range, msg, rt.call_stack.last().unwrap().index)
+    }
+
+    pub fn error_fnindex(&self, range: Range, msg: &str, fnindex: usize) -> String {
         use piston_meta::ParseErrorHandler;
 
         let mut w: Vec<u8> = vec![];
-        ParseErrorHandler::new(&self.source.as_ref().unwrap())
+        let source = &self.functions[fnindex].source;
+        ParseErrorHandler::new(source)
             .write_msg(&mut w, range, &format!("{}", msg))
             .unwrap();
         String::from_utf8(w).unwrap()
@@ -273,9 +276,8 @@ pub fn load(source: &str, module: &mut Module) -> Result<(), String> {
 
     let mut data_file = try!(File::open(source).map_err(|err|
         format!("Could not open `{}`, {}", source, err)));
-    let mut d = String::new();
-    data_file.read_to_string(&mut d).unwrap();
-    module.source = Some(d.clone());
+    let mut d = Arc::new(String::new());
+    data_file.read_to_string(Arc::make_mut(&mut d)).unwrap();
 
     let mut data = vec![];
     try!(parse_errstr(&syntax_rules, &d, &mut data).map_err(
@@ -293,7 +295,7 @@ pub fn load(source: &str, module: &mut Module) -> Result<(), String> {
 
     // Convert to AST.
     let mut ignored = vec![];
-    let conv_res = ast::convert(Arc::new(source.into()), &data, &mut ignored, module);
+    let conv_res = ast::convert(Arc::new(source.into()), d.clone(), &data, &mut ignored, module);
 
     // Check that lifetime checking succeeded.
     match handle.join().unwrap() {
@@ -306,13 +308,23 @@ pub fn load(source: &str, module: &mut Module) -> Result<(), String> {
             }
         }
         Err(err_msg) => {
+            use std::io::Write;
+            use piston_meta::ParseErrorHandler;
+
             let (range, msg) = err_msg.decouple();
-            return Err(format!("In `{}`:\n{}", source, module.error(range, &msg)))
+
+            let mut buf: Vec<u8> = vec![];
+            writeln!(&mut buf, "In `{}`:\n", source).unwrap();
+            ParseErrorHandler::new(&d)
+                .write_msg(&mut buf, range, &msg)
+                .unwrap();
+            return Err(String::from_utf8(buf).unwrap())
         }
     }
 
     if ignored.len() > 0 || conv_res.is_err() {
         use std::io::Write;
+        use piston_meta::ParseErrorHandler;
 
         let mut buf: Vec<u8> = vec![];
         if ignored.len() > 0 {
@@ -320,9 +332,13 @@ pub fn load(source: &str, module: &mut Module) -> Result<(), String> {
             writeln!(&mut buf, "START IGNORED").unwrap();
             json::write(&mut buf, &data[ignored[0].iter()]).unwrap();
             writeln!(&mut buf, "END IGNORED").unwrap();
-            writeln!(&mut buf, "In `{}`:\n{}", source,
-                module.error(data[ignored[0].iter()][0].range(),
-                "Could not understand this")).unwrap();
+
+            writeln!(&mut buf, "In `{}`:\n", source).unwrap();
+            ParseErrorHandler::new(&d)
+                .write_msg(&mut buf,
+                           data[ignored[0].iter()][0].range(),
+                           "Could not understand this")
+                .unwrap();
         }
         if let Err(()) = conv_res {
             writeln!(&mut buf, "Conversion error").unwrap();
