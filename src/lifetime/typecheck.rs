@@ -177,7 +177,7 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                     let ch = nodes[i].children[0];
                     if nodes[ch].item_ids() { continue 'node; }
                     if nodes[ch].kind == Kind::Return {
-                        this_ty = Some(Type::Void);
+                        this_ty = Some(Type::Unreachable);
                     } else if let Some(ref ty) = nodes[ch].ty {
                         this_ty = Some(nodes[i].inner_type(ty));
                     }
@@ -278,10 +278,12 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                     if nodes[ch].item_ids() { continue 'node; }
 
                     let expr_type = nodes[ch].ty.as_ref().map(|ty| nodes[i].inner_type(&ty));
-                    if expr_type.is_some() && expr_type != Some(Type::F64) {
-                        return Err(nodes[i].source.wrap(
-                            format!("Type mismatch: Expected `f64`, found `{}`",
-                                expr_type.as_ref().unwrap().description())));
+                    if let Some(ref ty) = expr_type {
+                        if !ty.goes_with(&Type::F64) {
+                            return Err(nodes[i].source.wrap(
+                                format!("Type mismatch: Expected `f64`, found `{}`",
+                                    expr_type.as_ref().unwrap().description())));
+                        }
                     }
                     this_ty = expr_type;
                 }
@@ -365,7 +367,7 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                         _ => {}
                     };
                     if let Some(ref ty) = nodes[ch].ty {
-                        if ty != &Type::Void {
+                        if ty != &Type::Void && ty != &Type::Unreachable {
                             return Err(nodes[ch].source.wrap(
                                 format!("Unused result `{}`", ty.description())
                             ));

@@ -3,12 +3,12 @@ fn __john_data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
     i := index
     if name != none() {
         node := start_node(data: data, index: i, name: unwrap(name))
-        if node == none() { err("Expected `" + unwrap(name) + "`")? }
+        if node == none() { return err("Expected `" + unwrap(name) + "`")? }
         i += unwrap(node)
     }
     _john := none()
     loop {
-        if i >= len(data) { err("Unexpected end")? }
+        if i >= len(data) { return err("Unexpected end")? }
         if (_john != none()) { break }
         i_john := read_bool(data: data, index: i, name: "john")
         if i_john != none() {
@@ -26,7 +26,7 @@ fn __john_data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
     john := if _john != none() {
         unwrap(_john)
     } else {
-        err("Could find `john`")?
+        return err("Could find `john`")?
     }
     return ok([i - start, {first_name: "John"}])
 }
@@ -36,12 +36,12 @@ fn __peter_data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
     i := index
     if name != none() {
         node := start_node(data: data, index: i, name: unwrap(name))
-        if node == none() { err("Expected `" + unwrap(name) + "`")? }
+        if node == none() { return err("Expected `" + unwrap(name) + "`")? }
         i += unwrap(node)
     }
     _peter := none()
     loop {
-        if i >= len(data) { err("Unexpected end")? }
+        if i >= len(data) { return err("Unexpected end")? }
         if (_peter != none()) { break }
         i_peter := read_bool(data: data, index: i, name: "peter")
         if i_peter != none() {
@@ -59,7 +59,7 @@ fn __peter_data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
     peter := if _peter != none() {
         unwrap(_peter)
     } else {
-        err("Could find `peter`")?
+        return err("Could find `peter`")?
     }
     return ok([i - start, {first_name: "Peter"}])
 }
@@ -69,7 +69,7 @@ fn __person_data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
     i := index
     if name != none() {
         node := start_node(data: data, index: i, name: unwrap(name))
-        if node == none() { err("Expected `" + unwrap(name) + "`")? }
+        if node == none() { return err("Expected `" + unwrap(name) + "`")? }
         i += unwrap(node)
     }
     _john := __john(data: data, index: i, name: none())
@@ -90,7 +90,7 @@ fn __person_data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
         }
         return ok([i - start, i_peter[1]])
     }
-    err("Expected one of `john`, `peter`")?
+    return err("Expected one of `john`, `peter`")?
 }
 
 fn __people_data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
@@ -98,7 +98,7 @@ fn __people_data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
     i := index
     if name != none() {
         node := start_node(data: data, index: i, name: unwrap(name))
-        if node == none() { err("Expected `" + unwrap(name) + "`")? }
+        if node == none() { return err("Expected `" + unwrap(name) + "`")? }
         i += unwrap(node)
     }
     arr := []

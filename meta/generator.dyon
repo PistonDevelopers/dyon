@@ -21,7 +21,7 @@ fn to_code(syntax: [[]]) -> res[str] {
         code += "    i := index\n"
         code += "    if name != none() {\n"
         code += "        node := start_node(data: data, index: i, name: unwrap(name))\n"
-        code += "        if node == none() { err(\"Expected `\" + unwrap(name) + \"`\")? }\n"
+        code += "        if node == none() { return err(\"Expected `\" + unwrap(name) + \"`\")? }\n"
         code += "        i += unwrap(node)\n"
         code += "    }\n"
 
@@ -70,7 +70,7 @@ fn to_code(syntax: [[]]) -> res[str] {
                 code += "    _" + gen_fields[i][0] + " := none()\n"
             }
             code += "    loop {\n"
-            code += "        if i >= len(data) { err(\"Unexpected end\")? }\n"
+            code += "        if i >= len(data) { return err(\"Unexpected end\")? }\n"
             code += "        if "
             for i len(gen_fields) {
                 code += "(_" + gen_fields[i][0] + " != none())"
@@ -117,7 +117,7 @@ fn to_code(syntax: [[]]) -> res[str] {
                 code += "    " + name + " := if _" + name + " != none() {\n"
                 code += "        unwrap(_" + name + ")\n"
                 code += "    } else {\n"
-                code += "        err(\"Could find `" + name + "`\")?\n"
+                code += "        return err(\"Could find `" + name + "`\")?\n"
                 code += "    }\n"
             }
             i += start_node(data: syntax, index: i, name: "expr")?
@@ -213,7 +213,7 @@ fn to_code(syntax: [[]]) -> res[str] {
                 i += end_node(data: syntax, index: i, name: "ref")?
             }
 
-            code += "    err(\"Expected one of "
+            code += "    return err(\"Expected one of "
             for i {
                 code += "`" + rules[i] + "`"
                 if (i + 1) < len(rules) {
