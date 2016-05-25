@@ -292,7 +292,7 @@ pub fn call_standard(
             _ => return Err(module.error(arg.source_range(),
                     &format!("{}\nExpected something. \
                     Expression did not return a value.",
-                    rt.stack_trace())))
+                    rt.stack_trace()), rt))
         };
     }
     let vec4_comp = |rt: &mut Runtime, module: &Module, call: &ast::Call, i: usize|
@@ -302,7 +302,7 @@ pub fn call_standard(
         let v = match rt.resolve(&v) {
             &Variable::Vec4(ref vec4) => Variable::F64(vec4[i] as f64),
             x => return Err(module.error(call.args[i].source_range(),
-                            &rt.expected(x, "number")))
+                            &rt.expected(x, "number"), rt))
         };
         rt.stack.push(v);
         rt.pop_fn(call.name.clone());
@@ -319,7 +319,7 @@ pub fn call_standard(
             let ind = match rt.resolve(&ind) {
                 &Variable::F64(val) => val,
                 x => return Err(module.error(call.args[1].source_range(),
-                                &rt.expected(x, "number")))
+                                &rt.expected(x, "number"), rt))
             };
             let v = rt.stack.pop().expect(TINVOTS);
             let s = match rt.resolve(&v) {
@@ -329,12 +329,12 @@ pub fn call_standard(
                         None => {
                             return Err(module.error(call.source_range,
                                 &format!("{}\nIndex out of bounds `{}`",
-                                    rt.stack_trace(), ind)))
+                                    rt.stack_trace(), ind), rt))
                         }
                     }
                 }
                 x => return Err(module.error(call.args[0].source_range(),
-                                &rt.expected(x, "vec4")))
+                                &rt.expected(x, "vec4"), rt))
             };
             rt.stack.push(Variable::F64(s));
             rt.pop_fn(call.name.clone());
@@ -387,7 +387,7 @@ pub fn call_standard(
             let v = match rt.resolve(&v) {
                 &Variable::F64(b) => b,
                 x => return Err(module.error(call.args[0].source_range(),
-                                &rt.expected(x, "number")))
+                                &rt.expected(x, "number"), rt))
             };
             let secs = v as u64;
             let nanos = (v.fract() * 1.0e9) as u32;
@@ -413,7 +413,7 @@ pub fn call_standard(
                 let arr = match rt.resolve(&v) {
                     &Variable::Array(ref arr) => arr,
                     x => return Err(module.error(call.args[0].source_range(),
-                                    &rt.expected(x, "array")))
+                                    &rt.expected(x, "array"), rt))
                 };
                 Variable::F64(arr.len() as f64)
             };
@@ -436,12 +436,12 @@ pub fn call_standard(
                 if !ok {
                     return Err(module.error(call.args[0].source_range(),
                         &format!("{}\nExpected reference to array",
-                            rt.stack_trace())));
+                            rt.stack_trace()), rt));
                 }
             } else {
                 return Err(module.error(call.args[0].source_range(),
                     &format!("{}\nExpected reference to array",
-                        rt.stack_trace())));
+                        rt.stack_trace()), rt));
             }
             rt.pop_fn(call.name.clone());
             Expect::Nothing
@@ -462,12 +462,12 @@ pub fn call_standard(
                 if !ok {
                     return Err(module.error(call.args[0].source_range(),
                         &format!("{}\nExpected reference to array",
-                            rt.stack_trace())));
+                            rt.stack_trace()), rt));
                 }
             } else {
                 return Err(module.error(call.args[0].source_range(),
                     &format!("{}\nExpected reference to array",
-                        rt.stack_trace())));
+                        rt.stack_trace()), rt));
             }
             rt.pop_fn(call.name.clone());
             Expect::Nothing
@@ -486,17 +486,17 @@ pub fn call_standard(
                 if !ok {
                     return Err(module.error(call.args[0].source_range(),
                         &format!("{}\nExpected reference to array",
-                            rt.stack_trace())));
+                            rt.stack_trace()), rt));
                 }
             } else {
                 return Err(module.error(call.args[0].source_range(),
                     &format!("{}\nExpected reference to array",
-                        rt.stack_trace())));
+                        rt.stack_trace()), rt));
             }
             match v {
                 None => return Err(module.error(call.args[0].source_range(),
                     &format!("{}\nExpected non-empty array",
-                        rt.stack_trace()))),
+                        rt.stack_trace()), rt)),
                 Some(val) => {
                     rt.stack.push(val);
                 }
@@ -517,12 +517,12 @@ pub fn call_standard(
                 if !ok {
                     return Err(module.error(call.args[0].source_range(),
                         &format!("{}\nExpected reference to array",
-                            rt.stack_trace())));
+                            rt.stack_trace()), rt));
                 }
             } else {
                 return Err(module.error(call.args[0].source_range(),
                     &format!("{}\nExpected reference to array",
-                        rt.stack_trace())));
+                        rt.stack_trace()), rt));
             }
             rt.pop_fn(call.name.clone());
             Expect::Nothing
@@ -540,12 +540,12 @@ pub fn call_standard(
                 if !ok {
                     return Err(module.error(call.args[0].source_range(),
                         &format!("{}\nExpected reference to array",
-                            rt.stack_trace())));
+                            rt.stack_trace()), rt));
                 }
             } else {
                 return Err(module.error(call.args[0].source_range(),
                     &format!("{}\nExpected reference to array",
-                        rt.stack_trace())));
+                        rt.stack_trace()), rt));
             }
             rt.pop_fn(call.name.clone());
             Expect::Nothing
@@ -557,12 +557,12 @@ pub fn call_standard(
             let j = match rt.resolve(&j) {
                 &Variable::F64(val) => val,
                 x => return Err(module.error(call.args[2].source_range(),
-                    &rt.expected(x, "number")))
+                    &rt.expected(x, "number"), rt))
             };
             let i = match rt.resolve(&i) {
                 &Variable::F64(val) => val,
                 x => return Err(module.error(call.args[1].source_range(),
-                    &rt.expected(x, "number")))
+                    &rt.expected(x, "number"), rt))
             };
             let v = rt.stack.pop().expect(TINVOTS);
             if let Variable::Ref(ind) = v {
@@ -575,12 +575,12 @@ pub fn call_standard(
                 if !ok {
                     return Err(module.error(call.args[0].source_range(),
                         &format!("{}\nExpected reference to array",
-                            rt.stack_trace())));
+                            rt.stack_trace()), rt));
                 }
             } else {
                 return Err(module.error(call.args[0].source_range(),
                     &format!("{}\nExpected reference to array",
-                        rt.stack_trace())));
+                        rt.stack_trace()), rt));
             }
             rt.pop_fn(call.name.clone());
             Expect::Nothing
@@ -613,7 +613,7 @@ pub fn call_standard(
             let err = match rt.resolve(&err) {
                 &Variable::Text(ref t) => t.clone(),
                 x => return Err(module.error(call.args[0].source_range(),
-                        &rt.expected(x, "text")))
+                        &rt.expected(x, "text"), rt))
             };
             let stdin = io::stdin();
             let mut stdout = io::stdout();
@@ -649,7 +649,7 @@ pub fn call_standard(
             let v = match rt.resolve(&v) {
                 &Variable::Text(ref t) => t.clone(),
                 x => return Err(module.error(call.args[0].source_range(),
-                        &rt.expected(x, "text")))
+                        &rt.expected(x, "text"), rt))
             };
             rt.stack.push(Variable::Text(Arc::new(v.trim().into())));
             rt.pop_fn(call.name.clone());
@@ -661,7 +661,7 @@ pub fn call_standard(
             let v = match rt.resolve(&v) {
                 &Variable::Text(ref t) => t.clone(),
                 x => return Err(module.error(call.args[0].source_range(),
-                        &rt.expected(x, "text")))
+                        &rt.expected(x, "text"), rt))
             };
             rt.stack.push(Variable::Text(Arc::new(v.trim_left().into())));
             rt.pop_fn(call.name.clone());
@@ -673,7 +673,7 @@ pub fn call_standard(
             let mut v = match rt.resolve(&v) {
                 &Variable::Text(ref t) => t.clone(),
                 x => return Err(module.error(call.args[0].source_range(),
-                        &rt.expected(x, "text")))
+                        &rt.expected(x, "text"), rt))
             };
             {
                 let w = Arc::make_mut(&mut v);
@@ -701,7 +701,7 @@ pub fn call_standard(
             let v = match rt.resolve(&v) {
                 &Variable::Vec4(val) => val,
                 x => return Err(module.error(call.args[0].source_range(),
-                        &rt.expected(x, "vec4")))
+                        &rt.expected(x, "vec4"), rt))
             };
             let mut buf: Vec<u8> = vec![];
             let clamp = |x| {
@@ -734,7 +734,7 @@ pub fn call_standard(
             let v = match rt.resolve(&v) {
                 &Variable::Vec4(val) => val,
                 x => return Err(module.error(call.args[0].source_range(),
-                        &rt.expected(x, "vec4")))
+                        &rt.expected(x, "vec4"), rt))
             };
             let to_linear = |f: f32| {
                 if f <= 0.04045 {
@@ -754,7 +754,7 @@ pub fn call_standard(
             let v = match rt.resolve(&v) {
                 &Variable::Vec4(val) => val,
                 x => return Err(module.error(call.args[0].source_range(),
-                        &rt.expected(x, "vec4")))
+                        &rt.expected(x, "vec4"), rt))
             };
             let to_srgb = |f: f32| {
                 if f <= 0.0031308 {
@@ -820,7 +820,7 @@ pub fn call_standard(
                             message: Variable::Text(Arc::new(
                                 format!("{}\n{}\n{}", rt.stack_trace(), err,
                                     module.error(call.args[0].source_range(),
-                                    "When attempting to load module:")))),
+                                    "When attempting to load module:", rt)))),
                             trace: vec![]
                         })))
                     } else {
@@ -829,7 +829,7 @@ pub fn call_standard(
                     }
                 }
                 x => return Err(module.error(call.args[0].source_range(),
-                        &rt.expected(x, "string")))
+                        &rt.expected(x, "string"), rt))
             };
             rt.stack.push(v);
             rt.pop_fn(call.name.clone());
@@ -859,17 +859,17 @@ pub fn call_standard(
                                     None => return Err(module.error(
                                         call.args[1].source_range(),
                                         &format!("{}\nExpected `Module`",
-                                            rt.stack_trace())))
+                                            rt.stack_trace()), rt))
                                 }
                             }
                             x => return Err(module.error(
                                 call.args[1].source_range(),
-                                &rt.expected(x, "Module")))
+                                &rt.expected(x, "Module"), rt))
                         }
                     }
                 }
                 x => return Err(module.error(call.args[1].source_range(),
-                        &rt.expected(x, "[Module]")))
+                        &rt.expected(x, "[Module]"), rt))
             }
             let v = match rt.resolve(&source) {
                 &Variable::Text(ref text) => {
@@ -878,7 +878,7 @@ pub fn call_standard(
                             message: Variable::Text(Arc::new(
                                 format!("{}\n{}\n{}", rt.stack_trace(), err,
                                     module.error(call.args[0].source_range(),
-                                    "When attempting to load module:")))),
+                                    "When attempting to load module:", rt)))),
                             trace: vec![]
                         })))
                     } else {
@@ -888,7 +888,7 @@ pub fn call_standard(
                     }
                 }
                 x => return Err(module.error(call.args[0].source_range(),
-                        &rt.expected(x, "[Module]")))
+                        &rt.expected(x, "[Module]"), rt))
             };
             rt.stack.push(v);
             rt.pop_fn(call.name.clone());
@@ -902,17 +902,17 @@ pub fn call_standard(
             let fn_name = match rt.resolve(&fn_name) {
                 &Variable::Text(ref text) => text.clone(),
                 x => return Err(module.error(call.args[1].source_range(),
-                                &rt.expected(x, "text")))
+                                &rt.expected(x, "text"), rt))
             };
             let args = match rt.resolve(&args) {
                 &Variable::Array(ref arr) => arr.clone(),
                 x => return Err(module.error(call.args[2].source_range(),
-                                &rt.expected(x, "array")))
+                                &rt.expected(x, "array"), rt))
             };
             let obj = match rt.resolve(&call_module) {
                 &Variable::RustObject(ref obj) => obj.clone(),
                 x => return Err(module.error(call.args[0].source_range(),
-                                &rt.expected(x, "Module")))
+                                &rt.expected(x, "Module"), rt))
             };
 
             match obj.lock().unwrap()
@@ -930,7 +930,7 @@ pub fn call_standard(
                                     &format!(
                                         "{}\nExpected `{}` arguments, found `{}`",
                                         rt.stack_trace(),
-                                        f.args.len(), args.len())))
+                                        f.args.len(), args.len()), rt))
                             }
                         }
                         FnIndex::None | FnIndex::External(_) => return Err(module.error(
@@ -938,7 +938,7 @@ pub fn call_standard(
                                     &format!(
                                         "{}\nCould not find function `{}`",
                                         rt.stack_trace(),
-                                        fn_name)))
+                                        fn_name), rt))
                     }
                     let call = ast::Call {
                         name: fn_name.clone(),
@@ -953,7 +953,7 @@ pub fn call_standard(
                 }
                 None => return Err(module.error(call.args[0].source_range(),
                             &format!("{}\nExpected `Module`",
-                                rt.stack_trace())))
+                                rt.stack_trace()), rt))
             }
 
             rt.pop_fn(call.name.clone());
@@ -967,17 +967,17 @@ pub fn call_standard(
             let fn_name = match rt.resolve(&fn_name) {
                 &Variable::Text(ref text) => text.clone(),
                 x => return Err(module.error(call.args[1].source_range(),
-                                &rt.expected(x, "text")))
+                                &rt.expected(x, "text"), rt))
             };
             let args = match rt.resolve(&args) {
                 &Variable::Array(ref arr) => arr.clone(),
                 x => return Err(module.error(call.args[2].source_range(),
-                                &rt.expected(x, "array")))
+                                &rt.expected(x, "array"), rt))
             };
             let obj = match rt.resolve(&call_module) {
                 &Variable::RustObject(ref obj) => obj.clone(),
                 x => return Err(module.error(call.args[0].source_range(),
-                                &rt.expected(x, "Module")))
+                                &rt.expected(x, "Module"), rt))
             };
 
             match obj.lock().unwrap()
@@ -995,7 +995,7 @@ pub fn call_standard(
                                     &format!(
                                         "{}\nExpected `{}` arguments, found `{}`",
                                         rt.stack_trace(),
-                                        f.args.len(), args.len())))
+                                        f.args.len(), args.len()), rt))
                             }
                         }
                         FnIndex::None | FnIndex::External(_) =>
@@ -1004,7 +1004,7 @@ pub fn call_standard(
                                 &format!(
                                     "{}\nCould not find function `{}`",
                                     rt.stack_trace(),
-                                    fn_name)))
+                                    fn_name), rt))
                     }
                     let call = ast::Call {
                         name: fn_name.clone(),
@@ -1018,7 +1018,7 @@ pub fn call_standard(
                     try!(rt.call(&call, &m));
                 }
                 None => return Err(module.error(call.args[0].source_range(),
-                    &format!("{}\nExpected `Module`", rt.stack_trace())))
+                    &format!("{}\nExpected `Module`", rt.stack_trace()), rt))
             }
 
             rt.pop_fn(call.name.clone());
@@ -1177,7 +1177,7 @@ pub fn call_standard(
                 &Variable::Result(Ok(_)) => Variable::Bool(false),
                 x => {
                     return Err(module.error(call.args[0].source_range(),
-                        &rt.expected(x, "result")));
+                        &rt.expected(x, "result"), rt));
                 }
             };
             rt.stack.push(v);
@@ -1192,7 +1192,7 @@ pub fn call_standard(
                 &Variable::Result(Ok(_)) => Variable::Bool(true),
                 x => {
                     return Err(module.error(call.args[0].source_range(),
-                        &rt.expected(x, "result")));
+                        &rt.expected(x, "result"), rt));
                 }
             };
             rt.stack.push(v);
@@ -1206,7 +1206,7 @@ pub fn call_standard(
                 &Variable::Array(ref arr) => {
                     if arr.len() == 0 {
                         return Err(module.error(call.args[0].source_range(),
-                            &format!("{}\nExpected non-empty array", rt.stack_trace())));
+                            &format!("{}\nExpected non-empty array", rt.stack_trace()), rt));
                     }
                     let mut min: f64 = ::std::f64::MAX;
                     for v in &**arr {
@@ -1218,7 +1218,7 @@ pub fn call_standard(
                 }
                 x => {
                     return Err(module.error(call.args[0].source_range(),
-                        &rt.expected(x, "array")));
+                        &rt.expected(x, "array"), rt));
                 }
             };
             rt.stack.push(Variable::F64(v));
@@ -1232,7 +1232,7 @@ pub fn call_standard(
                 &Variable::Array(ref arr) => {
                     if arr.len() == 0 {
                         return Err(module.error(call.args[0].source_range(),
-                            &format!("{}\nExpected non-empty array", rt.stack_trace())));
+                            &format!("{}\nExpected non-empty array", rt.stack_trace()), rt));
                     }
                     let mut max: f64 = ::std::f64::MIN;
                     for v in &**arr {
@@ -1244,7 +1244,7 @@ pub fn call_standard(
                 }
                 x => {
                     return Err(module.error(call.args[0].source_range(),
-                        &rt.expected(x, "array")));
+                        &rt.expected(x, "array"), rt));
                 }
             };
             rt.stack.push(Variable::F64(v));
@@ -1261,7 +1261,7 @@ pub fn call_standard(
                 &Variable::Option(None) => {
                     return Err(module.error(call.args[0].source_range(),
                         &format!("{}\nExpected `some(_)`",
-                            rt.stack_trace())));
+                            rt.stack_trace()), rt));
                 }
                 &Variable::Result(Ok(ref ok)) => (**ok).clone(),
                 &Variable::Result(Err(ref err)) => {
@@ -1278,11 +1278,11 @@ pub fn call_standard(
                         w.extend_from_slice(t.as_bytes());
                     }
                     return Err(module.error(call.args[0].source_range(),
-                                            from_utf8(&w).unwrap()));
+                                            from_utf8(&w).unwrap(), rt));
                 }
                 x => {
                     return Err(module.error(call.args[0].source_range(),
-                                            &rt.expected(x, "some(_) or ok(_)")));
+                                            &rt.expected(x, "some(_) or ok(_)"), rt));
                 }
             };
             rt.stack.push(v);
@@ -1296,7 +1296,7 @@ pub fn call_standard(
                 &Variable::Result(Err(ref err)) => err.message.clone(),
                 x => {
                     return Err(module.error(call.args[0].source_range(),
-                        &rt.expected(x, "err(_)")));
+                        &rt.expected(x, "err(_)"), rt));
                 }
             };
             rt.stack.push(v);
@@ -1310,7 +1310,7 @@ pub fn call_standard(
                 &Variable::F64(val) => Variable::Vec4([val.cos() as f32, val.sin() as f32, 0.0, 0.0]),
                 x => {
                     return Err(module.error(call.args[0].source_range(),
-                        &rt.expected(x, "err(_)")));
+                        &rt.expected(x, "err(_)"), rt));
                 }
             };
             rt.stack.push(v);
@@ -1324,12 +1324,12 @@ pub fn call_standard(
             let file = match rt.resolve(&file) {
                 &Variable::Text(ref file) => file.clone(),
                 x => return Err(module.error(call.args[1].source_range(),
-                                &rt.expected(x, "str")))
+                                &rt.expected(x, "str"), rt))
             };
             let meta = match rt.resolve(&meta) {
                 &Variable::Text(ref meta) => meta.clone(),
                 x => return Err(module.error(call.args[0].source_range(),
-                                &rt.expected(x, "str")))
+                                &rt.expected(x, "str"), rt))
             };
             let res = meta::load_meta_file(&**meta, &**file);
             rt.stack.push(Variable::Result(match res {
@@ -1349,12 +1349,12 @@ pub fn call_standard(
             let url = match rt.resolve(&url) {
                 &Variable::Text(ref url) => url.clone(),
                 x => return Err(module.error(call.args[1].source_range(),
-                                &rt.expected(x, "str")))
+                                &rt.expected(x, "str"), rt))
             };
             let meta = match rt.resolve(&meta) {
                 &Variable::Text(ref meta) => meta.clone(),
                 x => return Err(module.error(call.args[0].source_range(),
-                                &rt.expected(x, "str")))
+                                &rt.expected(x, "str"), rt))
             };
             let res = meta::load_meta_url(&**meta, &**url);
             rt.stack.push(Variable::Result(match res {
@@ -1374,12 +1374,12 @@ pub fn call_standard(
             let file = match rt.resolve(&file) {
                 &Variable::Text(ref file) => file.clone(),
                 x => return Err(module.error(call.args[1].source_range(),
-                                &rt.expected(x, "str")))
+                                &rt.expected(x, "str"), rt))
             };
             let url = match rt.resolve(&url) {
                 &Variable::Text(ref url) => url.clone(),
                 x => return Err(module.error(call.args[0].source_range(),
-                                &rt.expected(x, "str")))
+                                &rt.expected(x, "str"), rt))
             };
 
             let res = meta::download_url_to_file(&**url, &**file);
@@ -1437,7 +1437,7 @@ pub fn call_standard(
             let file = match rt.resolve(&file) {
                 &Variable::Text(ref t) => t.clone(),
                 x => return Err(module.error(call.args[1].source_range(),
-                                &rt.expected(x, "string")))
+                                &rt.expected(x, "string"), rt))
             };
             let data = rt.stack.pop().expect(TINVOTS);
 
@@ -1446,7 +1446,7 @@ pub fn call_standard(
                 Err(err) => {
                     return Err(module.error(call.args[0].source_range(),
                                &format!("{}\nError when creating file `{}`:\n{}",
-                                rt.stack_trace(), file, err.description())))
+                                rt.stack_trace(), file, err.description()), rt))
                 }
             };
             let res = match write_variable(&mut f, rt, &data, EscapeString::Json) {
@@ -1478,14 +1478,14 @@ pub fn call_standard(
                     }))
                 }
                 x => return Err(module.error(call.args[0].source_range(),
-                                &rt.expected(x, "array")))
+                                &rt.expected(x, "array"), rt))
             };
             rt.stack.push(Variable::Text(Arc::new(json)));
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
         _ => return Err(module.error(call.source_range,
-            &format!("{}\nUnknown function `{}`", rt.stack_trace(), call.name)))
+            &format!("{}\nUnknown function `{}`", rt.stack_trace(), call.name), rt))
     };
     Ok((expect, Flow::Continue))
 }
