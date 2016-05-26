@@ -91,7 +91,7 @@ impl Node {
         match self.kind {
             Pow | Sum | SumVec4 | Min | Max | Any | All |
             Vec4 | Vec4UnLoop | Swizzle |
-            Assign | For | ForN => false,
+            Assign | For | ForN | Link => false,
             Add | Mul | Compare => self.children.len() == 1,
             _ => true
         }

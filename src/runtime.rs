@@ -1271,6 +1271,7 @@ impl Runtime {
                                         match op {
                                             Set => *n = b.clone(),
                                             Add => *n = n.add(b),
+                                            Sub => *n = b.add(n),
                                             _ => unimplemented!()
                                         }
                                     }

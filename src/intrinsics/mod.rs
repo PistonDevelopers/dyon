@@ -158,6 +158,11 @@ pub fn standard(f: &mut HashMap<Arc<String>, PreludeFunction>) {
         tys: vec![Type::Text; 2],
         ret: Type::Result(Box::new(Type::Text))
     });
+    f.insert(Arc::new("save_string_file".into()), PreludeFunction {
+        lts: vec![Lt::Default; 2],
+        tys: vec![Type::Text; 2],
+        ret: Type::Result(Box::new(Type::Text))
+    });
     sarg(f, "join_thread", Type::thread(), Type::Result(Box::new(Type::Any)));
     f.insert(Arc::new("save_data_file".into()), PreludeFunction {
         lts: vec![Lt::Default; 2],
@@ -1412,6 +1417,43 @@ pub fn call_standard(
                 Ok(res) => Ok(Box::new(Variable::Text(Arc::new(res)))),
                 Err(err) => Err(Box::new(Error {
                     message: Variable::Text(Arc::new(err)),
+                    trace: vec![]
+                }))
+            }));
+            rt.pop_fn(call.name.clone());
+            Expect::Something
+        }
+        "save_string_file" => {
+            use std::fs::File;
+            use std::io::Write;
+            use std::error::Error as StdError;
+
+            rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
+            let file = rt.stack.pop().expect(TINVOTS);
+            let text = rt.stack.pop().expect(TINVOTS);
+            let file = match rt.resolve(&file) {
+                &Variable::Text(ref file) => file.clone(),
+                x => return Err(module.error(call.args[1].source_range(),
+                                &rt.expected(x, "str"), rt))
+            };
+            let text = match rt.resolve(&text) {
+                &Variable::Text(ref text) => text.clone(),
+                x => return Err(module.error(call.args[0].source_range(),
+                                &rt.expected(x, "str"), rt))
+            };
+
+            rt.stack.push(Variable::Result(match File::create(&**file) {
+                Ok(mut f) => {
+                    match f.write_all(text.as_bytes()) {
+                        Ok(_) => Ok(Box::new(Variable::Text(file))),
+                        Err(err) => Err(Box::new(Error {
+                            message: Variable::Text(Arc::new(err.description().into())),
+                            trace: vec![]
+                        }))
+                    }
+                }
+                Err(err) => Err(Box::new(Error {
+                    message: Variable::Text(Arc::new(err.description().into())),
                     trace: vec![]
                 }))
             }));

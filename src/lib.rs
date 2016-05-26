@@ -463,6 +463,11 @@ mod tests {
     }
 
     #[bench]
+    fn bench_push_link_go(b: &mut Bencher) {
+        b.iter(|| run_bench("source/bench/push_link_go.dyon"));
+    }
+
+    #[bench]
     fn bench_push_str(b: &mut Bencher) {
         b.iter(|| run_bench("source/bench/push_str.dyon"));
     }
