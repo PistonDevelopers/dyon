@@ -451,4 +451,19 @@ mod tests {
     fn bench_threads_go(b: &mut Bencher) {
         b.iter(|| run_bench("source/bench/threads_go.dyon"));
     }
+
+    #[bench]
+    fn bench_push_array(b: &mut Bencher) {
+        b.iter(|| run_bench("source/bench/push_array.dyon"));
+    }
+
+    #[bench]
+    fn bench_push_link(b: &mut Bencher) {
+        b.iter(|| run_bench("source/bench/push_link.dyon"));
+    }
+
+    #[bench]
+    fn bench_push_str(b: &mut Bencher) {
+        b.iter(|| run_bench("source/bench/push_str.dyon"));
+    }
 }

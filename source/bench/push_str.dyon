@@ -1,0 +1,6 @@
+fn main() {
+    x := ""
+    for i 100_000 {
+        x += to_string(i)
+    }
+}

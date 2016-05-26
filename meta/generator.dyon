@@ -80,22 +80,22 @@ fn to_code(syntax: [[]]) -> res[str] {
             for i len(gen_fields) {
                 code += link {"(_"gen_fields[i][0]" != none())"}
                 if (i + 1) != len(gen_fields) {
-                    code += link {" &&\n           "}
+                    code += " &&\n           "
                 }
             }
-            code += link{" { break }\n"}
+            code += " { break }\n"
             for i len(gen_fields) {
                 name := gen_fields[i][0]
                 ty := gen_fields[i][1]
                 rule := gen_fields[i][2]
                 as := gen_fields[i][3]
-                code += link {"        i_" + name + " := "}
+                code += link {"        i_"name" := "}
                 if rule != none() {
                     code += link {"__"unwrap(rule)"(data: data, index: i, name: "}
                     if as != none() {
                         code += link {"some(\""unwrap(as)"\"))\n"}
                     } else {
-                        code += link {"none())\n"}
+                        code += "none())\n"
                     }
                 } else {
                     code += link {"read_"unwrap(ty)
@@ -236,14 +236,14 @@ fn to_code(syntax: [[]]) -> res[str] {
                 i += end_node(data: syntax, index: i, name: "ref")?
             }
 
-            code += link {"    return err(\"Expected one of "}
+            code += "    return err(\"Expected one of "
             for i {
                 code += link {"`"rules[i]"`"}
                 if (i + 1) < len(rules) {
-                    code += link {", "}
+                    code += ", "
                 }
             }
-            code += link {"\")?\n"}
+            code += "\")?\n"
 
             i += end_node(data: syntax, index: i, name: "select")?
         }

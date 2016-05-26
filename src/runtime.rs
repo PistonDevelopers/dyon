@@ -1065,6 +1065,17 @@ impl Runtime {
                                                     self.stack_trace()), self))
                                         }
                                     }
+                                    Variable::Link(ref mut n) => {
+                                        if let Add = op {
+                                            try!(n.push(&Variable::F64(b)));
+                                        } else {
+                                            return Err(module.error(
+                                                left.source_range(),
+                                                &format!("{}\nCan not use this assignment \
+                                                operator with `link` and `number`",
+                                                    self.stack_trace()), self));
+                                        }
+                                    }
                                     _ => return Err(module.error(
                                             left.source_range(),
                                             &format!("{}\nExpected assigning to a number",
@@ -1129,6 +1140,17 @@ impl Runtime {
                                                     self.stack_trace()), self))
                                         }
                                     }
+                                    Variable::Link(ref mut n) => {
+                                        if let Add = op {
+                                            try!(n.push(&Variable::Bool(b)));
+                                        } else {
+                                            return Err(module.error(
+                                                left.source_range(),
+                                                &format!("{}\nCan not use this assignment \
+                                                operator with `link` and `bool`",
+                                                    self.stack_trace()), self));
+                                        }
+                                    }
                                     _ => return Err(module.error(
                                             left.source_range(),
                                             &format!("{}\nExpected assigning to a bool",
@@ -1154,6 +1176,17 @@ impl Runtime {
                                                 left.source_range(),
                                                 &format!("{}\nReturn has no value",
                                                     self.stack_trace()), self))
+                                        }
+                                    }
+                                    Variable::Link(ref mut n) => {
+                                        if let Add = op {
+                                            try!(n.push(&Variable::Text(b.clone())));
+                                        } else {
+                                            return Err(module.error(
+                                                left.source_range(),
+                                                &format!("{}\nCan not use this assignment \
+                                                operator with `link` and `text`",
+                                                    self.stack_trace()), self));
                                         }
                                     }
                                     _ => return Err(module.error(
