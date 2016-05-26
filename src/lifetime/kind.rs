@@ -70,6 +70,8 @@ pub enum Kind {
     Sw1,
     Sw2,
     Sw3,
+    Link,
+    LinkItem,
 }
 
 impl Kind {
@@ -145,6 +147,8 @@ impl Kind {
             "sw1" => Kind::Sw1,
             "sw2" => Kind::Sw2,
             "sw3" => Kind::Sw3,
+            "link" => Kind::Link,
+            "link_item" => Kind::LinkItem,
             _ => return None
         })
     }

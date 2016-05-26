@@ -214,6 +214,30 @@ fn write_variable<W>(
         Variable::Ref(ind) => {
             try!(write_variable(w, rt, &rt.stack[ind], escape_string));
         }
+        Variable::Link(ref link) => {
+            match escape_string {
+                EscapeString::Json => {
+                    // Write link items.
+                    try!(write!(w, "link {{ "));
+                    for slice in &link.slices {
+                        for i in slice.start..slice.end {
+                            let v = slice.block.var(i);
+                            try!(write_variable(w, rt, &v, EscapeString::Json));
+                            try!(write!(w, " "));
+                        }
+                    }
+                    try!(write!(w, "}}"));
+                }
+                EscapeString::None => {
+                    for slice in &link.slices {
+                        for i in slice.start..slice.end {
+                            let v = slice.block.var(i);
+                            try!(write_variable(w, rt, &v, EscapeString::None));
+                        }
+                    }
+                }
+            }
+        }
         Variable::Object(ref obj) => {
             try!(write!(w, "{{"));
             let n = obj.len();
@@ -779,6 +803,7 @@ pub fn call_standard(
                 &Variable::Bool(_) => rt.bool_type.clone(),
                 &Variable::Object(_) => rt.object_type.clone(),
                 &Variable::Array(_) => rt.array_type.clone(),
+                &Variable::Link(_) => rt.link_type.clone(),
                 &Variable::Ref(_) => rt.ref_type.clone(),
                 &Variable::UnsafeRef(_) => rt.unsafe_ref_type.clone(),
                 &Variable::RustObject(_) => rt.rust_object_type.clone(),

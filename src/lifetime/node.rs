@@ -154,6 +154,8 @@ impl Node {
         let mut call_arg_ind = 0;
         for &c in &self.children {
             match (self.kind, nodes[c].kind) {
+                (_, Kind::Link) => {}
+                (_, Kind::LinkItem) => {}
                 (_, Kind::ReturnVoid) => {}
                 (_, Kind::Swizzle) => {}
                 (_, Kind::Loop) => {}
@@ -292,6 +294,7 @@ pub fn convert_meta_data(
                     Kind::Sum => Some(Type::F64),
                     Kind::Swizzle => Some(Type::F64),
                     Kind::Compare => Some(Type::Bool),
+                    Kind::Link => Some(Type::Link),
                     _ => None
                 };
 

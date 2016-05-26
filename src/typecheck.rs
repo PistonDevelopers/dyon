@@ -12,6 +12,7 @@ pub enum Type {
     F64,
     Vec4,
     Text,
+    Link,
     Array(Box<Type>),
     // Object(HashMap<Arc<String>, Type>),
     Object,
@@ -33,6 +34,7 @@ impl Type {
             &F64 => "f64".into(),
             &Vec4 => "vec4".into(),
             &Text => "str".into(),
+            &Link => "link".into(),
             &Array(ref ty) => {
                 if let Any = **ty {
                     "[]".into()
@@ -234,6 +236,9 @@ impl Type {
             } else if let Ok((range, _)) = convert.meta_bool("vec4") {
                 convert.update(range);
                 ty = Some(Type::Vec4);
+            } else if let Ok((range, _)) = convert.meta_bool("link") {
+                convert.update(range);
+                ty = Some(Type::Link);
             } else if let Ok((range, _)) = convert.meta_bool("opt_any") {
                 convert.update(range);
                 ty = Some(Type::Option(Box::new(Type::Any)));

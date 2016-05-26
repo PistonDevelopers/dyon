@@ -67,6 +67,7 @@ pub struct Runtime {
     pub bool_type: Variable,
     pub object_type: Variable,
     pub array_type: Variable,
+    pub link_type: Variable,
     pub ref_type: Variable,
     pub unsafe_ref_type: Variable,
     pub rust_object_type: Variable,
@@ -223,6 +224,7 @@ impl Runtime {
             return_type: Variable::Text(Arc::new("return".into())),
             bool_type: Variable::Text(Arc::new("boolean".into())),
             object_type: Variable::Text(Arc::new("object".into())),
+            link_type: Variable::Text(Arc::new("link".into())),
             array_type: Variable::Text(Arc::new("array".into())),
             ref_type: Variable::Text(Arc::new("ref".into())),
             unsafe_ref_type: Variable::Text(Arc::new("unsafe_ref".into())),
@@ -338,6 +340,10 @@ impl Runtime {
         use ast::Expression::*;
 
         match *expr {
+            Link(ref link) => {
+                let flow = try!(self.link(link, module));
+                Ok((Expect::Something, flow))
+            }
             Object(ref obj) => {
                 let flow = try!(self.object(obj, module));
                 Ok((Expect::Something, flow))
@@ -620,6 +626,7 @@ impl Runtime {
             ref_type: self.ref_type.clone(),
             option_type: self.option_type.clone(),
             array_type: self.array_type.clone(),
+            link_type: self.link_type.clone(),
             bool_type: self.bool_type.clone(),
             object_type: self.object_type.clone(),
             text_type: self.text_type.clone(),
@@ -809,6 +816,40 @@ impl Runtime {
         }
         if let Some(ind) = sw.sw3 {
             self.stack.push(Variable::F64(v[ind] as f64));
+        }
+        Ok(Flow::Continue)
+    }
+
+    fn link(
+        &mut self,
+        link: &ast::Link,
+        module: &Module
+    ) -> Result<Flow, String> {
+        use Link;
+
+        if link.items.len() == 0 {
+            self.stack.push(Variable::Link(Link::new()));
+        } else {
+            let mut new_link = Link::new();
+            for item in &link.items {
+                match try!(self.expression(item, Side::Right, module)) {
+                    (_, Flow::Return) => { return Ok(Flow::Return); }
+                    (Expect::Something, Flow::Continue) => {}
+                    _ => return Err(module.error(item.source_range(),
+                        &format!("{}\nExpected something",
+                            self.stack_trace()), self))
+                };
+                let v = self.stack.pop().expect("There is no value on the stack");
+                match new_link.push(self.resolve(&v)) {
+                    Err(err) => {
+                        return Err(module.error(item.source_range(),
+                            &format!("{}\n{}", self.stack_trace(),
+                            err), self))
+                    }
+                    Ok(()) => {}
+                }
+            }
+            self.stack.push(Variable::Link(new_link));
         }
         Ok(Flow::Continue)
     }
@@ -1190,6 +1231,33 @@ impl Runtime {
                                 }
                             }
                         }
+                        &Variable::Link(ref b) => {
+                            unsafe {
+                                match *r {
+                                    Variable::Link(ref mut n) => {
+                                        match op {
+                                            Set => *n = b.clone(),
+                                            Add => *n = n.add(b),
+                                            _ => unimplemented!()
+                                        }
+                                    }
+                                    Variable::Return => {
+                                        if let Set = op {
+                                            *r = Variable::Link(b.clone())
+                                        } else {
+                                            return Err(module.error(
+                                                left.source_range(),
+                                                &format!("{}\nReturn has no value",
+                                                    self.stack_trace()), self))
+                                        }
+                                    }
+                                    _ => return Err(module.error(
+                                        left.source_range(),
+                                        &format!("{}\nExpected assigning to link",
+                                            self.stack_trace()), self))
+                                }
+                            }
+                        }
                         &Variable::Option(ref b) => {
                             unsafe {
                                 match *r {
@@ -1290,7 +1358,12 @@ impl Runtime {
                                 }
                             }
                         }
-                        _ => unimplemented!()
+                        x => {
+                            return Err(module.error(
+                                left.source_range(),
+                                &format!("{}\nCan not use this assignment operator with `{}`",
+                                    self.stack_trace(), self.typeof_var(x)), self));
+                        }
                     };
                     Ok(Flow::Continue)
                 }
@@ -1649,6 +1722,7 @@ impl Runtime {
             &Variable::Bool(_) => self.bool_type.clone(),
             &Variable::Object(_) => self.object_type.clone(),
             &Variable::Array(_) => self.array_type.clone(),
+            &Variable::Link(_) => self.link_type.clone(),
             &Variable::Ref(_) => self.ref_type.clone(),
             &Variable::UnsafeRef(_) => self.unsafe_ref_type.clone(),
             &Variable::RustObject(_) => self.rust_object_type.clone(),
@@ -3200,6 +3274,16 @@ impl Runtime {
                 return Err(module.error(binop.source_range,
                 &format!("{}\nThe right argument must be a string. \
                 Try the `to_string` function", self.stack_trace()), self)),
+            (&Variable::Link(ref a), &Variable::Link(ref b)) => {
+                match binop.op {
+                    Add => {
+                        Variable::Link(a.add(b))
+                    }
+                    _ => return Err(module.error(binop.source_range,
+                        &format!("{}\nThis operation can not be used with links",
+                            self.stack_trace()), self))
+                }
+            }
             _ => return Err(module.error(binop.source_range, &format!(
                 "{}\nInvalid type for binary operator `{:?}`, \
                 expected numbers, vec4s, bools or strings",

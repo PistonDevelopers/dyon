@@ -1,4 +1,4 @@
-_seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n"
+_seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\""
 
 200 multi_line_comment = ["/*" ..."*/"? .r?({
     [!"*/" "*" ..."*/"?] [multi_line_comment ..."*/"?] ["/" ..."*/"?]
@@ -80,6 +80,7 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n"
 20 item_extra = .r!([{
            [?w "[" ?w {.t?:"id" .$_:"id" expr:"id"} ?w "]"]
            [?w "." ?w .._seps!:"id"]} ?[?w "?":"try_id"]])
+20 link = ["link" ?w "{" ?w .s?.(?w expr:"link_item") "}"]
 21 for = [label "for" .w!
     expr:"init" ?w ";" ?w
     expr:"cond" ?w ";" ?w
@@ -109,7 +110,7 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n"
 42 try = ?[?w "?":"try"]
 43 , = [?w "," ?w]
 44 arr = {array:"array" array_fill:"array_fill"}
-45 items = {vec4:"vec4" ["(" ?w expr ?w ")"] unop:"unop"
+45 items = {vec4:"vec4" link:"link" ["(" ?w expr ?w ")"] unop:"unop"
             text go:"go" call:"call" named_call:"named_call"
             num bool color item:"item"}
 // Allow whitespace, but no new line.
@@ -134,6 +135,7 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n"
     "f64":"f64"
     "str":"str"
     "vec4":"vec4"
+    "link":"link"
     ["opt" ?w "[" ?w type:"opt" ?w "]"]
     "opt":"opt_any"
     ["res" ?w "[" ?w type:"res" ?w "]"]

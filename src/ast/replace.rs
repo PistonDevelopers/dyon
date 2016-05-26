@@ -15,6 +15,7 @@ use super::{
     Id,
     If,
     Item,
+    Link,
     Object,
     Number,
     Swizzle,
@@ -30,6 +31,16 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
     use super::Expression as E;
 
     match *expr {
+        E::Link(ref link_expr) => {
+            let mut new_items: Vec<Expression> = vec![];
+            for item in &link_expr.items {
+                new_items.push(number(item, name, val));
+            }
+            E::Link(Link {
+                items: new_items,
+                source_range: link_expr.source_range,
+            })
+        }
         E::Number(_) => expr.clone(),
         E::BinOp(ref bin_op_expr) => {
             E::BinOp(Box::new(BinOpExpression {

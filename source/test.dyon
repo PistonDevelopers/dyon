@@ -1,6 +1,3 @@
 fn main() {
-    test_load := unwrap(load("source/test_load.dyon"))
-    test_load_2 := unwrap(load(source: "source/test_load_2.dyon",
-                               imports: [test_load]))
-    call(test_load_2, "bar", [])
+    
 }

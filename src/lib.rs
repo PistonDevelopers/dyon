@@ -19,10 +19,12 @@ pub mod intrinsics;
 pub mod prelude;
 pub mod embed;
 pub mod typecheck;
+pub mod link;
 
 pub use runtime::Runtime;
 pub use prelude::{Lt, Prelude, PreludeFunction};
 pub use typecheck::Type;
+pub use link::Link;
 
 pub type Array = Arc<Vec<Variable>>;
 pub type Object = Arc<HashMap<Arc<String>, Variable>>;
@@ -96,6 +98,7 @@ pub enum Variable {
     Text(Arc<String>),
     Array(Array),
     Object(Object),
+    Link(Link),
     UnsafeRef(*mut Variable),
     RustObject(RustObject),
     Option(Option<Box<Variable>>),
@@ -134,6 +137,7 @@ impl Variable {
                 }
                 Array(res)
             }
+            Link(_) => self.clone(),
             Ref(ind) => {
                 stack[ind].deep_clone(stack)
             }
