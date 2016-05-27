@@ -298,7 +298,7 @@ impl Type {
                     convert.update(range);
                     val
                 } else {
-                    Type::Any
+                    Type::Object
                 };
                 ty = Some(Type::AdHoc(val, Box::new(inner_ty)));
             } else {

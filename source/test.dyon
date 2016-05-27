@@ -6,20 +6,20 @@ fn main() {
 
     println("=== people")
     call_many([john, peter])
-    
+
     println("=== anonymous")
     call({name: "Carl"})
 }
 
-fn new_person_name(name: str) -> Person[{}] {
+fn new_person_name(name: str) -> Person {
     return { name: clone(name) }
 }
 
-fn call(person: Person[{}]) {
+fn call(person: Person) {
     println("Hi " + person.name + "!")
 }
 
-fn call_many(people: [Person[{}]]) {
+fn call_many(people: [Person]) {
     for i {
         call(people[i])
     }
