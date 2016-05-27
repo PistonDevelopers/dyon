@@ -1,8 +1,5 @@
 fn main() {
-    a := 2
-    foo()
-}
-
-fn foo() ~ a {
-    println(a)
+    a := link {}
+    a += tail(link {1})
+    println(is_empty(a))
 }
