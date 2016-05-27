@@ -719,4 +719,6 @@ pub type ArgNames = HashMap<(usize, Arc<String>), (usize, usize)>;
 pub enum Op {
     Assign,
     Set,
+    Add,
+    Sub,
 }

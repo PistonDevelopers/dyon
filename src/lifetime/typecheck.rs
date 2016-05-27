@@ -158,10 +158,18 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                                 if let Some(ref ty) = nodes[decl].ty {
                                     this_ty = Some(nodes[i].inner_type(ty));
                                 }
+                                if this_ty.is_some() {
+                                    // Change the type of left expression,
+                                    // to get a more accurate type.
+                                    if let Some(parent) = nodes[i].parent {
+                                        if nodes[parent].kind == Kind::Left {
+                                            nodes[parent].ty = this_ty.clone();
+                                        }
+                                    }
+                                }
                             }
                         }
-                    }
-                    if let Some(parent) = nodes[i].parent {
+                    } else if let Some(parent) = nodes[i].parent {
                         if nodes[parent].kind == Kind::Left {
                            if let Some(ref ty) = nodes[parent].ty {
                                // Get type from assignment left expression.
@@ -339,6 +347,28 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
             }
             Kind::If => {
                 try!(check_if(i, nodes))
+            }
+            Kind::Assign => {
+                use super::Op;
+
+                match nodes[i].op {
+                    Some(Op::Add) | Some(Op::Sub) => {
+                        let left = nodes[i].find_child_by_kind(nodes, Kind::Left).unwrap();
+                        let right = nodes[i].find_child_by_kind(nodes, Kind::Right).unwrap();
+                        match (&nodes[left].ty, &nodes[right].ty) {
+                            (&Some(ref left_ty), &Some(ref right_ty)) => {
+                                if !left_ty.add_assign(&right_ty) {
+                                    return Err(nodes[i].source.wrap(
+                                        format!("Assignment operator can not be used with `{}` and `{}`",
+                                            left_ty.description(), right_ty.description())
+                                    ))
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
+                    _ => {}
+                }
             }
             Kind::Block => {
                 // Make sure all results are used.

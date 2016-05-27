@@ -1,6 +1,6 @@
 fn main() {
     a := km(3)
-    a -= km(3)
+    a += 3
     println(a)
 }
 

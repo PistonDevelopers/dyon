@@ -209,6 +209,21 @@ impl Type {
         }
     }
 
+    pub fn add_assign(&self, other: &Type) -> bool {
+        use self::Type::*;
+
+        match (self, other) {
+            (&AdHoc(ref name, ref ty), &AdHoc(ref other_name, ref other_ty)) => {
+                if name != other_name { return false; }
+                if !ty.goes_with(other_ty) { return false; }
+                ty.add_assign(other_ty)
+            }
+            (&AdHoc(_, _), _) | (_, &AdHoc(_, _)) => false,
+            (&Void, _) | (_, &Void) => false,
+            _ => true
+        }
+    }
+
     pub fn mul(&self, other: &Type) -> Option<Type> {
         use self::Type::*;
 
