@@ -188,8 +188,10 @@ impl Link {
             let first = &self.slices[0];
             let mut l = Link::new();
             if first.start < first.end {
-                l.slices.push(first.clone());
-                l.slices[0].start += 1;
+                if first.start + 1 < first.end {
+                    l.slices.push(first.clone());
+                    l.slices[0].start += 1;
+                }
             }
             for slice in self.slices.iter().skip(1) {
                 l.slices.push(slice.clone())
@@ -197,6 +199,8 @@ impl Link {
             l
         }
     }
+
+    pub fn is_empty(&self) -> bool { self.slices.len() == 0 }
 
     pub fn add(&self, other: &Link) -> Link {
         let mut slices = Vec::with_capacity(self.slices.len() + other.slices.len());
