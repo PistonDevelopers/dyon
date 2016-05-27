@@ -1,6 +1,8 @@
 fn main() {
-    a := link { 1 }
-    a += link { 2 }
-    b := tail(a)
-    println(b)
+    a := 2
+    foo()
+}
+
+fn foo() ~ a {
+    println(a)
 }

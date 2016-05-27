@@ -993,7 +993,9 @@ impl Runtime {
                         }
                     } else {
                         self.local_stack.push((item.name.clone(), self.stack.len()));
-                        self.current_stack.push((item.name.clone(), self.stack.len()));
+                        if item.current {
+                            self.current_stack.push((item.name.clone(), self.stack.len()));
+                        }
                         self.stack.push(v);
                     }
                     Ok(Flow::Continue)
