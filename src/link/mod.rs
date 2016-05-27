@@ -199,6 +199,14 @@ impl Link {
                 last.end = 1;
                 Ok(())
             }
+            &Variable::Link(ref link) => {
+                for slice in &link.slices {
+                    for i in slice.start..slice.end {
+                        try!(self.push(&slice.block.var(i)))
+                    }
+                }
+                Ok(())
+            }
             _ => return Err("Expected `bool`, `f64` or `str`".into())
         }
     }

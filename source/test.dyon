@@ -1,10 +1,6 @@
 fn main() {
-    a := link {}
-    for i 10 {
-        a += i
-        a += " so "
-        a += i > 0
-        a += " "
-    }
-    println(a)
+    a := link { 1 2 3 }
+    b := link { 4 5 6 }
+    c := link { a b }
+    println(c)
 }
