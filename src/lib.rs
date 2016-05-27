@@ -18,12 +18,12 @@ pub mod lifetime;
 pub mod intrinsics;
 pub mod prelude;
 pub mod embed;
-pub mod typecheck;
+pub mod ty;
 pub mod link;
 
 pub use runtime::Runtime;
 pub use prelude::{Lt, Prelude, PreludeFunction};
-pub use typecheck::Type;
+pub use ty::Type;
 pub use link::Link;
 
 pub type Array = Arc<Vec<Variable>>;

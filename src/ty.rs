@@ -1,4 +1,5 @@
-// use std::collections::HashMap;
+use std::sync::Arc;
+
 use piston_meta::bootstrap::Convert;
 use range::Range;
 
@@ -20,6 +21,7 @@ pub enum Type {
     Option(Box<Type>),
     Result(Box<Type>),
     Thread(Box<Type>),
+    AdHoc(Arc<String>, Box<Type>),
 }
 
 impl Type {
@@ -76,6 +78,9 @@ impl Type {
                     res
                 }
             }
+            &AdHoc(ref ad, ref ty) => {
+                (&**ad).clone() + "[" + &ty.description() + "]"
+            }
         }
     }
 
@@ -102,6 +107,13 @@ impl Type {
     pub fn goes_with(&self, other: &Type) -> bool {
         use self::Type::*;
 
+        // Invert the order because of complex ad-hoc logic.
+        if let &AdHoc(_, _) = other {
+            if let &AdHoc(_, _) = self {}
+            else {
+                return other.goes_with(self)
+            }
+        }
         match self {
             // Unreachable goes with anything.
             &Unreachable => true,
@@ -154,7 +166,16 @@ impl Type {
                     false
                 }
             }
-            // Bool, F64, Text, Vec4.
+            &AdHoc(ref name, ref ty) => {
+                if let &AdHoc(ref other_name, ref other_ty) = other {
+                    name == other_name && ty.goes_with(other_ty)
+                } else if let &Void = other {
+                    false
+                } else {
+                    ty.goes_with(other)
+                }
+            }
+            // Bool, F64, Text, Vec4, AdHoc.
             x if x == other => { true }
             _ if *other == Type::Any => { true }
             _ => { false }
@@ -270,6 +291,16 @@ impl Type {
                     "thr", convert, ignored) {
                 convert.update(range);
                 ty = Some(Type::Thread(Box::new(val)));
+            } else if let Ok((range, val)) = convert.meta_string("ad_hoc") {
+                convert.update(range);
+                let inner_ty = if let Ok((range, val)) = Type::from_meta_data(
+                        "ad_hoc_ty", convert, ignored) {
+                    convert.update(range);
+                    val
+                } else {
+                    Type::Any
+                };
+                ty = Some(Type::AdHoc(val, Box::new(inner_ty)));
             } else {
                 let range = convert.ignore();
                 convert.update(range);

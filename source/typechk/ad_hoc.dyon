@@ -6,7 +6,7 @@ fn main() {
 
     println("=== people")
     call_many([john, peter])
-    
+
     println("=== anonymous")
     call({name: "Carl"})
 }
