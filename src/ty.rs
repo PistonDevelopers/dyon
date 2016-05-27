@@ -186,6 +186,15 @@ impl Type {
         use self::Type::*;
 
         match (self, other) {
+            (&AdHoc(ref name, ref ty), &AdHoc(ref other_name, ref other_ty)) => {
+                if name != other_name { return None; }
+                if !ty.goes_with(other_ty) { return None; }
+                if let Some(new_ty) = ty.add(other_ty) {
+                    Some(AdHoc(name.clone(), Box::new(new_ty)))
+                } else {
+                    None
+                }
+            }
             (&Void, _) | (_, &Void) => None,
             (&Array(_), _) | (_, &Array(_)) => None,
             (&Bool, &Bool) => Some(Bool),

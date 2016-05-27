@@ -133,6 +133,8 @@ fn test_typechk() {
     test_fail_src("source/typechk/if_3.dyon");
     test_fail_src("source/typechk/if_4.dyon");
     test_src("source/typechk/ad_hoc.dyon");
+    test_fail_src("source/typechk/add_ad_hoc.dyon");
+    test_src("source/typechk/add_ad_hoc_2.dyon");
 }
 
 #[test]
