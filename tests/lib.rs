@@ -136,6 +136,7 @@ fn test_typechk() {
     test_fail_src("source/typechk/add_ad_hoc.dyon");
     test_src("source/typechk/add_ad_hoc_2.dyon");
     test_fail_src("source/typechk/add_ad_hoc_3.dyon");
+    test_fail_src("source/typechk/add_ad_hoc_4.dyon");
     test_fail_src("source/typechk/mul_ad_hoc.dyon");
 }
 
