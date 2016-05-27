@@ -1,6 +1,6 @@
 
 fn to_code(syntax: [[]]) -> res[str] {
-    code := ""
+    code := link {}
     i := 0
 
     i += start_node(data: syntax, index: i, name: "rules")?
@@ -13,17 +13,20 @@ fn to_code(syntax: [[]]) -> res[str] {
         i_name := read_str(data: syntax, index: i, name: "name")?
         i += i_name[0]
         name := i_name[1]
-        code += "fn __" + to_string(name) + "_data_index_name" +
-                "(data: [[]], index: f64, name: opt[str]) -> res {\n"
+        code += link {
+            "fn __"name"_data_index_name(data: [[]], index: f64, name: opt[str]) -> res {\n"
+        }
         i += start_node(data: syntax, index: i, name: "rule")?
 
-        code += "    start := index\n"
-        code += "    i := index\n"
-        code += "    if name != none() {\n"
-        code += "        node := start_node(data: data, index: i, name: unwrap(name))\n"
-        code += "        if node == none() { return err(\"Expected `\" + unwrap(name) + \"`\")? }\n"
-        code += "        i += unwrap(node)\n"
-        code += "    }\n"
+        code += link {
+            "    start := index\n"
+            "    i := index\n"
+            "    if name != none() {\n"
+            "        node := start_node(data: data, index: i, name: unwrap(name))\n"
+            "        if node == none() { return err(\"Expected `\" + unwrap(name) + \"`\")? }\n"
+            "        i += unwrap(node)\n"
+            "    }\n"
+        }
 
         fields := start_node(data: syntax, index: i, name: "fields")
         if fields != none() {
@@ -67,13 +70,15 @@ fn to_code(syntax: [[]]) -> res[str] {
                 i += end_node(data: syntax, index: i, name: "field")?
             }
             for i len(gen_fields) {
-                code += "    _" + gen_fields[i][0] + " := none()\n"
+                code += link {"    _"gen_fields[i][0]" := none()\n"}
             }
-            code += "    loop {\n"
-            code += "        if i >= len(data) { return err(\"Unexpected end\")? }\n"
-            code += "        if "
+            code += link {
+                "    loop {\n"
+                "        if i >= len(data) { return err(\"Unexpected end\")? }\n"
+                "        if "
+            }
             for i len(gen_fields) {
-                code += "(_" + gen_fields[i][0] + " != none())"
+                code += link {"(_"gen_fields[i][0]" != none())"}
                 if (i + 1) != len(gen_fields) {
                     code += " &&\n           "
                 }
@@ -84,46 +89,53 @@ fn to_code(syntax: [[]]) -> res[str] {
                 ty := gen_fields[i][1]
                 rule := gen_fields[i][2]
                 as := gen_fields[i][3]
-                code += "        i_" + name + " := "
+                code += link {"        i_"name" := "}
                 if rule != none() {
-                    code += "__" + unwrap(rule) + "(data: data, index: i, name: "
+                    code += link {"__"unwrap(rule)"(data: data, index: i, name: "}
                     if as != none() {
-                        code += "some(\"" + unwrap(as) + "\"))\n"
+                        code += link {"some(\""unwrap(as)"\"))\n"}
                     } else {
                         code += "none())\n"
                     }
                 } else {
-                    code += "read_" + unwrap(ty) + "(data: data, index: i, name: \"" + name + "\")\n"
+                    code += link {"read_"unwrap(ty)
+                        "(data: data, index: i, name: \""name"\")\n"}
                 }
                 if rule != none() {
-                    code += "        if !is_err(i_" + name + ") {\n"
+                    code += link {"        if !is_err(i_"name") {\n"}
                 } else {
-                    code += "        if i_" + name + " != none() {\n"
+                    code += link {"        if i_"name" != none() {\n"}
                 }
-                code += "            i_" + name + " := unwrap(i_" + name + ")\n"
-                code += "            i += i_" + name + "[0]\n"
-                code += "            _" + name + " = some(i_" + name + "[1])\n"
-                code += "            continue\n"
-                code += "        }\n"
+                code += link {
+                    "            i_"name" := unwrap(i_"name")\n"
+                    "            i += i_"name"[0]\n"
+                    "            _"name" = some(i_"name"[1])\n"
+                    "            continue\n"
+                    "        }\n"
+                }
             }
-            code += "        i += ignore(data: data, index: i)\n"
-            code += "        break\n"
-            code += "    }\n"
-            code += "    if name != none() {\n"
-            code += "        i += end_node(data: data, index: i, name: unwrap(name))?\n"
-            code += "    }\n"
+            code += link {
+                "        i += ignore(data: data, index: i)\n"
+                "        break\n"
+                "    }\n"
+                "    if name != none() {\n"
+                "        i += end_node(data: data, index: i, name: unwrap(name))?\n"
+                "    }\n"
+            }
             for i len(gen_fields) {
                 name := gen_fields[i][0]
-                code += "    " + name + " := if _" + name + " != none() {\n"
-                code += "        unwrap(_" + name + ")\n"
-                code += "    } else {\n"
-                code += "        return err(\"Could find `" + name + "`\")?\n"
-                code += "    }\n"
+                code += link {
+                    "    "name" := if _"name" != none() {\n"
+                    "        unwrap(_"name")\n"
+                    "    } else {\n"
+                    "        return err(\"Could find `"name"`\")?\n"
+                    "    }\n"
+                }
             }
             i += start_node(data: syntax, index: i, name: "expr")?
             expr := read_str(data: syntax, index: i, name: "code")?
             i += expr[0]
-            code += "    return ok([i - start, " + expr[1] + "])\n"
+            code += link {"    return ok([i - start, "expr[1]"])\n"}
 
             i += end_node(data: syntax, index: i, name: "expr")?
             i += end_node(data: syntax, index: i, name: "fields")?
@@ -138,38 +150,46 @@ fn to_code(syntax: [[]]) -> res[str] {
 
             as := read_str(data: syntax, index: i, name: "as")
 
-            code += "    arr := []\n"
-            code += "    loop {\n"
+            code += link {
+                "    arr := []\n"
+                "    loop {\n"
+            }
             if as == none() {
                 name := rule
 
-                code += "        _" + name + " := __" + rule + "(data: data, index: i, name: none())\n"
-                code += "        if is_err(_" + name + ") {\n"
-                code += "            break\n"
-                code += "        } else {\n"
-                code += "            i_" + name + " := unwrap(_" + name + ")\n"
-                code += "            i += i_" + name + "[0]\n"
-                code += "            push(mut arr, i_" + name + "[1])\n"
-                code += "        }\n"
+                code += link {
+                    "        _"name" := __"rule"(data: data, index: i, name: none())\n"
+                    "        if is_err(_"name") {\n"
+                    "            break\n"
+                    "        } else {\n"
+                    "            i_"name" := unwrap(_"name")\n"
+                    "            i += i_"name"[0]\n"
+                    "            push(mut arr, i_"name"[1])\n"
+                    "        }\n"
+                }
             } else {
                 i_as := unwrap(as)
                 i += i_as[0]
                 name := i_as[1]
 
-                code += "        _" + name + " := __" + rule + "(data: data, index: i, name: some(\"" + name + "\"))\n"
-                code += "        if is_err(_" + name + ") {\n"
-                code += "            break\n"
-                code += "        } else {\n"
-                code += "            i_" + name + " := unwrap(_" + name + ")\n"
-                code += "            i += i_" + name + "[0]\n"
-                code += "            push(mut arr, i_" + name + "[1])\n"
-                code += "        }\n"
+                code += link {
+                    "        _"name" := __"rule"(data: data, index: i, name: some(\""name"\"))\n"
+                    "        if is_err(_"name") {\n"
+                    "            break\n"
+                    "        } else {\n"
+                    "            i_"name" := unwrap(_"name")\n"
+                    "            i += i_"name"[0]\n"
+                    "            push(mut arr, i_"name"[1])\n"
+                    "        }\n"
+                }
             }
-            code += "    }\n"
-            code += "    if name != none() {\n"
-            code += "        i += end_node(data: data, index: i, name: unwrap(name))?\n"
-            code += "    }\n"
-            code += "    return ok([i - start, arr])\n"
+            code += link {
+                "    }\n"
+                "    if name != none() {\n"
+                "        i += end_node(data: data, index: i, name: unwrap(name))?\n"
+                "    }\n"
+                "    return ok([i - start, arr])\n"
+            }
 
             i += end_node(data: syntax, index: i, name: "repeat")?
         }
@@ -195,27 +215,30 @@ fn to_code(syntax: [[]]) -> res[str] {
                     i += i_as[0]
                     as := i_as[1]
 
-                    code += "    _" + rule + " := __" + rule +
-                            "(data: data, index: i, name: some(\"" + as + "\"))\n"
+                    code += link {"    _"rule" := __"rule
+                            "(data: data, index: i, name: some(\"" + as + "\"))\n"}
                 } else {
-                    code += "    _" + rule + " := __" + rule +
-                            "(data: data, index: i, name: none())\n"
+                    code += link {
+                        "    _"rule" := __"rule"(data: data, index: i, name: none())\n"
+                    }
                 }
-                code += "    if is_ok(_" + rule + ") {\n"
-                code += "        i_" + rule + " := unwrap(_" + rule + ")\n"
-                code += "        i += i_" + rule + "[0]\n"
-                code += "        if name != none() {\n"
-                code += "            i += end_node(data: data, index: i, name: unwrap(name))?\n"
-                code += "        }\n"
-                code += "        return ok([i - start, i_" + rule + "[1]])\n"
-                code += "    }\n"
+                code += link {
+                    "    if is_ok(_"rule") {\n"
+                    "        i_"rule" := unwrap(_"rule")\n"
+                    "        i += i_"rule"[0]\n"
+                    "        if name != none() {\n"
+                    "            i += end_node(data: data, index: i, name: unwrap(name))?\n"
+                    "        }\n"
+                    "        return ok([i - start, i_"rule"[1]])\n"
+                    "    }\n"
+                }
 
                 i += end_node(data: syntax, index: i, name: "ref")?
             }
 
             code += "    return err(\"Expected one of "
             for i {
-                code += "`" + rules[i] + "`"
+                code += link {"`"rules[i]"`"}
                 if (i + 1) < len(rules) {
                     code += ", "
                 }
@@ -225,7 +248,7 @@ fn to_code(syntax: [[]]) -> res[str] {
             i += end_node(data: syntax, index: i, name: "select")?
         }
 
-        code += "}\n\n"
+        code += link {"}\n\n"}
         i += end_node(data: syntax, index: i, name: "rule")?
         i += end_node(data: syntax, index: i, name: "decl")?
     }
@@ -235,11 +258,13 @@ fn to_code(syntax: [[]]) -> res[str] {
     i_start := read_str(data: syntax, index: i, name: "start")?
     i += i_start[0]
 
-    code += "fn convert(data) -> res {\n"
-    code += "    i := 0\n"
-    code += "    r := __" + i_start[1] + "(data: data, index: i, name: none())?\n"
-    code += "    return ok(r[1])\n"
-    code += "}\n\n"
+    code += link {
+        "fn convert(data) -> res {\n"
+        "    i := 0\n"
+        "    r := __"i_start[1]"(data: data, index: i, name: none())?\n"
+        "    return ok(r[1])\n"
+        "}\n\n"
+    }
 
     return ok(code)
 }

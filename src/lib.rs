@@ -19,10 +19,12 @@ pub mod intrinsics;
 pub mod prelude;
 pub mod embed;
 pub mod typecheck;
+pub mod link;
 
 pub use runtime::Runtime;
 pub use prelude::{Lt, Prelude, PreludeFunction};
 pub use typecheck::Type;
+pub use link::Link;
 
 pub type Array = Arc<Vec<Variable>>;
 pub type Object = Arc<HashMap<Arc<String>, Variable>>;
@@ -96,6 +98,7 @@ pub enum Variable {
     Text(Arc<String>),
     Array(Array),
     Object(Object),
+    Link(Link),
     UnsafeRef(*mut Variable),
     RustObject(RustObject),
     Option(Option<Box<Variable>>),
@@ -134,6 +137,7 @@ impl Variable {
                 }
                 Array(res)
             }
+            Link(_) => self.clone(),
             Ref(ind) => {
                 stack[ind].deep_clone(stack)
             }
@@ -446,5 +450,25 @@ mod tests {
     #[bench]
     fn bench_threads_go(b: &mut Bencher) {
         b.iter(|| run_bench("source/bench/threads_go.dyon"));
+    }
+
+    #[bench]
+    fn bench_push_array(b: &mut Bencher) {
+        b.iter(|| run_bench("source/bench/push_array.dyon"));
+    }
+
+    #[bench]
+    fn bench_push_link(b: &mut Bencher) {
+        b.iter(|| run_bench("source/bench/push_link.dyon"));
+    }
+
+    #[bench]
+    fn bench_push_link_go(b: &mut Bencher) {
+        b.iter(|| run_bench("source/bench/push_link_go.dyon"));
+    }
+
+    #[bench]
+    fn bench_push_str(b: &mut Bencher) {
+        b.iter(|| run_bench("source/bench/push_str.dyon"));
     }
 }

@@ -328,6 +328,7 @@ impl Block {
 
 #[derive(Debug, Clone)]
 pub enum Expression {
+    Link(Link),
     Object(Box<Object>),
     Array(Box<Array>),
     ArrayFill(Box<ArrayFill>),
@@ -383,6 +384,10 @@ impl Expression {
             } else if let Ok((range, _)) = convert.meta_bool("mut") {
                 // Ignore `mut` since it is handled by lifetime checker.
                 convert.update(range);
+            } else if let Ok((range, val)) = Link::from_meta_data(
+                    convert, ignored) {
+                convert.update(range);
+                result = Some(Expression::Link(val));
             } else if let Ok((range, val)) = Object::from_meta_data(
                     convert, ignored) {
                 convert.update(range);
@@ -560,6 +565,7 @@ impl Expression {
         use self::Expression::*;
 
         match *self {
+            Link(ref link) => link.source_range,
             Object(ref obj) => obj.source_range,
             Array(ref arr) => arr.source_range,
             ArrayFill(ref arr_fill) => arr_fill.source_range,
@@ -599,6 +605,7 @@ impl Expression {
         use self::Expression::*;
 
         match *self {
+            Link(ref link) => link.resolve_locals(relative, stack, module),
             Object(ref obj) => obj.resolve_locals(relative, stack, module),
             Array(ref arr) => arr.resolve_locals(relative, stack, module),
             ArrayFill(ref arr_fill) => arr_fill.resolve_locals(relative, stack, module),
@@ -638,6 +645,58 @@ impl Expression {
             Variable(_, _) => {}
             Try(ref expr) => expr.resolve_locals(relative, stack, module),
             Swizzle(ref swizzle) => swizzle.expr.resolve_locals(relative, stack, module),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Link {
+    pub items: Vec<Expression>,
+    pub source_range: Range,
+}
+
+impl Link {
+    pub fn from_meta_data(
+        mut convert: Convert,
+        ignored: &mut Vec<Range>)
+    -> Result<(Range, Link), ()> {
+        let start = convert.clone();
+        let node = "link";
+        let start_range = try!(convert.start_node(node));
+        convert.update(start_range);
+
+        let mut items: Vec<Expression> = vec![];
+        loop {
+            if let Ok(range) = convert.end_node(node) {
+                convert.update(range);
+                break;
+            } else if let Ok((range, val)) = Expression::from_meta_data(
+                    "link_item", convert, ignored) {
+                convert.update(range);
+                items.push(val);
+            } else {
+                let range = convert.ignore();
+                convert.update(range);
+                ignored.push(range);
+            }
+        }
+
+        Ok((convert.subtract(start), Link {
+            items: items,
+            source_range: convert.source(start).unwrap(),
+        }))
+    }
+
+    pub fn resolve_locals(
+        &self,
+        relative: usize,
+        stack: &mut Vec<Option<Arc<String>>>,
+        module: &Module
+    ) {
+        let st = stack.len();
+        for expr in &self.items {
+            expr.resolve_locals(relative, stack, module);
+            stack.truncate(st);
         }
     }
 }

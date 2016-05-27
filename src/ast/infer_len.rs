@@ -37,6 +37,12 @@ fn infer_expr(
     use super::Expression::*;
 
     match *expr {
+        Link(ref link) => {
+            for expr in &link.items {
+                let res = infer_expr(expr, name, decls);
+                if res.is_some() { return res; }
+            }
+        }
         Item(ref item) => {
             if item.ids.len() == 0 { return None; }
             for (i, id) in item.ids.iter().enumerate() {

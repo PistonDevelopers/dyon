@@ -46,6 +46,8 @@ pub fn standard(f: &mut HashMap<Arc<String>, PreludeFunction>) {
         tys: vec![],
         ret: Type::F64
     });
+    sarg(f, "head", Type::Link, Type::Any);
+    sarg(f, "tail", Type::Link, Type::Link);
     sarg(f, "read_number", Type::Text, Type::F64);
     f.insert(Arc::new("read_line".into()), PreludeFunction {
         lts: vec![],
@@ -158,6 +160,11 @@ pub fn standard(f: &mut HashMap<Arc<String>, PreludeFunction>) {
         tys: vec![Type::Text; 2],
         ret: Type::Result(Box::new(Type::Text))
     });
+    f.insert(Arc::new("save_string_file".into()), PreludeFunction {
+        lts: vec![Lt::Default; 2],
+        tys: vec![Type::Text; 2],
+        ret: Type::Result(Box::new(Type::Text))
+    });
     sarg(f, "join_thread", Type::thread(), Type::Result(Box::new(Type::Any)));
     f.insert(Arc::new("save_data_file".into()), PreludeFunction {
         lts: vec![Lt::Default; 2],
@@ -213,6 +220,30 @@ fn write_variable<W>(
         }
         Variable::Ref(ind) => {
             try!(write_variable(w, rt, &rt.stack[ind], escape_string));
+        }
+        Variable::Link(ref link) => {
+            match escape_string {
+                EscapeString::Json => {
+                    // Write link items.
+                    try!(write!(w, "link {{ "));
+                    for slice in &link.slices {
+                        for i in slice.start..slice.end {
+                            let v = slice.block.var(i);
+                            try!(write_variable(w, rt, &v, EscapeString::Json));
+                            try!(write!(w, " "));
+                        }
+                    }
+                    try!(write!(w, "}}"));
+                }
+                EscapeString::None => {
+                    for slice in &link.slices {
+                        for i in slice.start..slice.end {
+                            let v = slice.block.var(i);
+                            try!(write_variable(w, rt, &v, EscapeString::None));
+                        }
+                    }
+                }
+            }
         }
         Variable::Object(ref obj) => {
             try!(write!(w, "{{"));
@@ -394,6 +425,30 @@ pub fn call_standard(
             sleep(Duration::new(secs, nanos));
             rt.pop_fn(call.name.clone());
             Expect::Nothing
+        }
+        "head" => {
+            rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
+            let v = rt.stack.pop().expect(TINVOTS);
+            let v = Variable::Option(match rt.resolve(&v) {
+                &Variable::Link(ref link) => link.head(),
+                x => return Err(module.error(call.args[0].source_range(),
+                                &rt.expected(x, "link"), rt))
+            });
+            rt.stack.push(v);
+            rt.pop_fn(call.name.clone());
+            Expect::Something
+        }
+        "tail" => {
+            rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
+            let v = rt.stack.pop().expect(TINVOTS);
+            let v = Variable::Link(match rt.resolve(&v) {
+                &Variable::Link(ref link) => link.tail(),
+                x => return Err(module.error(call.args[0].source_range(),
+                                &rt.expected(x, "link"), rt))
+            });
+            rt.stack.push(v);
+            rt.pop_fn(call.name.clone());
+            Expect::Something
         }
         "random" => {
             rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
@@ -779,6 +834,7 @@ pub fn call_standard(
                 &Variable::Bool(_) => rt.bool_type.clone(),
                 &Variable::Object(_) => rt.object_type.clone(),
                 &Variable::Array(_) => rt.array_type.clone(),
+                &Variable::Link(_) => rt.link_type.clone(),
                 &Variable::Ref(_) => rt.ref_type.clone(),
                 &Variable::UnsafeRef(_) => rt.unsafe_ref_type.clone(),
                 &Variable::RustObject(_) => rt.rust_object_type.clone(),
@@ -1387,6 +1443,43 @@ pub fn call_standard(
                 Ok(res) => Ok(Box::new(Variable::Text(Arc::new(res)))),
                 Err(err) => Err(Box::new(Error {
                     message: Variable::Text(Arc::new(err)),
+                    trace: vec![]
+                }))
+            }));
+            rt.pop_fn(call.name.clone());
+            Expect::Something
+        }
+        "save_string_file" => {
+            use std::fs::File;
+            use std::io::Write;
+            use std::error::Error as StdError;
+
+            rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
+            let file = rt.stack.pop().expect(TINVOTS);
+            let text = rt.stack.pop().expect(TINVOTS);
+            let file = match rt.resolve(&file) {
+                &Variable::Text(ref file) => file.clone(),
+                x => return Err(module.error(call.args[1].source_range(),
+                                &rt.expected(x, "str"), rt))
+            };
+            let text = match rt.resolve(&text) {
+                &Variable::Text(ref text) => text.clone(),
+                x => return Err(module.error(call.args[0].source_range(),
+                                &rt.expected(x, "str"), rt))
+            };
+
+            rt.stack.push(Variable::Result(match File::create(&**file) {
+                Ok(mut f) => {
+                    match f.write_all(text.as_bytes()) {
+                        Ok(_) => Ok(Box::new(Variable::Text(file))),
+                        Err(err) => Err(Box::new(Error {
+                            message: Variable::Text(Arc::new(err.description().into())),
+                            trace: vec![]
+                        }))
+                    }
+                }
+                Err(err) => Err(Box::new(Error {
+                    message: Variable::Text(Arc::new(err.description().into())),
                     trace: vec![]
                 }))
             }));

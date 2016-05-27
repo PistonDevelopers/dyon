@@ -1,0 +1,19 @@
+fn main() {
+    threads := 2
+    p := 100_000 / threads
+    tasks := sift i threads {
+        go foo(i * p, p)
+    }
+    res := link {}
+    for i len(tasks) {
+        res -= unwrap(join(thread: pop(mut tasks)))
+    }
+}
+
+fn foo(n, p) -> link {
+    x := link {}
+    for i [n, n + p) {
+        x += i
+    }
+    return clone(x)
+}
