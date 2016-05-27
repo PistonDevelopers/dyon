@@ -9,6 +9,6 @@ fn foo(x: Person) {
     }
 }
 
-fn bar(x: P) -> bool {
+fn bar(x: Person) -> bool {
     return true
 }
