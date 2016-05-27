@@ -16,6 +16,9 @@ fn backtrace() { ... }
 /// Returns the first item in a link.
 fn head(l: link) -> opt[any] { ... }
 
+/// Returns the whole link except for the first item.
+fn tail(l: link) -> link { ... }
+
 /// Sleeps for a given amount of seconds.
 fn sleep(seconds: f64) { ... }
 
