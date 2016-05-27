@@ -46,6 +46,7 @@ pub fn standard(f: &mut HashMap<Arc<String>, PreludeFunction>) {
         tys: vec![],
         ret: Type::F64
     });
+    sarg(f, "head", Type::Link, Type::Any);
     sarg(f, "read_number", Type::Text, Type::F64);
     f.insert(Arc::new("read_line".into()), PreludeFunction {
         lts: vec![],
@@ -423,6 +424,18 @@ pub fn call_standard(
             sleep(Duration::new(secs, nanos));
             rt.pop_fn(call.name.clone());
             Expect::Nothing
+        }
+        "head" => {
+            rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
+            let v = rt.stack.pop().expect(TINVOTS);
+            let v = Variable::Option(match rt.resolve(&v) {
+                &Variable::Link(ref link) => link.head(),
+                x => return Err(module.error(call.args[0].source_range(),
+                                &rt.expected(x, "link"), rt))
+            });
+            rt.stack.push(v);
+            rt.pop_fn(call.name.clone());
+            Expect::Something
         }
         "random" => {
             rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);

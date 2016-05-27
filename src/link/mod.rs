@@ -170,6 +170,18 @@ impl Link {
         }
     }
 
+    pub fn head(&self) -> Option<Box<Variable>> {
+        if self.slices.len() == 0 { None }
+        else {
+            let first = &self.slices[0];
+            if first.start < first.end {
+                Some(Box::new(first.block.var(first.start)))
+            } else {
+                None
+            }
+        }
+    }
+
     pub fn add(&self, other: &Link) -> Link {
         let mut slices = Vec::with_capacity(self.slices.len() + other.slices.len());
         slices.extend_from_slice(&self.slices);

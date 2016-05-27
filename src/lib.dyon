@@ -13,6 +13,9 @@ fn debug() { ... }
 /// Prints out call stack.
 fn backtrace() { ... }
 
+/// Returns the first item in a link.
+fn head(l: link) -> opt[any] { ... }
+
 /// Sleeps for a given amount of seconds.
 fn sleep(seconds: f64) { ... }
 
@@ -202,6 +205,11 @@ fn load_meta_url(meta_file: str, url: str) -> res[[any]] { ... }
 /// Returns `ok(file)` if the downloading succeeded.
 /// Designed to be easy to use with threads.
 fn download_url_file(url: str, file: str) -> res[str] { ... }
+
+/// Saves a string to a file.
+/// Returns `ok(file)` if the saving succeeded.
+/// Designed to be easy to use with threads.
+fn save_string_file(string: str, file: str) -> res[str] { ... }
 
 /// Waits for thread to finish and returns the result.
 fn join_thread(t: thr[any]) -> res[any] { ... }

@@ -1,6 +1,5 @@
 fn main() {
     a := link { 1 2 3 }
-    b := link { 4 5 6 }
-    c := link { a b }
-    println(c)
+    b := unwrap(head(a))
+    println(b)
 }
