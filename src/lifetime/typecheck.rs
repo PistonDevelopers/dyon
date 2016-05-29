@@ -179,7 +179,8 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                     }
                 }
                 Kind::Return | Kind::Val | Kind::Expr | Kind::Cond |
-                Kind::Exp | Kind::Base | Kind::Right | Kind::ElseIfCond
+                Kind::Exp | Kind::Base | Kind::Right | Kind::ElseIfCond |
+                Kind::UnOp
                  => {
                     if nodes[i].children.len() == 0 { continue 'node; }
                     let ch = nodes[i].children[0];
