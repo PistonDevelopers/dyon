@@ -4,4 +4,4 @@ fn main() {
     println(a)
 }
 
-fn km(v: f64) -> km[f64] { return clone(v) }
+fn km(v: f64) -> km f64 { return clone(v) }

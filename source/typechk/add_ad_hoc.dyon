@@ -3,10 +3,10 @@ fn main() {
     bar(a + 5)
 }
 
-fn km(n: f64) -> km[f64] {
+fn km(n: f64) -> km f64 {
     return clone(n)
 }
 
-fn bar(a: km[f64]) {
+fn bar(a: km f64) {
     println(a)
 }

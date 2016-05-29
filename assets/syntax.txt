@@ -145,7 +145,7 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\""
     "{}":"obj_any"
     ["thr" ?w "[" ?w type:"thr" ?w "]"]
     "thr":"thr_any"
-    [.._seps!:"ad_hoc" ?[?w "[" ?w type:"ad_hoc_ty" ?w "]"]]
+    [.._seps!:"ad_hoc" ?[?w type:"ad_hoc_ty"]]
 }
 
 101 + = [?w {"+":"+" "||":"+" "∨":"+" "or":"+"} ?w]
