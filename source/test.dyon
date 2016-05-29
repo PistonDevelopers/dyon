@@ -1,14 +1,5 @@
 fn main() {
-    foo({name: "John"})
+    println(km(5) + 4)
 }
 
-fn foo(x: Person) {
-    x.name += " (friend)"
-    if bar(x) {
-        println(x)
-    }
-}
-
-fn bar(x: Person) -> bool {
-    return true
-}
+fn km(v: f64) -> km f64 { v }

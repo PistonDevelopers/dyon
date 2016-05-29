@@ -79,7 +79,7 @@ impl Type {
                 }
             }
             &AdHoc(ref ad, ref ty) => {
-                (&**ad).clone() + "[" + &ty.description() + "]"
+                (&**ad).clone() + " " + &ty.description()
             }
         }
     }
