@@ -1,0 +1,7 @@
+fn main() {
+    a := km(3)
+    a += 3
+    println(a)
+}
+
+fn km(v: f64) -> km f64 { return clone(v) }

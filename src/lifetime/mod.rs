@@ -187,6 +187,7 @@ pub fn check(
                 let left = nodes[j].children[0];
                 let item = nodes[left].children[0];
                 if nodes[item].name() == nodes[i].name() {
+                    if nodes[item].item_ids() { continue; }
                     it = Some(item);
                     break 'search;
                 }
@@ -719,4 +720,6 @@ pub type ArgNames = HashMap<(usize, Arc<String>), (usize, usize)>;
 pub enum Op {
     Assign,
     Set,
+    Add,
+    Sub,
 }

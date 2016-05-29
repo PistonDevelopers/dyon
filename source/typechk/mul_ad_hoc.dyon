@@ -1,0 +1,19 @@
+fn main() {
+    a := km(3)
+    bar(km: mul(km: a, km: km(5)))
+}
+
+fn km(n: f64) -> km[f64] {
+    return clone(n)
+}
+
+fn bar_km(a: km[f64]) {
+    print(a)
+    println(" km")
+}
+
+fn __km(v: km[f64]) -> f64 { return clone(v) }
+
+fn mul_km_km(a: km[f64], b: km[f64]) -> km2[f64] {
+    return __km(a) * __km(b)
+}

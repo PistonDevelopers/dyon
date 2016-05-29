@@ -1,0 +1,14 @@
+fn main() {
+    foo({name: "John"})
+}
+
+fn foo(x: Person) {
+    x.name += " (friend)"
+    if bar(x) {
+        println(x)
+    }
+}
+
+fn bar(x: P) -> bool {
+    return true
+}

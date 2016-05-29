@@ -1,5 +1,5 @@
 fn main() {
-    a := link {}
-    a += tail(link {1})
-    println(is_empty(a))
+    println(km(5) + 4)
 }
+
+fn km(v: f64) -> km f64 { v }

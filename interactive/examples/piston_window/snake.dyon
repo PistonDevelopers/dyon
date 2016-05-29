@@ -30,7 +30,7 @@ settings() = {
     unfocus_speed: .1,
 }
 
-fn init_data(settings: {}) -> {} {
+fn init_data(settings: Settings) -> Data {
     data := {
         snake_body: init_snake_body(
             parts: settings.snake_parts,
@@ -55,7 +55,7 @@ fn init_snake_body_parts_size(parts: f64, size: vec4) -> [] {
     return clone(body)
 }
 
-fn render() ~ settings: {}, data: {} {
+fn render() ~ settings: Settings, data: Data {
     radius := 20
     offset := 1
     n := len(data.snake_body)
@@ -94,7 +94,7 @@ fn render() ~ settings: {}, data: {} {
     draw(draw_list)
 }
 
-fn update(dt: f64) ~ mut data: {}, settings: {} {
+fn update(dt: f64) ~ mut data: Data, settings: Settings {
     if data.pressing_left {
         data.snake_angle -= settings.turn_speed * dt
     }

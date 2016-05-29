@@ -374,6 +374,14 @@ pub fn convert_meta_data(
                         let i = *parents.last().unwrap();
                         nodes[i].op = Some(Op::Set);
                     }
+                    "+=" => {
+                        let i = *parents.last().unwrap();
+                        nodes[i].op = Some(Op::Add);
+                    }
+                    "-=" => {
+                        let i = *parents.last().unwrap();
+                        nodes[i].op = Some(Op::Sub);
+                    }
                     "mut" => {
                         let i = *parents.last().unwrap();
                         nodes[i].mutable = _val;

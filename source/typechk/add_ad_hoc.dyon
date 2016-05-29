@@ -1,0 +1,12 @@
+fn main() {
+    a := km(0)
+    bar(a + 5)
+}
+
+fn km(n: f64) -> km f64 {
+    return clone(n)
+}
+
+fn bar(a: km f64) {
+    println(a)
+}
