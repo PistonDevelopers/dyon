@@ -29,10 +29,93 @@ macro_rules! dyon_fn {
             }
         }
     };
+    (fn $name:ident (
+        $arg0:tt : $t0:ty,
+        $arg1:tt : $t1:ty,
+        $arg2:tt : $t2:ty
+    ) -> $rt:ty $b:block) => {
+        dyon_macro_items!{
+            fn $name(rt: &mut $crate::Runtime) -> Result<(), String> {
+                let $arg2: $t2 = try!(rt.pop());
+                let $arg1: $t1 = try!(rt.pop());
+                let $arg0: $t0 = try!(rt.pop());
+                rt.push::<$rt>($b);
+                Ok(())
+            }
+        }
+    };
+    (fn $name:ident (
+        $arg0:tt : $t0:ty,
+        $arg1:tt : $t1:ty,
+        $arg2:tt : $t2:ty,
+        $arg3:tt : $t3:ty
+    ) -> $rt:ty $b:block) => {
+        dyon_macro_items!{
+            fn $name(rt: &mut $crate::Runtime) -> Result<(), String> {
+                let $arg3: $t3 = try!(rt.pop());
+                let $arg2: $t2 = try!(rt.pop());
+                let $arg1: $t1 = try!(rt.pop());
+                let $arg0: $t0 = try!(rt.pop());
+                rt.push::<$rt>($b);
+                Ok(())
+            }
+        }
+    };
     (fn $name:ident () $b:block) => {
         fn $name(_: &mut $crate::Runtime) -> Result<(), String> {
             $b
             Ok(())
+        }
+    };
+    (fn $name:ident ($arg:tt : $t:ty) $b:block) => {
+        dyon_macro_items!{
+            fn $name(rt: &mut $crate::Runtime) -> Result<(), String> {
+                let $arg: $t = try!(rt.pop());
+                $b
+                Ok(())
+            }
+        }
+    };
+    (fn $name:ident ($arg0:tt : $t0:ty, $arg1:tt : $t1:ty) $b:block) => {
+        dyon_macro_items!{
+            fn $name(rt: &mut $crate::Runtime) -> Result<(), String> {
+                let $arg1: $t1 = try!(rt.pop());
+                let $arg0: $t0 = try!(rt.pop());
+                $b
+                Ok(())
+            }
+        }
+    };
+    (fn $name:ident (
+        $arg0:tt : $t0:ty,
+        $arg1:tt : $t1:ty,
+        $arg2:tt : $t2:ty
+    ) $b:block) => {
+        dyon_macro_items!{
+            fn $name(rt: &mut $crate::Runtime) -> Result<(), String> {
+                let $arg2: $t2 = try!(rt.pop());
+                let $arg1: $t1 = try!(rt.pop());
+                let $arg0: $t0 = try!(rt.pop());
+                $b
+                Ok(())
+            }
+        }
+    };
+    (fn $name:ident (
+        $arg0:tt : $t0:ty,
+        $arg1:tt : $t1:ty,
+        $arg2:tt : $t2:ty,
+        $arg3:tt : $t3:ty
+    ) $b:block) => {
+        dyon_macro_items!{
+            fn $name(rt: &mut $crate::Runtime) -> Result<(), String> {
+                let $arg3: $t3 = try!(rt.pop());
+                let $arg2: $t2 = try!(rt.pop());
+                let $arg1: $t1 = try!(rt.pop());
+                let $arg0: $t0 = try!(rt.pop());
+                $b
+                Ok(())
+            }
         }
     };
 }
