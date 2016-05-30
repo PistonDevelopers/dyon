@@ -1,11 +1,9 @@
 #[macro_use]
 extern crate dyon;
 
-use std::sync::Arc;
-use std::collections::HashMap;
-use dyon::*;
-
 fn main() {
+    use dyon::{error, Runtime};
+
     let mut dyon_runtime = Runtime::new();
     let dyon_module = load_module().unwrap();
     if error(dyon_runtime.run(&dyon_module)) {
@@ -13,7 +11,10 @@ fn main() {
     }
 }
 
-fn load_module() -> Option<Module> {
+fn load_module() -> Option<dyon::Module> {
+    use std::sync::Arc;
+    use dyon::*;
+
     let mut module = Module::new();
     module.add(Arc::new("say_hello".into()), say_hello, PreludeFunction {
         lts: vec![],
@@ -68,28 +69,4 @@ pub struct Person {
     pub age: u32,
 }
 
-impl embed::PopVariable for Person {
-    fn pop_var(rt: &Runtime, var: &Variable) -> Result<Self, String> {
-        use dyon::embed::obj_field;
-        let var = rt.resolve(var);
-        if let &Variable::Object(ref obj) = var {
-            Ok(Person {
-                first_name: try!(obj_field(rt, obj, "first_name")),
-                last_name: try!(obj_field(rt, obj, "last_name")),
-                age: try!(obj_field(rt, obj, "age")),
-            })
-        } else {
-            Err(rt.expected(var, "Person"))
-        }
-    }
-}
-
-impl embed::PushVariable for Person {
-    fn push_var(&self) -> Variable {
-        let mut obj: HashMap<_, Variable> = HashMap::new();
-        obj.insert(Arc::new("first_name".into()), self.first_name.push_var());
-        obj.insert(Arc::new("last_name".into()), self.last_name.push_var());
-        obj.insert(Arc::new("age".into()), (self.age as f64).push_var());
-        Variable::Object(Arc::new(obj))
-    }
-}
+dyon_obj!{Person { first_name, last_name, age }}
