@@ -10,6 +10,7 @@ use embed;
 use FnIndex;
 use Module;
 use Variable;
+use UnsafeRef;
 
 /// Which side an expression is evalutated.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -985,8 +986,8 @@ impl Runtime {
                                         self.stack_trace()), self))
                         };
                         match self.stack.pop() {
-                            Some(Variable::UnsafeRef(r)) => {
-                                unsafe { *r = v }
+                            Some(Variable::UnsafeRef(mut r)) => {
+                                unsafe { *r.0 = v }
                             }
                             None => panic!("There is no value on the stack"),
                             _ => panic!("Expected unsafe reference")
@@ -1024,16 +1025,16 @@ impl Runtime {
             };
             match (self.stack.pop(), self.stack.pop()) {
                 (Some(a), Some(b)) => {
-                    let r = match a {
+                    let mut r = match a {
                         Variable::Ref(ind) => {
-                            &mut self.stack[ind] as *mut Variable
+                            UnsafeRef(&mut self.stack[ind] as *mut Variable)
                         }
-                        Variable::UnsafeRef(r) => {
+                        Variable::UnsafeRef(mut r) => {
                             // If reference, use a shallow clone to type check,
                             // without affecting the original object.
                             unsafe {
-                                if let Variable::Ref(ind) = *r {
-                                    *r = self.stack[ind].clone()
+                                if let Variable::Ref(ind) = *r.0 {
+                                    *r.0 = self.stack[ind].clone()
                                 }
                             }
                             r
@@ -1044,7 +1045,7 @@ impl Runtime {
                     match self.resolve(&b) {
                         &Variable::F64(b) => {
                             unsafe {
-                                match *r {
+                                match *r.0 {
                                     Variable::F64(ref mut n) => {
                                         match op {
                                             Set => *n = b,
@@ -1059,7 +1060,7 @@ impl Runtime {
                                     }
                                     Variable::Return => {
                                         if let Set = op {
-                                            *r = Variable::F64(b)
+                                            *r.0 = Variable::F64(b)
                                         } else {
                                             return Err(module.error(
                                                 left.source_range(),
@@ -1087,7 +1088,7 @@ impl Runtime {
                         }
                         &Variable::Vec4(b) => {
                             unsafe {
-                                match *r {
+                                match *r.0 {
                                     Variable::Vec4(ref mut n) => {
                                         match op {
                                             Set => *n = b,
@@ -1108,7 +1109,7 @@ impl Runtime {
                                     }
                                     Variable::Return => {
                                         if let Set = op {
-                                            *r = Variable::Vec4(b)
+                                            *r.0 = Variable::Vec4(b)
                                         } else {
                                             return Err(module.error(
                                                 left.source_range(),
@@ -1125,7 +1126,7 @@ impl Runtime {
                         }
                         &Variable::Bool(b) => {
                             unsafe {
-                                match *r {
+                                match *r.0 {
                                     Variable::Bool(ref mut n) => {
                                         match op {
                                             Set => *n = b,
@@ -1134,7 +1135,7 @@ impl Runtime {
                                     }
                                     Variable::Return => {
                                         if let Set = op {
-                                            *r = Variable::Bool(b)
+                                            *r.0 = Variable::Bool(b)
                                         } else {
                                             return Err(module.error(
                                                 left.source_range(),
@@ -1162,7 +1163,7 @@ impl Runtime {
                         }
                         &Variable::Text(ref b) => {
                             unsafe {
-                                match *r {
+                                match *r.0 {
                                     Variable::Text(ref mut n) => {
                                         match op {
                                             Set => *n = b.clone(),
@@ -1172,7 +1173,7 @@ impl Runtime {
                                     }
                                     Variable::Return => {
                                         if let Set = op {
-                                            *r = Variable::Text(b.clone())
+                                            *r.0 = Variable::Text(b.clone())
                                         } else {
                                             return Err(module.error(
                                                 left.source_range(),
@@ -1200,7 +1201,7 @@ impl Runtime {
                         }
                         &Variable::Object(ref b) => {
                             unsafe {
-                                match *r {
+                                match *r.0 {
                                     Variable::Object(ref mut n) => {
                                         if let Set = op {
                                             // Check address to avoid unsafe
@@ -1208,7 +1209,7 @@ impl Runtime {
                                             let n_addr = n as *const _ as usize;
                                             let b_addr = b as *const _ as usize;
                                             if n_addr != b_addr {
-                                                *r = Variable::Object(b.clone())
+                                                *r.0 = Variable::Object(b.clone())
                                             }
                                             // *n = obj.clone()
                                         } else {
@@ -1217,7 +1218,7 @@ impl Runtime {
                                     }
                                     Variable::Return => {
                                         if let Set = op {
-                                            *r = Variable::Object(b.clone())
+                                            *r.0 = Variable::Object(b.clone())
                                         } else {
                                             return Err(module.error(
                                                 left.source_range(),
@@ -1234,7 +1235,7 @@ impl Runtime {
                         }
                         &Variable::Array(ref b) => {
                             unsafe {
-                                match *r {
+                                match *r.0 {
                                     Variable::Array(ref mut n) => {
                                         if let Set = op {
                                             // Check address to avoid unsafe
@@ -1242,7 +1243,7 @@ impl Runtime {
                                             let n_addr = n as *const _ as usize;
                                             let b_addr = b as *const _ as usize;
                                             if n_addr != b_addr {
-                                                *r = Variable::Array(b.clone())
+                                                *r.0 = Variable::Array(b.clone())
                                             }
                                             // *n = arr.clone();
                                         } else {
@@ -1251,7 +1252,7 @@ impl Runtime {
                                     }
                                     Variable::Return => {
                                         if let Set = op {
-                                            *r = Variable::Array(b.clone())
+                                            *r.0 = Variable::Array(b.clone())
                                         } else {
                                             return Err(module.error(
                                                 left.source_range(),
@@ -1268,7 +1269,7 @@ impl Runtime {
                         }
                         &Variable::Link(ref b) => {
                             unsafe {
-                                match *r {
+                                match *r.0 {
                                     Variable::Link(ref mut n) => {
                                         match op {
                                             Set => *n = b.clone(),
@@ -1279,7 +1280,7 @@ impl Runtime {
                                     }
                                     Variable::Return => {
                                         if let Set = op {
-                                            *r = Variable::Link(b.clone())
+                                            *r.0 = Variable::Link(b.clone())
                                         } else {
                                             return Err(module.error(
                                                 left.source_range(),
@@ -1296,7 +1297,7 @@ impl Runtime {
                         }
                         &Variable::Option(ref b) => {
                             unsafe {
-                                match *r {
+                                match *r.0 {
                                     Variable::Option(ref mut n) => {
                                         if let Set = op {
                                             // Check address to avoid unsafe
@@ -1304,7 +1305,7 @@ impl Runtime {
                                             let n_addr = n as *const _ as usize;
                                             let b_addr = b as *const _ as usize;
                                             if n_addr != b_addr {
-                                                *r = Variable::Option(b.clone())
+                                                *r.0 = Variable::Option(b.clone())
                                             }
                                         } else {
                                             unimplemented!()
@@ -1312,7 +1313,7 @@ impl Runtime {
                                     }
                                     Variable::Return => {
                                         if let Set = op {
-                                            *r = Variable::Option(b.clone())
+                                            *r.0 = Variable::Option(b.clone())
                                         } else {
                                             return Err(module.error(
                                                 left.source_range(),
@@ -1329,7 +1330,7 @@ impl Runtime {
                         }
                         &Variable::Result(ref b) => {
                             unsafe {
-                                match *r {
+                                match *r.0 {
                                     Variable::Result(ref mut n) => {
                                         if let Set = op {
                                             // Check address to avoid unsafe
@@ -1337,7 +1338,7 @@ impl Runtime {
                                             let n_addr = n as *const _ as usize;
                                             let b_addr = b as *const _ as usize;
                                             if n_addr != b_addr {
-                                                *r = Variable::Result(b.clone())
+                                                *r.0 = Variable::Result(b.clone())
                                             }
                                         } else {
                                             unimplemented!()
@@ -1345,7 +1346,7 @@ impl Runtime {
                                     }
                                     Variable::Return => {
                                         if let Set = op {
-                                            *r = Variable::Result(b.clone())
+                                            *r.0 = Variable::Result(b.clone())
                                         } else {
                                             return Err(module.error(
                                                 left.source_range(),
@@ -1362,7 +1363,7 @@ impl Runtime {
                         }
                         &Variable::RustObject(ref b) => {
                             unsafe {
-                                match *r {
+                                match *r.0 {
                                     Variable::RustObject(ref mut n) => {
                                         if let Set = op {
                                             // Check address to avoid unsafe
@@ -1370,7 +1371,7 @@ impl Runtime {
                                             let n_addr = n as *const _ as usize;
                                             let b_addr = b as *const _ as usize;
                                             if n_addr != b_addr {
-                                                *r = Variable::RustObject(b.clone())
+                                                *r.0 = Variable::RustObject(b.clone())
                                             }
                                         } else {
                                             unimplemented!()
@@ -1378,7 +1379,7 @@ impl Runtime {
                                     }
                                     Variable::Return => {
                                         if let Set = op {
-                                            *r = Variable::RustObject(b.clone())
+                                            *r.0 = Variable::RustObject(b.clone())
                                         } else {
                                             return Err(module.error(
                                                 left.source_range(),
@@ -1741,7 +1742,7 @@ impl Runtime {
 
             match side {
                 Side::Right => unsafe {&*var}.clone(),
-                Side::LeftInsert(_) => Variable::UnsafeRef(var)
+                Side::LeftInsert(_) => Variable::UnsafeRef(UnsafeRef(var))
             }
         };
         stack.truncate(start_stack_len);

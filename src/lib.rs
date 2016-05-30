@@ -88,6 +88,10 @@ impl fmt::Debug for Thread {
     }
 }
 
+/// Prevents unsafe references from being accessed outside library.
+#[derive(Debug, Clone)]
+pub struct UnsafeRef(*mut Variable);
+
 #[derive(Debug, Clone)]
 pub enum Variable {
     Ref(usize),
@@ -99,18 +103,16 @@ pub enum Variable {
     Array(Array),
     Object(Object),
     Link(Link),
-    UnsafeRef(*mut Variable),
+    UnsafeRef(UnsafeRef),
     RustObject(RustObject),
     Option(Option<Box<Variable>>),
     Result(Result<Box<Variable>, Box<Error>>),
     Thread(Thread),
 }
 
-/*
-This is requires because `UnsafeRef(*mut Variable)` can not be sent across threads.
-The lack of `UnsafeRef` variant when sending across threads is guaranteed at language level.
-TODO: Make the interior of `UnsafeRef` inaccessible outside the library.
-*/
+/// This is requires because `UnsafeRef(*mut Variable)` can not be sent across threads.
+/// The lack of `UnsafeRef` variant when sending across threads is guaranteed at language level.
+/// The interior of `UnsafeRef` can not be accessed outside this library.
 unsafe impl Send for Variable {}
 
 impl Variable {
