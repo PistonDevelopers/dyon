@@ -269,6 +269,9 @@ impl Type {
             if let Ok(range) = convert.end_node(node) {
                 convert.update(range);
                 break;
+            } else if let Ok((range, _)) = convert.meta_bool("any") {
+                convert.update(range);
+                ty = Some(Type::Any);
             } else if let Ok((range, _)) = convert.meta_bool("bool") {
                 convert.update(range);
                 ty = Some(Type::Bool);
