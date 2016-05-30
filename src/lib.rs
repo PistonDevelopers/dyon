@@ -20,6 +20,7 @@ pub mod prelude;
 pub mod embed;
 pub mod ty;
 pub mod link;
+pub mod macros;
 
 pub use runtime::Runtime;
 pub use prelude::{Lt, Prelude, PreludeFunction};

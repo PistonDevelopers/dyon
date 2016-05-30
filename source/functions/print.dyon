@@ -16,4 +16,6 @@ fn main() {
     println(homer())
     homer = age(homer)
     println(homer)
+
+    println(mr(homer.first_name, homer.last_name))
 }

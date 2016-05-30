@@ -169,6 +169,10 @@ impl PushVariable for str {
     fn push_var(&self) -> Variable { Variable::Text(Arc::new(self.into())) }
 }
 
+impl PushVariable for String {
+    fn push_var(&self) -> Variable { Variable::Text(Arc::new(self.clone())) }
+}
+
 impl PushVariable for Arc<String> {
     fn push_var(&self) -> Variable { Variable::Text(self.clone()) }
 }
