@@ -6,15 +6,23 @@ macro_rules! dyon_macro_items { ($($x:item)+) => ($($x)+) }
 macro_rules! dyon_fn {
     (fn $name:ident () -> $rt:ty $b:block) => {
         fn $name(rt: &mut $crate::Runtime) -> Result<(), String> {
-            rt.push::<$rt>($b);
+            fn inner() -> $rt {
+                $b
+            }
+
+            rt.push(inner());
             Ok(())
         }
     };
     (fn $name:ident ($arg:tt : $t:ty) -> $rt:ty $b:block) => {
         dyon_macro_items!{
             fn $name(rt: &mut $crate::Runtime) -> Result<(), String> {
+                fn inner($arg: $t) -> $rt {
+                    $b
+                }
+
                 let $arg: $t = try!(rt.pop());
-                rt.push::<$rt>($b);
+                rt.push(inner($arg));
                 Ok(())
             }
         }
@@ -22,9 +30,13 @@ macro_rules! dyon_fn {
     (fn $name:ident ($arg0:tt : $t0:ty, $arg1:tt : $t1:ty) -> $rt:ty $b:block) => {
         dyon_macro_items!{
             fn $name(rt: &mut $crate::Runtime) -> Result<(), String> {
+                fn inner($arg0: $t0, $arg1: $t1) -> $rt {
+                    $b
+                }
+
                 let $arg1: $t1 = try!(rt.pop());
                 let $arg0: $t0 = try!(rt.pop());
-                rt.push::<$rt>($b);
+                rt.push(inner($arg0, $arg1));
                 Ok(())
             }
         }
@@ -36,10 +48,14 @@ macro_rules! dyon_fn {
     ) -> $rt:ty $b:block) => {
         dyon_macro_items!{
             fn $name(rt: &mut $crate::Runtime) -> Result<(), String> {
+                fn inner($arg0: $t0, $arg1: $t1, $arg2: $t2) -> $rt {
+                    $b
+                }
+
                 let $arg2: $t2 = try!(rt.pop());
                 let $arg1: $t1 = try!(rt.pop());
                 let $arg0: $t0 = try!(rt.pop());
-                rt.push::<$rt>($b);
+                rt.push(inner($arg0, $arg1, $arg2));
                 Ok(())
             }
         }
@@ -52,26 +68,38 @@ macro_rules! dyon_fn {
     ) -> $rt:ty $b:block) => {
         dyon_macro_items!{
             fn $name(rt: &mut $crate::Runtime) -> Result<(), String> {
+                fn inner($arg0: $t0, $arg1: $t1, $arg2: $t2, $arg3: $t3) -> $rt {
+                    $b
+                }
+
                 let $arg3: $t3 = try!(rt.pop());
                 let $arg2: $t2 = try!(rt.pop());
                 let $arg1: $t1 = try!(rt.pop());
                 let $arg0: $t0 = try!(rt.pop());
-                rt.push::<$rt>($b);
+                rt.push(inner($arg0, $arg1, $arg2, $arg3));
                 Ok(())
             }
         }
     };
     (fn $name:ident () $b:block) => {
         fn $name(_: &mut $crate::Runtime) -> Result<(), String> {
-            $b
+            fn inner() {
+                $b
+            }
+
+            inner();
             Ok(())
         }
     };
     (fn $name:ident ($arg:tt : $t:ty) $b:block) => {
         dyon_macro_items!{
             fn $name(rt: &mut $crate::Runtime) -> Result<(), String> {
+                fn inner($arg: $t) {
+                    $b
+                }
+
                 let $arg: $t = try!(rt.pop());
-                $b
+                inner($arg);
                 Ok(())
             }
         }
@@ -79,9 +107,13 @@ macro_rules! dyon_fn {
     (fn $name:ident ($arg0:tt : $t0:ty, $arg1:tt : $t1:ty) $b:block) => {
         dyon_macro_items!{
             fn $name(rt: &mut $crate::Runtime) -> Result<(), String> {
+                fn inner($arg0: $t0, $arg1: $t1) {
+                    $b
+                }
+
                 let $arg1: $t1 = try!(rt.pop());
                 let $arg0: $t0 = try!(rt.pop());
-                $b
+                inner($arg0, $arg1);
                 Ok(())
             }
         }
@@ -93,10 +125,14 @@ macro_rules! dyon_fn {
     ) $b:block) => {
         dyon_macro_items!{
             fn $name(rt: &mut $crate::Runtime) -> Result<(), String> {
+                fn inner($arg0: $t0, $arg1: $t1, $arg2: $t2) {
+                    $b
+                }
+
                 let $arg2: $t2 = try!(rt.pop());
                 let $arg1: $t1 = try!(rt.pop());
                 let $arg0: $t0 = try!(rt.pop());
-                $b
+                inner($arg0, $arg1, $arg2);
                 Ok(())
             }
         }
@@ -109,11 +145,15 @@ macro_rules! dyon_fn {
     ) $b:block) => {
         dyon_macro_items!{
             fn $name(rt: &mut $crate::Runtime) -> Result<(), String> {
+                fn inner($arg0: $t0, $arg1: $t1, $arg2: $t2, $arg3: $t3) {
+                    $b
+                }
+
                 let $arg3: $t3 = try!(rt.pop());
                 let $arg2: $t2 = try!(rt.pop());
                 let $arg1: $t1 = try!(rt.pop());
                 let $arg0: $t0 = try!(rt.pop());
-                $b
+                inner($arg0, $arg1, $arg2, $arg3);
                 Ok(())
             }
         }
