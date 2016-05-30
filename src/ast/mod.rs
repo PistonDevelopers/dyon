@@ -1547,11 +1547,9 @@ impl Call {
                     stack.push(Some(Arc::new("return".into())));
                 }
             }
-            FnIndex::External(f_index) => {
-                let f = &module.ext_prelude[f_index];
-                if f.p.returns() {
-                    stack.push(Some(Arc::new("return".into())));
-                }
+            FnIndex::External(_) => {
+                // Don't push return since last value in block
+                // is used as return value.
             }
             FnIndex::None => {}
         }
