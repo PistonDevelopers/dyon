@@ -53,7 +53,7 @@ Dyon script files ends with ".dyon".
 - `unwrap(x)` [prints trace of propagated error](https://github.com/PistonDevelopers/dyon/issues/82)
 - `functions()` returns sorted list of all available functions in a module
 - [Optional type system](https://github.com/PistonDevelopers/dyon/issues/84)
-- [Go-like coroutines with `go`](https://github.com/PistonDevelopers/dyon/issues/84)
+- [Go-like coroutines with `go`](https://github.com/PistonDevelopers/dyon/issues/163)
 - [4D vectors with `f32` precision `(x, y, z, w)`](https://github.com/PistonDevelopers/dyon/issues/144)
 - [HTML hex colors](https://github.com/PistonDevelopers/dyon/issues/167)
 - [Meta parsing](https://github.com/PistonDevelopers/dyon/issues/168)
