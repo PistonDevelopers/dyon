@@ -21,11 +21,13 @@ pub mod embed;
 pub mod ty;
 pub mod link;
 pub mod macros;
+pub mod vec4;
 
 pub use runtime::Runtime;
 pub use prelude::{Lt, Prelude, PreludeFunction};
 pub use ty::Type;
 pub use link::Link;
+pub use vec4::Vec4;
 
 pub type Array = Arc<Vec<Variable>>;
 pub type Object = Arc<HashMap<Arc<String>, Variable>>;

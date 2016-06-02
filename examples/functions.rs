@@ -1,6 +1,8 @@
 #[macro_use]
 extern crate dyon;
 
+use dyon::Vec4;
+
 fn main() {
     use dyon::{error, Runtime};
 
@@ -36,6 +38,11 @@ fn load_module() -> Option<dyon::Module> {
         tys: vec![Type::Text; 2],
         ret: Type::Text
     });
+    module.add(Arc::new("origo".into()), origo, PreludeFunction {
+        lts: vec![],
+        tys: vec![],
+        ret: Type::Object,
+    });
     if error(load("source/functions/loader.dyon", &mut module)) {
         None
     } else {
@@ -70,3 +77,17 @@ pub struct Person {
 }
 
 dyon_obj!{Person { first_name, last_name, age }}
+
+pub struct PhysicalState {
+    pub pos: Vec4,
+    pub vel: Vec4
+}
+
+dyon_obj!{PhysicalState { pos, vel }}
+
+dyon_fn!{fn origo() -> PhysicalState {
+    PhysicalState {
+        pos: [0.0, 1.0, 2.0].into(),
+        vel: [3.0, 4.0, 5.0].into()
+    }
+}}

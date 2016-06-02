@@ -18,4 +18,6 @@ fn main() {
     println(homer)
 
     println(mr(homer.first_name, homer.last_name))
+
+    println(origo())
 }
