@@ -221,6 +221,16 @@ pub fn draw_2d<G: Graphics>(rt: &mut Runtime, c: Context, g: &mut G) -> Result<(
                         .resolution(resolution as u32)
                         .draw([corner[0], corner[1], size[0], size[1]], &c.draw_state, transform, g);
                     }
+                    "ellipse_border_color_corner_size_resolution" => {
+                        let border: f64 = try!(rt.var(&it[1]));
+                        let color: [f32; 4] = try!(rt.var_vec4(&it[2]));
+                        let corner: [f64; 2] = try!(rt.var_vec4(&it[3]));
+                        let size: [f64; 2] = try!(rt.var_vec4(&it[4]));
+                        let resolution: u32 = try!(rt.var(&it[5]));
+                        Ellipse::new_border(color, border)
+                        .resolution(resolution as u32)
+                        .draw([corner[0], corner[1], size[0], size[1]], &c.draw_state, transform, g);
+                    }
                     _ => {}
                 }
             }
