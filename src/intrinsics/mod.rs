@@ -964,6 +964,8 @@ pub fn call_standard(
             Expect::Something
         }
         "call" => {
+            // Use the source from calling function.
+            let source = module.functions[rt.call_stack.last().unwrap().index].source.clone();
             rt.push_fn(call.name.clone(), 0, None, st, lc, cu);
             let args = rt.stack.pop().expect(TINVOTS);
             let fn_name = rt.stack.pop().expect(TINVOTS);
@@ -1015,6 +1017,7 @@ pub fn call_standard(
                         args: args.iter().map(|arg|
                             ast::Expression::Variable(
                                 call.source_range, arg.clone())).collect(),
+                        custom_source: Some(source),
                         source_range: call.source_range,
                     };
                     // TODO: Figure out what to do expect and flow.
@@ -1029,6 +1032,8 @@ pub fn call_standard(
             Expect::Nothing
         }
         "call_ret" => {
+            // Use the source from calling function.
+            let source = module.functions[rt.call_stack.last().unwrap().index].source.clone();
             rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let args = rt.stack.pop().expect(TINVOTS);
             let fn_name = rt.stack.pop().expect(TINVOTS);
@@ -1081,6 +1086,7 @@ pub fn call_standard(
                         args: args.iter().map(|arg|
                             ast::Expression::Variable(
                                 call.source_range, arg.clone())).collect(),
+                        custom_source: Some(source),
                         source_range: call.source_range,
                     };
                     // TODO: Figure out what to do expect and flow.

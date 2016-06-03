@@ -23,6 +23,7 @@ pub fn infer(block: &Block, name: &str) -> Option<Expression> {
             args: vec![
                 Expression::Item(item)
             ],
+            custom_source: None,
             source_range: source_range,
         })
     });

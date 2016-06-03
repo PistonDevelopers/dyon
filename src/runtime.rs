@@ -511,6 +511,7 @@ impl Runtime {
             name: name.clone(),
             f_index: Cell::new(module.find_function(&name, 0)),
             args: vec![],
+            custom_source: None,
             source_range: Range::empty(0),
         };
         match call.f_index.get() {
@@ -587,6 +588,7 @@ impl Runtime {
             name: go.call.name.clone(),
             f_index: Cell::new(module.find_function(&go.call.name, relative)),
             args: Vec::with_capacity(n),
+            custom_source: None,
             source_range: go.call.source_range,
         };
         // Evaluate the arguments and put a deep clone on the new stack.
@@ -748,12 +750,18 @@ impl Runtime {
                         match (f.returns(), x) {
                             (true, Expect::Nothing) => {
                                 match self.stack.last() {
-                                    Some(&Variable::Return) =>
-                                        return Err(module.error(
+                                    Some(&Variable::Return) => {
+                                        let source = call.custom_source.as_ref().unwrap_or(
+                                            &module.functions[
+                                                self.call_stack.last().unwrap().index
+                                            ].source
+                                        );
+                                        return Err(module.error_source(
                                         call.source_range, &format!(
                                         "{}\nFunction `{}` did not return a value",
                                         self.stack_trace(),
-                                        f.name), self)),
+                                        f.name), source))
+                                    }
                                     None =>
                                         panic!("There is no value on the stack"),
                                     _ => {
@@ -764,12 +772,16 @@ impl Runtime {
                                     }
                                 };
                             }
-                            (false, Expect::Something) =>
-                                return Err(module.error(call.source_range,
+                            (false, Expect::Something) => {
+                                let source = call.custom_source.as_ref().unwrap_or(
+                                    &module.functions[self.call_stack.last().unwrap().index].source
+                                );
+                                return Err(module.error_source(call.source_range,
                                     &format!(
                                         "{}\nFunction `{}` should not return a value",
                                         self.stack_trace(),
-                                        f.name), self)),
+                                        f.name), source))
+                            }
                             (true, Expect::Something)
                                 if self.stack.len() == 0 =>
                                 panic!("There is no value on the stack"),
@@ -777,15 +789,19 @@ impl Runtime {
                                 if match self.stack.last().unwrap() {
                                     &Variable::Return => true,
                                     _ => false
-                                } =>
+                                } => {
                                 // TODO: Could return the last value on the stack.
                                 //       Requires .pop_fn delayed after.
-                                return Err(module.error(call.source_range,
+                                let source = call.custom_source.as_ref().unwrap_or(
+                                    &module.functions[self.call_stack.last().unwrap().index].source
+                                );
+                                return Err(module.error_source(call.source_range,
                                     &format!(
                                     "{}\nFunction `{}` did not return a value. \
-                                    Did you forgot a `return`?",
+                                    Did you forget a `return`?",
                                         self.stack_trace(),
-                                        f.name), self)),
+                                        f.name), source))
+                            }
                             (_, b) => {
                                 return Ok((b, Flow::Continue))
                             }
