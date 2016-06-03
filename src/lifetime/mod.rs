@@ -10,6 +10,7 @@ use self::node::{convert_meta_data, Node};
 use self::lt::{arg_lifetime, compare_lifetimes, Lifetime};
 
 use prelude::{Lt, Prelude};
+use ast::AssignOp;
 
 use Type;
 
@@ -102,7 +103,7 @@ pub fn check(
     // Stores assign node, item node.
     let locals: Vec<(usize, usize)> = nodes.iter().enumerate()
         .filter(|&(_, n)| {
-            n.op == Some(Op::Assign) &&
+            n.op == Some(AssignOp::Assign) &&
             n.children.len() > 0 &&
             nodes[n.children[0]].children.len() > 0
         })
@@ -122,7 +123,7 @@ pub fn check(
     // Stores assign node, item node.
     let mutated_locals: Vec<(usize, usize)> = nodes.iter().enumerate()
         .filter(|&(_, n)| {
-            n.op == Some(Op::Set)
+            n.op.is_some() && n.op != Some(AssignOp::Assign)
         })
         .map(|(i, n)| {
                 // Left argument.
@@ -409,6 +410,8 @@ pub fn check(
 
     // Check the lifetime of mutated locals.
     for &(a, i) in &mutated_locals {
+        // Only `=` needs a lifetime check.
+        if nodes[a].op != Some(AssignOp::Set) { continue }
         let right = nodes[a].children[1];
         let ref lifetime_left = nodes[i].lifetime(&nodes, &arg_names);
         let ref lifetime_right = nodes[right].lifetime(&nodes, &arg_names);
@@ -715,11 +718,3 @@ fn suggestions(
 
 /// Maps (function, argument_name) => (argument, index)
 pub type ArgNames = HashMap<(usize, Arc<String>), (usize, usize)>;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Op {
-    Assign,
-    Set,
-    Add,
-    Sub,
-}

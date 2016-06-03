@@ -4,8 +4,8 @@ use super::piston_meta::MetaData;
 use super::piston_meta::bootstrap::Convert;
 use super::lt::{arg_lifetime, Lifetime};
 use super::kind::Kind;
-use super::Op;
 use super::ArgNames;
+use ast::AssignOp;
 use Lt;
 use Type;
 
@@ -36,7 +36,7 @@ pub struct Node {
     /// The declaration.
     pub declaration: Option<usize>,
     /// Operation.
-    pub op: Option<Op>,
+    pub op: Option<AssignOp>,
     /// Number of ids.
     /// Used to determine declaration of locals.
     pub ids: u32,
@@ -368,19 +368,35 @@ pub fn convert_meta_data(
                 match &***n {
                     ":=" => {
                         let i = *parents.last().unwrap();
-                        nodes[i].op = Some(Op::Assign);
+                        nodes[i].op = Some(AssignOp::Assign);
                     }
                     "=" => {
                         let i = *parents.last().unwrap();
-                        nodes[i].op = Some(Op::Set);
+                        nodes[i].op = Some(AssignOp::Set);
                     }
                     "+=" => {
                         let i = *parents.last().unwrap();
-                        nodes[i].op = Some(Op::Add);
+                        nodes[i].op = Some(AssignOp::Add);
                     }
                     "-=" => {
                         let i = *parents.last().unwrap();
-                        nodes[i].op = Some(Op::Sub);
+                        nodes[i].op = Some(AssignOp::Sub);
+                    }
+                    "*=" => {
+                        let i = *parents.last().unwrap();
+                        nodes[i].op = Some(AssignOp::Mul);
+                    }
+                    "/=" => {
+                        let i = *parents.last().unwrap();
+                        nodes[i].op = Some(AssignOp::Div);
+                    }
+                    "%=" => {
+                        let i = *parents.last().unwrap();
+                        nodes[i].op = Some(AssignOp::Rem);
+                    }
+                    "^=" => {
+                        let i = *parents.last().unwrap();
+                        nodes[i].op = Some(AssignOp::Pow);
                     }
                     "mut" => {
                         let i = *parents.last().unwrap();

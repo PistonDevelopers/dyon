@@ -350,10 +350,10 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                 try!(check_if(i, nodes))
             }
             Kind::Assign => {
-                use super::Op;
+                use ast::AssignOp;
 
                 match nodes[i].op {
-                    Some(Op::Add) | Some(Op::Sub) => {
+                    Some(AssignOp::Add) | Some(AssignOp::Sub) => {
                         let left = nodes[i].find_child_by_kind(nodes, Kind::Left).unwrap();
                         let right = nodes[i].find_child_by_kind(nodes, Kind::Right).unwrap();
                         match (&nodes[left].ty, &nodes[right].ty) {
