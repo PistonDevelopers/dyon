@@ -239,10 +239,14 @@ impl Module {
     }
 
     pub fn error_fnindex(&self, range: Range, msg: &str, fnindex: usize) -> String {
+        let source = &self.functions[fnindex].source;
+        self.error_source(range, msg, source)
+    }
+
+    pub fn error_source(&self, range: Range, msg: &str, source: &Arc<String>) -> String {
         use piston_meta::ParseErrorHandler;
 
         let mut w: Vec<u8> = vec![];
-        let source = &self.functions[fnindex].source;
         ParseErrorHandler::new(source)
             .write_msg(&mut w, range, &format!("{}", msg))
             .unwrap();

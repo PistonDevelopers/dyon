@@ -1406,6 +1406,8 @@ pub struct Call {
     pub name: Arc<String>,
     pub args: Vec<Expression>,
     pub f_index: Cell<FnIndex>,
+    /// A custom source, such as when calling a function inside a loaded module.
+    pub custom_source: Option<Arc<String>>,
     pub source_range: Range,
 }
 
@@ -1468,6 +1470,7 @@ impl Call {
             name: name,
             args: args,
             f_index: Cell::new(FnIndex::None),
+            custom_source: None,
             source_range: convert.source(start).unwrap(),
         }))
     }
@@ -1527,6 +1530,7 @@ impl Call {
             name: Arc::new(name),
             args: args,
             f_index: Cell::new(FnIndex::None),
+            custom_source: None,
             source_range: convert.source(start).unwrap(),
         }))
     }

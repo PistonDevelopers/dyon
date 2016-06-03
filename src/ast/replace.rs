@@ -260,6 +260,7 @@ fn number_call(call_expr: &Call, name: &Arc<String>, val: f64) -> Call {
         name: call_expr.name.clone(),
         args: new_args,
         f_index: call_expr.f_index.clone(),
+        custom_source: None,
         source_range: call_expr.source_range,
     }
 }

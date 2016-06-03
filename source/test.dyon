@@ -1,7 +1,14 @@
+/*
 fn main() {
-    foo(3)
+    foo(2)
 }
 
-fn foo(a: any) {
-    println(a)
+fn foo(a) {
+    a += 1
+}
+*/
+
+fn main() {
+    m := unwrap(load("source/test_2.dyon"))
+    a := call_ret(m, "foo", [])
 }
