@@ -145,6 +145,48 @@ impl<T: PopVariable> PopVariable for [T; 4] {
     }
 }
 
+impl<T: PopVariable, U: PopVariable> PopVariable for (T, U) {
+    fn pop_var(rt: &Runtime, var: &Variable) -> Result<Self, String> {
+        if let &Variable::Array(ref arr) = var {
+            Ok((
+                try!(PopVariable::pop_var(rt, rt.resolve(&arr[0]))),
+                try!(PopVariable::pop_var(rt, rt.resolve(&arr[1])))
+            ))
+        } else {
+            Err(rt.expected(var, "[_; 2]"))
+        }
+    }
+}
+
+impl<T: PopVariable, U: PopVariable, V: PopVariable> PopVariable for (T, U, V) {
+    fn pop_var(rt: &Runtime, var: &Variable) -> Result<Self, String> {
+        if let &Variable::Array(ref arr) = var {
+            Ok((
+                try!(PopVariable::pop_var(rt, rt.resolve(&arr[0]))),
+                try!(PopVariable::pop_var(rt, rt.resolve(&arr[1]))),
+                try!(PopVariable::pop_var(rt, rt.resolve(&arr[2])))
+            ))
+        } else {
+            Err(rt.expected(var, "[_; 3]"))
+        }
+    }
+}
+
+impl<T: PopVariable, U: PopVariable, V: PopVariable, W: PopVariable> PopVariable for (T, U, V, W) {
+    fn pop_var(rt: &Runtime, var: &Variable) -> Result<Self, String> {
+        if let &Variable::Array(ref arr) = var {
+            Ok((
+                try!(PopVariable::pop_var(rt, rt.resolve(&arr[0]))),
+                try!(PopVariable::pop_var(rt, rt.resolve(&arr[1]))),
+                try!(PopVariable::pop_var(rt, rt.resolve(&arr[2]))),
+                try!(PopVariable::pop_var(rt, rt.resolve(&arr[3])))
+            ))
+        } else {
+            Err(rt.expected(var, "[_; 4]"))
+        }
+    }
+}
+
 impl<T: PopVariable> PopVariable for Vec<T> {
     fn pop_var(rt: &Runtime, var: &Variable) -> Result<Self, String> {
         if let &Variable::Array(ref arr) = var {
@@ -223,6 +265,37 @@ impl<T: PushVariable> PushVariable for [T; 4] {
             self[1].push_var(),
             self[2].push_var(),
             self[3].push_var()
+        ]))
+    }
+}
+
+impl<T: PushVariable, U: PushVariable> PushVariable for (T, U) {
+    fn push_var(&self) -> Variable {
+        Variable::Array(Arc::new(vec![
+            self.0.push_var(),
+            self.1.push_var()
+        ]))
+    }
+}
+
+impl<T: PushVariable, U: PushVariable, V: PushVariable> PushVariable for (T, U, V) {
+    fn push_var(&self) -> Variable {
+        Variable::Array(Arc::new(vec![
+            self.0.push_var(),
+            self.1.push_var(),
+            self.2.push_var()
+        ]))
+    }
+}
+
+impl<T: PushVariable, U: PushVariable, V: PushVariable, W: PushVariable>
+PushVariable for (T, U, V, W) {
+    fn push_var(&self) -> Variable {
+        Variable::Array(Arc::new(vec![
+            self.0.push_var(),
+            self.1.push_var(),
+            self.2.push_var(),
+            self.3.push_var()
         ]))
     }
 }
