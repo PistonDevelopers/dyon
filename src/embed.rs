@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use Error;
 use Object;
 use Runtime;
 use Variable;
@@ -99,6 +100,19 @@ impl<T: PopVariable> PopVariable for Option<T> {
             })
         } else {
             Err(rt.expected(var, "option"))
+        }
+    }
+}
+
+impl<T: PopVariable, U: PopVariable> PopVariable for Result<T, U> {
+    fn pop_var(rt: &Runtime, var: &Variable) -> Result<Self, String> {
+        if let &Variable::Result(ref s) = var {
+            Ok(match *s {
+                Ok(ref s) => Ok(try!(PopVariable::pop_var(rt, rt.resolve(s)))),
+                Err(ref err) => Err(try!(PopVariable::pop_var(rt, rt.resolve(&err.message))))
+            })
+        } else {
+            Err(rt.expected(var, "result"))
         }
     }
 }
@@ -236,6 +250,14 @@ impl PushVariable for Arc<String> {
 impl<T: PushVariable> PushVariable for Option<T> {
     fn push_var(&self) -> Variable {
         Variable::Option(self.as_ref().map(|v| Box::new(v.push_var())))
+    }
+}
+
+impl<T: PushVariable, U: PushVariable> PushVariable for Result<T, U> {
+    fn push_var(&self) -> Variable {
+        Variable::Result(self.as_ref()
+            .map(|v| Box::new(v.push_var()))
+            .map_err(|e| Box::new(Error { message: e.push_var(), trace: vec![] })))
     }
 }
 
