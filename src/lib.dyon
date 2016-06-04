@@ -66,6 +66,9 @@ fn trim_right(text: str) -> str { ... }
 /// Returns a string representation of variable.
 fn to_string(var: any) -> str { ... }
 
+/// Creates a JSON string of text.
+fn json_string(text: str) -> str { ... }
+
 /// Returns a HTML hex color string.
 /// The vector is clamped in range `(0, 0, 0, 0)` to `(1, 1, 1, 1).
 fn to_string_color(color: vec4) -> str { ... }
