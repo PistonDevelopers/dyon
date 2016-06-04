@@ -29,6 +29,9 @@ pub use ty::Type;
 pub use link::Link;
 pub use vec4::Vec4;
 
+/// A common error message when there is no value on the stack.
+pub const TINVOTS: &'static str = "There is no value on the stack";
+
 pub type Array = Arc<Vec<Variable>>;
 pub type Object = Arc<HashMap<Arc<String>, Variable>>;
 pub type RustObject = Arc<Mutex<Any>>;

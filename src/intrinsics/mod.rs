@@ -13,10 +13,9 @@ use Error;
 use Module;
 use Variable;
 use Type;
+use TINVOTS;
 
 mod meta;
-
-const TINVOTS: &'static str = "There is no value on the stack";
 
 pub fn standard(f: &mut HashMap<Arc<String>, PreludeFunction>) {
     let sarg = |f: &mut HashMap<Arc<String>, PreludeFunction>, name: &str, ty: Type, ret: Type| {

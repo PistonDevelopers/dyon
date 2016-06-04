@@ -11,6 +11,7 @@ use FnIndex;
 use Module;
 use Variable;
 use UnsafeRef;
+use TINVOTS;
 
 /// Which side an expression is evalutated.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -237,16 +238,12 @@ impl Runtime {
     }
 
     pub fn pop<T: embed::PopVariable>(&mut self) -> Result<T, String> {
-        let v = self.stack.pop().unwrap_or_else(|| {
-            panic!("There is no value on the stack")
-        });
+        let v = self.stack.pop().unwrap_or_else(|| panic!(TINVOTS));
         T::pop_var(self, self.resolve(&v))
     }
 
     pub fn pop_vec4<T: embed::ConvertVec4>(&mut self) -> Result<T, String> {
-        let v = self.stack.pop().unwrap_or_else(|| {
-            panic!("There is no value on the stack")
-        });
+        let v = self.stack.pop().unwrap_or_else(|| panic!(TINVOTS));
         match self.resolve(&v) {
             &Variable::Vec4(val) => Ok(T::from(val)),
             x => Err(self.expected(x, "vec4"))
@@ -288,7 +285,7 @@ impl Runtime {
         module: &Module,
         f: F
     ) -> Result<Expect, String> {
-        let x = self.stack.pop().expect("There is no value on the stack");
+        let x = self.stack.pop().expect(TINVOTS);
         match self.resolve(&x) {
             &Variable::F64(a) => {
                 self.stack.push(Variable::F64(f(a)));
@@ -446,8 +443,7 @@ impl Runtime {
                             &format!("{}\nExpected something",
                                 self.stack_trace()), self))
         };
-        let v = self.stack.pop()
-            .expect("There is no value on the stack");
+        let v = self.stack.pop().expect(TINVOTS);
         let v = match self.resolve(&v) {
             &Variable::Result(ref res) => res.clone(),
             &Variable::Option(ref opt) => {
@@ -545,7 +541,7 @@ impl Runtime {
                     if let (Expect::Something, _) = x {
                         // Truncate stack to keep later locals at fixed length from end of stack.
                         if self.stack.len() - st != 1 {
-                            let v = self.stack.pop().expect("There is no value on the stack");
+                            let v = self.stack.pop().expect(TINVOTS);
                             self.stack.truncate(st);
                             self.stack.push(v);
                         }
@@ -563,7 +559,7 @@ impl Runtime {
         if expect == Expect::Something {
             // Truncate stack to keep later locals at fixed length from end of stack.
             if self.stack.len() - st != 1 {
-                let v = self.stack.pop().expect("There is no value on the stack");
+                let v = self.stack.pop().expect(TINVOTS);
                 self.stack.truncate(st);
                 self.stack.push(v);
             }
@@ -602,7 +598,7 @@ impl Runtime {
                                 Expression did not return a value.",
                                 self.stack_trace()), self))
             };
-            let v = self.stack.pop().expect("There is no value on the stack");
+            let v = self.stack.pop().expect(TINVOTS);
             stack.push(v.deep_clone(&self.stack));
             fake_call.args.push(ast::Expression::Variable(
                 go.call.args[i].source_range(), Variable::Ref(n-i-1)));
@@ -651,7 +647,7 @@ impl Runtime {
                 Ok(_) => {}
             };
 
-            let v = new_rt.stack.pop().expect("There is no value on the stack");
+            let v = new_rt.stack.pop().expect(TINVOTS);
             Ok(v.deep_clone(&new_rt.stack))
         });
         self.stack.push(Variable::Thread(Thread::new(handle)));
@@ -762,8 +758,7 @@ impl Runtime {
                                         self.stack_trace(),
                                         f.name), source))
                                     }
-                                    None =>
-                                        panic!("There is no value on the stack"),
+                                    None => panic!(TINVOTS),
                                     _ => {
                                         // This happens when return is only
                                         // assigned to `return = x`.
@@ -782,9 +777,7 @@ impl Runtime {
                                         self.stack_trace(),
                                         f.name), source))
                             }
-                            (true, Expect::Something)
-                                if self.stack.len() == 0 =>
-                                panic!("There is no value on the stack"),
+                            (true, Expect::Something) if self.stack.len() == 0 => panic!(TINVOTS),
                             (true, Expect::Something)
                                 if match self.stack.last().unwrap() {
                                     &Variable::Return => true,
@@ -820,7 +813,7 @@ impl Runtime {
                             &format!("{}\nExpected something",
                                 self.stack_trace()), self))
         };
-        let v = self.stack.pop().expect("There is no value on the stack");
+        let v = self.stack.pop().expect(TINVOTS);
         let v = match self.resolve(&v) {
             &Variable::Vec4(v) => v,
             x => return Err(module.error(sw.source_range,
@@ -856,7 +849,7 @@ impl Runtime {
                         &format!("{}\nExpected something",
                             self.stack_trace()), self))
                 };
-                let v = self.stack.pop().expect("There is no value on the stack");
+                let v = self.stack.pop().expect(TINVOTS);
                 match new_link.push(self.resolve(&v)) {
                     Err(err) => {
                         return Err(module.error(item.source_range(),
@@ -886,7 +879,7 @@ impl Runtime {
                                     self.stack_trace()), self))
             };
             match self.stack.pop() {
-                None => panic!("There is no value on the stack"),
+                None => panic!(TINVOTS),
                 Some(x) => {
                     match object.insert(key.clone(), x) {
                         None => {}
@@ -916,7 +909,7 @@ impl Runtime {
                         self.stack_trace()), self))
             };
             match self.stack.pop() {
-                None => panic!("There is no value on the stack"),
+                None => panic!(TINVOTS),
                 Some(x) => array.push(x)
             }
         }
@@ -987,7 +980,7 @@ impl Runtime {
                                         self.stack_trace()), self))
                     }
                     let v = match self.stack.pop() {
-                        None => panic!("There is no value on the stack"),
+                        None => panic!(TINVOTS),
                         // Use a shallow clone of a reference.
                         Some(Variable::Ref(ind)) => self.stack[ind].clone(),
                         Some(x) => x
@@ -1005,7 +998,7 @@ impl Runtime {
                             Some(Variable::UnsafeRef(mut r)) => {
                                 unsafe { *r.0 = v }
                             }
-                            None => panic!("There is no value on the stack"),
+                            None => panic!(TINVOTS),
                             _ => panic!("Expected unsafe reference")
                         }
                     } else {
@@ -1997,7 +1990,7 @@ impl Runtime {
                         self.stack_trace()), self))
             };
             match self.stack.pop() {
-                None => panic!("There is no value on the stack"),
+                None => panic!(TINVOTS),
                 Some(x) => {
                     let val = match x {
                         Variable::Bool(val) => val,
@@ -2089,7 +2082,7 @@ impl Runtime {
                     &format!("{}\nExpected number from for start",
                         self.stack_trace()), self))
             };
-            let start = self.stack.pop().expect("There is no value on the stack");
+            let start = self.stack.pop().expect(TINVOTS);
             let start = match self.resolve(&start) {
                 &Variable::F64(val) => val,
                 x => return Err(module.error(for_n_expr.end.source_range(),
@@ -2106,7 +2099,7 @@ impl Runtime {
                 &format!("{}\nExpected number from for end",
                     self.stack_trace()), self))
         };
-        let end = self.stack.pop().expect("There is no value on the stack");
+        let end = self.stack.pop().expect(TINVOTS);
         let end = match self.resolve(&end) {
             &Variable::F64(val) => val,
             x => return Err(module.error(for_n_expr.end.source_range(),
@@ -2196,7 +2189,7 @@ impl Runtime {
                     &format!("{}\nExpected number from for start",
                         self.stack_trace()), self))
             };
-            let start = self.stack.pop().expect("There is no value on the stack");
+            let start = self.stack.pop().expect(TINVOTS);
             let start = match self.resolve(&start) {
                 &Variable::F64(val) => val,
                 x => return Err(module.error(for_n_expr.end.source_range(),
@@ -2213,7 +2206,7 @@ impl Runtime {
                 &format!("{}\nExpected number from for end",
                     self.stack_trace()), self))
         };
-        let end = self.stack.pop().expect("There is no value on the stack");
+        let end = self.stack.pop().expect(TINVOTS);
         let end = match self.resolve(&end) {
             &Variable::F64(val) => val,
             x => return Err(module.error(for_n_expr.end.source_range(),
@@ -2239,8 +2232,7 @@ impl Runtime {
             match try!(self.block(&for_n_expr.block, module)) {
                 (_, Flow::Return) => { return Ok(Flow::Return); }
                 (Expect::Something, Flow::Continue) => {
-                    match self.resolve(self.stack.last()
-                              .expect("There is no value on the stack")) {
+                    match self.resolve(self.stack.last().expect(TINVOTS)) {
                         &Variable::F64(val) => sum += val,
                         x => return Err(module.error(for_n_expr.block.source_range,
                                 &self.expected(x, "number"), self))
@@ -2315,7 +2307,7 @@ impl Runtime {
                     &format!("{}\nExpected number from for start",
                         self.stack_trace()), self))
             };
-            let start = self.stack.pop().expect("There is no value on the stack");
+            let start = self.stack.pop().expect(TINVOTS);
             let start = match self.resolve(&start) {
                 &Variable::F64(val) => val,
                 x => return Err(module.error(for_n_expr.end.source_range(),
@@ -2332,7 +2324,7 @@ impl Runtime {
                 &format!("{}\nExpected number from for end",
                     self.stack_trace()), self))
         };
-        let end = self.stack.pop().expect("There is no value on the stack");
+        let end = self.stack.pop().expect(TINVOTS);
         let end = match self.resolve(&end) {
             &Variable::F64(val) => val,
             x => return Err(module.error(for_n_expr.end.source_range(),
@@ -2358,8 +2350,7 @@ impl Runtime {
             match try!(self.block(&for_n_expr.block, module)) {
                 (_, Flow::Return) => { return Ok(Flow::Return); }
                 (Expect::Something, Flow::Continue) => {
-                    match self.resolve(self.stack.last()
-                              .expect("There is no value on the stack")) {
+                    match self.resolve(self.stack.last().expect(TINVOTS)) {
                         &Variable::Vec4(val) => {
                             for i in 0..4 {
                                 sum[i] += val[i]
@@ -2437,7 +2428,7 @@ impl Runtime {
                     &format!("{}\nExpected number from for start",
                         self.stack_trace()), self))
             };
-            let start = self.stack.pop().expect("There is no value on the stack");
+            let start = self.stack.pop().expect(TINVOTS);
             let start = match self.resolve(&start) {
                 &Variable::F64(val) => val,
                 x => return Err(module.error(for_n_expr.end.source_range(),
@@ -2454,7 +2445,7 @@ impl Runtime {
                 &format!("{}\nExpected number from for end",
                     self.stack_trace()), self))
         };
-        let end = self.stack.pop().expect("There is no value on the stack");
+        let end = self.stack.pop().expect(TINVOTS);
         let end = match self.resolve(&end) {
             &Variable::F64(val) => val,
             x => return Err(module.error(for_n_expr.end.source_range(),
@@ -2481,8 +2472,7 @@ impl Runtime {
             match try!(self.block(&for_n_expr.block, module)) {
                 (_, Flow::Return) => { return Ok(Flow::Return); }
                 (Expect::Something, Flow::Continue) => {
-                    match self.resolve(self.stack.last()
-                              .expect("There is no value on the stack")) {
+                    match self.resolve(self.stack.last().expect(TINVOTS)) {
                         &Variable::F64(val) => {
                             if let Some((ref mut min_arg, ref mut min_val, ref mut tail_arg)) = min {
                                 if *min_val > val {
@@ -2598,7 +2588,7 @@ impl Runtime {
                     &format!("{}\nExpected number from for start",
                         self.stack_trace()), self))
             };
-            let start = self.stack.pop().expect("There is no value on the stack");
+            let start = self.stack.pop().expect(TINVOTS);
             let start = match self.resolve(&start) {
                 &Variable::F64(val) => val,
                 x => return Err(module.error(for_n_expr.end.source_range(),
@@ -2615,7 +2605,7 @@ impl Runtime {
                 &format!("{}\nExpected number from for end",
                     self.stack_trace()), self))
         };
-        let end = self.stack.pop().expect("There is no value on the stack");
+        let end = self.stack.pop().expect(TINVOTS);
         let end = match self.resolve(&end) {
             &Variable::F64(val) => val,
             x => return Err(module.error(for_n_expr.end.source_range(),
@@ -2643,8 +2633,7 @@ impl Runtime {
             match try!(self.block(&for_n_expr.block, module)) {
                 (_, Flow::Return) => { return Ok(Flow::Return); }
                 (Expect::Something, Flow::Continue) => {
-                    match self.resolve(self.stack.last()
-                              .expect("There is no value on the stack")) {
+                    match self.resolve(self.stack.last().expect(TINVOTS)) {
                         &Variable::F64(val) => {
                             if let Some((ref mut max_arg, ref mut max_val, ref mut tail_arg)) = max {
                                 if *max_val < val {
@@ -2760,7 +2749,7 @@ impl Runtime {
                     &format!("{}\nExpected number from for start",
                         self.stack_trace()), self))
             };
-            let start = self.stack.pop().expect("There is no value on the stack");
+            let start = self.stack.pop().expect(TINVOTS);
             let start = match self.resolve(&start) {
                 &Variable::F64(val) => val,
                 x => return Err(module.error(for_n_expr.end.source_range(),
@@ -2777,7 +2766,7 @@ impl Runtime {
                 &format!("{}\nExpected number from for end",
                     self.stack_trace()), self))
         };
-        let end = self.stack.pop().expect("There is no value on the stack");
+        let end = self.stack.pop().expect(TINVOTS);
         let end = match self.resolve(&end) {
             &Variable::F64(val) => val,
             x => return Err(module.error(for_n_expr.end.source_range(),
@@ -2804,8 +2793,7 @@ impl Runtime {
             match try!(self.block(&for_n_expr.block, module)) {
                 (_, Flow::Return) => { return Ok(Flow::Return); }
                 (Expect::Something, Flow::Continue) => {
-                    match self.resolve(self.stack.last()
-                              .expect("There is no value on the stack")) {
+                    match self.resolve(self.stack.last().expect(TINVOTS)) {
                         &Variable::Bool(val) => {
                             if val {
                                 any = true;
@@ -2884,7 +2872,7 @@ impl Runtime {
                     &format!("{}\nExpected number from for start",
                         self.stack_trace()), self))
             };
-            let start = self.stack.pop().expect("There is no value on the stack");
+            let start = self.stack.pop().expect(TINVOTS);
             let start = match self.resolve(&start) {
                 &Variable::F64(val) => val,
                 x => return Err(module.error(for_n_expr.end.source_range(),
@@ -2901,7 +2889,7 @@ impl Runtime {
                 &format!("{}\nExpected number from for end",
                     self.stack_trace()), self))
         };
-        let end = self.stack.pop().expect("There is no value on the stack");
+        let end = self.stack.pop().expect(TINVOTS);
         let end = match self.resolve(&end) {
             &Variable::F64(val) => val,
             x => return Err(module.error(for_n_expr.end.source_range(),
@@ -2928,8 +2916,7 @@ impl Runtime {
             match try!(self.block(&for_n_expr.block, module)) {
                 (_, Flow::Return) => { return Ok(Flow::Return); }
                 (Expect::Something, Flow::Continue) => {
-                    match self.resolve(self.stack.last()
-                              .expect("There is no value on the stack")) {
+                    match self.resolve(self.stack.last().expect(TINVOTS)) {
                         &Variable::Bool(val) => {
                             if !val {
                                 any = false;
@@ -3009,7 +2996,7 @@ impl Runtime {
                     &format!("{}\nExpected number from for start",
                         self.stack_trace()), self))
             };
-            let start = self.stack.pop().expect("There is no value on the stack");
+            let start = self.stack.pop().expect(TINVOTS);
             let start = match self.resolve(&start) {
                 &Variable::F64(val) => val,
                 x => return Err(module.error(for_n_expr.end.source_range(),
@@ -3026,7 +3013,7 @@ impl Runtime {
                 &format!("{}\nExpected number from for end",
                     self.stack_trace()), self))
         };
-        let end = self.stack.pop().expect("There is no value on the stack");
+        let end = self.stack.pop().expect(TINVOTS);
         let end = match self.resolve(&end) {
             &Variable::F64(val) => val,
             x => return Err(module.error(for_n_expr.end.source_range(),
@@ -3053,7 +3040,7 @@ impl Runtime {
                 (_, Flow::Return) => { return Ok(Flow::Return); }
                 (Expect::Something, Flow::Continue) => {
                     res.push(self.stack.pop()
-                       .expect("There is no value on the stack"));
+                       .expect(TINVOTS));
                 }
                 (Expect::Nothing, Flow::Continue) => {
                     return Err(module.error(for_n_expr.block.source_range,
@@ -3132,25 +3119,25 @@ impl Runtime {
             // Skip the rest if swizzling pushes arguments.
             if self.stack.len() - st > 3 { break; }
         }
-        let w = self.stack.pop().expect("There is no value on the stack");
+        let w = self.stack.pop().expect(TINVOTS);
         let w = match self.resolve(&w) {
             &Variable::F64(val) => val,
             x => return Err(module.error(vec4.args[3].source_range(),
                 &self.expected(x, "number"), self))
         };
-        let z = self.stack.pop().expect("There is no value on the stack");
+        let z = self.stack.pop().expect(TINVOTS);
         let z = match self.resolve(&z) {
             &Variable::F64(val) => val,
             x => return Err(module.error(vec4.args[2].source_range(),
                 &self.expected(x, "number"), self))
         };
-        let y = self.stack.pop().expect("There is no value on the stack");
+        let y = self.stack.pop().expect(TINVOTS);
         let y = match self.resolve(&y) {
             &Variable::F64(val) => val,
             x => return Err(module.error(vec4.args[1].source_range(),
                 &self.expected(x, "number"), self))
         };
-        let x = self.stack.pop().expect("There is no value on the stack");
+        let x = self.stack.pop().expect(TINVOTS);
         let x = match self.resolve(&x) {
             &Variable::F64(val) => val,
             x => return Err(module.error(vec4.args[0].source_range(),
