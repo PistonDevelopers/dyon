@@ -104,6 +104,32 @@ macro_rules! dyon_fn {
             }
         }
     };
+    (fn $name:ident (
+        $arg0:tt : $t0:ty,
+        $arg1:tt : $t1:ty,
+        $arg2:tt : $t2:ty,
+        $arg3:tt : $t3:ty,
+        $arg4:tt : $t4:ty,
+        $arg5:tt : $t5:ty
+    ) -> $rt:ty $b:block) => {
+        dyon_macro_items!{
+            pub fn $name(rt: &mut $crate::Runtime) -> Result<(), String> {
+                fn inner($arg0: $t0, $arg1: $t1, $arg2: $t2, $arg3: $t3, $arg4: $t4,
+                    $arg5: $t5) -> $rt {
+                    $b
+                }
+
+                let $arg5: $t5 = try!(rt.pop());
+                let $arg4: $t4 = try!(rt.pop());
+                let $arg3: $t3 = try!(rt.pop());
+                let $arg2: $t2 = try!(rt.pop());
+                let $arg1: $t1 = try!(rt.pop());
+                let $arg0: $t0 = try!(rt.pop());
+                rt.push(inner($arg0, $arg1, $arg2, $arg3, $arg4, $arg5));
+                Ok(())
+            }
+        }
+    };
     (fn $name:ident () $b:block) => {
         pub fn $name(_: &mut $crate::Runtime) -> Result<(), String> {
             fn inner() {
@@ -200,6 +226,31 @@ macro_rules! dyon_fn {
                 let $arg1: $t1 = try!(rt.pop());
                 let $arg0: $t0 = try!(rt.pop());
                 inner($arg0, $arg1, $arg2, $arg3, $arg4);
+                Ok(())
+            }
+        }
+    };
+    (fn $name:ident (
+        $arg0:tt : $t0:ty,
+        $arg1:tt : $t1:ty,
+        $arg2:tt : $t2:ty,
+        $arg3:tt : $t3:ty,
+        $arg4:tt : $t4:ty,
+        $arg5:tt : $t5:ty
+    ) $b:block) => {
+        dyon_macro_items!{
+            pub fn $name(rt: &mut $crate::Runtime) -> Result<(), String> {
+                fn inner($arg0: $t0, $arg1: $t1, $arg2: $t2, $arg3: $t3, $arg4: $t4, $arg5: $t5) {
+                    $b
+                }
+
+                let $arg5: $t5 = try!(rt.pop());
+                let $arg4: $t4 = try!(rt.pop());
+                let $arg3: $t3 = try!(rt.pop());
+                let $arg2: $t2 = try!(rt.pop());
+                let $arg1: $t1 = try!(rt.pop());
+                let $arg0: $t0 = try!(rt.pop());
+                inner($arg0, $arg1, $arg2, $arg3, $arg4, $arg5);
                 Ok(())
             }
         }
