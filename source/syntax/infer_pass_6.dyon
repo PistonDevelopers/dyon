@@ -1,0 +1,9 @@
+fn main() {
+    list := [1, 2, 3]
+    j := 0
+    hit := 0
+    println(any i {
+        hit = clone(i)
+        list[i] == 2
+    })
+}

@@ -259,7 +259,6 @@ pub fn check(
                     }
                     ch = parent;
                 }
-                break;
             }
 
             if !found {
