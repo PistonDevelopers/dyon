@@ -1827,6 +1827,16 @@ impl Runtime {
                                 x.symbol()), rt))
                     })
                 }
+                (&Variable::Vec4(ref b), &Variable::Vec4(ref a)) => {
+                    Ok(match compare.op {
+                        Equal => a == b,
+                        NotEqual => a != b,
+                        x => return Err(module.error(compare.source_range,
+                            &format!("{}\n`{}` can not be used with vec4s",
+                                rt.stack_trace(),
+                                x.symbol()), rt))
+                    })
+                }
                 (&Variable::Object(ref b), &Variable::Object(ref a)) => {
                     Ok(match compare.op {
                         Equal => a == b,

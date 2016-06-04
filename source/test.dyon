@@ -1,7 +1,3 @@
 fn main() {
-    pos := [0, 1, 2]
-    vs := [1, 2, 3]
-    for i {
-        pos := vs[pos[i]]
-    }
+    println((1, 0) != (1, 0))
 }
