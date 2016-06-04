@@ -82,6 +82,7 @@ pub fn standard(f: &mut HashMap<Arc<String>, PreludeFunction>) {
     sarg(f, "trim_left", Type::Text, Type::Text);
     sarg(f, "trim_right", Type::Text, Type::Text);
     sarg(f, "to_string", Type::Any, Type::Text);
+    sarg(f, "json_string", Type::Text, Type::Text);
     sarg(f, "to_string_color", Type::Vec4, Type::Text);
     sarg(f, "srgb_to_linear_color", Type::Vec4, Type::Vec4);
     sarg(f, "linear_to_srgb_color", Type::Vec4, Type::Vec4);
@@ -758,6 +759,16 @@ pub fn call_standard(
             let v = rt.stack.pop().expect(TINVOTS);
             let mut buf: Vec<u8> = vec![];
             write_variable(&mut buf, rt, rt.resolve(&v), EscapeString::None).unwrap();
+            let v = Variable::Text(Arc::new(String::from_utf8(buf).unwrap()));
+            rt.stack.push(v);
+            rt.pop_fn(call.name.clone());
+            Expect::Something
+        }
+        "json_string" => {
+            rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
+            let v = rt.stack.pop().expect(TINVOTS);
+            let mut buf: Vec<u8> = vec![];
+            write_variable(&mut buf, rt, rt.resolve(&v), EscapeString::Json).unwrap();
             let v = Variable::Text(Arc::new(String::from_utf8(buf).unwrap()));
             rt.stack.push(v);
             rt.pop_fn(call.name.clone());
