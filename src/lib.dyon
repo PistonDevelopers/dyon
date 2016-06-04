@@ -217,6 +217,10 @@ fn download_url_file(url: str, file: str) -> res[str] { ... }
 /// Designed to be easy to use with threads.
 fn save_string_file(string: str, file: str) -> res[str] { ... }
 
+/// Loads a string from file.
+/// Returns `ok(text)` if the loading succeeded.
+fn load_string_file(file: str) -> res[str] { ... }
+
 /// Waits for thread to finish and returns the result.
 fn join_thread(t: thr[any]) -> res[any] { ... }
 

@@ -1,10 +1,5 @@
 
 fn main() {
-    a := 3
-    foo(a)
-    println(a)
-}
-
-fn foo(a) {
-    a %= 2
+    myself := unwrap(load_string(file: "source/test.dyon"))
+    println(myself)
 }
