@@ -5,7 +5,7 @@ macro_rules! dyon_macro_items { ($($x:item)+) => ($($x)+) }
 #[macro_export]
 macro_rules! dyon_fn {
     (fn $name:ident () -> $rt:ty $b:block) => {
-        fn $name(rt: &mut $crate::Runtime) -> Result<(), String> {
+        pub fn $name(rt: &mut $crate::Runtime) -> Result<(), String> {
             fn inner() -> $rt {
                 $b
             }
@@ -16,7 +16,7 @@ macro_rules! dyon_fn {
     };
     (fn $name:ident ($arg:tt : $t:ty) -> $rt:ty $b:block) => {
         dyon_macro_items!{
-            fn $name(rt: &mut $crate::Runtime) -> Result<(), String> {
+            pub fn $name(rt: &mut $crate::Runtime) -> Result<(), String> {
                 fn inner($arg: $t) -> $rt {
                     $b
                 }
@@ -29,7 +29,7 @@ macro_rules! dyon_fn {
     };
     (fn $name:ident ($arg0:tt : $t0:ty, $arg1:tt : $t1:ty) -> $rt:ty $b:block) => {
         dyon_macro_items!{
-            fn $name(rt: &mut $crate::Runtime) -> Result<(), String> {
+            pub fn $name(rt: &mut $crate::Runtime) -> Result<(), String> {
                 fn inner($arg0: $t0, $arg1: $t1) -> $rt {
                     $b
                 }
@@ -47,7 +47,7 @@ macro_rules! dyon_fn {
         $arg2:tt : $t2:ty
     ) -> $rt:ty $b:block) => {
         dyon_macro_items!{
-            fn $name(rt: &mut $crate::Runtime) -> Result<(), String> {
+            pub fn $name(rt: &mut $crate::Runtime) -> Result<(), String> {
                 fn inner($arg0: $t0, $arg1: $t1, $arg2: $t2) -> $rt {
                     $b
                 }
@@ -67,7 +67,7 @@ macro_rules! dyon_fn {
         $arg3:tt : $t3:ty
     ) -> $rt:ty $b:block) => {
         dyon_macro_items!{
-            fn $name(rt: &mut $crate::Runtime) -> Result<(), String> {
+            pub fn $name(rt: &mut $crate::Runtime) -> Result<(), String> {
                 fn inner($arg0: $t0, $arg1: $t1, $arg2: $t2, $arg3: $t3) -> $rt {
                     $b
                 }
@@ -82,7 +82,7 @@ macro_rules! dyon_fn {
         }
     };
     (fn $name:ident () $b:block) => {
-        fn $name(_: &mut $crate::Runtime) -> Result<(), String> {
+        pub fn $name(_: &mut $crate::Runtime) -> Result<(), String> {
             fn inner() {
                 $b
             }
@@ -93,7 +93,7 @@ macro_rules! dyon_fn {
     };
     (fn $name:ident ($arg:tt : $t:ty) $b:block) => {
         dyon_macro_items!{
-            fn $name(rt: &mut $crate::Runtime) -> Result<(), String> {
+            pub fn $name(rt: &mut $crate::Runtime) -> Result<(), String> {
                 fn inner($arg: $t) {
                     $b
                 }
@@ -106,7 +106,7 @@ macro_rules! dyon_fn {
     };
     (fn $name:ident ($arg0:tt : $t0:ty, $arg1:tt : $t1:ty) $b:block) => {
         dyon_macro_items!{
-            fn $name(rt: &mut $crate::Runtime) -> Result<(), String> {
+            pub fn $name(rt: &mut $crate::Runtime) -> Result<(), String> {
                 fn inner($arg0: $t0, $arg1: $t1) {
                     $b
                 }
@@ -124,7 +124,7 @@ macro_rules! dyon_fn {
         $arg2:tt : $t2:ty
     ) $b:block) => {
         dyon_macro_items!{
-            fn $name(rt: &mut $crate::Runtime) -> Result<(), String> {
+            pub fn $name(rt: &mut $crate::Runtime) -> Result<(), String> {
                 fn inner($arg0: $t0, $arg1: $t1, $arg2: $t2) {
                     $b
                 }
@@ -144,7 +144,7 @@ macro_rules! dyon_fn {
         $arg3:tt : $t3:ty
     ) $b:block) => {
         dyon_macro_items!{
-            fn $name(rt: &mut $crate::Runtime) -> Result<(), String> {
+            pub fn $name(rt: &mut $crate::Runtime) -> Result<(), String> {
                 fn inner($arg0: $t0, $arg1: $t1, $arg2: $t2, $arg3: $t3) {
                     $b
                 }
