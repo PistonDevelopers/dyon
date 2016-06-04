@@ -250,6 +250,9 @@ fn infer_block(
     let f = |decls: &mut Vec<Arc<String>>| -> Option<Item> {
         for expr in &block.expressions {
             if let &Expression::Assign(ref assign_expr) = expr {
+                // Check right expression before left expression.
+                let right = infer_expr(&assign_expr.right, name, decls);
+                if right.is_some() { return right; }
                 // Check for declaration of same name.
                 if let Expression::Item(ref item) = assign_expr.left {
                     if &**item.name == name {
@@ -261,9 +264,12 @@ fn infer_block(
                         }
                     }
                 }
+                let left = infer_expr(&assign_expr.left, name, decls);
+                if left.is_some() { return left; }
+            } else {
+                let res = infer_expr(expr, name, decls);
+                if res.is_some() { return res; }
             }
-            let res = infer_expr(expr, name, decls);
-            if res.is_some() { return res; }
         }
         None
     };

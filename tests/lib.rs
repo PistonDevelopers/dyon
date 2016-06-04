@@ -90,6 +90,8 @@ fn test_syntax() {
     test_src("source/syntax/infer_pass_3.dyon");
     test_src("source/syntax/infer_pass_4.dyon");
     test_src("source/syntax/infer_pass_5.dyon");
+    test_src("source/syntax/infer_pass_6.dyon");
+    test_src("source/syntax/infer_pass_7.dyon");
     test_fail_src("source/syntax/infer_fail_1.dyon");
     test_fail_src("source/syntax/infer_fail_2.dyon");
     test_fail_src("source/syntax/infer_fail_3.dyon");
