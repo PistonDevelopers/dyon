@@ -1793,99 +1793,99 @@ impl Runtime {
             module: &Module,
             a: &Variable,
             b: &Variable
-        ) -> Result<bool, String> {
+        ) -> Result<Variable, String> {
             use ast::CompareOp::*;
 
             match (rt.resolve(&b), rt.resolve(&a)) {
-                (&Variable::F64(b, _), &Variable::F64(a, _)) => {
-                    Ok(match compare.op {
+                (&Variable::F64(b, _), &Variable::F64(a, ref sec)) => {
+                    Ok(Variable::Bool(match compare.op {
                         Less => a < b,
                         LessOrEqual => a <= b,
                         Greater => a > b,
                         GreaterOrEqual => a >= b,
                         Equal => a == b,
                         NotEqual => a != b
-                    })
+                    }, sec.clone()))
                 }
                 (&Variable::Text(ref b), &Variable::Text(ref a)) => {
-                    Ok(match compare.op {
+                    Ok(Variable::bool(match compare.op {
                         Less => a < b,
                         LessOrEqual => a <= b,
                         Greater => a > b,
                         GreaterOrEqual => a >= b,
                         Equal => a == b,
                         NotEqual => a != b
-                    })
+                    }))
                 }
-                (&Variable::Bool(b, _), &Variable::Bool(a, _)) => {
-                    Ok(match compare.op {
+                (&Variable::Bool(b, _), &Variable::Bool(a, ref sec)) => {
+                    Ok(Variable::Bool(match compare.op {
                         Equal => a == b,
                         NotEqual => a != b,
                         x => return Err(module.error(compare.source_range,
                             &format!("{}\n`{}` can not be used with bools",
                                 rt.stack_trace(),
                                 x.symbol()), rt))
-                    })
+                    }, sec.clone()))
                 }
                 (&Variable::Vec4(ref b), &Variable::Vec4(ref a)) => {
-                    Ok(match compare.op {
+                    Ok(Variable::bool(match compare.op {
                         Equal => a == b,
                         NotEqual => a != b,
                         x => return Err(module.error(compare.source_range,
                             &format!("{}\n`{}` can not be used with vec4s",
                                 rt.stack_trace(),
                                 x.symbol()), rt))
-                    })
+                    }))
                 }
                 (&Variable::Object(ref b), &Variable::Object(ref a)) => {
-                    Ok(match compare.op {
+                    Ok(Variable::bool(match compare.op {
                         Equal => a == b,
                         NotEqual => a != b,
                         x => return Err(module.error(compare.source_range,
                             &format!("{}\n`{}` can not be used with objects",
                                 rt.stack_trace(),
                                 x.symbol()), rt))
-                    })
+                    }))
                 }
                 (&Variable::Array(ref b), &Variable::Array(ref a)) => {
-                    Ok(match compare.op {
+                    Ok(Variable::bool(match compare.op {
                         Equal => a == b,
                         NotEqual => a != b,
                         x => return Err(module.error(compare.source_range,
                             &format!("{}\n`{}` can not be used with arrays",
                                 rt.stack_trace(),
                                 x.symbol()), rt))
-                    })
+                    }))
                 }
                 (&Variable::Option(None), &Variable::Option(None)) => {
-                    Ok(match compare.op {
+                    Ok(Variable::bool(match compare.op {
                         Equal => true,
                         NotEqual => false,
                         x => return Err(module.error(compare.source_range,
                             &format!("{}\n`{}` can not be used with options",
                                 rt.stack_trace(),
                                 x.symbol()), rt))
-                    })
+                    }))
                 }
                 (&Variable::Option(None), &Variable::Option(_)) => {
-                    Ok(match compare.op {
+                    Ok(Variable::bool(match compare.op {
                         Equal => false,
                         NotEqual => true,
                         x => return Err(module.error(compare.source_range,
                             &format!("{}\n`{}` can not be used with options",
                                 rt.stack_trace(),
                                 x.symbol()), rt))
-                    })
+                    }))
                 }
                 (&Variable::Option(_), &Variable::Option(None)) => {
-                    Ok(match compare.op {
+                    Ok(Variable::bool(match compare.op {
                         Equal => false,
                         NotEqual => true,
                         x => return Err(module.error(compare.source_range,
                             &format!("{}\n`{}` can not be used with options",
                                 rt.stack_trace(),
                                 x.symbol()), rt))
-                    })
+                    }))
                 }
                 (&Variable::Option(Some(ref b)),
                  &Variable::Option(Some(ref a))) => {
@@ -1918,7 +1918,7 @@ impl Runtime {
         match (self.stack.pop(), self.stack.pop()) {
             (Some(b), Some(a)) => {
                 let v = try!(sub_compare(self, compare, module, &a, &b));
-                self.stack.push(Variable::bool(v))
+                self.stack.push(v)
             }
             _ => panic!("Expected two variables on the stack")
         }
@@ -3198,8 +3198,8 @@ impl Runtime {
         let right = self.stack.pop().expect("Expected right argument");
         let left = self.stack.pop().expect("Expected left argument");
         let v = match (self.resolve(&left), self.resolve(&right)) {
-            (&Variable::F64(a, _), &Variable::F64(b, _)) => {
-                Variable::f64(match binop.op {
+            (&Variable::F64(a, ref sec), &Variable::F64(b, _)) => {
+                Variable::F64(match binop.op {
                     Add => a + b,
                     Sub => a - b,
                     Mul => a * b,
@@ -3210,7 +3210,7 @@ impl Runtime {
                         &format!("{}\nUnknown number operator `{:?}`",
                             self.stack_trace(),
                             binop.op.symbol()), self))
-                })
+                }, sec.clone())
             }
             (&Variable::Vec4(a), &Variable::Vec4(b)) => {
                 match binop.op {
@@ -3262,8 +3262,8 @@ impl Runtime {
                                            a.powf(b[2]), a.powf(b[3])])
                 }
             }
-            (&Variable::Bool(a, _), &Variable::Bool(b, _)) => {
-                Variable::bool(match binop.op {
+            (&Variable::Bool(a, ref sec), &Variable::Bool(b, _)) => {
+                Variable::Bool(match binop.op {
                     Add => a || b,
                     // Boolean subtraction with lazy precedence.
                     Sub => a && !b,
@@ -3273,7 +3273,7 @@ impl Runtime {
                         &format!("{}\nUnknown boolean operator `{:?}`",
                             self.stack_trace(),
                             binop.op.symbol_bool()), self))
-                })
+                }, sec.clone())
             }
             (&Variable::Text(ref a), &Variable::Text(ref b)) => {
                 match binop.op {
