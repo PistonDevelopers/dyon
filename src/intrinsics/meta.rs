@@ -34,7 +34,7 @@ fn load_metarules_data(meta: &str, s: &str, file: &str, d: &str) -> Result<Vec<V
             &MetaData::Bool(ref name, val) => {
                 data.push(Variable::Text(b.clone()));
                 data.push(Variable::Text(name.clone()));
-                data.push(Variable::Bool(val));
+                data.push(Variable::bool(val));
             }
             &MetaData::String(ref name, ref val) => {
                 data.push(Variable::Text(s.clone()));
@@ -209,7 +209,7 @@ pub fn json_from_meta_data(data: &Vec<Variable>) -> Result<String, io::Error> {
                         try!(write!(w, "{}", "}"));
                     }
                     "bool" => {
-                        if let &Variable::Bool(val) = &arr[4] {
+                        if let &Variable::Bool(val, _) = &arr[4] {
                             try!(write_string(&mut w, name));
                             try!(write!(w, ":{}", val));
                         }

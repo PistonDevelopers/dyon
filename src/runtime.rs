@@ -1133,10 +1133,10 @@ impl Runtime {
                                 };
                             }
                         }
-                        &Variable::Bool(b) => {
+                        &Variable::Bool(b, _) => {
                             unsafe {
                                 match *r.0 {
-                                    Variable::Bool(ref mut n) => {
+                                    Variable::Bool(ref mut n, _) => {
                                         match op {
                                             Set => *n = b,
                                             _ => unimplemented!()
@@ -1144,7 +1144,7 @@ impl Runtime {
                                     }
                                     Variable::Return => {
                                         if let Set = op {
-                                            *r.0 = Variable::Bool(b)
+                                            *r.0 = Variable::bool(b)
                                         } else {
                                             return Err(module.error(
                                                 left.source_range(),
@@ -1154,7 +1154,7 @@ impl Runtime {
                                     }
                                     Variable::Link(ref mut n) => {
                                         if let Add = op {
-                                            try!(n.push(&Variable::Bool(b)));
+                                            try!(n.push(&Variable::bool(b)));
                                         } else {
                                             return Err(module.error(
                                                 left.source_range(),
@@ -1765,7 +1765,7 @@ impl Runtime {
             &Variable::F64(_) => self.f64_type.clone(),
             &Variable::Vec4(_) => self.vec4_type.clone(),
             &Variable::Return => self.return_type.clone(),
-            &Variable::Bool(_) => self.bool_type.clone(),
+            &Variable::Bool(_, _) => self.bool_type.clone(),
             &Variable::Object(_) => self.object_type.clone(),
             &Variable::Array(_) => self.array_type.clone(),
             &Variable::Link(_) => self.link_type.clone(),
@@ -1817,7 +1817,7 @@ impl Runtime {
                         NotEqual => a != b
                     })
                 }
-                (&Variable::Bool(b), &Variable::Bool(a)) => {
+                (&Variable::Bool(b, _), &Variable::Bool(a, _)) => {
                     Ok(match compare.op {
                         Equal => a == b,
                         NotEqual => a != b,
@@ -1918,7 +1918,7 @@ impl Runtime {
         match (self.stack.pop(), self.stack.pop()) {
             (Some(b), Some(a)) => {
                 let v = try!(sub_compare(self, compare, module, &a, &b));
-                self.stack.push(Variable::Bool(v))
+                self.stack.push(Variable::bool(v))
             }
             _ => panic!("Expected two variables on the stack")
         }
@@ -1938,7 +1938,7 @@ impl Runtime {
         };
         let cond = self.stack.pop().expect("Expected bool");
         let val = match self.resolve(&cond) {
-            &Variable::Bool(val) => val,
+            &Variable::Bool(val, _) => val,
             _ => return Err(module.error(if_expr.cond.source_range(),
                 &format!("{}\nExpected bool from if condition",
                     self.stack_trace()), self))
@@ -1959,8 +1959,8 @@ impl Runtime {
             };
             let else_if_cond = self.stack.pop().expect("Expected bool");
             match self.resolve(&else_if_cond) {
-                &Variable::Bool(false) => {}
-                &Variable::Bool(true) => {
+                &Variable::Bool(false, _) => {}
+                &Variable::Bool(true, _) => {
                     return self.block(body, module);
                 }
                 _ => return Err(module.error(cond.source_range(),
@@ -2003,7 +2003,7 @@ impl Runtime {
                 None => panic!(TINVOTS),
                 Some(x) => {
                     let val = match x {
-                        Variable::Bool(val) => val,
+                        Variable::Bool(val, _) => val,
                         _ => return Err(module.error(
                             for_expr.cond.source_range(),
                             &format!("{}\nExpected bool", self.stack_trace()), self))
@@ -2804,7 +2804,7 @@ impl Runtime {
                 (_, Flow::Return) => { return Ok(Flow::Return); }
                 (Expect::Something, Flow::Continue) => {
                     match self.resolve(self.stack.last().expect(TINVOTS)) {
-                        &Variable::Bool(val) => {
+                        &Variable::Bool(val, _) => {
                             if val {
                                 any = true;
                                 break;
@@ -2862,7 +2862,7 @@ impl Runtime {
         };
         self.stack.truncate(prev_st);
         self.local_stack.truncate(prev_lc);
-        self.stack.push(Variable::Bool(any));
+        self.stack.push(Variable::bool(any));
         Ok(flow)
     }
     fn all_n_expr(
@@ -2927,7 +2927,7 @@ impl Runtime {
                 (_, Flow::Return) => { return Ok(Flow::Return); }
                 (Expect::Something, Flow::Continue) => {
                     match self.resolve(self.stack.last().expect(TINVOTS)) {
-                        &Variable::Bool(val) => {
+                        &Variable::Bool(val, _) => {
                             if !val {
                                 any = false;
                                 break;
@@ -2985,7 +2985,7 @@ impl Runtime {
         };
         self.stack.truncate(prev_st);
         self.local_stack.truncate(prev_lc);
-        self.stack.push(Variable::Bool(any));
+        self.stack.push(Variable::bool(any));
         Ok(flow)
     }
     fn sift_n_expr(
@@ -3158,7 +3158,7 @@ impl Runtime {
     }
     #[inline(always)]
     fn bool(&mut self, val: &ast::Bool) {
-        self.stack.push(Variable::Bool(val.val));
+        self.stack.push(Variable::bool(val.val));
     }
     fn unop(
         &mut self,
@@ -3183,8 +3183,8 @@ impl Runtime {
                                              self.stack_trace()), self))
                 })
             }
-            &Variable::Bool(b) => {
-                Variable::Bool(match unop.op {
+            &Variable::Bool(b, _) => {
+                Variable::bool(match unop.op {
                     ast::UnOp::Not => !b,
                     _ => return Err(module.error(unop.source_range,
                                     &format!("{}\nUnknown boolean unary operator",
@@ -3294,8 +3294,8 @@ impl Runtime {
                                            a.powf(b[2]), a.powf(b[3])])
                 }
             }
-            (&Variable::Bool(a), &Variable::Bool(b)) => {
-                Variable::Bool(match binop.op {
+            (&Variable::Bool(a, _), &Variable::Bool(b, _)) => {
+                Variable::bool(match binop.op {
                     Add => a || b,
                     // Boolean subtraction with lazy precedence.
                     Sub => a && !b,

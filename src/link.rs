@@ -34,7 +34,7 @@ impl Block {
         let j = k - i * 32;
         match self.tys[i] >> (j * 2) & 0x3 {
             EMPTY => panic!("Reading beyond end"),
-            BOOL => Variable::Bool(self.data[k] != 0),
+            BOOL => Variable::bool(self.data[k] != 0),
             F64 => {
                 Variable::F64(unsafe {
                     transmute::<usize, f64>(self.data[k])
@@ -59,7 +59,7 @@ impl Block {
         let i = k / 32;
         let j = k - i * 32;
         match *var {
-            Variable::Bool(val) => {
+            Variable::Bool(val, _) => {
                 // Reset bits.
                 self.tys[i] &= !(0x3 << (j * 2));
                 // Sets new bits.
@@ -213,7 +213,7 @@ impl Link {
 
     pub fn push(&mut self, v: &Variable) -> Result<(), String> {
         match v {
-            &Variable::Bool(_) |
+            &Variable::Bool(_, _) |
             &Variable::F64(_) |
             &Variable::Text(_) => {
                 if self.slices.len() > 0 {

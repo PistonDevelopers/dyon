@@ -217,7 +217,7 @@ fn write_variable<W>(
                 try!(write!(w, ")"));
             }
         }
-        Variable::Bool(x) => {
+        Variable::Bool(x, _) => {
             try!(write!(w, "{}", x));
         }
         Variable::Ref(ind) => {
@@ -455,7 +455,7 @@ pub fn call_standard(
         "is_empty" => {
             rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let v = rt.stack.pop().expect(TINVOTS);
-            let v = Variable::Bool(match rt.resolve(&v) {
+            let v = Variable::bool(match rt.resolve(&v) {
                 &Variable::Link(ref link) => link.is_empty(),
                 x => return Err(module.error(call.args[0].source_range(),
                                 &rt.expected(x, "link"), rt))
@@ -855,7 +855,7 @@ pub fn call_standard(
                 &Variable::F64(_) => rt.f64_type.clone(),
                 &Variable::Vec4(_) => rt.vec4_type.clone(),
                 &Variable::Return => rt.return_type.clone(),
-                &Variable::Bool(_) => rt.bool_type.clone(),
+                &Variable::Bool(_, _) => rt.bool_type.clone(),
                 &Variable::Object(_) => rt.object_type.clone(),
                 &Variable::Array(_) => rt.array_type.clone(),
                 &Variable::Link(_) => rt.link_type.clone(),
@@ -1259,8 +1259,8 @@ pub fn call_standard(
             rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let v = rt.stack.pop().expect(TINVOTS);
             let v = match rt.resolve(&v) {
-                &Variable::Result(Err(_)) => Variable::Bool(true),
-                &Variable::Result(Ok(_)) => Variable::Bool(false),
+                &Variable::Result(Err(_)) => Variable::bool(true),
+                &Variable::Result(Ok(_)) => Variable::bool(false),
                 x => {
                     return Err(module.error(call.args[0].source_range(),
                         &rt.expected(x, "result"), rt));
@@ -1274,8 +1274,8 @@ pub fn call_standard(
             rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let v = rt.stack.pop().expect(TINVOTS);
             let v = match rt.resolve(&v) {
-                &Variable::Result(Err(_)) => Variable::Bool(false),
-                &Variable::Result(Ok(_)) => Variable::Bool(true),
+                &Variable::Result(Err(_)) => Variable::bool(false),
+                &Variable::Result(Ok(_)) => Variable::bool(true),
                 x => {
                     return Err(module.error(call.args[0].source_range(),
                         &rt.expected(x, "result"), rt));

@@ -216,7 +216,7 @@ impl<T: PopVariable> PopVariable for Vec<T> {
 }
 
 impl PushVariable for bool {
-    fn push_var(&self) -> Variable { Variable::Bool(*self) }
+    fn push_var(&self) -> Variable { Variable::bool(*self) }
 }
 
 impl PushVariable for u32 {

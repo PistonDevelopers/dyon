@@ -102,7 +102,7 @@ pub struct UnsafeRef(*mut Variable);
 pub enum Variable {
     Ref(usize),
     Return,
-    Bool(bool),
+    Bool(bool, Option<Box<Vec<Variable>>>),
     F64(f64),
     Vec4([f32; 4]),
     Text(Arc<String>),
@@ -122,6 +122,10 @@ pub enum Variable {
 unsafe impl Send for Variable {}
 
 impl Variable {
+    pub fn bool(val: bool) -> Variable {
+        Variable::Bool(val, None)
+    }
+
     fn deep_clone(&self, stack: &Vec<Variable>) -> Variable {
         use Variable::*;
 
@@ -129,7 +133,7 @@ impl Variable {
             F64(_) => self.clone(),
             Vec4(_) => self.clone(),
             Return => self.clone(),
-            Bool(_) => self.clone(),
+            Bool(_, _) => self.clone(),
             Text(_) => self.clone(),
             Object(ref obj) => {
                 let mut res = obj.clone();
@@ -167,7 +171,7 @@ impl PartialEq for Variable {
     fn eq(&self, other: &Variable) -> bool {
         match (self, other) {
             (&Variable::Return, _) => false,
-            (&Variable::Bool(a), &Variable::Bool(b)) => a == b,
+            (&Variable::Bool(a, _), &Variable::Bool(b, _)) => a == b,
             (&Variable::F64(a), &Variable::F64(b)) => a == b,
             (&Variable::Text(ref a), &Variable::Text(ref b)) => a == b,
             (&Variable::Object(ref a), &Variable::Object(ref b)) => a == b,
