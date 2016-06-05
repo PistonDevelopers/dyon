@@ -1,3 +1,35 @@
+
 fn main() {
-    println((1, 0) != (1, 0))
+    /*
+    list := [1, 2, 3]
+    x := any i { list[i] > 1 }
+    if x {
+        println(why(x))
+    }
+
+    list := [[1, 2], [3, 4]]
+    x := any i, j { list[i][j] == 2 }
+    if x {
+        println(why(x))
+    }
+
+    list := [1]
+    x := any i { list[i] > 0 }
+    println(why(x))
+    */
+
+    list := [[4, 4], [3, 4]]
+    x := any i, j { list[i][j] != 4 }
+    println(why(x))
+
+    /*
+    list := [2, 1, 3]
+    x := !all i { list[i] > 1 }
+    println(why(x))
+    */
+
+    /*
+    list := [[3, 4], [1, 2]]
+    println(why(!all i, j { list[i][j] > 2 }))
+    */
 }

@@ -2784,6 +2784,7 @@ impl Runtime {
         };
 
         let mut any = false;
+        let mut sec = None;
         // Initialize counter.
         self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
         self.stack.push(Variable::f64(start));
@@ -2792,9 +2793,9 @@ impl Runtime {
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
         loop {
-            match &self.stack[st - 1] {
+            let ind = match &self.stack[st - 1] {
                 &Variable::F64(val, _) => {
-                    if val < end {}
+                    if val < end { val }
                     else { break }
                 }
                 x => return Err(module.error(for_n_expr.source_range,
@@ -2804,9 +2805,19 @@ impl Runtime {
                 (_, Flow::Return) => { return Ok(Flow::Return); }
                 (Expect::Something, Flow::Continue) => {
                     match self.resolve(self.stack.last().expect(TINVOTS)) {
-                        &Variable::Bool(val, _) => {
+                        &Variable::Bool(val, ref val_sec) => {
                             if val {
                                 any = true;
+                                sec = match val_sec {
+                                    &None => {
+                                        Some(Box::new(vec![Variable::f64(ind)]))
+                                    }
+                                    &Some(ref arr) => {
+                                        let mut arr = arr.clone();
+                                        arr.push(Variable::f64(ind));
+                                        Some(arr)
+                                    }
+                                };
                                 break;
                             }
                         },
@@ -2862,7 +2873,7 @@ impl Runtime {
         };
         self.stack.truncate(prev_st);
         self.local_stack.truncate(prev_lc);
-        self.stack.push(Variable::bool(any));
+        self.stack.push(Variable::Bool(any, sec));
         Ok(flow)
     }
     fn all_n_expr(
@@ -2906,7 +2917,8 @@ impl Runtime {
                             &self.expected(x, "number"), self))
         };
 
-        let mut any = true;
+        let mut all = true;
+        let mut sec = None;
         // Initialize counter.
         self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
         self.stack.push(Variable::f64(start));
@@ -2915,9 +2927,9 @@ impl Runtime {
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
         loop {
-            match &self.stack[st - 1] {
+            let ind = match &self.stack[st - 1] {
                 &Variable::F64(val, _) => {
-                    if val < end {}
+                    if val < end { val }
                     else { break }
                 }
                 x => return Err(module.error(for_n_expr.source_range,
@@ -2927,9 +2939,19 @@ impl Runtime {
                 (_, Flow::Return) => { return Ok(Flow::Return); }
                 (Expect::Something, Flow::Continue) => {
                     match self.resolve(self.stack.last().expect(TINVOTS)) {
-                        &Variable::Bool(val, _) => {
+                        &Variable::Bool(val, ref val_sec) => {
                             if !val {
-                                any = false;
+                                all = false;
+                                sec = match val_sec {
+                                    &None => {
+                                        Some(Box::new(vec![Variable::f64(ind)]))
+                                    }
+                                    &Some(ref arr) => {
+                                        let mut arr = arr.clone();
+                                        arr.push(Variable::f64(ind));
+                                        Some(arr)
+                                    }
+                                };
                                 break;
                             }
                         },
@@ -2985,7 +3007,7 @@ impl Runtime {
         };
         self.stack.truncate(prev_st);
         self.local_stack.truncate(prev_lc);
-        self.stack.push(Variable::bool(any));
+        self.stack.push(Variable::Bool(all, sec));
         Ok(flow)
     }
     fn sift_n_expr(
@@ -3183,13 +3205,13 @@ impl Runtime {
                                              self.stack_trace()), self))
                 })
             }
-            &Variable::Bool(b, _) => {
-                Variable::bool(match unop.op {
+            &Variable::Bool(b, ref sec) => {
+                Variable::Bool(match unop.op {
                     ast::UnOp::Not => !b,
                     _ => return Err(module.error(unop.source_range,
                                     &format!("{}\nUnknown boolean unary operator",
                                              self.stack_trace()), self))
-                })
+                }, sec.clone())
             }
             &Variable::F64(v, _) => {
                 Variable::f64(match unop.op {

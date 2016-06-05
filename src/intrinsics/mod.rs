@@ -26,6 +26,7 @@ pub fn standard(f: &mut HashMap<Arc<String>, PreludeFunction>) {
         });
     };
 
+    sarg(f, "why", Type::Bool, Type::array());
     sarg(f, "println", Type::Any, Type::Void);
     sarg(f, "print", Type::Any, Type::Void);
     sarg(f, "clone", Type::Any, Type::Any);
@@ -377,6 +378,32 @@ pub fn call_standard(
             rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let v = rt.stack.pop().expect(TINVOTS);
             let v = rt.resolve(&v).deep_clone(&rt.stack);
+            rt.stack.push(v);
+            rt.pop_fn(call.name.clone());
+            Expect::Something
+        }
+        "why" => {
+            rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
+            let v = rt.stack.pop().expect(TINVOTS);
+            let v = Variable::Array(Arc::new(match rt.resolve(&v) {
+                &Variable::Bool(true, Some(ref sec)) => {
+                    let mut sec = (**sec).clone();
+                    sec.reverse();
+                    sec
+                }
+                &Variable::Bool(true, None) => {
+                    return Err(module.error(call.args[0].source_range(),
+                        &format!("{}\nThis does not make sense, perhaps an array is empty?",
+                            rt.stack_trace()), rt))
+                }
+                &Variable::Bool(false, _) => {
+                    return Err(module.error(call.args[0].source_range(),
+                        &format!("{}\nMust be `true` to have meaning, try add or remove `!`",
+                            rt.stack_trace()), rt))
+                }
+                x => return Err(module.error(call.args[0].source_range(),
+                    &rt.expected(x, "bool"), rt))
+            }));
             rt.stack.push(v);
             rt.pop_fn(call.name.clone());
             Expect::Something
