@@ -26,8 +26,16 @@ pub fn standard(f: &mut HashMap<Arc<String>, PreludeFunction>) {
         });
     };
 
-    sarg(f, "why", Type::Bool, Type::array());
-    sarg(f, "where", Type::Bool, Type::array());
+    f.insert(Arc::new("why".into()), PreludeFunction {
+        lts: vec![Lt::Return],
+        tys: vec![Type::Bool],
+        ret: Type::array()
+    });
+    f.insert(Arc::new("where".into()), PreludeFunction {
+        lts: vec![Lt::Return],
+        tys: vec![Type::F64],
+        ret: Type::array()
+    });
     sarg(f, "println", Type::Any, Type::Void);
     sarg(f, "print", Type::Any, Type::Void);
     sarg(f, "clone", Type::Any, Type::Any);
