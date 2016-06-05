@@ -95,7 +95,7 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\""
 27 call = [.._seps!:"name" wn "(" .s?.(, arg_expr:"call_arg") ?w ")"]
 28 named_call = [.._seps!:"word" wn "(" ?w
     .s?.(, [.._seps!:"word" ?w ":" ?w arg_expr:"call_arg" ?w]) ")"]
-29 go = ["go" ?w {call:"call" named_call:"named_call"}]
+29 go = ["go " ?w {call:"call" named_call:"named_call"}]
 30 assign = [lexpr:"left" ?w assign_op ?w expr:"right"]
 31 assign_op = {":=":":=" "=":"=" "+=":"+=" "-=":"-=" "*=":"*=" "/=":"/=" "%=":"%="}
 32 compare = [lexpr:"left" ?w compare_op ?w expr:"right"]

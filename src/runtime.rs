@@ -168,7 +168,7 @@ fn item_lookup(
                                 id
                             };
                         match &mut stack[id] {
-                            &mut Variable::F64(id) => {
+                            &mut Variable::F64(id, _) => {
                                 *expr_j += 1;
                                 id
                             }
@@ -287,8 +287,8 @@ impl Runtime {
     ) -> Result<Expect, String> {
         let x = self.stack.pop().expect(TINVOTS);
         match self.resolve(&x) {
-            &Variable::F64(a) => {
-                self.stack.push(Variable::F64(f(a)));
+            &Variable::F64(a, _) => {
+                self.stack.push(Variable::f64(f(a)));
             }
             _ => return Err(module.error(call.args[0].source_range(),
                     &format!("{}\nExpected number", self.stack_trace()), self))
@@ -428,23 +428,10 @@ impl Runtime {
         }
     }
 
-    pub fn try(
-        &mut self,
-        expr: &ast::Expression,
-        side: Side,
-        module: &Module
-    ) -> Result<(Expect, Flow), String> {
+    fn try_msg(v: &Variable) -> Option<Result<Box<Variable>, Box<::Error>>> {
         use Error;
 
-        match self.expression(expr, side, module) {
-            Ok((x, Flow::Return)) => { return Ok((x, Flow::Return)); }
-            Ok((Expect::Something, Flow::Continue)) => {}
-            _ => return Err(module.error(expr.source_range(),
-                            &format!("{}\nExpected something",
-                                self.stack_trace()), self))
-        };
-        let v = self.stack.pop().expect(TINVOTS);
-        let v = match self.resolve(&v) {
+        Some(match v {
             &Variable::Result(ref res) => res.clone(),
             &Variable::Option(ref opt) => {
                 match opt {
@@ -457,9 +444,77 @@ impl Runtime {
                     }))
                 }
             }
-            _ => {
+            &Variable::Bool(true, None) => {
+                Err(Box::new(Error {
+                    message: Variable::Text(Arc::new(
+                        "This does not make sense, perhaps an array is empty?"
+                        .into())),
+                    trace: vec![]
+                }))
+            }
+            &Variable::Bool(false, _) => {
+                Err(Box::new(Error {
+                    message: Variable::Text(Arc::new(
+                        "Must be `true` to have meaning, try add or remove `!`"
+                        .into())),
+                    trace: vec![]
+                }))
+            }
+            &Variable::Bool(true, ref sec) => {
+                match sec {
+                    &None => Err(Box::new(Error {
+                        message: Variable::Text(Arc::new(
+                            "Expected `some(_)`, found `none()`"
+                            .into())),
+                        trace: vec![]
+                    })),
+                    &Some(_) => {
+                        Ok(Box::new(Variable::Bool(true, sec.clone())))
+                    }
+                }
+            }
+            &Variable::F64(val, ref sec) => {
+                if val.is_nan() {
+                    Err(Box::new(Error {
+                        message: Variable::Text(Arc::new(
+                            "Expected number, found `NaN`"
+                            .into())),
+                        trace: vec![]
+                    }))
+                } else if sec.is_none() {
+                    Err(Box::new(Error {
+                        message: Variable::Text(Arc::new(
+                            "This does not make sense, perhaps an array is empty?"
+                            .into())),
+                        trace: vec![]
+                    }))
+                } else {
+                    Ok(Box::new(Variable::F64(val, sec.clone())))
+                }
+            }
+            _ => return None
+        })
+    }
+
+    pub fn try(
+        &mut self,
+        expr: &ast::Expression,
+        side: Side,
+        module: &Module
+    ) -> Result<(Expect, Flow), String> {
+        match self.expression(expr, side, module) {
+            Ok((x, Flow::Return)) => { return Ok((x, Flow::Return)); }
+            Ok((Expect::Something, Flow::Continue)) => {}
+            _ => return Err(module.error(expr.source_range(),
+                            &format!("{}\nExpected something",
+                                self.stack_trace()), self))
+        };
+        let v = self.stack.pop().expect(TINVOTS);
+        let v = match Runtime::try_msg(self.resolve(&v)) {
+            Some(v) => v,
+            None => {
                 return Err(module.error(expr.source_range(),
-                    &format!("{}\nExpected `ok(_)` or `err(_)`",
+                    &format!("{}\nExpected `ok(_)`, `err(_)`, `bool`, `f64`",
                         self.stack_trace()), self));
             }
         };
@@ -819,13 +874,13 @@ impl Runtime {
             x => return Err(module.error(sw.source_range,
                     &self.expected(x, "vec4"), self))
         };
-        self.stack.push(Variable::F64(v[sw.sw0] as f64));
-        self.stack.push(Variable::F64(v[sw.sw1] as f64));
+        self.stack.push(Variable::f64(v[sw.sw0] as f64));
+        self.stack.push(Variable::f64(v[sw.sw1] as f64));
         if let Some(ind) = sw.sw2 {
-            self.stack.push(Variable::F64(v[ind] as f64));
+            self.stack.push(Variable::f64(v[ind] as f64));
         }
         if let Some(ind) = sw.sw3 {
-            self.stack.push(Variable::F64(v[ind] as f64));
+            self.stack.push(Variable::f64(v[ind] as f64));
         }
         Ok(Flow::Continue)
     }
@@ -939,7 +994,7 @@ impl Runtime {
         };
         let n: Variable = self.stack.pop().expect("Expected n");
         let v = match (self.resolve(&fill), self.resolve(&n)) {
-            (x, &Variable::F64(n)) => {
+            (x, &Variable::F64(n, _)) => {
                 Variable::Array(Arc::new(vec![x.clone(); n as usize]))
             }
             _ => return Err(module.error(array_fill.n.source_range(),
@@ -1052,10 +1107,10 @@ impl Runtime {
                     };
 
                     match self.resolve(&b) {
-                        &Variable::F64(b) => {
+                        &Variable::F64(b, ref sec) => {
                             unsafe {
                                 match *r.0 {
-                                    Variable::F64(ref mut n) => {
+                                    Variable::F64(ref mut n, ref mut n_sec) => {
                                         match op {
                                             Set => *n = b,
                                             Add => *n += b,
@@ -1065,11 +1120,12 @@ impl Runtime {
                                             Rem => *n %= b,
                                             Pow => *n = n.powf(b),
                                             Assign => {}
-                                        }
+                                        };
+                                        *n_sec = sec.clone()
                                     }
                                     Variable::Return => {
                                         if let Set = op {
-                                            *r.0 = Variable::F64(b)
+                                            *r.0 = Variable::F64(b, sec.clone())
                                         } else {
                                             return Err(module.error(
                                                 left.source_range(),
@@ -1079,7 +1135,7 @@ impl Runtime {
                                     }
                                     Variable::Link(ref mut n) => {
                                         if let Add = op {
-                                            try!(n.push(&Variable::F64(b)));
+                                            try!(n.push(&Variable::f64(b)));
                                         } else {
                                             return Err(module.error(
                                                 left.source_range(),
@@ -1133,18 +1189,19 @@ impl Runtime {
                                 };
                             }
                         }
-                        &Variable::Bool(b) => {
+                        &Variable::Bool(b, ref sec) => {
                             unsafe {
                                 match *r.0 {
-                                    Variable::Bool(ref mut n) => {
+                                    Variable::Bool(ref mut n, ref mut n_sec) => {
                                         match op {
                                             Set => *n = b,
                                             _ => unimplemented!()
-                                        }
+                                        };
+                                        *n_sec = sec.clone();
                                     }
                                     Variable::Return => {
                                         if let Set = op {
-                                            *r.0 = Variable::Bool(b)
+                                            *r.0 = Variable::Bool(b, sec.clone())
                                         } else {
                                             return Err(module.error(
                                                 left.source_range(),
@@ -1154,7 +1211,7 @@ impl Runtime {
                                     }
                                     Variable::Link(ref mut n) => {
                                         if let Add = op {
-                                            try!(n.push(&Variable::Bool(b)));
+                                            try!(n.push(&Variable::bool(b)));
                                         } else {
                                             return Err(module.error(
                                                 left.source_range(),
@@ -1553,22 +1610,11 @@ impl Runtime {
         if item.ids.len() == 0 {
             if item.try {
                 // Check for `err(_)` or unwrap when `?` follows item.
-                let v = match &self.stack[stack_id] {
-                    &Variable::Result(ref res) => res.clone(),
-                    &Variable::Option(ref opt) => {
-                        match opt {
-                            &Some(ref some) => Ok(some.clone()),
-                            &None => Err(Box::new(Error {
-                                message: Variable::Text(Arc::new(
-                                    "Expected `some(_)`, found `none()`"
-                                    .into())),
-                                trace: vec![]
-                            }))
-                        }
-                    }
-                    _ => {
+                let v = match Runtime::try_msg(&self.stack[stack_id]) {
+                    Some(v) => v,
+                    None => {
                         return Err(module.error(item.source_range,
-                            &format!("{}\nExpected `ok(_)` or `err(_)`",
+                            &format!("{}\nExpected `ok(_)`, `err(_)`, `bool`, `f64`",
                                 self.stack_trace()), self));
                     }
                 };
@@ -1623,20 +1669,9 @@ impl Runtime {
             let mut try_id_ind = 0;
             if item.try_ids.len() > 0 && item.try_ids[try_id_ind] == 0 {
                 // Check for error on `?` for first id.
-                let v = unsafe {match *var {
-                    Variable::Result(ref res) => res.clone(),
-                    Variable::Option(ref opt) => {
-                        match opt {
-                            &Some(ref some) => Ok(some.clone()),
-                            &None => Err(Box::new(Error {
-                                message: Variable::Text(Arc::new(
-                                    "Expected `some(_)`, found `none()`"
-                                    .into())),
-                                trace: vec![]
-                            }))
-                        }
-                    }
-                    _ => {
+                let v = unsafe {match Runtime::try_msg(&*var) {
+                    Some(v) => v,
+                    None => {
                         return Err(module.error_fnindex(item.ids[0].source_range(),
                             &format!("{}\nExpected `ok(_)` or `err(_)`",
                                 stack_trace(call_stack)),
@@ -1694,22 +1729,11 @@ impl Runtime {
                 if item.try_ids.len() > try_id_ind &&
                    item.try_ids[try_id_ind] == i + 1 {
                     // Check for error on `?` for rest of ids.
-                    let v = unsafe {match *var {
-                        Variable::Result(ref res) => res.clone(),
-                        Variable::Option(ref opt) => {
-                            match opt {
-                                &Some(ref some) => Ok(some.clone()),
-                                &None => Err(Box::new(Error {
-                                    message: Variable::Text(Arc::new(
-                                        "Expected `some(_)`, found `none()`"
-                                        .into())),
-                                    trace: vec![]
-                                }))
-                            }
-                        }
-                        _ => {
+                    let v = unsafe {match Runtime::try_msg(&*var) {
+                        Some(v) => v,
+                        None => {
                             return Err(module.error_fnindex(prop.source_range(),
-                                &format!("{}\nExpected `ok(_)` or `err(_)`",
+                                &format!("{}\nExpected `ok(_)`, `err(_)`, `bool`, `f64`",
                                     stack_trace(call_stack)),
                                     call_stack.last().unwrap().index));
                         }
@@ -1762,10 +1786,10 @@ impl Runtime {
     pub fn typeof_var(&self, var: &Variable) -> Arc<String> {
         let v = match var {
             &Variable::Text(_) => self.text_type.clone(),
-            &Variable::F64(_) => self.f64_type.clone(),
+            &Variable::F64(_, _) => self.f64_type.clone(),
             &Variable::Vec4(_) => self.vec4_type.clone(),
             &Variable::Return => self.return_type.clone(),
-            &Variable::Bool(_) => self.bool_type.clone(),
+            &Variable::Bool(_, _) => self.bool_type.clone(),
             &Variable::Object(_) => self.object_type.clone(),
             &Variable::Array(_) => self.array_type.clone(),
             &Variable::Link(_) => self.link_type.clone(),
@@ -1793,99 +1817,99 @@ impl Runtime {
             module: &Module,
             a: &Variable,
             b: &Variable
-        ) -> Result<bool, String> {
+        ) -> Result<Variable, String> {
             use ast::CompareOp::*;
 
             match (rt.resolve(&b), rt.resolve(&a)) {
-                (&Variable::F64(b), &Variable::F64(a)) => {
-                    Ok(match compare.op {
+                (&Variable::F64(b, _), &Variable::F64(a, ref sec)) => {
+                    Ok(Variable::Bool(match compare.op {
                         Less => a < b,
                         LessOrEqual => a <= b,
                         Greater => a > b,
                         GreaterOrEqual => a >= b,
                         Equal => a == b,
                         NotEqual => a != b
-                    })
+                    }, sec.clone()))
                 }
                 (&Variable::Text(ref b), &Variable::Text(ref a)) => {
-                    Ok(match compare.op {
+                    Ok(Variable::bool(match compare.op {
                         Less => a < b,
                         LessOrEqual => a <= b,
                         Greater => a > b,
                         GreaterOrEqual => a >= b,
                         Equal => a == b,
                         NotEqual => a != b
-                    })
+                    }))
                 }
-                (&Variable::Bool(b), &Variable::Bool(a)) => {
-                    Ok(match compare.op {
+                (&Variable::Bool(b, _), &Variable::Bool(a, ref sec)) => {
+                    Ok(Variable::Bool(match compare.op {
                         Equal => a == b,
                         NotEqual => a != b,
                         x => return Err(module.error(compare.source_range,
                             &format!("{}\n`{}` can not be used with bools",
                                 rt.stack_trace(),
                                 x.symbol()), rt))
-                    })
+                    }, sec.clone()))
                 }
                 (&Variable::Vec4(ref b), &Variable::Vec4(ref a)) => {
-                    Ok(match compare.op {
+                    Ok(Variable::bool(match compare.op {
                         Equal => a == b,
                         NotEqual => a != b,
                         x => return Err(module.error(compare.source_range,
                             &format!("{}\n`{}` can not be used with vec4s",
                                 rt.stack_trace(),
                                 x.symbol()), rt))
-                    })
+                    }))
                 }
                 (&Variable::Object(ref b), &Variable::Object(ref a)) => {
-                    Ok(match compare.op {
+                    Ok(Variable::bool(match compare.op {
                         Equal => a == b,
                         NotEqual => a != b,
                         x => return Err(module.error(compare.source_range,
                             &format!("{}\n`{}` can not be used with objects",
                                 rt.stack_trace(),
                                 x.symbol()), rt))
-                    })
+                    }))
                 }
                 (&Variable::Array(ref b), &Variable::Array(ref a)) => {
-                    Ok(match compare.op {
+                    Ok(Variable::bool(match compare.op {
                         Equal => a == b,
                         NotEqual => a != b,
                         x => return Err(module.error(compare.source_range,
                             &format!("{}\n`{}` can not be used with arrays",
                                 rt.stack_trace(),
                                 x.symbol()), rt))
-                    })
+                    }))
                 }
                 (&Variable::Option(None), &Variable::Option(None)) => {
-                    Ok(match compare.op {
+                    Ok(Variable::bool(match compare.op {
                         Equal => true,
                         NotEqual => false,
                         x => return Err(module.error(compare.source_range,
                             &format!("{}\n`{}` can not be used with options",
                                 rt.stack_trace(),
                                 x.symbol()), rt))
-                    })
+                    }))
                 }
                 (&Variable::Option(None), &Variable::Option(_)) => {
-                    Ok(match compare.op {
+                    Ok(Variable::bool(match compare.op {
                         Equal => false,
                         NotEqual => true,
                         x => return Err(module.error(compare.source_range,
                             &format!("{}\n`{}` can not be used with options",
                                 rt.stack_trace(),
                                 x.symbol()), rt))
-                    })
+                    }))
                 }
                 (&Variable::Option(_), &Variable::Option(None)) => {
-                    Ok(match compare.op {
+                    Ok(Variable::bool(match compare.op {
                         Equal => false,
                         NotEqual => true,
                         x => return Err(module.error(compare.source_range,
                             &format!("{}\n`{}` can not be used with options",
                                 rt.stack_trace(),
                                 x.symbol()), rt))
-                    })
+                    }))
                 }
                 (&Variable::Option(Some(ref b)),
                  &Variable::Option(Some(ref a))) => {
@@ -1918,7 +1942,7 @@ impl Runtime {
         match (self.stack.pop(), self.stack.pop()) {
             (Some(b), Some(a)) => {
                 let v = try!(sub_compare(self, compare, module, &a, &b));
-                self.stack.push(Variable::Bool(v))
+                self.stack.push(v)
             }
             _ => panic!("Expected two variables on the stack")
         }
@@ -1938,7 +1962,7 @@ impl Runtime {
         };
         let cond = self.stack.pop().expect("Expected bool");
         let val = match self.resolve(&cond) {
-            &Variable::Bool(val) => val,
+            &Variable::Bool(val, _) => val,
             _ => return Err(module.error(if_expr.cond.source_range(),
                 &format!("{}\nExpected bool from if condition",
                     self.stack_trace()), self))
@@ -1959,8 +1983,8 @@ impl Runtime {
             };
             let else_if_cond = self.stack.pop().expect("Expected bool");
             match self.resolve(&else_if_cond) {
-                &Variable::Bool(false) => {}
-                &Variable::Bool(true) => {
+                &Variable::Bool(false, _) => {}
+                &Variable::Bool(true, _) => {
                     return self.block(body, module);
                 }
                 _ => return Err(module.error(cond.source_range(),
@@ -2003,7 +2027,7 @@ impl Runtime {
                 None => panic!(TINVOTS),
                 Some(x) => {
                     let val = match x {
-                        Variable::Bool(val) => val,
+                        Variable::Bool(val, _) => val,
                         _ => return Err(module.error(
                             for_expr.cond.source_range(),
                             &format!("{}\nExpected bool", self.stack_trace()), self))
@@ -2094,7 +2118,7 @@ impl Runtime {
             };
             let start = self.stack.pop().expect(TINVOTS);
             let start = match self.resolve(&start) {
-                &Variable::F64(val) => val,
+                &Variable::F64(val, _) => val,
                 x => return Err(module.error(for_n_expr.end.source_range(),
                                 &self.expected(x, "number"), self))
             };
@@ -2111,21 +2135,21 @@ impl Runtime {
         };
         let end = self.stack.pop().expect(TINVOTS);
         let end = match self.resolve(&end) {
-            &Variable::F64(val) => val,
+            &Variable::F64(val, _) => val,
             x => return Err(module.error(for_n_expr.end.source_range(),
                             &self.expected(x, "number"), self))
         };
 
         // Initialize counter.
         self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
-        self.stack.push(Variable::F64(start));
+        self.stack.push(Variable::f64(start));
 
         let st = self.stack.len();
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
         loop {
             match &self.stack[st - 1] {
-                &Variable::F64(val) => {
+                &Variable::F64(val, _) => {
                     if val < end {}
                     else { break }
                 }
@@ -2166,7 +2190,7 @@ impl Runtime {
                     }
                 }
             }
-            let error = if let Variable::F64(ref mut val) = self.stack[st - 1] {
+            let error = if let Variable::F64(ref mut val, _) = self.stack[st - 1] {
                 *val += 1.0;
                 false
             } else { true };
@@ -2201,7 +2225,7 @@ impl Runtime {
             };
             let start = self.stack.pop().expect(TINVOTS);
             let start = match self.resolve(&start) {
-                &Variable::F64(val) => val,
+                &Variable::F64(val, _) => val,
                 x => return Err(module.error(for_n_expr.end.source_range(),
                                 &self.expected(x, "number"), self))
             };
@@ -2218,21 +2242,21 @@ impl Runtime {
         };
         let end = self.stack.pop().expect(TINVOTS);
         let end = match self.resolve(&end) {
-            &Variable::F64(val) => val,
+            &Variable::F64(val, _) => val,
             x => return Err(module.error(for_n_expr.end.source_range(),
                             &self.expected(x, "number"), self))
         };
 
         // Initialize counter.
         self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
-        self.stack.push(Variable::F64(start));
+        self.stack.push(Variable::f64(start));
 
         let st = self.stack.len();
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
         loop {
             match &self.stack[st - 1] {
-                &Variable::F64(val) => {
+                &Variable::F64(val, _) => {
                     if val < end {}
                     else { break }
                 }
@@ -2243,7 +2267,7 @@ impl Runtime {
                 (_, Flow::Return) => { return Ok(Flow::Return); }
                 (Expect::Something, Flow::Continue) => {
                     match self.resolve(self.stack.last().expect(TINVOTS)) {
-                        &Variable::F64(val) => sum += val,
+                        &Variable::F64(val, _) => sum += val,
                         x => return Err(module.error(for_n_expr.block.source_range,
                                 &self.expected(x, "number"), self))
                     };
@@ -2283,7 +2307,7 @@ impl Runtime {
                     }
                 }
             }
-            let error = if let Variable::F64(ref mut val) = self.stack[st - 1] {
+            let error = if let Variable::F64(ref mut val, _) = self.stack[st - 1] {
                 *val += 1.0;
                 false
             } else { true };
@@ -2296,7 +2320,7 @@ impl Runtime {
         };
         self.stack.truncate(prev_st);
         self.local_stack.truncate(prev_lc);
-        self.stack.push(Variable::F64(sum));
+        self.stack.push(Variable::f64(sum));
         Ok(flow)
     }
     fn sum_vec4_n_expr(
@@ -2319,7 +2343,7 @@ impl Runtime {
             };
             let start = self.stack.pop().expect(TINVOTS);
             let start = match self.resolve(&start) {
-                &Variable::F64(val) => val,
+                &Variable::F64(val, _) => val,
                 x => return Err(module.error(for_n_expr.end.source_range(),
                                 &self.expected(x, "number"), self))
             };
@@ -2336,21 +2360,21 @@ impl Runtime {
         };
         let end = self.stack.pop().expect(TINVOTS);
         let end = match self.resolve(&end) {
-            &Variable::F64(val) => val,
+            &Variable::F64(val, _) => val,
             x => return Err(module.error(for_n_expr.end.source_range(),
                             &self.expected(x, "number"), self))
         };
 
         // Initialize counter.
         self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
-        self.stack.push(Variable::F64(start));
+        self.stack.push(Variable::f64(start));
 
         let st = self.stack.len();
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
         loop {
             match &self.stack[st - 1] {
-                &Variable::F64(val) => {
+                &Variable::F64(val, _) => {
                     if val < end {}
                     else { break }
                 }
@@ -2405,7 +2429,7 @@ impl Runtime {
                     }
                 }
             }
-            let error = if let Variable::F64(ref mut val) = self.stack[st - 1] {
+            let error = if let Variable::F64(ref mut val, _) = self.stack[st - 1] {
                 *val += 1.0;
                 false
             } else { true };
@@ -2440,7 +2464,7 @@ impl Runtime {
             };
             let start = self.stack.pop().expect(TINVOTS);
             let start = match self.resolve(&start) {
-                &Variable::F64(val) => val,
+                &Variable::F64(val, _) => val,
                 x => return Err(module.error(for_n_expr.end.source_range(),
                                 &self.expected(x, "number"), self))
             };
@@ -2457,21 +2481,22 @@ impl Runtime {
         };
         let end = self.stack.pop().expect(TINVOTS);
         let end = match self.resolve(&end) {
-            &Variable::F64(val) => val,
+            &Variable::F64(val, _) => val,
             x => return Err(module.error(for_n_expr.end.source_range(),
                             &self.expected(x, "number"), self))
         };
 
-        let mut min: Option<(f64, f64, Option<Vec<Variable>>)> = None;
+        let mut min = ::std::f64::NAN;
+        let mut sec = None;
         // Initialize counter.
         self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
-        self.stack.push(Variable::F64(start));
+        self.stack.push(Variable::f64(start));
         let st = self.stack.len();
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
         loop {
             let ind = match &self.stack[st - 1] {
-                &Variable::F64(val) => {
+                &Variable::F64(val, _) => {
                     if val < end {}
                     else { break }
                     val
@@ -2483,42 +2508,23 @@ impl Runtime {
                 (_, Flow::Return) => { return Ok(Flow::Return); }
                 (Expect::Something, Flow::Continue) => {
                     match self.resolve(self.stack.last().expect(TINVOTS)) {
-                        &Variable::F64(val) => {
-                            if let Some((ref mut min_arg, ref mut min_val, ref mut tail_arg)) = min {
-                                if *min_val > val {
-                                    *min_arg = ind;
-                                    *tail_arg = None;
-                                    *min_val = val;
-                                }
-                            } else {
-                                min = Some((ind, val, None));
+                        &Variable::F64(val, ref val_sec) => {
+                            if min.is_nan() || min > val {
+                                min = val;
+                                sec = match val_sec {
+                                    &None => {
+                                        Some(Box::new(vec![Variable::f64(ind)]))
+                                    }
+                                    &Some(ref arr) => {
+                                        let mut arr = arr.clone();
+                                        arr.push(Variable::f64(ind));
+                                        Some(arr)
+                                    }
+                                };
                             }
                         },
-                        &Variable::Option(Some(ref arr)) => {
-                            match **arr {
-                                Variable::Array(ref arr) => {
-                                    if let Variable::F64(val) = arr[0] {
-                                        if let Some((ref mut min_arg, ref mut min_val, ref mut tail_arg)) = min {
-                                            if *min_val > val {
-                                                *min_arg = ind;
-                                                *tail_arg = Some((arr[1..]).into());
-                                                *min_val = val;
-                                            }
-                                        } else {
-                                            min = Some((ind, val, Some(arr[1..].into())));
-                                        }
-                                    } else {
-                                        return Err(module.error(for_n_expr.block.source_range,
-                                                &self.expected(&arr[0], "number"), self))
-                                    }
-                                }
-                                ref x => return Err(module.error(for_n_expr.block.source_range,
-                                        &self.expected(x, "array"), self))
-                            }
-                        }
-                        &Variable::Option(None) => {}
                         x => return Err(module.error(for_n_expr.block.source_range,
-                                &self.expected(x, "number or option"), self))
+                                &self.expected(x, "number"), self))
                     };
                 }
                 (Expect::Nothing, Flow::Continue) => {
@@ -2556,7 +2562,7 @@ impl Runtime {
                     }
                 }
             }
-            let error = if let Variable::F64(ref mut val) = self.stack[st - 1] {
+            let error = if let Variable::F64(ref mut val, _) = self.stack[st - 1] {
                 *val += 1.0;
                 false
             } else { true };
@@ -2569,16 +2575,7 @@ impl Runtime {
         };
         self.stack.truncate(prev_st);
         self.local_stack.truncate(prev_lc);
-        self.stack.push(match min {
-            None => Variable::Option(None),
-            Some((arg, val, ref tail)) => Variable::Option(Some(Box::new({
-                let mut res = vec![Variable::F64(val), Variable::F64(arg)];
-                if let &Some(ref tail) = tail {
-                    res.extend_from_slice(tail);
-                }
-                Variable::Array(Arc::new(res))
-            })))
-        });
+        self.stack.push(Variable::F64(min, sec));
         Ok(flow)
     }
     fn max_n_expr(
@@ -2600,7 +2597,7 @@ impl Runtime {
             };
             let start = self.stack.pop().expect(TINVOTS);
             let start = match self.resolve(&start) {
-                &Variable::F64(val) => val,
+                &Variable::F64(val, _) => val,
                 x => return Err(module.error(for_n_expr.end.source_range(),
                                 &self.expected(x, "number"), self))
             };
@@ -2617,22 +2614,23 @@ impl Runtime {
         };
         let end = self.stack.pop().expect(TINVOTS);
         let end = match self.resolve(&end) {
-            &Variable::F64(val) => val,
+            &Variable::F64(val, _) => val,
             x => return Err(module.error(for_n_expr.end.source_range(),
                             &self.expected(x, "number"), self))
         };
 
-        let mut max: Option<(f64, f64, Option<Vec<Variable>>)> = None;
+        let mut max = ::std::f64::NAN;
+        let mut sec = None;
         // Initialize counter.
         self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
-        self.stack.push(Variable::F64(start));
+        self.stack.push(Variable::f64(start));
 
         let st = self.stack.len();
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
         loop {
             let ind = match &self.stack[st - 1] {
-                &Variable::F64(val) => {
+                &Variable::F64(val, _) => {
                     if val < end {}
                     else { break }
                     val
@@ -2644,40 +2642,21 @@ impl Runtime {
                 (_, Flow::Return) => { return Ok(Flow::Return); }
                 (Expect::Something, Flow::Continue) => {
                     match self.resolve(self.stack.last().expect(TINVOTS)) {
-                        &Variable::F64(val) => {
-                            if let Some((ref mut max_arg, ref mut max_val, ref mut tail_arg)) = max {
-                                if *max_val < val {
-                                    *max_arg = ind;
-                                    *max_val = val;
-                                    *tail_arg = None;
-                                }
-                            } else {
-                                max = Some((ind, val, None));
+                        &Variable::F64(val, ref val_sec) => {
+                            if max.is_nan() || max < val {
+                                max = val;
+                                sec = match val_sec {
+                                    &None => {
+                                        Some(Box::new(vec![Variable::f64(ind)]))
+                                    }
+                                    &Some(ref arr) => {
+                                        let mut arr = arr.clone();
+                                        arr.push(Variable::f64(ind));
+                                        Some(arr)
+                                    }
+                                };
                             }
                         },
-                        &Variable::Option(Some(ref arr)) => {
-                            match **arr {
-                                Variable::Array(ref arr) => {
-                                    if let Variable::F64(val) = arr[0] {
-                                        if let Some((ref mut max_arg, ref mut max_val, ref mut tail_arg)) = max {
-                                            if *max_val < val {
-                                                *max_arg = ind;
-                                                *tail_arg = Some((arr[1..]).into());
-                                                *max_val = val;
-                                            }
-                                        } else {
-                                            max = Some((ind, val, Some(arr[1..].into())));
-                                        }
-                                    } else {
-                                        return Err(module.error(for_n_expr.block.source_range,
-                                                &self.expected(&arr[0], "number"), self))
-                                    }
-                                }
-                                ref x => return Err(module.error(for_n_expr.block.source_range,
-                                        &self.expected(x, "array"), self))
-                            }
-                        }
-                        &Variable::Option(None) => {}
                         x => return Err(module.error(for_n_expr.block.source_range,
                                 &self.expected(x, "number"), self))
                     };
@@ -2717,7 +2696,7 @@ impl Runtime {
                     }
                 }
             }
-            let error = if let Variable::F64(ref mut val) = self.stack[st - 1] {
+            let error = if let Variable::F64(ref mut val, _) = self.stack[st - 1] {
                 *val += 1.0;
                 false
             } else { true };
@@ -2730,16 +2709,7 @@ impl Runtime {
         };
         self.stack.truncate(prev_st);
         self.local_stack.truncate(prev_lc);
-        self.stack.push(match max {
-            None => Variable::Option(None),
-            Some((arg, val, ref tail)) => Variable::Option(Some(Box::new({
-                let mut res = vec![Variable::F64(val), Variable::F64(arg)];
-                if let &Some(ref tail) = tail {
-                    res.extend_from_slice(tail);
-                }
-                Variable::Array(Arc::new(res))
-            })))
-        });
+        self.stack.push(Variable::F64(max, sec));
         Ok(flow)
     }
     fn any_n_expr(
@@ -2761,7 +2731,7 @@ impl Runtime {
             };
             let start = self.stack.pop().expect(TINVOTS);
             let start = match self.resolve(&start) {
-                &Variable::F64(val) => val,
+                &Variable::F64(val, _) => val,
                 x => return Err(module.error(for_n_expr.end.source_range(),
                                 &self.expected(x, "number"), self))
             };
@@ -2778,23 +2748,24 @@ impl Runtime {
         };
         let end = self.stack.pop().expect(TINVOTS);
         let end = match self.resolve(&end) {
-            &Variable::F64(val) => val,
+            &Variable::F64(val, _) => val,
             x => return Err(module.error(for_n_expr.end.source_range(),
                             &self.expected(x, "number"), self))
         };
 
         let mut any = false;
+        let mut sec = None;
         // Initialize counter.
         self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
-        self.stack.push(Variable::F64(start));
+        self.stack.push(Variable::f64(start));
 
         let st = self.stack.len();
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
         loop {
-            match &self.stack[st - 1] {
-                &Variable::F64(val) => {
-                    if val < end {}
+            let ind = match &self.stack[st - 1] {
+                &Variable::F64(val, _) => {
+                    if val < end { val }
                     else { break }
                 }
                 x => return Err(module.error(for_n_expr.source_range,
@@ -2804,9 +2775,19 @@ impl Runtime {
                 (_, Flow::Return) => { return Ok(Flow::Return); }
                 (Expect::Something, Flow::Continue) => {
                     match self.resolve(self.stack.last().expect(TINVOTS)) {
-                        &Variable::Bool(val) => {
+                        &Variable::Bool(val, ref val_sec) => {
                             if val {
                                 any = true;
+                                sec = match val_sec {
+                                    &None => {
+                                        Some(Box::new(vec![Variable::f64(ind)]))
+                                    }
+                                    &Some(ref arr) => {
+                                        let mut arr = arr.clone();
+                                        arr.push(Variable::f64(ind));
+                                        Some(arr)
+                                    }
+                                };
                                 break;
                             }
                         },
@@ -2849,7 +2830,7 @@ impl Runtime {
                     }
                 }
             }
-            let error = if let Variable::F64(ref mut val) = self.stack[st - 1] {
+            let error = if let Variable::F64(ref mut val, _) = self.stack[st - 1] {
                 *val += 1.0;
                 false
             } else { true };
@@ -2862,7 +2843,7 @@ impl Runtime {
         };
         self.stack.truncate(prev_st);
         self.local_stack.truncate(prev_lc);
-        self.stack.push(Variable::Bool(any));
+        self.stack.push(Variable::Bool(any, sec));
         Ok(flow)
     }
     fn all_n_expr(
@@ -2884,7 +2865,7 @@ impl Runtime {
             };
             let start = self.stack.pop().expect(TINVOTS);
             let start = match self.resolve(&start) {
-                &Variable::F64(val) => val,
+                &Variable::F64(val, _) => val,
                 x => return Err(module.error(for_n_expr.end.source_range(),
                                 &self.expected(x, "number"), self))
             };
@@ -2901,23 +2882,24 @@ impl Runtime {
         };
         let end = self.stack.pop().expect(TINVOTS);
         let end = match self.resolve(&end) {
-            &Variable::F64(val) => val,
+            &Variable::F64(val, _) => val,
             x => return Err(module.error(for_n_expr.end.source_range(),
                             &self.expected(x, "number"), self))
         };
 
-        let mut any = true;
+        let mut all = true;
+        let mut sec = None;
         // Initialize counter.
         self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
-        self.stack.push(Variable::F64(start));
+        self.stack.push(Variable::f64(start));
 
         let st = self.stack.len();
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
         loop {
-            match &self.stack[st - 1] {
-                &Variable::F64(val) => {
-                    if val < end {}
+            let ind = match &self.stack[st - 1] {
+                &Variable::F64(val, _) => {
+                    if val < end { val }
                     else { break }
                 }
                 x => return Err(module.error(for_n_expr.source_range,
@@ -2927,9 +2909,19 @@ impl Runtime {
                 (_, Flow::Return) => { return Ok(Flow::Return); }
                 (Expect::Something, Flow::Continue) => {
                     match self.resolve(self.stack.last().expect(TINVOTS)) {
-                        &Variable::Bool(val) => {
+                        &Variable::Bool(val, ref val_sec) => {
                             if !val {
-                                any = false;
+                                all = false;
+                                sec = match val_sec {
+                                    &None => {
+                                        Some(Box::new(vec![Variable::f64(ind)]))
+                                    }
+                                    &Some(ref arr) => {
+                                        let mut arr = arr.clone();
+                                        arr.push(Variable::f64(ind));
+                                        Some(arr)
+                                    }
+                                };
                                 break;
                             }
                         },
@@ -2972,7 +2964,7 @@ impl Runtime {
                     }
                 }
             }
-            let error = if let Variable::F64(ref mut val) = self.stack[st - 1] {
+            let error = if let Variable::F64(ref mut val, _) = self.stack[st - 1] {
                 *val += 1.0;
                 false
             } else { true };
@@ -2985,7 +2977,7 @@ impl Runtime {
         };
         self.stack.truncate(prev_st);
         self.local_stack.truncate(prev_lc);
-        self.stack.push(Variable::Bool(any));
+        self.stack.push(Variable::Bool(all, sec));
         Ok(flow)
     }
     fn sift_n_expr(
@@ -3008,7 +3000,7 @@ impl Runtime {
             };
             let start = self.stack.pop().expect(TINVOTS);
             let start = match self.resolve(&start) {
-                &Variable::F64(val) => val,
+                &Variable::F64(val, _) => val,
                 x => return Err(module.error(for_n_expr.end.source_range(),
                                 &self.expected(x, "number"), self))
             };
@@ -3025,21 +3017,21 @@ impl Runtime {
         };
         let end = self.stack.pop().expect(TINVOTS);
         let end = match self.resolve(&end) {
-            &Variable::F64(val) => val,
+            &Variable::F64(val, _) => val,
             x => return Err(module.error(for_n_expr.end.source_range(),
                             &self.expected(x, "number"), self))
         };
 
         // Initialize counter.
         self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
-        self.stack.push(Variable::F64(start));
+        self.stack.push(Variable::f64(start));
 
         let st = self.stack.len();
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
         loop {
             match &self.stack[st - 1] {
-                &Variable::F64(val) => {
+                &Variable::F64(val, _) => {
                     if val < end {}
                     else { break }
                 }
@@ -3087,7 +3079,7 @@ impl Runtime {
                     }
                 }
             }
-            let error = if let Variable::F64(ref mut val) = self.stack[st - 1] {
+            let error = if let Variable::F64(ref mut val, _) = self.stack[st - 1] {
                 *val += 1.0;
                 false
             } else { true };
@@ -3109,7 +3101,7 @@ impl Runtime {
     }
     #[inline(always)]
     fn number(&mut self, num: &ast::Number) {
-        self.stack.push(Variable::F64(num.num));
+        self.stack.push(Variable::f64(num.num));
     }
     fn vec4(
         &mut self,
@@ -3131,25 +3123,25 @@ impl Runtime {
         }
         let w = self.stack.pop().expect(TINVOTS);
         let w = match self.resolve(&w) {
-            &Variable::F64(val) => val,
+            &Variable::F64(val, _) => val,
             x => return Err(module.error(vec4.args[3].source_range(),
                 &self.expected(x, "number"), self))
         };
         let z = self.stack.pop().expect(TINVOTS);
         let z = match self.resolve(&z) {
-            &Variable::F64(val) => val,
+            &Variable::F64(val, _) => val,
             x => return Err(module.error(vec4.args[2].source_range(),
                 &self.expected(x, "number"), self))
         };
         let y = self.stack.pop().expect(TINVOTS);
         let y = match self.resolve(&y) {
-            &Variable::F64(val) => val,
+            &Variable::F64(val, _) => val,
             x => return Err(module.error(vec4.args[1].source_range(),
                 &self.expected(x, "number"), self))
         };
         let x = self.stack.pop().expect(TINVOTS);
         let x = match self.resolve(&x) {
-            &Variable::F64(val) => val,
+            &Variable::F64(val, _) => val,
             x => return Err(module.error(vec4.args[0].source_range(),
                 &self.expected(x, "number"), self))
         };
@@ -3158,7 +3150,7 @@ impl Runtime {
     }
     #[inline(always)]
     fn bool(&mut self, val: &ast::Bool) {
-        self.stack.push(Variable::Bool(val.val));
+        self.stack.push(Variable::bool(val.val));
     }
     fn unop(
         &mut self,
@@ -3176,28 +3168,28 @@ impl Runtime {
         let val = self.stack.pop().expect("Expected unary argument");
         let v = match self.resolve(&val) {
             &Variable::Vec4(b) => {
-                Variable::F64(match unop.op {
+                Variable::f64(match unop.op {
                     ast::UnOp::Norm => (b[0] * b[0] + b[1] * b[1] + b[2] * b[2]).sqrt() as f64,
                     _ => return Err(module.error(unop.source_range,
                                     &format!("{}\nUnknown vec4 unary operator",
                                              self.stack_trace()), self))
                 })
             }
-            &Variable::Bool(b) => {
+            &Variable::Bool(b, ref sec) => {
                 Variable::Bool(match unop.op {
                     ast::UnOp::Not => !b,
                     _ => return Err(module.error(unop.source_range,
                                     &format!("{}\nUnknown boolean unary operator",
                                              self.stack_trace()), self))
-                })
+                }, sec.clone())
             }
-            &Variable::F64(v) => {
+            &Variable::F64(v, ref sec) => {
                 Variable::F64(match unop.op {
                     ast::UnOp::Neg => -v,
                     _ => return Err(module.error(unop.source_range,
                                     &format!("{}\nUnknown number unary operator",
                                              self.stack_trace()), self))
-                })
+                }, sec.clone())
             }
             _ => return Err(module.error(unop.source_range,
                 &format!("{}\nInvalid type, expected bool", self.stack_trace()), self))
@@ -3230,7 +3222,7 @@ impl Runtime {
         let right = self.stack.pop().expect("Expected right argument");
         let left = self.stack.pop().expect("Expected left argument");
         let v = match (self.resolve(&left), self.resolve(&right)) {
-            (&Variable::F64(a), &Variable::F64(b)) => {
+            (&Variable::F64(a, ref sec), &Variable::F64(b, _)) => {
                 Variable::F64(match binop.op {
                     Add => a + b,
                     Sub => a - b,
@@ -3242,14 +3234,14 @@ impl Runtime {
                         &format!("{}\nUnknown number operator `{:?}`",
                             self.stack_trace(),
                             binop.op.symbol()), self))
-                })
+                }, sec.clone())
             }
             (&Variable::Vec4(a), &Variable::Vec4(b)) => {
                 match binop.op {
                     Add => Variable::Vec4([a[0] + b[0], a[1] + b[1], a[2] + b[2], a[3] + b[3]]),
                     Sub => Variable::Vec4([a[0] - b[0], a[1] - b[1], a[2] - b[2], a[3] - b[3]]),
                     Mul => Variable::Vec4([a[0] * b[0], a[1] * b[1], a[2] * b[2], a[3] * b[3]]),
-                    Dot => Variable::F64((a[0] * b[0] + a[1] * b[1] +
+                    Dot => Variable::f64((a[0] * b[0] + a[1] * b[1] +
                                           a[2] * b[2] + a[3] * b[3]) as f64),
                     Cross => Variable::Vec4([a[1] * b[2] - a[2] * b[1],
                                              a[2] * b[0] - a[0] * b[2],
@@ -3260,13 +3252,13 @@ impl Runtime {
                                            a[2].powf(b[2]), a[3].powf(b[3])])
                 }
             }
-            (&Variable::Vec4(a), &Variable::F64(b)) => {
+            (&Variable::Vec4(a), &Variable::F64(b, _)) => {
                 let b = b as f32;
                 match binop.op {
                     Add => Variable::Vec4([a[0] + b, a[1] + b, a[2] + b, a[3] + b]),
                     Sub => Variable::Vec4([a[0] - b, a[1] - b, a[2] - b, a[3] - b]),
                     Mul => Variable::Vec4([a[0] * b, a[1] * b, a[2] * b, a[3] * b]),
-                    Dot => Variable::F64((a[0] * b + a[1] * b +
+                    Dot => Variable::f64((a[0] * b + a[1] * b +
                                           a[2] * b + a[3] * b) as f64),
                     Cross => return Err(module.error(binop.source_range,
                         &format!("{}\nExpected two vec4 for `{:?}`",
@@ -3277,13 +3269,13 @@ impl Runtime {
                                            a[2].powf(b), a[3].powf(b)]),
                 }
             }
-            (&Variable::F64(a), &Variable::Vec4(b)) => {
+            (&Variable::F64(a, _), &Variable::Vec4(b)) => {
                 let a = a as f32;
                 match binop.op {
                     Add => Variable::Vec4([a + b[0], a + b[1], a + b[2], a + b[3]]),
                     Sub => Variable::Vec4([a - b[0], a - b[1], a - b[2], a - b[3]]),
                     Mul => Variable::Vec4([a * b[0], a * b[1], a * b[2], a * b[3]]),
-                    Dot => Variable::F64((a * b[0] + a * b[1] +
+                    Dot => Variable::f64((a * b[0] + a * b[1] +
                                           a * b[2] + a * b[3]) as f64),
                     Cross => return Err(module.error(binop.source_range,
                         &format!("{}\nExpected two vec4 for `{:?}`",
@@ -3294,7 +3286,7 @@ impl Runtime {
                                            a.powf(b[2]), a.powf(b[3])])
                 }
             }
-            (&Variable::Bool(a), &Variable::Bool(b)) => {
+            (&Variable::Bool(a, ref sec), &Variable::Bool(b, _)) => {
                 Variable::Bool(match binop.op {
                     Add => a || b,
                     // Boolean subtraction with lazy precedence.
@@ -3305,7 +3297,7 @@ impl Runtime {
                         &format!("{}\nUnknown boolean operator `{:?}`",
                             self.stack_trace(),
                             binop.op.symbol_bool()), self))
-                })
+                }, sec.clone())
             }
             (&Variable::Text(ref a), &Variable::Text(ref b)) => {
                 match binop.op {

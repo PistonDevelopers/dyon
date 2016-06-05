@@ -53,7 +53,7 @@ impl PopVariable for Arc<String> {
 
 impl PopVariable for u32 {
     fn pop_var(rt: &Runtime, var: &Variable) -> Result<Self, String> {
-        if let &Variable::F64(n) = var {
+        if let &Variable::F64(n, _) = var {
             Ok(n as u32)
         } else {
             Err(rt.expected(var, "number"))
@@ -63,7 +63,7 @@ impl PopVariable for u32 {
 
 impl PopVariable for usize {
     fn pop_var(rt: &Runtime, var: &Variable) -> Result<Self, String> {
-        if let &Variable::F64(n) = var {
+        if let &Variable::F64(n, _) = var {
             Ok(n as usize)
         } else {
             Err(rt.expected(var, "number"))
@@ -73,7 +73,7 @@ impl PopVariable for usize {
 
 impl PopVariable for f32 {
     fn pop_var(rt: &Runtime, var: &Variable) -> Result<Self, String> {
-        if let &Variable::F64(n) = var {
+        if let &Variable::F64(n, _) = var {
             Ok(n as f32)
         } else {
             Err(rt.expected(var, "number"))
@@ -83,7 +83,7 @@ impl PopVariable for f32 {
 
 impl PopVariable for f64 {
     fn pop_var(rt: &Runtime, var: &Variable) -> Result<Self, String> {
-        if let &Variable::F64(n) = var {
+        if let &Variable::F64(n, _) = var {
             Ok(n)
         } else {
             Err(rt.expected(var, "number"))
@@ -216,23 +216,23 @@ impl<T: PopVariable> PopVariable for Vec<T> {
 }
 
 impl PushVariable for bool {
-    fn push_var(&self) -> Variable { Variable::Bool(*self) }
+    fn push_var(&self) -> Variable { Variable::bool(*self) }
 }
 
 impl PushVariable for u32 {
-    fn push_var(&self) -> Variable { Variable::F64(*self as f64) }
+    fn push_var(&self) -> Variable { Variable::f64(*self as f64) }
 }
 
 impl PushVariable for usize {
-    fn push_var(&self) -> Variable { Variable::F64(*self as f64) }
+    fn push_var(&self) -> Variable { Variable::f64(*self as f64) }
 }
 
 impl PushVariable for f32 {
-    fn push_var(&self) -> Variable { Variable::F64(*self as f64) }
+    fn push_var(&self) -> Variable { Variable::f64(*self as f64) }
 }
 
 impl PushVariable for f64 {
-    fn push_var(&self) -> Variable { Variable::F64(*self) }
+    fn push_var(&self) -> Variable { Variable::f64(*self) }
 }
 
 impl PushVariable for str {

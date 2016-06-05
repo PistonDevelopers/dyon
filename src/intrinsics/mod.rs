@@ -26,6 +26,26 @@ pub fn standard(f: &mut HashMap<Arc<String>, PreludeFunction>) {
         });
     };
 
+    f.insert(Arc::new("why".into()), PreludeFunction {
+        lts: vec![Lt::Default],
+        tys: vec![Type::Bool],
+        ret: Type::array()
+    });
+    f.insert(Arc::new("where".into()), PreludeFunction {
+        lts: vec![Lt::Default],
+        tys: vec![Type::F64],
+        ret: Type::array()
+    });
+    f.insert(Arc::new("explain_why".into()), PreludeFunction {
+        lts: vec![Lt::Default; 2],
+        tys: vec![Type::Bool, Type::Any],
+        ret: Type::Bool
+    });
+    f.insert(Arc::new("explain_where".into()), PreludeFunction {
+        lts: vec![Lt::Default; 2],
+        tys: vec![Type::F64, Type::Any],
+        ret: Type::F64
+    });
     sarg(f, "println", Type::Any, Type::Void);
     sarg(f, "print", Type::Any, Type::Void);
     sarg(f, "clone", Type::Any, Type::Any);
@@ -201,7 +221,7 @@ fn write_variable<W>(
                 }
             }
         }
-        Variable::F64(x) => {
+        Variable::F64(x, _) => {
             try!(write!(w, "{}", x));
         }
         Variable::Vec4(v) => {
@@ -217,7 +237,7 @@ fn write_variable<W>(
                 try!(write!(w, ")"));
             }
         }
-        Variable::Bool(x) => {
+        Variable::Bool(x, _) => {
             try!(write!(w, "{}", x));
         }
         Variable::Ref(ind) => {
@@ -333,7 +353,7 @@ pub fn call_standard(
         rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
         let v = rt.stack.pop().expect(TINVOTS);
         let v = match rt.resolve(&v) {
-            &Variable::Vec4(ref vec4) => Variable::F64(vec4[i] as f64),
+            &Variable::Vec4(ref vec4) => Variable::f64(vec4[i] as f64),
             x => return Err(module.error(call.args[i].source_range(),
                             &rt.expected(x, "number"), rt))
         };
@@ -350,7 +370,7 @@ pub fn call_standard(
             rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let ind = rt.stack.pop().expect(TINVOTS);
             let ind = match rt.resolve(&ind) {
-                &Variable::F64(val) => val,
+                &Variable::F64(val, _) => val,
                 x => return Err(module.error(call.args[1].source_range(),
                                 &rt.expected(x, "number"), rt))
             };
@@ -369,7 +389,7 @@ pub fn call_standard(
                 x => return Err(module.error(call.args[0].source_range(),
                                 &rt.expected(x, "vec4"), rt))
             };
-            rt.stack.push(Variable::F64(s));
+            rt.stack.push(Variable::f64(s));
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
@@ -378,6 +398,103 @@ pub fn call_standard(
             let v = rt.stack.pop().expect(TINVOTS);
             let v = rt.resolve(&v).deep_clone(&rt.stack);
             rt.stack.push(v);
+            rt.pop_fn(call.name.clone());
+            Expect::Something
+        }
+        "why" => {
+            rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
+            let v = rt.stack.pop().expect(TINVOTS);
+            let v = Variable::Array(Arc::new(match rt.resolve(&v) {
+                &Variable::Bool(true, Some(ref sec)) => {
+                    let mut sec = (**sec).clone();
+                    sec.reverse();
+                    sec
+                }
+                &Variable::Bool(true, None) => {
+                    return Err(module.error(call.args[0].source_range(),
+                        &format!("{}\nThis does not make sense, perhaps an array is empty?",
+                            rt.stack_trace()), rt))
+                }
+                &Variable::Bool(false, _) => {
+                    return Err(module.error(call.args[0].source_range(),
+                        &format!("{}\nMust be `true` to have meaning, try add or remove `!`",
+                            rt.stack_trace()), rt))
+                }
+                x => return Err(module.error(call.args[0].source_range(),
+                    &rt.expected(x, "bool"), rt))
+            }));
+            rt.stack.push(v);
+            rt.pop_fn(call.name.clone());
+            Expect::Something
+        }
+        "where" => {
+            rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
+            let v = rt.stack.pop().expect(TINVOTS);
+            let v = Variable::Array(Arc::new(match rt.resolve(&v) {
+                &Variable::F64(val, Some(ref sec)) => {
+                    if val.is_nan() {
+                        return Err(module.error(call.args[0].source_range(),
+                            &format!("{}\nExpected number, found `NaN`",
+                                rt.stack_trace()), rt))
+                    } else {
+                        let mut sec = (**sec).clone();
+                        sec.reverse();
+                        sec
+                    }
+                }
+                &Variable::F64(_, None) => {
+                    return Err(module.error(call.args[0].source_range(),
+                        &format!("{}\nThis does not make sense, perhaps an array is empty?",
+                            rt.stack_trace()), rt))
+                }
+                x => return Err(module.error(call.args[0].source_range(),
+                    &rt.expected(x, "f64"), rt))
+            }));
+            rt.stack.push(v);
+            rt.pop_fn(call.name.clone());
+            Expect::Something
+        }
+        "explain_why" => {
+            rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
+            let why = rt.stack.pop().expect(TINVOTS);
+            let val = rt.stack.pop().expect(TINVOTS);
+            let (val, why) = match rt.resolve(&val) {
+                &Variable::Bool(val, ref sec) => (val,
+                    match sec {
+                        &None => Box::new(vec![why.deep_clone(&rt.stack)]),
+                        &Some(ref sec) => {
+                            let mut sec = sec.clone();
+                            sec.push(why.deep_clone(&rt.stack));
+                            sec
+                        }
+                    }
+                ),
+                x => return Err(module.error(call.args[0].source_range(),
+                    &rt.expected(x, "bool"), rt))
+            };
+            rt.stack.push(Variable::Bool(val, Some(why)));
+            rt.pop_fn(call.name.clone());
+            Expect::Something
+        }
+        "explain_where" => {
+            rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
+            let wh = rt.stack.pop().expect(TINVOTS);
+            let val = rt.stack.pop().expect(TINVOTS);
+            let (val, wh) = match rt.resolve(&val) {
+                &Variable::F64(val, ref sec) => (val,
+                    match sec {
+                        &None => Box::new(vec![wh.deep_clone(&rt.stack)]),
+                        &Some(ref sec) => {
+                            let mut sec = sec.clone();
+                            sec.push(wh.deep_clone(&rt.stack));
+                            sec
+                        }
+                    }
+                ),
+                x => return Err(module.error(call.args[0].source_range(),
+                    &rt.expected(x, "bool"), rt))
+            };
+            rt.stack.push(Variable::F64(val, Some(wh)));
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
@@ -418,7 +535,7 @@ pub fn call_standard(
             rt.push_fn(call.name.clone(), 0, None, st, lc, cu);
             let v = rt.stack.pop().expect(TINVOTS);
             let v = match rt.resolve(&v) {
-                &Variable::F64(b) => b,
+                &Variable::F64(b, _) => b,
                 x => return Err(module.error(call.args[0].source_range(),
                                 &rt.expected(x, "number"), rt))
             };
@@ -455,7 +572,7 @@ pub fn call_standard(
         "is_empty" => {
             rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let v = rt.stack.pop().expect(TINVOTS);
-            let v = Variable::Bool(match rt.resolve(&v) {
+            let v = Variable::bool(match rt.resolve(&v) {
                 &Variable::Link(ref link) => link.is_empty(),
                 x => return Err(module.error(call.args[0].source_range(),
                                 &rt.expected(x, "link"), rt))
@@ -466,7 +583,7 @@ pub fn call_standard(
         }
         "random" => {
             rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
-            let v = Variable::F64(rt.rng.gen());
+            let v = Variable::f64(rt.rng.gen());
             rt.stack.push(v);
             rt.pop_fn(call.name.clone());
             Expect::Something
@@ -484,7 +601,7 @@ pub fn call_standard(
                     x => return Err(module.error(call.args[0].source_range(),
                                     &rt.expected(x, "array"), rt))
                 };
-                Variable::F64(arr.len() as f64)
+                Variable::f64(arr.len() as f64)
             };
             rt.stack.push(v);
             rt.pop_fn(call.name.clone());
@@ -624,12 +741,12 @@ pub fn call_standard(
             let j = rt.stack.pop().expect(TINVOTS);
             let i = rt.stack.pop().expect(TINVOTS);
             let j = match rt.resolve(&j) {
-                &Variable::F64(val) => val,
+                &Variable::F64(val, _) => val,
                 x => return Err(module.error(call.args[2].source_range(),
                     &rt.expected(x, "number"), rt))
             };
             let i = match rt.resolve(&i) {
-                &Variable::F64(val) => val,
+                &Variable::F64(val, _) => val,
                 x => return Err(module.error(call.args[1].source_range(),
                     &rt.expected(x, "number"), rt))
             };
@@ -701,7 +818,7 @@ pub fn call_standard(
                 };
                 match input.trim().parse::<f64>() {
                     Ok(v) => {
-                        rt.stack.push(Variable::F64(v));
+                        rt.stack.push(Variable::f64(v));
                         break;
                     }
                     Err(_) => {
@@ -852,10 +969,10 @@ pub fn call_standard(
             let v = rt.stack.pop().expect(TINVOTS);
             let v = match rt.resolve(&v) {
                 &Variable::Text(_) => rt.text_type.clone(),
-                &Variable::F64(_) => rt.f64_type.clone(),
+                &Variable::F64(_, _) => rt.f64_type.clone(),
                 &Variable::Vec4(_) => rt.vec4_type.clone(),
                 &Variable::Return => rt.return_type.clone(),
-                &Variable::Bool(_) => rt.bool_type.clone(),
+                &Variable::Bool(_, _) => rt.bool_type.clone(),
                 &Variable::Object(_) => rt.object_type.clone(),
                 &Variable::Array(_) => rt.array_type.clone(),
                 &Variable::Link(_) => rt.link_type.clone(),
@@ -1259,8 +1376,8 @@ pub fn call_standard(
             rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let v = rt.stack.pop().expect(TINVOTS);
             let v = match rt.resolve(&v) {
-                &Variable::Result(Err(_)) => Variable::Bool(true),
-                &Variable::Result(Ok(_)) => Variable::Bool(false),
+                &Variable::Result(Err(_)) => Variable::bool(true),
+                &Variable::Result(Ok(_)) => Variable::bool(false),
                 x => {
                     return Err(module.error(call.args[0].source_range(),
                         &rt.expected(x, "result"), rt));
@@ -1274,8 +1391,8 @@ pub fn call_standard(
             rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let v = rt.stack.pop().expect(TINVOTS);
             let v = match rt.resolve(&v) {
-                &Variable::Result(Err(_)) => Variable::Bool(false),
-                &Variable::Result(Ok(_)) => Variable::Bool(true),
+                &Variable::Result(Err(_)) => Variable::bool(false),
+                &Variable::Result(Ok(_)) => Variable::bool(true),
                 x => {
                     return Err(module.error(call.args[0].source_range(),
                         &rt.expected(x, "result"), rt));
@@ -1296,7 +1413,7 @@ pub fn call_standard(
                     }
                     let mut min: f64 = ::std::f64::MAX;
                     for v in &**arr {
-                        if let &Variable::F64(val) = v {
+                        if let &Variable::F64(val, _) = v {
                             if val < min { min = val }
                         }
                     }
@@ -1307,7 +1424,7 @@ pub fn call_standard(
                         &rt.expected(x, "array"), rt));
                 }
             };
-            rt.stack.push(Variable::F64(v));
+            rt.stack.push(Variable::f64(v));
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
@@ -1322,7 +1439,7 @@ pub fn call_standard(
                     }
                     let mut max: f64 = ::std::f64::MIN;
                     for v in &**arr {
-                        if let &Variable::F64(val) = v {
+                        if let &Variable::F64(val, _) = v {
                             if val > max { max = val }
                         }
                     }
@@ -1333,7 +1450,7 @@ pub fn call_standard(
                         &rt.expected(x, "array"), rt));
                 }
             };
-            rt.stack.push(Variable::F64(v));
+            rt.stack.push(Variable::f64(v));
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
@@ -1393,7 +1510,7 @@ pub fn call_standard(
             rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let v = rt.stack.pop().expect(TINVOTS);
             let v = match rt.resolve(&v) {
-                &Variable::F64(val) => Variable::Vec4([val.cos() as f32, val.sin() as f32, 0.0, 0.0]),
+                &Variable::F64(val, _) => Variable::Vec4([val.cos() as f32, val.sin() as f32, 0.0, 0.0]),
                 x => {
                     return Err(module.error(call.args[0].source_range(),
                         &rt.expected(x, "err(_)"), rt));

@@ -28,13 +28,13 @@ fn load_metarules_data(meta: &str, s: &str, file: &str, d: &str) -> Result<Vec<V
     let end: Arc<String> = Arc::new("end".into());
     for range_token in &tokens {
         let mut data = vec![];
-        data.push(Variable::F64(range_token.offset as f64));
-        data.push(Variable::F64(range_token.length as f64));
+        data.push(Variable::f64(range_token.offset as f64));
+        data.push(Variable::f64(range_token.length as f64));
         match &range_token.data {
             &MetaData::Bool(ref name, val) => {
                 data.push(Variable::Text(b.clone()));
                 data.push(Variable::Text(name.clone()));
-                data.push(Variable::Bool(val));
+                data.push(Variable::bool(val));
             }
             &MetaData::String(ref name, ref val) => {
                 data.push(Variable::Text(s.clone()));
@@ -44,7 +44,7 @@ fn load_metarules_data(meta: &str, s: &str, file: &str, d: &str) -> Result<Vec<V
             &MetaData::F64(ref name, val) => {
                 data.push(Variable::Text(n.clone()));
                 data.push(Variable::Text(name.clone()));
-                data.push(Variable::F64(val));
+                data.push(Variable::f64(val));
             }
             &MetaData::StartNode(ref name) => {
                 data.push(Variable::Text(start.clone()));
@@ -209,13 +209,13 @@ pub fn json_from_meta_data(data: &Vec<Variable>) -> Result<String, io::Error> {
                         try!(write!(w, "{}", "}"));
                     }
                     "bool" => {
-                        if let &Variable::Bool(val) = &arr[4] {
+                        if let &Variable::Bool(val, _) = &arr[4] {
                             try!(write_string(&mut w, name));
                             try!(write!(w, ":{}", val));
                         }
                     }
                     "f64" => {
-                        if let &Variable::F64(val) = &arr[4] {
+                        if let &Variable::F64(val, _) = &arr[4] {
                             try!(write_string(&mut w, name));
                             try!(write!(w, ":{}", val));
                         }
