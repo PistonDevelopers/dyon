@@ -27,6 +27,7 @@ pub fn standard(f: &mut HashMap<Arc<String>, PreludeFunction>) {
     };
 
     sarg(f, "why", Type::Bool, Type::array());
+    sarg(f, "where", Type::Bool, Type::array());
     sarg(f, "println", Type::Any, Type::Void);
     sarg(f, "print", Type::Any, Type::Void);
     sarg(f, "clone", Type::Any, Type::Any);
@@ -403,6 +404,33 @@ pub fn call_standard(
                 }
                 x => return Err(module.error(call.args[0].source_range(),
                     &rt.expected(x, "bool"), rt))
+            }));
+            rt.stack.push(v);
+            rt.pop_fn(call.name.clone());
+            Expect::Something
+        }
+        "where" => {
+            rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
+            let v = rt.stack.pop().expect(TINVOTS);
+            let v = Variable::Array(Arc::new(match rt.resolve(&v) {
+                &Variable::F64(val, Some(ref sec)) => {
+                    if val.is_nan() {
+                        return Err(module.error(call.args[0].source_range(),
+                            &format!("{}\nExpected number, found `NaN`",
+                                rt.stack_trace()), rt))
+                    } else {
+                        let mut sec = (**sec).clone();
+                        sec.reverse();
+                        sec
+                    }
+                }
+                &Variable::F64(_, None) => {
+                    return Err(module.error(call.args[0].source_range(),
+                        &format!("{}\nThis does not make sense, perhaps an array is empty?",
+                            rt.stack_trace()), rt))
+                }
+                x => return Err(module.error(call.args[0].source_range(),
+                    &rt.expected(x, "f64"), rt))
             }));
             rt.stack.push(v);
             rt.pop_fn(call.name.clone());
