@@ -1,4 +1,0 @@
-
-fn main() {
-    println(where(-max i 3 { i }))
-}
