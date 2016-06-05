@@ -1070,7 +1070,7 @@ impl Runtime {
                                     }
                                     Variable::Return => {
                                         if let Set = op {
-                                            *r.0 = Variable::f64(b)
+                                            *r.0 = Variable::F64(b, sec.clone())
                                         } else {
                                             return Err(module.error(
                                                 left.source_range(),
@@ -1146,7 +1146,7 @@ impl Runtime {
                                     }
                                     Variable::Return => {
                                         if let Set = op {
-                                            *r.0 = Variable::bool(b)
+                                            *r.0 = Variable::Bool(b, sec.clone())
                                         } else {
                                             return Err(module.error(
                                                 left.source_range(),
