@@ -41,6 +41,11 @@ pub fn standard(f: &mut HashMap<Arc<String>, PreludeFunction>) {
         tys: vec![Type::Bool, Type::Any],
         ret: Type::Bool
     });
+    f.insert(Arc::new("explain_where".into()), PreludeFunction {
+        lts: vec![Lt::Default, Lt::Return],
+        tys: vec![Type::F64, Type::Any],
+        ret: Type::Bool
+    });
     sarg(f, "println", Type::Any, Type::Void);
     sarg(f, "print", Type::Any, Type::Void);
     sarg(f, "clone", Type::Any, Type::Any);
@@ -459,6 +464,19 @@ pub fn call_standard(
                     &rt.expected(x, "bool"), rt))
             };
             rt.stack.push(Variable::Bool(val, Some(Box::new(vec![why]))));
+            rt.pop_fn(call.name.clone());
+            Expect::Something
+        }
+        "explain_where" => {
+            rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
+            let why = rt.stack.pop().expect(TINVOTS);
+            let val = rt.stack.pop().expect(TINVOTS);
+            let val = match rt.resolve(&val) {
+                &Variable::F64(val, _) => val,
+                x => return Err(module.error(call.args[0].source_range(),
+                    &rt.expected(x, "bool"), rt))
+            };
+            rt.stack.push(Variable::F64(val, Some(Box::new(vec![why]))));
             rt.pop_fn(call.name.clone());
             Expect::Something
         }

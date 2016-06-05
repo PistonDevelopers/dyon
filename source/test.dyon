@@ -1,8 +1,9 @@
 
 fn main() {
-    reason := "because 1 >= 0 and 1 < 3"
-    x := any i 3 {
-        explain_why(i == 1, reason)
+    list := [1, 2, 3]
+    reason := "in the list!"
+    x := min i {
+        explain_where(list[i], reason)
     }
-    println(why(x))
+    println(where(x))
 }

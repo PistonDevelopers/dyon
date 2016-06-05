@@ -1,10 +1,10 @@
 /// Returns an array of derived information for the truth value of `var`.
 /// This can be used with the value of `∃`/`any` and `∀`/`all` loops.
-fn why(var: bool) -> [any] { ... }
+fn why(var: 'return bool) -> [any] { ... }
 
 /// Returns an array of derived information for the value of `var`.
 /// This can be used with the value of `min` and `max` loops.
-fn where(var: f64) -> [any] { ... }
+fn where(var: 'return f64) -> [any] { ... }
 
 /// Prints out variable to standard output, adding newline character.
 fn println(var: any) { ... }
