@@ -3183,13 +3183,13 @@ impl Runtime {
                                              self.stack_trace()), self))
                 }, sec.clone())
             }
-            &Variable::F64(v, _) => {
-                Variable::f64(match unop.op {
+            &Variable::F64(v, ref sec) => {
+                Variable::F64(match unop.op {
                     ast::UnOp::Neg => -v,
                     _ => return Err(module.error(unop.source_range,
                                     &format!("{}\nUnknown number unary operator",
                                              self.stack_trace()), self))
-                })
+                }, sec.clone())
             }
             _ => return Err(module.error(unop.source_range,
                 &format!("{}\nInvalid type, expected bool", self.stack_trace()), self))
