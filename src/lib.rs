@@ -103,7 +103,7 @@ pub enum Variable {
     Ref(usize),
     Return,
     Bool(bool, Option<Box<Vec<Variable>>>),
-    F64(f64),
+    F64(f64, Option<Box<Vec<Variable>>>),
     Vec4([f32; 4]),
     Text(Arc<String>),
     Array(Array),
@@ -122,6 +122,10 @@ pub enum Variable {
 unsafe impl Send for Variable {}
 
 impl Variable {
+    pub fn f64(val: f64) -> Variable {
+        Variable::F64(val, None)
+    }
+
     pub fn bool(val: bool) -> Variable {
         Variable::Bool(val, None)
     }
@@ -130,7 +134,7 @@ impl Variable {
         use Variable::*;
 
         match *self {
-            F64(_) => self.clone(),
+            F64(_, _) => self.clone(),
             Vec4(_) => self.clone(),
             Return => self.clone(),
             Bool(_, _) => self.clone(),
@@ -172,7 +176,7 @@ impl PartialEq for Variable {
         match (self, other) {
             (&Variable::Return, _) => false,
             (&Variable::Bool(a, _), &Variable::Bool(b, _)) => a == b,
-            (&Variable::F64(a), &Variable::F64(b)) => a == b,
+            (&Variable::F64(a, _), &Variable::F64(b, _)) => a == b,
             (&Variable::Text(ref a), &Variable::Text(ref b)) => a == b,
             (&Variable::Object(ref a), &Variable::Object(ref b)) => a == b,
             (&Variable::Array(ref a), &Variable::Array(ref b)) => a == b,

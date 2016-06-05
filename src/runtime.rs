@@ -168,7 +168,7 @@ fn item_lookup(
                                 id
                             };
                         match &mut stack[id] {
-                            &mut Variable::F64(id) => {
+                            &mut Variable::F64(id, _) => {
                                 *expr_j += 1;
                                 id
                             }
@@ -287,8 +287,8 @@ impl Runtime {
     ) -> Result<Expect, String> {
         let x = self.stack.pop().expect(TINVOTS);
         match self.resolve(&x) {
-            &Variable::F64(a) => {
-                self.stack.push(Variable::F64(f(a)));
+            &Variable::F64(a, _) => {
+                self.stack.push(Variable::f64(f(a)));
             }
             _ => return Err(module.error(call.args[0].source_range(),
                     &format!("{}\nExpected number", self.stack_trace()), self))
@@ -819,13 +819,13 @@ impl Runtime {
             x => return Err(module.error(sw.source_range,
                     &self.expected(x, "vec4"), self))
         };
-        self.stack.push(Variable::F64(v[sw.sw0] as f64));
-        self.stack.push(Variable::F64(v[sw.sw1] as f64));
+        self.stack.push(Variable::f64(v[sw.sw0] as f64));
+        self.stack.push(Variable::f64(v[sw.sw1] as f64));
         if let Some(ind) = sw.sw2 {
-            self.stack.push(Variable::F64(v[ind] as f64));
+            self.stack.push(Variable::f64(v[ind] as f64));
         }
         if let Some(ind) = sw.sw3 {
-            self.stack.push(Variable::F64(v[ind] as f64));
+            self.stack.push(Variable::f64(v[ind] as f64));
         }
         Ok(Flow::Continue)
     }
@@ -939,7 +939,7 @@ impl Runtime {
         };
         let n: Variable = self.stack.pop().expect("Expected n");
         let v = match (self.resolve(&fill), self.resolve(&n)) {
-            (x, &Variable::F64(n)) => {
+            (x, &Variable::F64(n, _)) => {
                 Variable::Array(Arc::new(vec![x.clone(); n as usize]))
             }
             _ => return Err(module.error(array_fill.n.source_range(),
@@ -1052,10 +1052,10 @@ impl Runtime {
                     };
 
                     match self.resolve(&b) {
-                        &Variable::F64(b) => {
+                        &Variable::F64(b, _) => {
                             unsafe {
                                 match *r.0 {
-                                    Variable::F64(ref mut n) => {
+                                    Variable::F64(ref mut n, _) => {
                                         match op {
                                             Set => *n = b,
                                             Add => *n += b,
@@ -1069,7 +1069,7 @@ impl Runtime {
                                     }
                                     Variable::Return => {
                                         if let Set = op {
-                                            *r.0 = Variable::F64(b)
+                                            *r.0 = Variable::f64(b)
                                         } else {
                                             return Err(module.error(
                                                 left.source_range(),
@@ -1079,7 +1079,7 @@ impl Runtime {
                                     }
                                     Variable::Link(ref mut n) => {
                                         if let Add = op {
-                                            try!(n.push(&Variable::F64(b)));
+                                            try!(n.push(&Variable::f64(b)));
                                         } else {
                                             return Err(module.error(
                                                 left.source_range(),
@@ -1762,7 +1762,7 @@ impl Runtime {
     pub fn typeof_var(&self, var: &Variable) -> Arc<String> {
         let v = match var {
             &Variable::Text(_) => self.text_type.clone(),
-            &Variable::F64(_) => self.f64_type.clone(),
+            &Variable::F64(_, _) => self.f64_type.clone(),
             &Variable::Vec4(_) => self.vec4_type.clone(),
             &Variable::Return => self.return_type.clone(),
             &Variable::Bool(_, _) => self.bool_type.clone(),
@@ -1797,7 +1797,7 @@ impl Runtime {
             use ast::CompareOp::*;
 
             match (rt.resolve(&b), rt.resolve(&a)) {
-                (&Variable::F64(b), &Variable::F64(a)) => {
+                (&Variable::F64(b, _), &Variable::F64(a, _)) => {
                     Ok(match compare.op {
                         Less => a < b,
                         LessOrEqual => a <= b,
@@ -2094,7 +2094,7 @@ impl Runtime {
             };
             let start = self.stack.pop().expect(TINVOTS);
             let start = match self.resolve(&start) {
-                &Variable::F64(val) => val,
+                &Variable::F64(val, _) => val,
                 x => return Err(module.error(for_n_expr.end.source_range(),
                                 &self.expected(x, "number"), self))
             };
@@ -2111,21 +2111,21 @@ impl Runtime {
         };
         let end = self.stack.pop().expect(TINVOTS);
         let end = match self.resolve(&end) {
-            &Variable::F64(val) => val,
+            &Variable::F64(val, _) => val,
             x => return Err(module.error(for_n_expr.end.source_range(),
                             &self.expected(x, "number"), self))
         };
 
         // Initialize counter.
         self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
-        self.stack.push(Variable::F64(start));
+        self.stack.push(Variable::f64(start));
 
         let st = self.stack.len();
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
         loop {
             match &self.stack[st - 1] {
-                &Variable::F64(val) => {
+                &Variable::F64(val, _) => {
                     if val < end {}
                     else { break }
                 }
@@ -2166,7 +2166,7 @@ impl Runtime {
                     }
                 }
             }
-            let error = if let Variable::F64(ref mut val) = self.stack[st - 1] {
+            let error = if let Variable::F64(ref mut val, _) = self.stack[st - 1] {
                 *val += 1.0;
                 false
             } else { true };
@@ -2201,7 +2201,7 @@ impl Runtime {
             };
             let start = self.stack.pop().expect(TINVOTS);
             let start = match self.resolve(&start) {
-                &Variable::F64(val) => val,
+                &Variable::F64(val, _) => val,
                 x => return Err(module.error(for_n_expr.end.source_range(),
                                 &self.expected(x, "number"), self))
             };
@@ -2218,21 +2218,21 @@ impl Runtime {
         };
         let end = self.stack.pop().expect(TINVOTS);
         let end = match self.resolve(&end) {
-            &Variable::F64(val) => val,
+            &Variable::F64(val, _) => val,
             x => return Err(module.error(for_n_expr.end.source_range(),
                             &self.expected(x, "number"), self))
         };
 
         // Initialize counter.
         self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
-        self.stack.push(Variable::F64(start));
+        self.stack.push(Variable::f64(start));
 
         let st = self.stack.len();
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
         loop {
             match &self.stack[st - 1] {
-                &Variable::F64(val) => {
+                &Variable::F64(val, _) => {
                     if val < end {}
                     else { break }
                 }
@@ -2243,7 +2243,7 @@ impl Runtime {
                 (_, Flow::Return) => { return Ok(Flow::Return); }
                 (Expect::Something, Flow::Continue) => {
                     match self.resolve(self.stack.last().expect(TINVOTS)) {
-                        &Variable::F64(val) => sum += val,
+                        &Variable::F64(val, _) => sum += val,
                         x => return Err(module.error(for_n_expr.block.source_range,
                                 &self.expected(x, "number"), self))
                     };
@@ -2283,7 +2283,7 @@ impl Runtime {
                     }
                 }
             }
-            let error = if let Variable::F64(ref mut val) = self.stack[st - 1] {
+            let error = if let Variable::F64(ref mut val, _) = self.stack[st - 1] {
                 *val += 1.0;
                 false
             } else { true };
@@ -2296,7 +2296,7 @@ impl Runtime {
         };
         self.stack.truncate(prev_st);
         self.local_stack.truncate(prev_lc);
-        self.stack.push(Variable::F64(sum));
+        self.stack.push(Variable::f64(sum));
         Ok(flow)
     }
     fn sum_vec4_n_expr(
@@ -2319,7 +2319,7 @@ impl Runtime {
             };
             let start = self.stack.pop().expect(TINVOTS);
             let start = match self.resolve(&start) {
-                &Variable::F64(val) => val,
+                &Variable::F64(val, _) => val,
                 x => return Err(module.error(for_n_expr.end.source_range(),
                                 &self.expected(x, "number"), self))
             };
@@ -2336,21 +2336,21 @@ impl Runtime {
         };
         let end = self.stack.pop().expect(TINVOTS);
         let end = match self.resolve(&end) {
-            &Variable::F64(val) => val,
+            &Variable::F64(val, _) => val,
             x => return Err(module.error(for_n_expr.end.source_range(),
                             &self.expected(x, "number"), self))
         };
 
         // Initialize counter.
         self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
-        self.stack.push(Variable::F64(start));
+        self.stack.push(Variable::f64(start));
 
         let st = self.stack.len();
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
         loop {
             match &self.stack[st - 1] {
-                &Variable::F64(val) => {
+                &Variable::F64(val, _) => {
                     if val < end {}
                     else { break }
                 }
@@ -2405,7 +2405,7 @@ impl Runtime {
                     }
                 }
             }
-            let error = if let Variable::F64(ref mut val) = self.stack[st - 1] {
+            let error = if let Variable::F64(ref mut val, _) = self.stack[st - 1] {
                 *val += 1.0;
                 false
             } else { true };
@@ -2440,7 +2440,7 @@ impl Runtime {
             };
             let start = self.stack.pop().expect(TINVOTS);
             let start = match self.resolve(&start) {
-                &Variable::F64(val) => val,
+                &Variable::F64(val, _) => val,
                 x => return Err(module.error(for_n_expr.end.source_range(),
                                 &self.expected(x, "number"), self))
             };
@@ -2457,7 +2457,7 @@ impl Runtime {
         };
         let end = self.stack.pop().expect(TINVOTS);
         let end = match self.resolve(&end) {
-            &Variable::F64(val) => val,
+            &Variable::F64(val, _) => val,
             x => return Err(module.error(for_n_expr.end.source_range(),
                             &self.expected(x, "number"), self))
         };
@@ -2465,13 +2465,13 @@ impl Runtime {
         let mut min: Option<(f64, f64, Option<Vec<Variable>>)> = None;
         // Initialize counter.
         self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
-        self.stack.push(Variable::F64(start));
+        self.stack.push(Variable::f64(start));
         let st = self.stack.len();
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
         loop {
             let ind = match &self.stack[st - 1] {
-                &Variable::F64(val) => {
+                &Variable::F64(val, _) => {
                     if val < end {}
                     else { break }
                     val
@@ -2483,7 +2483,7 @@ impl Runtime {
                 (_, Flow::Return) => { return Ok(Flow::Return); }
                 (Expect::Something, Flow::Continue) => {
                     match self.resolve(self.stack.last().expect(TINVOTS)) {
-                        &Variable::F64(val) => {
+                        &Variable::F64(val, _) => {
                             if let Some((ref mut min_arg, ref mut min_val, ref mut tail_arg)) = min {
                                 if *min_val > val {
                                     *min_arg = ind;
@@ -2497,7 +2497,7 @@ impl Runtime {
                         &Variable::Option(Some(ref arr)) => {
                             match **arr {
                                 Variable::Array(ref arr) => {
-                                    if let Variable::F64(val) = arr[0] {
+                                    if let Variable::F64(val, _) = arr[0] {
                                         if let Some((ref mut min_arg, ref mut min_val, ref mut tail_arg)) = min {
                                             if *min_val > val {
                                                 *min_arg = ind;
@@ -2556,7 +2556,7 @@ impl Runtime {
                     }
                 }
             }
-            let error = if let Variable::F64(ref mut val) = self.stack[st - 1] {
+            let error = if let Variable::F64(ref mut val, _) = self.stack[st - 1] {
                 *val += 1.0;
                 false
             } else { true };
@@ -2572,7 +2572,7 @@ impl Runtime {
         self.stack.push(match min {
             None => Variable::Option(None),
             Some((arg, val, ref tail)) => Variable::Option(Some(Box::new({
-                let mut res = vec![Variable::F64(val), Variable::F64(arg)];
+                let mut res = vec![Variable::f64(val), Variable::f64(arg)];
                 if let &Some(ref tail) = tail {
                     res.extend_from_slice(tail);
                 }
@@ -2600,7 +2600,7 @@ impl Runtime {
             };
             let start = self.stack.pop().expect(TINVOTS);
             let start = match self.resolve(&start) {
-                &Variable::F64(val) => val,
+                &Variable::F64(val, _) => val,
                 x => return Err(module.error(for_n_expr.end.source_range(),
                                 &self.expected(x, "number"), self))
             };
@@ -2617,7 +2617,7 @@ impl Runtime {
         };
         let end = self.stack.pop().expect(TINVOTS);
         let end = match self.resolve(&end) {
-            &Variable::F64(val) => val,
+            &Variable::F64(val, _) => val,
             x => return Err(module.error(for_n_expr.end.source_range(),
                             &self.expected(x, "number"), self))
         };
@@ -2625,14 +2625,14 @@ impl Runtime {
         let mut max: Option<(f64, f64, Option<Vec<Variable>>)> = None;
         // Initialize counter.
         self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
-        self.stack.push(Variable::F64(start));
+        self.stack.push(Variable::f64(start));
 
         let st = self.stack.len();
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
         loop {
             let ind = match &self.stack[st - 1] {
-                &Variable::F64(val) => {
+                &Variable::F64(val, _) => {
                     if val < end {}
                     else { break }
                     val
@@ -2644,7 +2644,7 @@ impl Runtime {
                 (_, Flow::Return) => { return Ok(Flow::Return); }
                 (Expect::Something, Flow::Continue) => {
                     match self.resolve(self.stack.last().expect(TINVOTS)) {
-                        &Variable::F64(val) => {
+                        &Variable::F64(val, _) => {
                             if let Some((ref mut max_arg, ref mut max_val, ref mut tail_arg)) = max {
                                 if *max_val < val {
                                     *max_arg = ind;
@@ -2658,7 +2658,7 @@ impl Runtime {
                         &Variable::Option(Some(ref arr)) => {
                             match **arr {
                                 Variable::Array(ref arr) => {
-                                    if let Variable::F64(val) = arr[0] {
+                                    if let Variable::F64(val, _) = arr[0] {
                                         if let Some((ref mut max_arg, ref mut max_val, ref mut tail_arg)) = max {
                                             if *max_val < val {
                                                 *max_arg = ind;
@@ -2717,7 +2717,7 @@ impl Runtime {
                     }
                 }
             }
-            let error = if let Variable::F64(ref mut val) = self.stack[st - 1] {
+            let error = if let Variable::F64(ref mut val, _) = self.stack[st - 1] {
                 *val += 1.0;
                 false
             } else { true };
@@ -2733,7 +2733,7 @@ impl Runtime {
         self.stack.push(match max {
             None => Variable::Option(None),
             Some((arg, val, ref tail)) => Variable::Option(Some(Box::new({
-                let mut res = vec![Variable::F64(val), Variable::F64(arg)];
+                let mut res = vec![Variable::f64(val), Variable::f64(arg)];
                 if let &Some(ref tail) = tail {
                     res.extend_from_slice(tail);
                 }
@@ -2761,7 +2761,7 @@ impl Runtime {
             };
             let start = self.stack.pop().expect(TINVOTS);
             let start = match self.resolve(&start) {
-                &Variable::F64(val) => val,
+                &Variable::F64(val, _) => val,
                 x => return Err(module.error(for_n_expr.end.source_range(),
                                 &self.expected(x, "number"), self))
             };
@@ -2778,7 +2778,7 @@ impl Runtime {
         };
         let end = self.stack.pop().expect(TINVOTS);
         let end = match self.resolve(&end) {
-            &Variable::F64(val) => val,
+            &Variable::F64(val, _) => val,
             x => return Err(module.error(for_n_expr.end.source_range(),
                             &self.expected(x, "number"), self))
         };
@@ -2786,14 +2786,14 @@ impl Runtime {
         let mut any = false;
         // Initialize counter.
         self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
-        self.stack.push(Variable::F64(start));
+        self.stack.push(Variable::f64(start));
 
         let st = self.stack.len();
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
         loop {
             match &self.stack[st - 1] {
-                &Variable::F64(val) => {
+                &Variable::F64(val, _) => {
                     if val < end {}
                     else { break }
                 }
@@ -2849,7 +2849,7 @@ impl Runtime {
                     }
                 }
             }
-            let error = if let Variable::F64(ref mut val) = self.stack[st - 1] {
+            let error = if let Variable::F64(ref mut val, _) = self.stack[st - 1] {
                 *val += 1.0;
                 false
             } else { true };
@@ -2884,7 +2884,7 @@ impl Runtime {
             };
             let start = self.stack.pop().expect(TINVOTS);
             let start = match self.resolve(&start) {
-                &Variable::F64(val) => val,
+                &Variable::F64(val, _) => val,
                 x => return Err(module.error(for_n_expr.end.source_range(),
                                 &self.expected(x, "number"), self))
             };
@@ -2901,7 +2901,7 @@ impl Runtime {
         };
         let end = self.stack.pop().expect(TINVOTS);
         let end = match self.resolve(&end) {
-            &Variable::F64(val) => val,
+            &Variable::F64(val, _) => val,
             x => return Err(module.error(for_n_expr.end.source_range(),
                             &self.expected(x, "number"), self))
         };
@@ -2909,14 +2909,14 @@ impl Runtime {
         let mut any = true;
         // Initialize counter.
         self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
-        self.stack.push(Variable::F64(start));
+        self.stack.push(Variable::f64(start));
 
         let st = self.stack.len();
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
         loop {
             match &self.stack[st - 1] {
-                &Variable::F64(val) => {
+                &Variable::F64(val, _) => {
                     if val < end {}
                     else { break }
                 }
@@ -2972,7 +2972,7 @@ impl Runtime {
                     }
                 }
             }
-            let error = if let Variable::F64(ref mut val) = self.stack[st - 1] {
+            let error = if let Variable::F64(ref mut val, _) = self.stack[st - 1] {
                 *val += 1.0;
                 false
             } else { true };
@@ -3008,7 +3008,7 @@ impl Runtime {
             };
             let start = self.stack.pop().expect(TINVOTS);
             let start = match self.resolve(&start) {
-                &Variable::F64(val) => val,
+                &Variable::F64(val, _) => val,
                 x => return Err(module.error(for_n_expr.end.source_range(),
                                 &self.expected(x, "number"), self))
             };
@@ -3025,21 +3025,21 @@ impl Runtime {
         };
         let end = self.stack.pop().expect(TINVOTS);
         let end = match self.resolve(&end) {
-            &Variable::F64(val) => val,
+            &Variable::F64(val, _) => val,
             x => return Err(module.error(for_n_expr.end.source_range(),
                             &self.expected(x, "number"), self))
         };
 
         // Initialize counter.
         self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
-        self.stack.push(Variable::F64(start));
+        self.stack.push(Variable::f64(start));
 
         let st = self.stack.len();
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
         loop {
             match &self.stack[st - 1] {
-                &Variable::F64(val) => {
+                &Variable::F64(val, _) => {
                     if val < end {}
                     else { break }
                 }
@@ -3087,7 +3087,7 @@ impl Runtime {
                     }
                 }
             }
-            let error = if let Variable::F64(ref mut val) = self.stack[st - 1] {
+            let error = if let Variable::F64(ref mut val, _) = self.stack[st - 1] {
                 *val += 1.0;
                 false
             } else { true };
@@ -3109,7 +3109,7 @@ impl Runtime {
     }
     #[inline(always)]
     fn number(&mut self, num: &ast::Number) {
-        self.stack.push(Variable::F64(num.num));
+        self.stack.push(Variable::f64(num.num));
     }
     fn vec4(
         &mut self,
@@ -3131,25 +3131,25 @@ impl Runtime {
         }
         let w = self.stack.pop().expect(TINVOTS);
         let w = match self.resolve(&w) {
-            &Variable::F64(val) => val,
+            &Variable::F64(val, _) => val,
             x => return Err(module.error(vec4.args[3].source_range(),
                 &self.expected(x, "number"), self))
         };
         let z = self.stack.pop().expect(TINVOTS);
         let z = match self.resolve(&z) {
-            &Variable::F64(val) => val,
+            &Variable::F64(val, _) => val,
             x => return Err(module.error(vec4.args[2].source_range(),
                 &self.expected(x, "number"), self))
         };
         let y = self.stack.pop().expect(TINVOTS);
         let y = match self.resolve(&y) {
-            &Variable::F64(val) => val,
+            &Variable::F64(val, _) => val,
             x => return Err(module.error(vec4.args[1].source_range(),
                 &self.expected(x, "number"), self))
         };
         let x = self.stack.pop().expect(TINVOTS);
         let x = match self.resolve(&x) {
-            &Variable::F64(val) => val,
+            &Variable::F64(val, _) => val,
             x => return Err(module.error(vec4.args[0].source_range(),
                 &self.expected(x, "number"), self))
         };
@@ -3176,7 +3176,7 @@ impl Runtime {
         let val = self.stack.pop().expect("Expected unary argument");
         let v = match self.resolve(&val) {
             &Variable::Vec4(b) => {
-                Variable::F64(match unop.op {
+                Variable::f64(match unop.op {
                     ast::UnOp::Norm => (b[0] * b[0] + b[1] * b[1] + b[2] * b[2]).sqrt() as f64,
                     _ => return Err(module.error(unop.source_range,
                                     &format!("{}\nUnknown vec4 unary operator",
@@ -3191,8 +3191,8 @@ impl Runtime {
                                              self.stack_trace()), self))
                 })
             }
-            &Variable::F64(v) => {
-                Variable::F64(match unop.op {
+            &Variable::F64(v, _) => {
+                Variable::f64(match unop.op {
                     ast::UnOp::Neg => -v,
                     _ => return Err(module.error(unop.source_range,
                                     &format!("{}\nUnknown number unary operator",
@@ -3230,8 +3230,8 @@ impl Runtime {
         let right = self.stack.pop().expect("Expected right argument");
         let left = self.stack.pop().expect("Expected left argument");
         let v = match (self.resolve(&left), self.resolve(&right)) {
-            (&Variable::F64(a), &Variable::F64(b)) => {
-                Variable::F64(match binop.op {
+            (&Variable::F64(a, _), &Variable::F64(b, _)) => {
+                Variable::f64(match binop.op {
                     Add => a + b,
                     Sub => a - b,
                     Mul => a * b,
@@ -3249,7 +3249,7 @@ impl Runtime {
                     Add => Variable::Vec4([a[0] + b[0], a[1] + b[1], a[2] + b[2], a[3] + b[3]]),
                     Sub => Variable::Vec4([a[0] - b[0], a[1] - b[1], a[2] - b[2], a[3] - b[3]]),
                     Mul => Variable::Vec4([a[0] * b[0], a[1] * b[1], a[2] * b[2], a[3] * b[3]]),
-                    Dot => Variable::F64((a[0] * b[0] + a[1] * b[1] +
+                    Dot => Variable::f64((a[0] * b[0] + a[1] * b[1] +
                                           a[2] * b[2] + a[3] * b[3]) as f64),
                     Cross => Variable::Vec4([a[1] * b[2] - a[2] * b[1],
                                              a[2] * b[0] - a[0] * b[2],
@@ -3260,13 +3260,13 @@ impl Runtime {
                                            a[2].powf(b[2]), a[3].powf(b[3])])
                 }
             }
-            (&Variable::Vec4(a), &Variable::F64(b)) => {
+            (&Variable::Vec4(a), &Variable::F64(b, _)) => {
                 let b = b as f32;
                 match binop.op {
                     Add => Variable::Vec4([a[0] + b, a[1] + b, a[2] + b, a[3] + b]),
                     Sub => Variable::Vec4([a[0] - b, a[1] - b, a[2] - b, a[3] - b]),
                     Mul => Variable::Vec4([a[0] * b, a[1] * b, a[2] * b, a[3] * b]),
-                    Dot => Variable::F64((a[0] * b + a[1] * b +
+                    Dot => Variable::f64((a[0] * b + a[1] * b +
                                           a[2] * b + a[3] * b) as f64),
                     Cross => return Err(module.error(binop.source_range,
                         &format!("{}\nExpected two vec4 for `{:?}`",
@@ -3277,13 +3277,13 @@ impl Runtime {
                                            a[2].powf(b), a[3].powf(b)]),
                 }
             }
-            (&Variable::F64(a), &Variable::Vec4(b)) => {
+            (&Variable::F64(a, _), &Variable::Vec4(b)) => {
                 let a = a as f32;
                 match binop.op {
                     Add => Variable::Vec4([a + b[0], a + b[1], a + b[2], a + b[3]]),
                     Sub => Variable::Vec4([a - b[0], a - b[1], a - b[2], a - b[3]]),
                     Mul => Variable::Vec4([a * b[0], a * b[1], a * b[2], a * b[3]]),
-                    Dot => Variable::F64((a * b[0] + a * b[1] +
+                    Dot => Variable::f64((a * b[0] + a * b[1] +
                                           a * b[2] + a * b[3]) as f64),
                     Cross => return Err(module.error(binop.source_range,
                         &format!("{}\nExpected two vec4 for `{:?}`",

@@ -201,7 +201,7 @@ fn write_variable<W>(
                 }
             }
         }
-        Variable::F64(x) => {
+        Variable::F64(x, _) => {
             try!(write!(w, "{}", x));
         }
         Variable::Vec4(v) => {
@@ -333,7 +333,7 @@ pub fn call_standard(
         rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
         let v = rt.stack.pop().expect(TINVOTS);
         let v = match rt.resolve(&v) {
-            &Variable::Vec4(ref vec4) => Variable::F64(vec4[i] as f64),
+            &Variable::Vec4(ref vec4) => Variable::f64(vec4[i] as f64),
             x => return Err(module.error(call.args[i].source_range(),
                             &rt.expected(x, "number"), rt))
         };
@@ -350,7 +350,7 @@ pub fn call_standard(
             rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let ind = rt.stack.pop().expect(TINVOTS);
             let ind = match rt.resolve(&ind) {
-                &Variable::F64(val) => val,
+                &Variable::F64(val, _) => val,
                 x => return Err(module.error(call.args[1].source_range(),
                                 &rt.expected(x, "number"), rt))
             };
@@ -369,7 +369,7 @@ pub fn call_standard(
                 x => return Err(module.error(call.args[0].source_range(),
                                 &rt.expected(x, "vec4"), rt))
             };
-            rt.stack.push(Variable::F64(s));
+            rt.stack.push(Variable::f64(s));
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
@@ -418,7 +418,7 @@ pub fn call_standard(
             rt.push_fn(call.name.clone(), 0, None, st, lc, cu);
             let v = rt.stack.pop().expect(TINVOTS);
             let v = match rt.resolve(&v) {
-                &Variable::F64(b) => b,
+                &Variable::F64(b, _) => b,
                 x => return Err(module.error(call.args[0].source_range(),
                                 &rt.expected(x, "number"), rt))
             };
@@ -466,7 +466,7 @@ pub fn call_standard(
         }
         "random" => {
             rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
-            let v = Variable::F64(rt.rng.gen());
+            let v = Variable::f64(rt.rng.gen());
             rt.stack.push(v);
             rt.pop_fn(call.name.clone());
             Expect::Something
@@ -484,7 +484,7 @@ pub fn call_standard(
                     x => return Err(module.error(call.args[0].source_range(),
                                     &rt.expected(x, "array"), rt))
                 };
-                Variable::F64(arr.len() as f64)
+                Variable::f64(arr.len() as f64)
             };
             rt.stack.push(v);
             rt.pop_fn(call.name.clone());
@@ -624,12 +624,12 @@ pub fn call_standard(
             let j = rt.stack.pop().expect(TINVOTS);
             let i = rt.stack.pop().expect(TINVOTS);
             let j = match rt.resolve(&j) {
-                &Variable::F64(val) => val,
+                &Variable::F64(val, _) => val,
                 x => return Err(module.error(call.args[2].source_range(),
                     &rt.expected(x, "number"), rt))
             };
             let i = match rt.resolve(&i) {
-                &Variable::F64(val) => val,
+                &Variable::F64(val, _) => val,
                 x => return Err(module.error(call.args[1].source_range(),
                     &rt.expected(x, "number"), rt))
             };
@@ -701,7 +701,7 @@ pub fn call_standard(
                 };
                 match input.trim().parse::<f64>() {
                     Ok(v) => {
-                        rt.stack.push(Variable::F64(v));
+                        rt.stack.push(Variable::f64(v));
                         break;
                     }
                     Err(_) => {
@@ -852,7 +852,7 @@ pub fn call_standard(
             let v = rt.stack.pop().expect(TINVOTS);
             let v = match rt.resolve(&v) {
                 &Variable::Text(_) => rt.text_type.clone(),
-                &Variable::F64(_) => rt.f64_type.clone(),
+                &Variable::F64(_, _) => rt.f64_type.clone(),
                 &Variable::Vec4(_) => rt.vec4_type.clone(),
                 &Variable::Return => rt.return_type.clone(),
                 &Variable::Bool(_, _) => rt.bool_type.clone(),
@@ -1296,7 +1296,7 @@ pub fn call_standard(
                     }
                     let mut min: f64 = ::std::f64::MAX;
                     for v in &**arr {
-                        if let &Variable::F64(val) = v {
+                        if let &Variable::F64(val, _) = v {
                             if val < min { min = val }
                         }
                     }
@@ -1307,7 +1307,7 @@ pub fn call_standard(
                         &rt.expected(x, "array"), rt));
                 }
             };
-            rt.stack.push(Variable::F64(v));
+            rt.stack.push(Variable::f64(v));
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
@@ -1322,7 +1322,7 @@ pub fn call_standard(
                     }
                     let mut max: f64 = ::std::f64::MIN;
                     for v in &**arr {
-                        if let &Variable::F64(val) = v {
+                        if let &Variable::F64(val, _) = v {
                             if val > max { max = val }
                         }
                     }
@@ -1333,7 +1333,7 @@ pub fn call_standard(
                         &rt.expected(x, "array"), rt));
                 }
             };
-            rt.stack.push(Variable::F64(v));
+            rt.stack.push(Variable::f64(v));
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
@@ -1393,7 +1393,7 @@ pub fn call_standard(
             rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let v = rt.stack.pop().expect(TINVOTS);
             let v = match rt.resolve(&v) {
-                &Variable::F64(val) => Variable::Vec4([val.cos() as f32, val.sin() as f32, 0.0, 0.0]),
+                &Variable::F64(val, _) => Variable::Vec4([val.cos() as f32, val.sin() as f32, 0.0, 0.0]),
                 x => {
                     return Err(module.error(call.args[0].source_range(),
                         &rt.expected(x, "err(_)"), rt));
