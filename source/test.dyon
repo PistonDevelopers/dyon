@@ -2,8 +2,15 @@
 fn main() {
     list := [1, 2, 3]
     reason := "in the list!"
-    x := min i {
-        explain_where(list[i], reason)
+    x := any i {
+        x := explain_why(list[i] == 1, reason)
+        explain_why(x, reason)
+    }
+    println(why(x))
+
+    x := max i {
+        x := explain_where(list[i], reason)
+        explain_where(x, reason)
     }
     println(where(x))
 }

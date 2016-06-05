@@ -44,7 +44,7 @@ pub fn standard(f: &mut HashMap<Arc<String>, PreludeFunction>) {
     f.insert(Arc::new("explain_where".into()), PreludeFunction {
         lts: vec![Lt::Default, Lt::Return],
         tys: vec![Type::F64, Type::Any],
-        ret: Type::Bool
+        ret: Type::F64
     });
     sarg(f, "println", Type::Any, Type::Void);
     sarg(f, "print", Type::Any, Type::Void);
@@ -458,25 +458,45 @@ pub fn call_standard(
             rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let why = rt.stack.pop().expect(TINVOTS);
             let val = rt.stack.pop().expect(TINVOTS);
-            let val = match rt.resolve(&val) {
-                &Variable::Bool(val, _) => val,
+            let (val, why) = match rt.resolve(&val) {
+                &Variable::Bool(val, ref sec) => (val,
+                    match sec {
+                        &None => vec![why],
+                        &Some(ref sec) => {
+                            let mut sec: Vec<Variable> = sec.iter()
+                                .map(|n| n.deep_clone(&rt.stack)).collect();
+                            sec.push(why);
+                            sec
+                        }
+                    }
+                ),
                 x => return Err(module.error(call.args[0].source_range(),
                     &rt.expected(x, "bool"), rt))
             };
-            rt.stack.push(Variable::Bool(val, Some(Box::new(vec![why]))));
+            rt.stack.push(Variable::Bool(val, Some(Box::new(why))));
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
         "explain_where" => {
             rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
-            let why = rt.stack.pop().expect(TINVOTS);
+            let wh = rt.stack.pop().expect(TINVOTS);
             let val = rt.stack.pop().expect(TINVOTS);
-            let val = match rt.resolve(&val) {
-                &Variable::F64(val, _) => val,
+            let (val, wh) = match rt.resolve(&val) {
+                &Variable::F64(val, ref sec) => (val,
+                    match sec {
+                        &None => vec![wh],
+                        &Some(ref sec) => {
+                            let mut sec: Vec<Variable> = sec.iter()
+                                .map(|n| n.deep_clone(&rt.stack)).collect();
+                            sec.push(wh);
+                            sec
+                        }
+                    }
+                ),
                 x => return Err(module.error(call.args[0].source_range(),
                     &rt.expected(x, "bool"), rt))
             };
-            rt.stack.push(Variable::F64(val, Some(Box::new(vec![why]))));
+            rt.stack.push(Variable::F64(val, Some(Box::new(wh))));
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
