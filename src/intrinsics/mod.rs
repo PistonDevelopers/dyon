@@ -27,22 +27,22 @@ pub fn standard(f: &mut HashMap<Arc<String>, PreludeFunction>) {
     };
 
     f.insert(Arc::new("why".into()), PreludeFunction {
-        lts: vec![Lt::Return],
+        lts: vec![Lt::Default],
         tys: vec![Type::Bool],
         ret: Type::array()
     });
     f.insert(Arc::new("where".into()), PreludeFunction {
-        lts: vec![Lt::Return],
+        lts: vec![Lt::Default],
         tys: vec![Type::F64],
         ret: Type::array()
     });
     f.insert(Arc::new("explain_why".into()), PreludeFunction {
-        lts: vec![Lt::Default, Lt::Return],
+        lts: vec![Lt::Default; 2],
         tys: vec![Type::Bool, Type::Any],
         ret: Type::Bool
     });
     f.insert(Arc::new("explain_where".into()), PreludeFunction {
-        lts: vec![Lt::Default, Lt::Return],
+        lts: vec![Lt::Default; 2],
         tys: vec![Type::F64, Type::Any],
         ret: Type::F64
     });
@@ -461,11 +461,10 @@ pub fn call_standard(
             let (val, why) = match rt.resolve(&val) {
                 &Variable::Bool(val, ref sec) => (val,
                     match sec {
-                        &None => vec![why],
+                        &None => Box::new(vec![why.deep_clone(&rt.stack)]),
                         &Some(ref sec) => {
-                            let mut sec: Vec<Variable> = sec.iter()
-                                .map(|n| n.deep_clone(&rt.stack)).collect();
-                            sec.push(why);
+                            let mut sec = sec.clone();
+                            sec.push(why.deep_clone(&rt.stack));
                             sec
                         }
                     }
@@ -473,7 +472,7 @@ pub fn call_standard(
                 x => return Err(module.error(call.args[0].source_range(),
                     &rt.expected(x, "bool"), rt))
             };
-            rt.stack.push(Variable::Bool(val, Some(Box::new(why))));
+            rt.stack.push(Variable::Bool(val, Some(why)));
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
@@ -484,11 +483,10 @@ pub fn call_standard(
             let (val, wh) = match rt.resolve(&val) {
                 &Variable::F64(val, ref sec) => (val,
                     match sec {
-                        &None => vec![wh],
+                        &None => Box::new(vec![wh.deep_clone(&rt.stack)]),
                         &Some(ref sec) => {
-                            let mut sec: Vec<Variable> = sec.iter()
-                                .map(|n| n.deep_clone(&rt.stack)).collect();
-                            sec.push(wh);
+                            let mut sec = sec.clone();
+                            sec.push(wh.deep_clone(&rt.stack));
                             sec
                         }
                     }
@@ -496,7 +494,7 @@ pub fn call_standard(
                 x => return Err(module.error(call.args[0].source_range(),
                     &rt.expected(x, "bool"), rt))
             };
-            rt.stack.push(Variable::F64(val, Some(Box::new(wh))));
+            rt.stack.push(Variable::F64(val, Some(wh)));
             rt.pop_fn(call.name.clone());
             Expect::Something
         }

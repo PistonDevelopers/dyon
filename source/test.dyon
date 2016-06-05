@@ -50,9 +50,14 @@ fn main() {
     println(why(x)) // prints `just because`
     */
 
+    /*
     reason := "the number is 2"
     x := explain_where(2, reason)
     println(where(x)) // prints `the number is 2`
+    */
+
+    x := foo()
+    println(x)
 }
 
 /*
@@ -73,3 +78,7 @@ fn foo(list) -> {
     return max i { list[i] }
 }
 */
+
+fn foo() -> res {
+    return ok(where(max i 3 { i }?))
+}

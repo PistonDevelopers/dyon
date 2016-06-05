@@ -428,23 +428,10 @@ impl Runtime {
         }
     }
 
-    pub fn try(
-        &mut self,
-        expr: &ast::Expression,
-        side: Side,
-        module: &Module
-    ) -> Result<(Expect, Flow), String> {
+    fn try_msg(v: &Variable) -> Option<Result<Box<Variable>, Box<::Error>>> {
         use Error;
 
-        match self.expression(expr, side, module) {
-            Ok((x, Flow::Return)) => { return Ok((x, Flow::Return)); }
-            Ok((Expect::Something, Flow::Continue)) => {}
-            _ => return Err(module.error(expr.source_range(),
-                            &format!("{}\nExpected something",
-                                self.stack_trace()), self))
-        };
-        let v = self.stack.pop().expect(TINVOTS);
-        let v = match self.resolve(&v) {
+        Some(match v {
             &Variable::Result(ref res) => res.clone(),
             &Variable::Option(ref opt) => {
                 match opt {
@@ -457,9 +444,77 @@ impl Runtime {
                     }))
                 }
             }
-            _ => {
+            &Variable::Bool(true, None) => {
+                Err(Box::new(Error {
+                    message: Variable::Text(Arc::new(
+                        "This does not make sense, perhaps an array is empty?"
+                        .into())),
+                    trace: vec![]
+                }))
+            }
+            &Variable::Bool(false, _) => {
+                Err(Box::new(Error {
+                    message: Variable::Text(Arc::new(
+                        "Must be `true` to have meaning, try add or remove `!`"
+                        .into())),
+                    trace: vec![]
+                }))
+            }
+            &Variable::Bool(true, ref sec) => {
+                match sec {
+                    &None => Err(Box::new(Error {
+                        message: Variable::Text(Arc::new(
+                            "Expected `some(_)`, found `none()`"
+                            .into())),
+                        trace: vec![]
+                    })),
+                    &Some(_) => {
+                        Ok(Box::new(Variable::Bool(true, sec.clone())))
+                    }
+                }
+            }
+            &Variable::F64(val, ref sec) => {
+                if val.is_nan() {
+                    Err(Box::new(Error {
+                        message: Variable::Text(Arc::new(
+                            "Expected number, found `NaN`"
+                            .into())),
+                        trace: vec![]
+                    }))
+                } else if sec.is_none() {
+                    Err(Box::new(Error {
+                        message: Variable::Text(Arc::new(
+                            "This does not make sense, perhaps an array is empty?"
+                            .into())),
+                        trace: vec![]
+                    }))
+                } else {
+                    Ok(Box::new(Variable::F64(val, sec.clone())))
+                }
+            }
+            _ => return None
+        })
+    }
+
+    pub fn try(
+        &mut self,
+        expr: &ast::Expression,
+        side: Side,
+        module: &Module
+    ) -> Result<(Expect, Flow), String> {
+        match self.expression(expr, side, module) {
+            Ok((x, Flow::Return)) => { return Ok((x, Flow::Return)); }
+            Ok((Expect::Something, Flow::Continue)) => {}
+            _ => return Err(module.error(expr.source_range(),
+                            &format!("{}\nExpected something",
+                                self.stack_trace()), self))
+        };
+        let v = self.stack.pop().expect(TINVOTS);
+        let v = match Runtime::try_msg(self.resolve(&v)) {
+            Some(v) => v,
+            None => {
                 return Err(module.error(expr.source_range(),
-                    &format!("{}\nExpected `ok(_)` or `err(_)`",
+                    &format!("{}\nExpected `ok(_)`, `err(_)`, `bool`, `f64`",
                         self.stack_trace()), self));
             }
         };
@@ -1555,22 +1610,11 @@ impl Runtime {
         if item.ids.len() == 0 {
             if item.try {
                 // Check for `err(_)` or unwrap when `?` follows item.
-                let v = match &self.stack[stack_id] {
-                    &Variable::Result(ref res) => res.clone(),
-                    &Variable::Option(ref opt) => {
-                        match opt {
-                            &Some(ref some) => Ok(some.clone()),
-                            &None => Err(Box::new(Error {
-                                message: Variable::Text(Arc::new(
-                                    "Expected `some(_)`, found `none()`"
-                                    .into())),
-                                trace: vec![]
-                            }))
-                        }
-                    }
-                    _ => {
+                let v = match Runtime::try_msg(&self.stack[stack_id]) {
+                    Some(v) => v,
+                    None => {
                         return Err(module.error(item.source_range,
-                            &format!("{}\nExpected `ok(_)` or `err(_)`",
+                            &format!("{}\nExpected `ok(_)`, `err(_)`, `bool`, `f64`",
                                 self.stack_trace()), self));
                     }
                 };
@@ -1625,20 +1669,9 @@ impl Runtime {
             let mut try_id_ind = 0;
             if item.try_ids.len() > 0 && item.try_ids[try_id_ind] == 0 {
                 // Check for error on `?` for first id.
-                let v = unsafe {match *var {
-                    Variable::Result(ref res) => res.clone(),
-                    Variable::Option(ref opt) => {
-                        match opt {
-                            &Some(ref some) => Ok(some.clone()),
-                            &None => Err(Box::new(Error {
-                                message: Variable::Text(Arc::new(
-                                    "Expected `some(_)`, found `none()`"
-                                    .into())),
-                                trace: vec![]
-                            }))
-                        }
-                    }
-                    _ => {
+                let v = unsafe {match Runtime::try_msg(&*var) {
+                    Some(v) => v,
+                    None => {
                         return Err(module.error_fnindex(item.ids[0].source_range(),
                             &format!("{}\nExpected `ok(_)` or `err(_)`",
                                 stack_trace(call_stack)),
@@ -1696,22 +1729,11 @@ impl Runtime {
                 if item.try_ids.len() > try_id_ind &&
                    item.try_ids[try_id_ind] == i + 1 {
                     // Check for error on `?` for rest of ids.
-                    let v = unsafe {match *var {
-                        Variable::Result(ref res) => res.clone(),
-                        Variable::Option(ref opt) => {
-                            match opt {
-                                &Some(ref some) => Ok(some.clone()),
-                                &None => Err(Box::new(Error {
-                                    message: Variable::Text(Arc::new(
-                                        "Expected `some(_)`, found `none()`"
-                                        .into())),
-                                    trace: vec![]
-                                }))
-                            }
-                        }
-                        _ => {
+                    let v = unsafe {match Runtime::try_msg(&*var) {
+                        Some(v) => v,
+                        None => {
                             return Err(module.error_fnindex(prop.source_range(),
-                                &format!("{}\nExpected `ok(_)` or `err(_)`",
+                                &format!("{}\nExpected `ok(_)`, `err(_)`, `bool`, `f64`",
                                     stack_trace(call_stack)),
                                     call_stack.last().unwrap().index));
                         }
