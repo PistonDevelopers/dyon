@@ -443,11 +443,11 @@ pub fn call_standard(
         "tail" => {
             rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let v = rt.stack.pop().expect(TINVOTS);
-            let v = Variable::Link(match rt.resolve(&v) {
+            let v = Variable::Link(Box::new(match rt.resolve(&v) {
                 &Variable::Link(ref link) => link.tail(),
                 x => return Err(module.error(call.args[0].source_range(),
                                 &rt.expected(x, "link"), rt))
-            });
+            }));
             rt.stack.push(v);
             rt.pop_fn(call.name.clone());
             Expect::Something

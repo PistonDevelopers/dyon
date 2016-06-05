@@ -108,7 +108,7 @@ pub enum Variable {
     Text(Arc<String>),
     Array(Array),
     Object(Object),
-    Link(Link),
+    Link(Box<Link>),
     UnsafeRef(UnsafeRef),
     RustObject(RustObject),
     Option(Option<Box<Variable>>),
@@ -384,6 +384,35 @@ mod tests {
 
     use super::run;
     use self::test::Bencher;
+
+    #[test]
+    fn variable_size() {
+        use std::mem::size_of;
+        use super::*;
+
+        /*
+        Ref(usize),
+        Return,
+        Bool(bool),
+        F64(f64),
+        Vec4([f32; 4]),
+        Text(Arc<String>),
+        Array(Array),
+        Object(Object),
+        Link(Link),
+        UnsafeRef(UnsafeRef),
+        RustObject(RustObject),
+        Option(Option<Box<Variable>>),
+        Result(Result<Box<Variable>, Box<Error>>),
+        Thread(Thread),
+        */
+
+        println!("Link {}", size_of::<Link>());
+        println!("[f32; 4] {}", size_of::<[f32; 4]>());
+        println!("Result {}", size_of::<Result<Box<Variable>, Box<Error>>>());
+        println!("Thread {}", size_of::<Thread>());
+        assert_eq!(size_of::<Variable>(), 24);
+    }
 
     fn run_bench(source: &str) {
         run(source).unwrap_or_else(|err| panic!("{}", err));

@@ -838,7 +838,7 @@ impl Runtime {
         use Link;
 
         if link.items.len() == 0 {
-            self.stack.push(Variable::Link(Link::new()));
+            self.stack.push(Variable::Link(Box::new(Link::new())));
         } else {
             let mut new_link = Link::new();
             for item in &link.items {
@@ -859,7 +859,7 @@ impl Runtime {
                     Ok(()) => {}
                 }
             }
-            self.stack.push(Variable::Link(new_link));
+            self.stack.push(Variable::Link(Box::new(new_link)));
         }
         Ok(Flow::Continue)
     }
@@ -1282,8 +1282,8 @@ impl Runtime {
                                     Variable::Link(ref mut n) => {
                                         match op {
                                             Set => *n = b.clone(),
-                                            Add => *n = n.add(b),
-                                            Sub => *n = b.add(n),
+                                            Add => **n = n.add(b),
+                                            Sub => **n = b.add(n),
                                             _ => unimplemented!()
                                         }
                                     }
@@ -3327,7 +3327,7 @@ impl Runtime {
             (&Variable::Link(ref a), &Variable::Link(ref b)) => {
                 match binop.op {
                     Add => {
-                        Variable::Link(a.add(b))
+                        Variable::Link(Box::new(a.add(b)))
                     }
                     _ => return Err(module.error(binop.source_range,
                         &format!("{}\nThis operation can not be used with links",
