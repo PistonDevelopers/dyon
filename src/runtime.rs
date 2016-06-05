@@ -1052,10 +1052,10 @@ impl Runtime {
                     };
 
                     match self.resolve(&b) {
-                        &Variable::F64(b, _) => {
+                        &Variable::F64(b, ref sec) => {
                             unsafe {
                                 match *r.0 {
-                                    Variable::F64(ref mut n, _) => {
+                                    Variable::F64(ref mut n, ref mut n_sec) => {
                                         match op {
                                             Set => *n = b,
                                             Add => *n += b,
@@ -1065,7 +1065,8 @@ impl Runtime {
                                             Rem => *n %= b,
                                             Pow => *n = n.powf(b),
                                             Assign => {}
-                                        }
+                                        };
+                                        *n_sec = sec.clone()
                                     }
                                     Variable::Return => {
                                         if let Set = op {
@@ -1133,14 +1134,15 @@ impl Runtime {
                                 };
                             }
                         }
-                        &Variable::Bool(b, _) => {
+                        &Variable::Bool(b, ref sec) => {
                             unsafe {
                                 match *r.0 {
-                                    Variable::Bool(ref mut n, _) => {
+                                    Variable::Bool(ref mut n, ref mut n_sec) => {
                                         match op {
                                             Set => *n = b,
                                             _ => unimplemented!()
-                                        }
+                                        };
+                                        *n_sec = sec.clone();
                                     }
                                     Variable::Return => {
                                         if let Set = op {
