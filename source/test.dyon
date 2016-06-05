@@ -1,9 +1,8 @@
 
 fn main() {
-    x := any i 3 { i == 1 }
-    println(foo(x))
-}
-
-fn foo(x: 'return) -> [f64] {
-    return why(x)
+    reason := "because 1 >= 0 and 1 < 3"
+    x := any i 3 {
+        explain_why(i == 1, reason)
+    }
+    println(why(x))
 }
