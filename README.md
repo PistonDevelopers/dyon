@@ -60,7 +60,7 @@ Dyon script files ends with ".dyon".
 - [Un-loop for 4D vectors](https://github.com/PistonDevelopers/dyon/issues/201) `vec4 i f(i)`
 - [Unpack 4D vectors](https://github.com/PistonDevelopers/dyon/issues/213) `f(xy v)`
 - [Swizzle 4D vectors](https://github.com/PistonDevelopers/dyon/issues/213) `(yxz v, 1)`
-- [HTML hex colors](https://github.com/PistonDevelopers/dyon/issues/167)
+- [HTML hex colors](https://github.com/PistonDevelopers/dyon/issues/167) `#fab3ee`
 - [Meta parsing](https://github.com/PistonDevelopers/dyon/issues/168)
 
 ### Why the name Dyon?
