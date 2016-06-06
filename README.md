@@ -37,6 +37,8 @@ Dyon script files ends with ".dyon".
 - For loop `for i := 0; i < 10; i += 1 { ... }`
 - [Short For loop](https://github.com/PistonDevelopers/dyon/issues/116) `for i 10 { ... }`
 - [Short For loop](https://github.com/PistonDevelopers/dyon/issues/116) with offset `for i [2, 10) { ... }`
+- [Infer range from loop body](https://github.com/PistonDevelopers/dyon/issues/116) `for i { println(list[i]) }`
+- [Packed loop](https://github.com/PistonDevelopers/dyon/issues/116) `for i, j { println(list[i][j]) }`
 - [`∑`/`sum`, `min`, `max`, `sift`, `∃`/`any`, `∀`/`all` loops](https://github.com/PistonDevelopers/dyon/issues/119)
 - Infinite loop `loop { ... }`
 - Unlabeled break `loop { break }`
