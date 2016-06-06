@@ -58,6 +58,8 @@ Dyon script files ends with ".dyon".
 - [Go-like coroutines with `go`](https://github.com/PistonDevelopers/dyon/issues/163)
 - [4D vectors with `f32` precision `(x, y, z, w)`](https://github.com/PistonDevelopers/dyon/issues/144)
 - [Un-loop for 4D vectors](https://github.com/PistonDevelopers/dyon/issues/201) `vec4 i f(i)`
+- [Unpack 4D vectors](https://github.com/PistonDevelopers/dyon/issues/213) `f(xy v)`
+- [Swizzle 4D vectors](https://github.com/PistonDevelopers/dyon/issues/213) `(yxz v, 1)`
 - [HTML hex colors](https://github.com/PistonDevelopers/dyon/issues/167)
 - [Meta parsing](https://github.com/PistonDevelopers/dyon/issues/168)
 
