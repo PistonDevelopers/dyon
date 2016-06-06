@@ -23,6 +23,7 @@ Dyon script files ends with ".dyon".
 - Object `obj := {x: a, y: b}`
 - Number (f64) `n := 5.3`
 - Boolean `t := true`
+- [Link](https://github.com/PistonDevelopers/dyon/issues/227) `link { 1 2 "hi" false }`
 - Custom Rust objects using `Arc<Mutex<Any>>`
 - Functions without return `fn foo() { ... }`
 - Functions with return `fn foo() -> { ... return x }`
@@ -40,6 +41,7 @@ Dyon script files ends with ".dyon".
 - [Infer range from loop body](https://github.com/PistonDevelopers/dyon/issues/116) `for i { println(list[i]) }`
 - [Packed loop](https://github.com/PistonDevelopers/dyon/issues/116) `for i, j { println(list[i][j]) }`
 - [`∑`/`sum`, `min`, `max`, `sift`, `∃`/`any`, `∀`/`all` loops](https://github.com/PistonDevelopers/dyon/issues/119)
+- [Secrets derived from loops](https://github.com/PistonDevelopers/dyon/issues/266) `why(any i { list[i] > 3 })`
 - Infinite loop `loop { ... }`
 - Unlabeled break `loop { break }`
 - Unlabled continue `loop { continue }`
@@ -54,7 +56,9 @@ Dyon script files ends with ".dyon".
 - `?` operator to propagate errors, e.g. `x := foo()?`, [maps option to result automatically](https://github.com/PistonDevelopers/dyon/issues/172)
 - `unwrap(x)` [prints trace of propagated error](https://github.com/PistonDevelopers/dyon/issues/82)
 - `functions()` returns sorted list of all available functions in a module
-- [Optional type system](https://github.com/PistonDevelopers/dyon/issues/84)
+- [Optional type system](https://github.com/PistonDevelopers/dyon/issues/84) `fn could(list: []) -> f64`
+- [Ad-hoc types](https://github.com/PistonDevelopers/dyon/issues/236) `fn players() -> [Player str] { ... }`
+- [Current objects](https://github.com/PistonDevelopers/dyon/issues/224) `fn render() ~ world { ... }`
 - [Go-like coroutines with `go`](https://github.com/PistonDevelopers/dyon/issues/163)
 - [4D vectors with `f32` precision `(x, y, z, w)`](https://github.com/PistonDevelopers/dyon/issues/144)
 - [Un-loop for 4D vectors](https://github.com/PistonDevelopers/dyon/issues/201) `vec4 i f(i)`
@@ -62,6 +66,7 @@ Dyon script files ends with ".dyon".
 - [Swizzle 4D vectors](https://github.com/PistonDevelopers/dyon/issues/213) `(yxz v, 1)`
 - [HTML hex colors](https://github.com/PistonDevelopers/dyon/issues/167) `#fab3ee`
 - [Meta parsing](https://github.com/PistonDevelopers/dyon/issues/168)
+- [Macros for embedding in Rust](https://github.com/PistonDevelopers/dyon/blob/master/examples/functions.rs) `dyon_fn!{fn say_hello() { println!("hi!"); }}`
 
 ### Why the name Dyon?
 
@@ -76,13 +81,21 @@ but is the result of exploring and testing new ideas.
 [Sven Nilsen](https://github.com/bvssvni/) started this project in early 2016.
 The idea was to make a simple, but convenient scripting language that integrated well with Rust.
 
-- During the first week of coding, it was discovered a way to make a lifetime checking on arguments
+- During the first week of coding, it was discovered a way to do lifetime checking on function arguments
 - Dynamic modules with imported prelude were added to explore a different approach to organizing code
 - For nice error handling, added option, result and `?` operator
 - To test the design of the language, created a demo for interactive coding
 - Mutability check to improve readability
 - Short For loop to improve readability and performance
 - Mathematical loops and unicode symbols to improve readability
+- Go-like coroutines to add multi-thread support
+- 4D vectors with unpack and swizzle to make 2D and 3D programming easier
+- Html hex colors to make copying colors from image editors possible
+- Optional type system to help scaling a project
+- Ad-hoc types for extra type safety
+- Current objects to improve prototyping and tailored environments
+- Macros for easier embedding with Rust
+- Secrets to automatically derive meaning from mathematical loops
 
 Main goals:
 
