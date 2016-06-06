@@ -1,0 +1,8 @@
+fn main() {
+    // Find the value in 2D array that is less than zero.
+    list := [[1, 0], [-1, 2]]
+    x := ∃ i, j { list[i][j] < 0 }
+    arg := why(x)
+    println(arg) // prints `[1, 0]`
+    println(list[arg[0]][arg[1]] < 0) // prints `true`
+}
