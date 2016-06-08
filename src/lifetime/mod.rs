@@ -325,8 +325,8 @@ pub fn check(
             None => {
                 // Check whether it is a prelude function.
                 match prelude.functions.get(&name) {
-                    Some(pf) => {
-                        node.lts = pf.lts.clone();
+                    Some(&pf) => {
+                        node.lts = prelude.list[pf].lts.clone();
                         if node.lts.len() != n {
                             return Err(node.source.wrap(
                                 format!("{}: Expected {} arguments, found {}",

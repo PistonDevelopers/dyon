@@ -20,6 +20,7 @@ pub fn convert(
     module: &mut Module
 ) -> Result<(), ()> {
     let mut convert = Convert::new(data);
+
     loop {
         if let Ok((range, function)) =
         Function::from_meta_data(file.clone(), source.clone(), convert, ignored) {
@@ -613,7 +614,6 @@ impl Expression {
                 let st = stack.len();
                 expr.resolve_locals(relative, stack, module);
                 stack.truncate(st);
-                stack.push(None);
                 item.resolve_locals(relative, stack, module);
                 stack.truncate(st);
             }
@@ -1555,6 +1555,7 @@ impl Call {
                 // Don't push return since last value in block
                 // is used as return value.
             }
+            FnIndex::Intrinsic(_) => {}
             FnIndex::None => {}
         }
         for arg in &self.args {
@@ -1608,7 +1609,6 @@ impl BinOpExpression {
         let st = stack.len();
         self.left.resolve_locals(relative, stack, module);
         stack.truncate(st);
-        stack.push(None);
         self.right.resolve_locals(relative, stack, module);
         stack.truncate(st);
     }
@@ -1771,11 +1771,7 @@ impl Assign {
                 return;
             }
         }
-        // Or else, just resolve normally.
-        if self.op != AssignOp::Assign {
-            // Item is resolved before popping right value.
-            stack.push(None);
-        }
+
         self.left.resolve_locals(relative, stack, module);
         stack.truncate(st);
     }
@@ -2655,7 +2651,6 @@ impl Compare {
         let st = stack.len();
         self.left.resolve_locals(relative, stack, module);
         stack.truncate(st);
-        stack.push(None);
         self.right.resolve_locals(relative, stack, module);
         stack.truncate(st);
     }
