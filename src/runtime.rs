@@ -365,12 +365,8 @@ impl Runtime {
             All(ref for_n_expr) => self.all_n_expr(for_n_expr, module),
             If(ref if_expr) => self.if_expr(if_expr, module),
             Compare(ref compare) => self.compare(compare, module),
-            Variable(_, ref var) => {
-                Ok((Some(var.clone()), Flow::Continue))
-            }
-            Try(ref expr) => {
-                self.try(expr, side, module)
-            }
+            Variable(_, ref var) => Ok((Some(var.clone()), Flow::Continue)),
+            Try(ref expr) => self.try(expr, side, module),
             Swizzle(ref sw) => {
                 let flow = try!(self.swizzle(sw, module));
                 Ok((Some(::Variable::Ref(self.stack.len() - 1)), flow))

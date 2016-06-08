@@ -1,5 +1,5 @@
 fn main() {
     x := 0
-    for i 100_000_000 { x = sqrt(x+1) }
+    for i 1_000_000_000 { x = sqrt(x+1) }
     println("x " + to_string(x))
 }
