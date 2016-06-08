@@ -369,7 +369,7 @@ impl Runtime {
             Try(ref expr) => self.try(expr, side, module),
             Swizzle(ref sw) => {
                 let flow = try!(self.swizzle(sw, module));
-                Ok((Some(::Variable::Ref(self.stack.len() - 1)), flow))
+                Ok((None, flow))
             }
         }
     }
@@ -681,6 +681,7 @@ impl Runtime {
                 for arg in &call.args {
                     match try!(self.expression(arg, Side::Right, module)) {
                         (Some(x), Flow::Continue) => self.stack.push(x),
+                        (None, Flow::Continue) => {}
                         (x, Flow::Return) => { return Ok((x, Flow::Return)); }
                         _ => return Err(module.error(arg.source_range(),
                                         &format!("{}\nExpected something. \
@@ -780,8 +781,8 @@ impl Runtime {
 
     fn swizzle(&mut self, sw: &ast::Swizzle, module: &Module) -> Result<Flow, String> {
         let v = match try!(self.expression(&sw.expr, Side::Right, module)) {
-            (_, Flow::Return) => { return Ok(Flow::Return); }
             (Some(x), Flow::Continue) => x,
+            (_, Flow::Return) => { return Ok(Flow::Return); }
             _ => return Err(module.error(sw.expr.source_range(),
                             &format!("{}\nExpected something",
                                 self.stack_trace()), self))
@@ -2934,6 +2935,7 @@ impl Runtime {
         let st = self.stack.len();
         for expr in &vec4.args {
             match try!(self.expression(expr, side, module)) {
+                (None, Flow::Continue) => {}
                 (Some(x), Flow::Continue) => self.stack.push(x),
                 (x, Flow::Return) => return Ok((x, Flow::Return)),
                 _ => return Err(module.error(expr.source_range(),
