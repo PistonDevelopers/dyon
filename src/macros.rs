@@ -3,6 +3,17 @@
 macro_rules! dyon_macro_items { ($($x:item)+) => ($($x)+) }
 
 #[macro_export]
+macro_rules! dyon_fn_pop {
+    ($rt:ident $arg:ident : $t:ty) => {
+        let $arg: $t = try!($rt.pop());
+    };
+    ($rt:ident $arg:ident : $t:ty, $($args:tt : $ts:ty),+) => {
+        dyon_fn_pop!($rt $($args: $ts),+);
+        let $arg: $t = try!($rt.pop());
+    };
+}
+
+#[macro_export]
 macro_rules! dyon_fn {
     (fn $name:ident () -> $rt:ty $b:block) => {
         pub fn $name(rt: &mut $crate::Runtime) -> Result<(), String> {
@@ -14,118 +25,15 @@ macro_rules! dyon_fn {
             Ok(())
         }
     };
-    (fn $name:ident ($arg:tt : $t:ty) -> $rt:ty $b:block) => {
+    (fn $name:ident ($($arg:tt : $t:ty),+) -> $rt:ty $b:block) => {
         dyon_macro_items!{
             pub fn $name(rt: &mut $crate::Runtime) -> Result<(), String> {
-                fn inner($arg: $t) -> $rt {
+                fn inner($($arg: $t),+) -> $rt {
                     $b
                 }
 
-                let $arg: $t = try!(rt.pop());
-                rt.push(inner($arg));
-                Ok(())
-            }
-        }
-    };
-    (fn $name:ident ($arg0:tt : $t0:ty, $arg1:tt : $t1:ty) -> $rt:ty $b:block) => {
-        dyon_macro_items!{
-            pub fn $name(rt: &mut $crate::Runtime) -> Result<(), String> {
-                fn inner($arg0: $t0, $arg1: $t1) -> $rt {
-                    $b
-                }
-
-                let $arg1: $t1 = try!(rt.pop());
-                let $arg0: $t0 = try!(rt.pop());
-                rt.push(inner($arg0, $arg1));
-                Ok(())
-            }
-        }
-    };
-    (fn $name:ident (
-        $arg0:tt : $t0:ty,
-        $arg1:tt : $t1:ty,
-        $arg2:tt : $t2:ty
-    ) -> $rt:ty $b:block) => {
-        dyon_macro_items!{
-            pub fn $name(rt: &mut $crate::Runtime) -> Result<(), String> {
-                fn inner($arg0: $t0, $arg1: $t1, $arg2: $t2) -> $rt {
-                    $b
-                }
-
-                let $arg2: $t2 = try!(rt.pop());
-                let $arg1: $t1 = try!(rt.pop());
-                let $arg0: $t0 = try!(rt.pop());
-                rt.push(inner($arg0, $arg1, $arg2));
-                Ok(())
-            }
-        }
-    };
-    (fn $name:ident (
-        $arg0:tt : $t0:ty,
-        $arg1:tt : $t1:ty,
-        $arg2:tt : $t2:ty,
-        $arg3:tt : $t3:ty
-    ) -> $rt:ty $b:block) => {
-        dyon_macro_items!{
-            pub fn $name(rt: &mut $crate::Runtime) -> Result<(), String> {
-                fn inner($arg0: $t0, $arg1: $t1, $arg2: $t2, $arg3: $t3) -> $rt {
-                    $b
-                }
-
-                let $arg3: $t3 = try!(rt.pop());
-                let $arg2: $t2 = try!(rt.pop());
-                let $arg1: $t1 = try!(rt.pop());
-                let $arg0: $t0 = try!(rt.pop());
-                rt.push(inner($arg0, $arg1, $arg2, $arg3));
-                Ok(())
-            }
-        }
-    };
-    (fn $name:ident (
-        $arg0:tt : $t0:ty,
-        $arg1:tt : $t1:ty,
-        $arg2:tt : $t2:ty,
-        $arg3:tt : $t3:ty,
-        $arg4:tt : $t4:ty
-    ) -> $rt:ty $b:block) => {
-        dyon_macro_items!{
-            pub fn $name(rt: &mut $crate::Runtime) -> Result<(), String> {
-                fn inner($arg0: $t0, $arg1: $t1, $arg2: $t2, $arg3: $t3, $arg4: $t4) -> $rt {
-                    $b
-                }
-
-                let $arg4: $t4 = try!(rt.pop());
-                let $arg3: $t3 = try!(rt.pop());
-                let $arg2: $t2 = try!(rt.pop());
-                let $arg1: $t1 = try!(rt.pop());
-                let $arg0: $t0 = try!(rt.pop());
-                rt.push(inner($arg0, $arg1, $arg2, $arg3, $arg4));
-                Ok(())
-            }
-        }
-    };
-    (fn $name:ident (
-        $arg0:tt : $t0:ty,
-        $arg1:tt : $t1:ty,
-        $arg2:tt : $t2:ty,
-        $arg3:tt : $t3:ty,
-        $arg4:tt : $t4:ty,
-        $arg5:tt : $t5:ty
-    ) -> $rt:ty $b:block) => {
-        dyon_macro_items!{
-            pub fn $name(rt: &mut $crate::Runtime) -> Result<(), String> {
-                fn inner($arg0: $t0, $arg1: $t1, $arg2: $t2, $arg3: $t3, $arg4: $t4,
-                    $arg5: $t5) -> $rt {
-                    $b
-                }
-
-                let $arg5: $t5 = try!(rt.pop());
-                let $arg4: $t4 = try!(rt.pop());
-                let $arg3: $t3 = try!(rt.pop());
-                let $arg2: $t2 = try!(rt.pop());
-                let $arg1: $t1 = try!(rt.pop());
-                let $arg0: $t0 = try!(rt.pop());
-                rt.push(inner($arg0, $arg1, $arg2, $arg3, $arg4, $arg5));
+                dyon_fn_pop!(rt $($arg: $t),+);
+                rt.push(inner($($arg),+));
                 Ok(())
             }
         }
@@ -140,117 +48,15 @@ macro_rules! dyon_fn {
             Ok(())
         }
     };
-    (fn $name:ident ($arg:tt : $t:ty) $b:block) => {
+    (fn $name:ident ($($arg:tt : $t:ty),+) $b:block) => {
         dyon_macro_items!{
             pub fn $name(rt: &mut $crate::Runtime) -> Result<(), String> {
-                fn inner($arg: $t) {
+                fn inner($($arg: $t),+) {
                     $b
                 }
 
-                let $arg: $t = try!(rt.pop());
-                inner($arg);
-                Ok(())
-            }
-        }
-    };
-    (fn $name:ident ($arg0:tt : $t0:ty, $arg1:tt : $t1:ty) $b:block) => {
-        dyon_macro_items!{
-            pub fn $name(rt: &mut $crate::Runtime) -> Result<(), String> {
-                fn inner($arg0: $t0, $arg1: $t1) {
-                    $b
-                }
-
-                let $arg1: $t1 = try!(rt.pop());
-                let $arg0: $t0 = try!(rt.pop());
-                inner($arg0, $arg1);
-                Ok(())
-            }
-        }
-    };
-    (fn $name:ident (
-        $arg0:tt : $t0:ty,
-        $arg1:tt : $t1:ty,
-        $arg2:tt : $t2:ty
-    ) $b:block) => {
-        dyon_macro_items!{
-            pub fn $name(rt: &mut $crate::Runtime) -> Result<(), String> {
-                fn inner($arg0: $t0, $arg1: $t1, $arg2: $t2) {
-                    $b
-                }
-
-                let $arg2: $t2 = try!(rt.pop());
-                let $arg1: $t1 = try!(rt.pop());
-                let $arg0: $t0 = try!(rt.pop());
-                inner($arg0, $arg1, $arg2);
-                Ok(())
-            }
-        }
-    };
-    (fn $name:ident (
-        $arg0:tt : $t0:ty,
-        $arg1:tt : $t1:ty,
-        $arg2:tt : $t2:ty,
-        $arg3:tt : $t3:ty
-    ) $b:block) => {
-        dyon_macro_items!{
-            pub fn $name(rt: &mut $crate::Runtime) -> Result<(), String> {
-                fn inner($arg0: $t0, $arg1: $t1, $arg2: $t2, $arg3: $t3) {
-                    $b
-                }
-
-                let $arg3: $t3 = try!(rt.pop());
-                let $arg2: $t2 = try!(rt.pop());
-                let $arg1: $t1 = try!(rt.pop());
-                let $arg0: $t0 = try!(rt.pop());
-                inner($arg0, $arg1, $arg2, $arg3);
-                Ok(())
-            }
-        }
-    };
-    (fn $name:ident (
-        $arg0:tt : $t0:ty,
-        $arg1:tt : $t1:ty,
-        $arg2:tt : $t2:ty,
-        $arg3:tt : $t3:ty,
-        $arg4:tt : $t4:ty
-    ) $b:block) => {
-        dyon_macro_items!{
-            pub fn $name(rt: &mut $crate::Runtime) -> Result<(), String> {
-                fn inner($arg0: $t0, $arg1: $t1, $arg2: $t2, $arg3: $t3, $arg4: $t4) {
-                    $b
-                }
-
-                let $arg4: $t4 = try!(rt.pop());
-                let $arg3: $t3 = try!(rt.pop());
-                let $arg2: $t2 = try!(rt.pop());
-                let $arg1: $t1 = try!(rt.pop());
-                let $arg0: $t0 = try!(rt.pop());
-                inner($arg0, $arg1, $arg2, $arg3, $arg4);
-                Ok(())
-            }
-        }
-    };
-    (fn $name:ident (
-        $arg0:tt : $t0:ty,
-        $arg1:tt : $t1:ty,
-        $arg2:tt : $t2:ty,
-        $arg3:tt : $t3:ty,
-        $arg4:tt : $t4:ty,
-        $arg5:tt : $t5:ty
-    ) $b:block) => {
-        dyon_macro_items!{
-            pub fn $name(rt: &mut $crate::Runtime) -> Result<(), String> {
-                fn inner($arg0: $t0, $arg1: $t1, $arg2: $t2, $arg3: $t3, $arg4: $t4, $arg5: $t5) {
-                    $b
-                }
-
-                let $arg5: $t5 = try!(rt.pop());
-                let $arg4: $t4 = try!(rt.pop());
-                let $arg3: $t3 = try!(rt.pop());
-                let $arg2: $t2 = try!(rt.pop());
-                let $arg1: $t1 = try!(rt.pop());
-                let $arg0: $t0 = try!(rt.pop());
-                inner($arg0, $arg1, $arg2, $arg3, $arg4, $arg5);
+                dyon_fn_pop!(rt $($arg: $t),+);
+                inner($($arg),+);
                 Ok(())
             }
         }
