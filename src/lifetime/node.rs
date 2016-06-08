@@ -295,6 +295,7 @@ pub fn convert_meta_data(
                     Kind::Swizzle => Some(Type::F64),
                     Kind::Compare => Some(Type::Bool),
                     Kind::Link => Some(Type::Link),
+                    Kind::Any | Kind::All => Some(Type::Bool),
                     _ => None
                 };
 
