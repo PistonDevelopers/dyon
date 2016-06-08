@@ -78,6 +78,7 @@ pub struct Runtime {
     pub thread_type: Variable,
 }
 
+#[inline(always)]
 fn resolve<'a>(stack: &'a Vec<Variable>, var: &'a Variable) -> &'a Variable {
     match *var {
         Variable::Ref(ind) => &stack[ind],
@@ -3195,21 +3196,21 @@ impl Runtime {
         use ast::BinOp::*;
 
         match try!(self.expression(&binop.left, side, module)) {
-            (_, Flow::Return) => { return Ok(Flow::Return); }
             (Expect::Something, Flow::Continue) => {}
+            (_, Flow::Return) => { return Ok(Flow::Return); }
             _ => return Err(module.error(binop.source_range,
                 &format!("{}\nExpected something from left argument",
                     self.stack_trace()), self))
         };
+        let left = self.stack.pop().expect("Expected left argument");
         match try!(self.expression(&binop.right, side, module)) {
-            (_, Flow::Return) => { return Ok(Flow::Return); }
             (Expect::Something, Flow::Continue) => {}
+            (_, Flow::Return) => { return Ok(Flow::Return); }
             _ => return Err(module.error(binop.source_range,
                 &format!("{}\nExpected something from right argument",
                     self.stack_trace()), self))
         };
         let right = self.stack.pop().expect("Expected right argument");
-        let left = self.stack.pop().expect("Expected left argument");
         let v = match (self.resolve(&left), self.resolve(&right)) {
             (&Variable::F64(a, ref sec), &Variable::F64(b, _)) => {
                 Variable::F64(match binop.op {

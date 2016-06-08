@@ -1608,7 +1608,6 @@ impl BinOpExpression {
         let st = stack.len();
         self.left.resolve_locals(relative, stack, module);
         stack.truncate(st);
-        stack.push(None);
         self.right.resolve_locals(relative, stack, module);
         stack.truncate(st);
     }
