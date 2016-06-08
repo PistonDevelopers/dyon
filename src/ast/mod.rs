@@ -614,7 +614,6 @@ impl Expression {
                 let st = stack.len();
                 expr.resolve_locals(relative, stack, module);
                 stack.truncate(st);
-                stack.push(None);
                 item.resolve_locals(relative, stack, module);
                 stack.truncate(st);
             }
@@ -1772,11 +1771,7 @@ impl Assign {
                 return;
             }
         }
-        // Or else, just resolve normally.
-        if self.op != AssignOp::Assign {
-            // Item is resolved before popping right value.
-            stack.push(None);
-        }
+
         self.left.resolve_locals(relative, stack, module);
         stack.truncate(st);
     }
@@ -2656,7 +2651,6 @@ impl Compare {
         let st = stack.len();
         self.left.resolve_locals(relative, stack, module);
         stack.truncate(st);
-        stack.push(None);
         self.right.resolve_locals(relative, stack, module);
         stack.truncate(st);
     }
