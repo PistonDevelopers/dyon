@@ -191,6 +191,7 @@ impl PartialEq for Variable {
 #[derive(Clone, Copy, Debug)]
 pub enum FnIndex {
     None,
+    Intrinsic(usize),
     /// Relative to function you call from.
     Loaded(isize),
     External(usize),
@@ -216,13 +217,19 @@ impl Clone for FnExternal {
 pub struct Module {
     pub functions: Vec<ast::Function>,
     pub ext_prelude: Vec<FnExternal>,
+    pub intrinsics: Arc<HashMap<Arc<String>, usize>>,
 }
 
 impl Module {
     pub fn new() -> Module {
+        Module::new_intrinsics(Arc::new(Prelude::new_intrinsics().functions))
+    }
+
+    pub fn new_intrinsics(intrinsics: Arc<HashMap<Arc<String>, usize>>) -> Module {
         Module {
             functions: vec![],
             ext_prelude: vec![],
+            intrinsics: intrinsics,
         }
     }
 
@@ -242,7 +249,10 @@ impl Module {
                 return FnIndex::External(i);
             }
         }
-        FnIndex::None
+        match self.intrinsics.get(name) {
+            None => FnIndex::None,
+            Some(&ind) => FnIndex::Intrinsic(ind)
+        }
     }
 
     pub fn error(&self, range: Range, msg: &str, rt: &Runtime) -> String {
@@ -281,7 +291,7 @@ impl Module {
 
 /// Runs a program using a syntax file and the source file.
 pub fn run(source: &str) -> Result<(), String> {
-    let mut module = Module::new();
+    let mut module = Module::new_intrinsics(Arc::new(Prelude::new_intrinsics().functions));
     try!(load(source, &mut module));
     let mut runtime = runtime::Runtime::new();
     try!(runtime.run(&module));

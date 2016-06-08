@@ -91,8 +91,9 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                                     }
                                     (&None, _) | (_, &None) => {}
                                 }
-                            } else if let Some(ref f) = prelude.functions.get(
+                            } else if let Some(&f) = prelude.functions.get(
                                     nodes[parent].name().unwrap()) {
+                                let f = &prelude.list[f];
                                 if let Some(ref ty) = expr_type {
                                     if !ty.goes_with(&f.tys[j]) {
                                         return Err(nodes[i].source.wrap(
@@ -111,9 +112,8 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                         if let Some(ref ty) = nodes[decl].ty {
                             this_ty = Some(ty.clone());
                         }
-                    } else if let Some(ref f) = prelude.functions.get(
-                            nodes[i].name().unwrap()) {
-                        this_ty = Some(f.ret.clone());
+                    } else if let Some(&f) = prelude.functions.get(nodes[i].name().unwrap()) {
+                        this_ty = Some(prelude.list[f].ret.clone());
                     }
                 }
                 Kind::Assign => {

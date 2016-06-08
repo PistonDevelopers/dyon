@@ -715,8 +715,8 @@ impl Runtime {
         module: &Module
     ) -> Result<(Expect, Flow), String> {
         match call.f_index.get() {
-            FnIndex::None => {
-                intrinsics::call_standard(self, call, module)
+            FnIndex::Intrinsic(index) => {
+                intrinsics::call_standard(self, index, call, module)
             }
             FnIndex::External(f_index) => {
                 let f = &module.ext_prelude[f_index];
@@ -856,6 +856,10 @@ impl Runtime {
                         }
                     }
                 }
+            }
+            FnIndex::None => {
+                return Err(module.error(call.source_range,
+                    &format!("{}\nUnknown function `{}`", self.stack_trace(), call.name), self))
             }
         }
     }

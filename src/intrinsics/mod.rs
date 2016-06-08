@@ -6,7 +6,7 @@ use piston_meta::json;
 
 use runtime::{Expect, Flow, Runtime, Side};
 use ast;
-use prelude::{Lt, PreludeFunction};
+use prelude::{Lt, Prelude, PreludeFunction};
 
 use FnIndex;
 use Error;
@@ -17,183 +17,260 @@ use TINVOTS;
 
 mod meta;
 
-pub fn standard(f: &mut HashMap<Arc<String>, PreludeFunction>) {
-    let sarg = |f: &mut HashMap<Arc<String>, PreludeFunction>, name: &str, ty: Type, ret: Type| {
-        f.insert(Arc::new(name.into()), PreludeFunction {
+const WHY: usize = 0;
+const WHERE: usize = 1;
+const EXPLAIN_WHY: usize = 2;
+const EXPLAIN_WHERE: usize = 3;
+const PRINTLN: usize = 4;
+const PRINT: usize = 5;
+const CLONE: usize = 6;
+const DEBUG: usize = 7;
+const BACKTRACE: usize = 8;
+const SLEEP: usize = 9;
+const RANDOM: usize = 10;
+const HEAD: usize = 11;
+const TAIL: usize = 12;
+const IS_EMPTY: usize = 13;
+const READ_NUMBER: usize = 14;
+const READ_LINE: usize = 15;
+const LEN: usize = 16;
+const PUSH_REF: usize = 17;
+const PUSH: usize = 18;
+const POP: usize = 19;
+const REVERSE: usize = 20;
+const CLEAR: usize = 21;
+const SWAP: usize = 22;
+const TRIM: usize = 23;
+const TRIM_LEFT: usize = 24;
+const TRIM_RIGHT: usize = 25;
+const TO_STRING: usize = 26;
+const JSON_STRING: usize = 27;
+const TO_STRING_COLOR: usize = 28;
+const SRGB_TO_LINEAR_COLOR: usize = 29;
+const LINEAR_TO_SRGB_COLOR: usize = 30;
+const TYPEOF: usize = 31;
+const ROUND: usize = 32;
+const ABS: usize = 33;
+const FLOOR: usize = 34;
+const CEIL: usize = 35;
+const SQRT: usize = 36;
+const SIN: usize = 37;
+const ASIN: usize = 38;
+const COS: usize = 39;
+const ACOS: usize = 40;
+const TAN: usize = 41;
+const ATAN: usize = 42;
+const EXP: usize = 43;
+const LN: usize = 44;
+const LOG2: usize = 45;
+const LOG10: usize = 46;
+const LOAD: usize = 47;
+const LOAD_SOURCE_IMPORTS: usize = 48;
+const CALL: usize = 49;
+const CALL_RET: usize = 50;
+const FUNCTIONS: usize = 51;
+const NONE: usize = 52;
+const SOME: usize = 53;
+const UNWRAP: usize = 54;
+const UNWRAP_ERR: usize = 55;
+const OK: usize = 56;
+const ERR: usize = 57;
+const IS_ERR: usize = 58;
+const IS_OK: usize = 59;
+const MIN: usize = 60;
+const MAX: usize = 61;
+const X: usize = 62;
+const Y: usize = 63;
+const Z: usize = 64;
+const W: usize = 65;
+const S: usize = 66;
+const DIR_ANGLE: usize = 67;
+const LOAD_META_FILE: usize = 68;
+const LOAD_META_URL: usize = 69;
+const DOWNLOAD_URL_FILE: usize = 70;
+const SAVE_STRING_FILE: usize = 71;
+const LOAD_STRING_FILE: usize = 72;
+const JOIN_THREAD: usize = 73;
+const SAVE_DATA_FILE: usize = 74;
+const JSON_FROM_META_DATA: usize = 75;
+
+pub fn standard(f: &mut Prelude) {
+    let sarg = |f: &mut Prelude, name: &str, index: usize, ty: Type, ret: Type| {
+        f.intrinsic(Arc::new(name.into()), index, PreludeFunction {
             lts: vec![Lt::Default],
             tys: vec![ty],
             ret: ret
         });
     };
 
-    f.insert(Arc::new("why".into()), PreludeFunction {
+    f.intrinsic(Arc::new("why".into()), WHY, PreludeFunction {
         lts: vec![Lt::Default],
         tys: vec![Type::Bool],
         ret: Type::array()
     });
-    f.insert(Arc::new("where".into()), PreludeFunction {
+    f.intrinsic(Arc::new("where".into()), WHERE, PreludeFunction {
         lts: vec![Lt::Default],
         tys: vec![Type::F64],
         ret: Type::array()
     });
-    f.insert(Arc::new("explain_why".into()), PreludeFunction {
+    f.intrinsic(Arc::new("explain_why".into()), EXPLAIN_WHY, PreludeFunction {
         lts: vec![Lt::Default; 2],
         tys: vec![Type::Bool, Type::Any],
         ret: Type::Bool
     });
-    f.insert(Arc::new("explain_where".into()), PreludeFunction {
+    f.intrinsic(Arc::new("explain_where".into()), EXPLAIN_WHERE, PreludeFunction {
         lts: vec![Lt::Default; 2],
         tys: vec![Type::F64, Type::Any],
         ret: Type::F64
     });
-    sarg(f, "println", Type::Any, Type::Void);
-    sarg(f, "print", Type::Any, Type::Void);
-    sarg(f, "clone", Type::Any, Type::Any);
-    f.insert(Arc::new("debug".into()), PreludeFunction {
+    sarg(f, "println", PRINTLN, Type::Any, Type::Void);
+    sarg(f, "print", PRINT, Type::Any, Type::Void);
+    sarg(f, "clone", CLONE, Type::Any, Type::Any);
+    f.intrinsic(Arc::new("debug".into()), DEBUG, PreludeFunction {
         lts: vec![],
         tys: vec![],
         ret: Type::Void
     });
-    f.insert(Arc::new("backtrace".into()), PreludeFunction {
+    f.intrinsic(Arc::new("backtrace".into()), BACKTRACE, PreludeFunction {
         lts: vec![],
         tys: vec![],
         ret: Type::Void
     });
-    sarg(f, "sleep", Type::F64, Type::Void);
-    f.insert(Arc::new("random".into()), PreludeFunction {
+    sarg(f, "sleep", SLEEP, Type::F64, Type::Void);
+    f.intrinsic(Arc::new("random".into()), RANDOM, PreludeFunction {
         lts: vec![],
         tys: vec![],
         ret: Type::F64
     });
-    sarg(f, "head", Type::Link, Type::Any);
-    sarg(f, "tail", Type::Link, Type::Link);
-    sarg(f, "is_empty", Type::Link, Type::Bool);
-    sarg(f, "read_number", Type::Text, Type::F64);
-    f.insert(Arc::new("read_line".into()), PreludeFunction {
+    sarg(f, "head", HEAD, Type::Link, Type::Any);
+    sarg(f, "tail", TAIL, Type::Link, Type::Link);
+    sarg(f, "is_empty", IS_EMPTY, Type::Link, Type::Bool);
+    sarg(f, "read_number", READ_NUMBER, Type::Text, Type::F64);
+    f.intrinsic(Arc::new("read_line".into()), READ_LINE, PreludeFunction {
         lts: vec![],
         tys: vec![],
         ret: Type::Text
     });
-    sarg(f, "len", Type::array(), Type::F64);
-    f.insert(Arc::new("push_ref(mut,_)".into()), PreludeFunction {
+    sarg(f, "len", LEN, Type::array(), Type::F64);
+    f.intrinsic(Arc::new("push_ref(mut,_)".into()), PUSH_REF, PreludeFunction {
         lts: vec![Lt::Default, Lt::Arg(0)],
         tys: vec![Type::array(), Type::Any],
         ret: Type::Void
     });
-    f.insert(Arc::new("push(mut,_)".into()), PreludeFunction {
+    f.intrinsic(Arc::new("push(mut,_)".into()), PUSH, PreludeFunction {
         lts: vec![Lt::Default; 2],
         tys: vec![Type::array(), Type::Any],
         ret: Type::Void
     });
-    f.insert(Arc::new("pop(mut)".into()), PreludeFunction {
+    f.intrinsic(Arc::new("pop(mut)".into()), POP, PreludeFunction {
         lts: vec![Lt::Return],
         tys: vec![Type::array()],
         ret: Type::Any
     });
-    sarg(f, "reverse(mut)", Type::array(), Type::Void);
-    sarg(f, "clear(mut)", Type::array(), Type::Void);
-    f.insert(Arc::new("swap(mut,_,_)".into()), PreludeFunction {
+    sarg(f, "reverse(mut)", REVERSE, Type::array(), Type::Void);
+    sarg(f, "clear(mut)", CLEAR, Type::array(), Type::Void);
+    f.intrinsic(Arc::new("swap(mut,_,_)".into()), SWAP, PreludeFunction {
         lts: vec![Lt::Default; 3],
         tys: vec![Type::array(), Type::F64, Type::F64],
         ret: Type::Void
     });
-    sarg(f, "trim", Type::Text, Type::Text);
-    sarg(f, "trim_left", Type::Text, Type::Text);
-    sarg(f, "trim_right", Type::Text, Type::Text);
-    sarg(f, "to_string", Type::Any, Type::Text);
-    sarg(f, "json_string", Type::Text, Type::Text);
-    sarg(f, "to_string_color", Type::Vec4, Type::Text);
-    sarg(f, "srgb_to_linear_color", Type::Vec4, Type::Vec4);
-    sarg(f, "linear_to_srgb_color", Type::Vec4, Type::Vec4);
-    sarg(f, "typeof", Type::Any, Type::Text);
-    sarg(f, "round", Type::F64, Type::F64);
-    sarg(f, "abs", Type::F64, Type::F64);
-    sarg(f, "floor", Type::F64, Type::F64);
-    sarg(f, "ceil", Type::F64, Type::F64);
-    sarg(f, "sqrt", Type::F64, Type::F64);
-    sarg(f, "sin", Type::F64, Type::F64);
-    sarg(f, "asin", Type::F64, Type::F64);
-    sarg(f, "cos", Type::F64, Type::F64);
-    sarg(f, "acos", Type::F64, Type::F64);
-    sarg(f, "tan", Type::F64, Type::F64);
-    sarg(f, "atan", Type::F64, Type::F64);
-    sarg(f, "exp", Type::F64, Type::F64);
-    sarg(f, "ln", Type::F64, Type::F64);
-    sarg(f, "log2", Type::F64, Type::F64);
-    sarg(f, "log10", Type::F64, Type::F64);
-    sarg(f, "load", Type::Text, Type::result());
-    f.insert(Arc::new("load_source_imports".into()), PreludeFunction {
+    sarg(f, "trim", TRIM, Type::Text, Type::Text);
+    sarg(f, "trim_left", TRIM_LEFT, Type::Text, Type::Text);
+    sarg(f, "trim_right", TRIM_RIGHT, Type::Text, Type::Text);
+    sarg(f, "to_string", TO_STRING, Type::Any, Type::Text);
+    sarg(f, "json_string", JSON_STRING, Type::Text, Type::Text);
+    sarg(f, "to_string_color", TO_STRING_COLOR, Type::Vec4, Type::Text);
+    sarg(f, "srgb_to_linear_color", SRGB_TO_LINEAR_COLOR, Type::Vec4, Type::Vec4);
+    sarg(f, "linear_to_srgb_color", LINEAR_TO_SRGB_COLOR, Type::Vec4, Type::Vec4);
+    sarg(f, "typeof", TYPEOF, Type::Any, Type::Text);
+    sarg(f, "round", ROUND, Type::F64, Type::F64);
+    sarg(f, "abs", ABS, Type::F64, Type::F64);
+    sarg(f, "floor", FLOOR, Type::F64, Type::F64);
+    sarg(f, "ceil", CEIL, Type::F64, Type::F64);
+    sarg(f, "sqrt", SQRT, Type::F64, Type::F64);
+    sarg(f, "sin", SIN, Type::F64, Type::F64);
+    sarg(f, "asin", ASIN, Type::F64, Type::F64);
+    sarg(f, "cos", COS, Type::F64, Type::F64);
+    sarg(f, "acos", ACOS, Type::F64, Type::F64);
+    sarg(f, "tan", TAN, Type::F64, Type::F64);
+    sarg(f, "atan", ATAN, Type::F64, Type::F64);
+    sarg(f, "exp", EXP, Type::F64, Type::F64);
+    sarg(f, "ln", LN, Type::F64, Type::F64);
+    sarg(f, "log2", LOG2, Type::F64, Type::F64);
+    sarg(f, "log10", LOG10, Type::F64, Type::F64);
+    sarg(f, "load", LOAD, Type::Text, Type::result());
+    f.intrinsic(Arc::new("load_source_imports".into()), LOAD_SOURCE_IMPORTS, PreludeFunction {
         lts: vec![Lt::Default; 2],
         tys: vec![Type::Text, Type::array()],
         ret: Type::result()
     });
-    f.insert(Arc::new("call".into()), PreludeFunction {
+    f.intrinsic(Arc::new("call".into()), CALL, PreludeFunction {
         lts: vec![Lt::Default; 3],
         tys: vec![Type::Any, Type::Text, Type::array()],
         ret: Type::Void
     });
-    f.insert(Arc::new("call_ret".into()), PreludeFunction {
+    f.intrinsic(Arc::new("call_ret".into()), CALL_RET, PreludeFunction {
         lts: vec![Lt::Default; 3],
         tys: vec![Type::Any, Type::Text, Type::array()],
         ret: Type::Any
     });
-    f.insert(Arc::new("functions".into()), PreludeFunction {
+    f.intrinsic(Arc::new("functions".into()), FUNCTIONS, PreludeFunction {
         lts: vec![],
         tys: vec![],
         ret: Type::Any
     });
-    f.insert(Arc::new("none".into()), PreludeFunction {
+    f.intrinsic(Arc::new("none".into()), NONE, PreludeFunction {
         lts: vec![],
         tys: vec![],
         ret: Type::option()
     });
-    sarg(f, "some", Type::Any, Type::option());
-    sarg(f, "unwrap", Type::Any, Type::Any);
-    sarg(f, "unwrap_err", Type::Any, Type::Any);
-    sarg(f, "ok", Type::Any, Type::result());
-    sarg(f, "err", Type::Any, Type::result());
-    sarg(f, "is_err", Type::result(), Type::Bool);
-    sarg(f, "is_ok", Type::result(), Type::Bool);
-    sarg(f, "min", Type::Array(Box::new(Type::F64)), Type::F64);
-    sarg(f, "max", Type::Array(Box::new(Type::F64)), Type::F64);
-    sarg(f, "x", Type::Vec4, Type::F64);
-    sarg(f, "y", Type::Vec4, Type::F64);
-    sarg(f, "z", Type::Vec4, Type::F64);
-    sarg(f, "w", Type::Vec4, Type::F64);
-    f.insert(Arc::new("s".into()), PreludeFunction {
+    sarg(f, "some", SOME, Type::Any, Type::option());
+    sarg(f, "unwrap", UNWRAP, Type::Any, Type::Any);
+    sarg(f, "unwrap_err", UNWRAP_ERR, Type::Any, Type::Any);
+    sarg(f, "ok", OK, Type::Any, Type::result());
+    sarg(f, "err", ERR, Type::Any, Type::result());
+    sarg(f, "is_err", IS_ERR, Type::result(), Type::Bool);
+    sarg(f, "is_ok", IS_OK, Type::result(), Type::Bool);
+    sarg(f, "min", MIN, Type::Array(Box::new(Type::F64)), Type::F64);
+    sarg(f, "max", MAX, Type::Array(Box::new(Type::F64)), Type::F64);
+    sarg(f, "x", X, Type::Vec4, Type::F64);
+    sarg(f, "y", Y, Type::Vec4, Type::F64);
+    sarg(f, "z", Z, Type::Vec4, Type::F64);
+    sarg(f, "w", W, Type::Vec4, Type::F64);
+    f.intrinsic(Arc::new("s".into()), S, PreludeFunction {
         lts: vec![Lt::Default; 2],
         tys: vec![Type::Vec4, Type::F64],
         ret: Type::F64
     });
-    sarg(f, "dir_angle", Type::F64, Type::Vec4);
-    f.insert(Arc::new("load_meta_file".into()), PreludeFunction {
+    sarg(f, "dir_angle", DIR_ANGLE, Type::F64, Type::Vec4);
+    f.intrinsic(Arc::new("load_meta_file".into()), LOAD_META_FILE, PreludeFunction {
         lts: vec![Lt::Default; 2],
         tys: vec![Type::Text; 2],
         ret: Type::Result(Box::new(Type::Array(Box::new(Type::array()))))
     });
-    f.insert(Arc::new("load_meta_url".into()), PreludeFunction {
+    f.intrinsic(Arc::new("load_meta_url".into()), LOAD_META_URL, PreludeFunction {
         lts: vec![Lt::Default; 2],
         tys: vec![Type::Text; 2],
         ret: Type::Result(Box::new(Type::array()))
     });
-    f.insert(Arc::new("download_url_file".into()), PreludeFunction {
+    f.intrinsic(Arc::new("download_url_file".into()), DOWNLOAD_URL_FILE, PreludeFunction {
         lts: vec![Lt::Default; 2],
         tys: vec![Type::Text; 2],
         ret: Type::Result(Box::new(Type::Text))
     });
-    f.insert(Arc::new("save_string_file".into()), PreludeFunction {
+    f.intrinsic(Arc::new("save_string_file".into()), SAVE_STRING_FILE, PreludeFunction {
         lts: vec![Lt::Default; 2],
         tys: vec![Type::Text; 2],
         ret: Type::Result(Box::new(Type::Text))
     });
-    sarg(f, "load_string_file", Type::Text, Type::Result(Box::new(Type::Text)));
-    sarg(f, "join_thread", Type::thread(), Type::Result(Box::new(Type::Any)));
-    f.insert(Arc::new("save_data_file".into()), PreludeFunction {
+    sarg(f, "load_string_file", LOAD_STRING_FILE, Type::Text, Type::Result(Box::new(Type::Text)));
+    sarg(f, "join_thread", JOIN_THREAD, Type::thread(), Type::Result(Box::new(Type::Any)));
+    f.intrinsic(Arc::new("save_data_file".into()), SAVE_DATA_FILE, PreludeFunction {
         lts: vec![Lt::Default; 2],
         tys: vec![Type::Any, Type::Text],
         ret: Type::Result(Box::new(Type::Text))
     });
-    sarg(f, "json_from_meta_data", Type::Array(Box::new(Type::array())), Type::Text);
+    sarg(f, "json_from_meta_data", JSON_FROM_META_DATA, Type::Array(Box::new(Type::array())), Type::Text);
 }
 
 enum EscapeString {
@@ -332,6 +409,7 @@ fn print_variable(rt: &Runtime, v: &Variable, escape_string: EscapeString) {
 
 pub fn call_standard(
     rt: &mut Runtime,
+    index: usize,
     call: &ast::Call,
     module: &Module
 ) -> Result<(Expect, Flow), String> {
@@ -361,12 +439,12 @@ pub fn call_standard(
         rt.pop_fn(call.name.clone());
         Ok(Expect::Something)
     };
-    let expect = match &**call.name {
-        "x" => try!(vec4_comp(rt, module, call, 0)),
-        "y" => try!(vec4_comp(rt, module, call, 1)),
-        "z" => try!(vec4_comp(rt, module, call, 2)),
-        "w" => try!(vec4_comp(rt, module, call, 3)),
-        "s" => {
+    let expect = match index {
+        X => try!(vec4_comp(rt, module, call, 0)),
+        Y => try!(vec4_comp(rt, module, call, 1)),
+        Z => try!(vec4_comp(rt, module, call, 2)),
+        W => try!(vec4_comp(rt, module, call, 3)),
+        S => {
             rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let ind = rt.stack.pop().expect(TINVOTS);
             let ind = match rt.resolve(&ind) {
@@ -393,7 +471,7 @@ pub fn call_standard(
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
-        "clone" => {
+        CLONE => {
             rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let v = rt.stack.pop().expect(TINVOTS);
             let v = rt.resolve(&v).deep_clone(&rt.stack);
@@ -401,7 +479,7 @@ pub fn call_standard(
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
-        "why" => {
+        WHY => {
             rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let v = rt.stack.pop().expect(TINVOTS);
             let v = Variable::Array(Arc::new(match rt.resolve(&v) {
@@ -427,7 +505,7 @@ pub fn call_standard(
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
-        "where" => {
+        WHERE => {
             rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let v = rt.stack.pop().expect(TINVOTS);
             let v = Variable::Array(Arc::new(match rt.resolve(&v) {
@@ -454,7 +532,7 @@ pub fn call_standard(
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
-        "explain_why" => {
+        EXPLAIN_WHY => {
             rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let why = rt.stack.pop().expect(TINVOTS);
             let val = rt.stack.pop().expect(TINVOTS);
@@ -476,7 +554,7 @@ pub fn call_standard(
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
-        "explain_where" => {
+        EXPLAIN_WHERE => {
             rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let wh = rt.stack.pop().expect(TINVOTS);
             let val = rt.stack.pop().expect(TINVOTS);
@@ -498,7 +576,7 @@ pub fn call_standard(
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
-        "println" => {
+        PRINTLN => {
             rt.push_fn(call.name.clone(), 0, None, st, lc, cu);
             let x = rt.stack.pop().expect(TINVOTS);
             print_variable(rt, &x, EscapeString::None);
@@ -506,29 +584,29 @@ pub fn call_standard(
             rt.pop_fn(call.name.clone());
             Expect::Nothing
         }
-        "print" => {
+        PRINT => {
             rt.push_fn(call.name.clone(), 0, None, st, lc, cu);
             let x = rt.stack.pop().expect(TINVOTS);
             print_variable(rt, &x, EscapeString::None);
             rt.pop_fn(call.name.clone());
             Expect::Nothing
         }
-        "sqrt" => try!(rt.unary_f64(call, module, |a| a.sqrt())),
-        "sin" => try!(rt.unary_f64(call, module, |a| a.sin())),
-        "asin" => try!(rt.unary_f64(call, module, |a| a.asin())),
-        "cos" => try!(rt.unary_f64(call, module, |a| a.cos())),
-        "acos" => try!(rt.unary_f64(call, module, |a| a.acos())),
-        "tan" => try!(rt.unary_f64(call, module, |a| a.tan())),
-        "atan" => try!(rt.unary_f64(call, module, |a| a.atan())),
-        "exp" => try!(rt.unary_f64(call, module, |a| a.exp())),
-        "ln" => try!(rt.unary_f64(call, module, |a| a.ln())),
-        "log2" => try!(rt.unary_f64(call, module, |a| a.log2())),
-        "log10" => try!(rt.unary_f64(call, module, |a| a.log10())),
-        "round" => try!(rt.unary_f64(call, module, |a| a.round())),
-        "abs" => try!(rt.unary_f64(call, module, |a| a.abs())),
-        "floor" => try!(rt.unary_f64(call, module, |a| a.floor())),
-        "ceil" => try!(rt.unary_f64(call, module, |a| a.ceil())),
-        "sleep" => {
+        SQRT => try!(rt.unary_f64(call, module, |a| a.sqrt())),
+        SIN => try!(rt.unary_f64(call, module, |a| a.sin())),
+        ASIN => try!(rt.unary_f64(call, module, |a| a.asin())),
+        COS => try!(rt.unary_f64(call, module, |a| a.cos())),
+        ACOS => try!(rt.unary_f64(call, module, |a| a.acos())),
+        TAN => try!(rt.unary_f64(call, module, |a| a.tan())),
+        ATAN => try!(rt.unary_f64(call, module, |a| a.atan())),
+        EXP => try!(rt.unary_f64(call, module, |a| a.exp())),
+        LN => try!(rt.unary_f64(call, module, |a| a.ln())),
+        LOG2 => try!(rt.unary_f64(call, module, |a| a.log2())),
+        LOG10 => try!(rt.unary_f64(call, module, |a| a.log10())),
+        ROUND => try!(rt.unary_f64(call, module, |a| a.round())),
+        ABS => try!(rt.unary_f64(call, module, |a| a.abs())),
+        FLOOR => try!(rt.unary_f64(call, module, |a| a.floor())),
+        CEIL => try!(rt.unary_f64(call, module, |a| a.ceil())),
+        SLEEP => {
             use std::thread::sleep;
             use std::time::Duration;
 
@@ -545,7 +623,7 @@ pub fn call_standard(
             rt.pop_fn(call.name.clone());
             Expect::Nothing
         }
-        "head" => {
+        HEAD => {
             rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let v = rt.stack.pop().expect(TINVOTS);
             let v = Variable::Option(match rt.resolve(&v) {
@@ -557,7 +635,7 @@ pub fn call_standard(
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
-        "tail" => {
+        TAIL => {
             rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let v = rt.stack.pop().expect(TINVOTS);
             let v = Variable::Link(Box::new(match rt.resolve(&v) {
@@ -569,7 +647,7 @@ pub fn call_standard(
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
-        "is_empty" => {
+        IS_EMPTY => {
             rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let v = rt.stack.pop().expect(TINVOTS);
             let v = Variable::bool(match rt.resolve(&v) {
@@ -581,14 +659,14 @@ pub fn call_standard(
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
-        "random" => {
+        RANDOM => {
             rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let v = Variable::f64(rt.rng.gen());
             rt.stack.push(v);
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
-        "len" => {
+        LEN => {
             rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let v = match rt.stack.pop() {
                 Some(v) => v,
@@ -607,7 +685,7 @@ pub fn call_standard(
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
-        "push_ref(mut,_)" => {
+        PUSH_REF => {
             rt.push_fn(call.name.clone(), 0, None, st, lc, cu);
             let item = rt.stack.pop().expect(TINVOTS);
             let v = rt.stack.pop().expect(TINVOTS);
@@ -632,7 +710,7 @@ pub fn call_standard(
             rt.pop_fn(call.name.clone());
             Expect::Nothing
         }
-        "push(mut,_)" => {
+        PUSH => {
             rt.push_fn(call.name.clone(), 0, None, st, lc, cu);
             let item = rt.stack.pop().expect(TINVOTS);
             let item = rt.resolve(&item).deep_clone(&rt.stack);
@@ -658,7 +736,7 @@ pub fn call_standard(
             rt.pop_fn(call.name.clone());
             Expect::Nothing
         }
-        "pop(mut)" => {
+        POP => {
             rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let arr = rt.stack.pop().expect(TINVOTS);
             let mut v: Option<Variable> = None;
@@ -690,7 +768,7 @@ pub fn call_standard(
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
-        "reverse(mut)" => {
+        REVERSE => {
             rt.push_fn(call.name.clone(), 0, None, st, lc, cu);
             let v = rt.stack.pop().expect(TINVOTS);
             if let Variable::Ref(ind) = v {
@@ -713,7 +791,7 @@ pub fn call_standard(
             rt.pop_fn(call.name.clone());
             Expect::Nothing
         }
-        "clear(mut)" => {
+        CLEAR => {
             rt.push_fn(call.name.clone(), 0, None, st, lc, cu);
             let v = rt.stack.pop().expect(TINVOTS);
             if let Variable::Ref(ind) = v {
@@ -736,7 +814,7 @@ pub fn call_standard(
             rt.pop_fn(call.name.clone());
             Expect::Nothing
         }
-        "swap(mut,_,_)" => {
+        SWAP => {
             rt.push_fn(call.name.clone(), 0, None, st, lc, cu);
             let j = rt.stack.pop().expect(TINVOTS);
             let i = rt.stack.pop().expect(TINVOTS);
@@ -771,7 +849,7 @@ pub fn call_standard(
             rt.pop_fn(call.name.clone());
             Expect::Nothing
         }
-        "read_line" => {
+        READ_LINE => {
             use std::io::{self, Write};
 
             rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
@@ -791,7 +869,7 @@ pub fn call_standard(
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
-        "read_number" => {
+        READ_NUMBER => {
             use std::io::{self, Write};
 
             rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
@@ -829,7 +907,7 @@ pub fn call_standard(
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
-        "trim" => {
+        TRIM => {
             rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let v = rt.stack.pop().expect(TINVOTS);
             let v = match rt.resolve(&v) {
@@ -841,7 +919,7 @@ pub fn call_standard(
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
-        "trim_left" => {
+        TRIM_LEFT => {
             rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let v = rt.stack.pop().expect(TINVOTS);
             let v = match rt.resolve(&v) {
@@ -853,7 +931,7 @@ pub fn call_standard(
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
-        "trim_right" => {
+        TRIM_RIGHT => {
             rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let v = rt.stack.pop().expect(TINVOTS);
             let mut v = match rt.resolve(&v) {
@@ -871,7 +949,7 @@ pub fn call_standard(
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
-        "to_string" => {
+        TO_STRING => {
             rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let v = rt.stack.pop().expect(TINVOTS);
             let mut buf: Vec<u8> = vec![];
@@ -881,7 +959,7 @@ pub fn call_standard(
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
-        "json_string" => {
+        JSON_STRING => {
             rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let v = rt.stack.pop().expect(TINVOTS);
             let mut buf: Vec<u8> = vec![];
@@ -891,7 +969,7 @@ pub fn call_standard(
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
-        "to_string_color" => {
+        TO_STRING_COLOR => {
             rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let v = rt.stack.pop().expect(TINVOTS);
             let v = match rt.resolve(&v) {
@@ -924,7 +1002,7 @@ pub fn call_standard(
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
-        "srgb_to_linear_color" => {
+        SRGB_TO_LINEAR_COLOR => {
             rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let v = rt.stack.pop().expect(TINVOTS);
             let v = match rt.resolve(&v) {
@@ -944,7 +1022,7 @@ pub fn call_standard(
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
-        "linear_to_srgb_color" => {
+        LINEAR_TO_SRGB_COLOR => {
             rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let v = rt.stack.pop().expect(TINVOTS);
             let v = match rt.resolve(&v) {
@@ -964,7 +1042,7 @@ pub fn call_standard(
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
-        "typeof" => {
+        TYPEOF => {
             rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let v = rt.stack.pop().expect(TINVOTS);
             let v = match rt.resolve(&v) {
@@ -987,7 +1065,7 @@ pub fn call_standard(
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
-        "debug" => {
+        DEBUG => {
             rt.push_fn(call.name.clone(), 0, None, st, lc, cu);
             println!("Stack {:#?}", rt.stack);
             println!("Locals {:#?}", rt.local_stack);
@@ -995,20 +1073,20 @@ pub fn call_standard(
             rt.pop_fn(call.name.clone());
             Expect::Nothing
         }
-        "backtrace" => {
+        BACKTRACE => {
             rt.push_fn(call.name.clone(), 0, None, st, lc, cu);
             println!("{:#?}", rt.call_stack);
             rt.pop_fn(call.name.clone());
             Expect::Nothing
         }
-        "load" => {
+        LOAD => {
             use load;
 
             rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let v = rt.stack.pop().expect(TINVOTS);
             let v = match rt.resolve(&v) {
                 &Variable::Text(ref text) => {
-                    let mut m = Module::new();
+                    let mut m = Module::new_intrinsics(module.intrinsics.clone());
                     for f in &module.ext_prelude {
                         m.add(f.name.clone(), f.f, f.p.clone());
                     }
@@ -1032,13 +1110,13 @@ pub fn call_standard(
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
-        "load_source_imports" => {
+        LOAD_SOURCE_IMPORTS => {
             use load;
 
             rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let modules = rt.stack.pop().expect(TINVOTS);
             let source = rt.stack.pop().expect(TINVOTS);
-            let mut new_module = Module::new();
+            let mut new_module = Module::new_intrinsics(module.intrinsics.clone());
             for f in &module.ext_prelude {
                 new_module.add(f.name.clone(), f.f, f.p.clone());
             }
@@ -1091,7 +1169,7 @@ pub fn call_standard(
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
-        "call" => {
+        CALL => {
             // Use the source from calling function.
             let source = module.functions[rt.call_stack.last().unwrap().index].source.clone();
             rt.push_fn(call.name.clone(), 0, None, st, lc, cu);
@@ -1132,7 +1210,8 @@ pub fn call_standard(
                                         f.args.len(), args.len()), rt))
                             }
                         }
-                        FnIndex::None | FnIndex::External(_) => return Err(module.error(
+                        FnIndex::Intrinsic(_) | FnIndex::None | FnIndex::External(_) =>
+                            return Err(module.error(
                                     call.args[1].source_range(),
                                     &format!(
                                         "{}\nCould not find function `{}`",
@@ -1159,7 +1238,7 @@ pub fn call_standard(
             rt.pop_fn(call.name.clone());
             Expect::Nothing
         }
-        "call_ret" => {
+        CALL_RET => {
             // Use the source from calling function.
             let source = module.functions[rt.call_stack.last().unwrap().index].source.clone();
             rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
@@ -1200,7 +1279,7 @@ pub fn call_standard(
                                         f.args.len(), args.len()), rt))
                             }
                         }
-                        FnIndex::None | FnIndex::External(_) =>
+                        FnIndex::Intrinsic(_) | FnIndex::None | FnIndex::External(_) =>
                             return Err(module.error(
                                 call.args[1].source_range(),
                                 &format!(
@@ -1227,7 +1306,7 @@ pub fn call_standard(
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
-        "functions" => {
+        FUNCTIONS => {
             // List available functions in scope.
             rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let mut functions = vec![];
@@ -1241,9 +1320,10 @@ pub fn call_standard(
             let intrinsic: Arc<String> = Arc::new("intrinsic".into());
             let external: Arc<String> = Arc::new("external".into());
             let loaded: Arc<String> = Arc::new("loaded".into());
-            let mut intrinsics = HashMap::new();
+            let mut intrinsics = Prelude::new();
             standard(&mut intrinsics);
-            for (f_name, f) in &intrinsics {
+            for (f_name, &f) in &intrinsics.functions {
+                let f = &intrinsics.list[f];
                 let mut obj = HashMap::new();
                 obj.insert(name.clone(), Variable::Text(f_name.clone()));
                 obj.insert(returns.clone(), Variable::Text(Arc::new(f.ret.description())));
@@ -1343,11 +1423,11 @@ pub fn call_standard(
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
-        "none" => {
+        NONE => {
             rt.stack.push(Variable::Option(None));
             Expect::Something
         }
-        "some" => {
+        SOME => {
             rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let v = rt.stack.pop().expect(TINVOTS);
             let v = rt.resolve(&v).deep_clone(&rt.stack);
@@ -1355,7 +1435,7 @@ pub fn call_standard(
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
-        "ok" => {
+        OK => {
             rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let v = rt.stack.pop().expect(TINVOTS);
             let v = rt.resolve(&v).deep_clone(&rt.stack);
@@ -1363,7 +1443,7 @@ pub fn call_standard(
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
-        "err" => {
+        ERR => {
             rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let v = rt.stack.pop().expect(TINVOTS);
             let v = rt.resolve(&v).deep_clone(&rt.stack);
@@ -1372,7 +1452,7 @@ pub fn call_standard(
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
-        "is_err" => {
+        IS_ERR => {
             rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let v = rt.stack.pop().expect(TINVOTS);
             let v = match rt.resolve(&v) {
@@ -1387,7 +1467,7 @@ pub fn call_standard(
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
-        "is_ok" => {
+        IS_OK => {
             rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let v = rt.stack.pop().expect(TINVOTS);
             let v = match rt.resolve(&v) {
@@ -1402,7 +1482,7 @@ pub fn call_standard(
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
-        "min" => {
+        MIN => {
             rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let v = rt.stack.pop().expect(TINVOTS);
             let v = match rt.resolve(&v) {
@@ -1428,7 +1508,7 @@ pub fn call_standard(
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
-        "max" => {
+        MAX => {
             rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let v = rt.stack.pop().expect(TINVOTS);
             let v = match rt.resolve(&v) {
@@ -1454,7 +1534,7 @@ pub fn call_standard(
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
-        "unwrap" => {
+        UNWRAP => {
             // Return value does not depend on lifetime of argument since
             // `ok(x)` and `some(x)` perform a deep clone.
             rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
@@ -1492,7 +1572,7 @@ pub fn call_standard(
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
-        "unwrap_err" => {
+        UNWRAP_ERR => {
             rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let v = rt.stack.pop().expect(TINVOTS);
             let v = match rt.resolve(&v) {
@@ -1506,7 +1586,7 @@ pub fn call_standard(
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
-        "dir_angle" => {
+        DIR_ANGLE => {
             rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let v = rt.stack.pop().expect(TINVOTS);
             let v = match rt.resolve(&v) {
@@ -1520,7 +1600,7 @@ pub fn call_standard(
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
-        "load_meta_file" => {
+        LOAD_META_FILE => {
             rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let file = rt.stack.pop().expect(TINVOTS);
             let meta = rt.stack.pop().expect(TINVOTS);
@@ -1545,7 +1625,7 @@ pub fn call_standard(
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
-        "load_meta_url" => {
+        LOAD_META_URL => {
             rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let url = rt.stack.pop().expect(TINVOTS);
             let meta = rt.stack.pop().expect(TINVOTS);
@@ -1570,7 +1650,7 @@ pub fn call_standard(
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
-        "download_url_file" => {
+        DOWNLOAD_URL_FILE => {
             rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
             let file = rt.stack.pop().expect(TINVOTS);
             let url = rt.stack.pop().expect(TINVOTS);
@@ -1596,7 +1676,7 @@ pub fn call_standard(
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
-        "save_string_file" => {
+        SAVE_STRING_FILE => {
             use std::fs::File;
             use std::io::Write;
             use std::error::Error as StdError;
@@ -1633,7 +1713,7 @@ pub fn call_standard(
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
-        "load_string_file" => {
+        LOAD_STRING_FILE => {
             use std::fs::File;
             use std::io::Read;
             use std::error::Error as StdError;
@@ -1669,7 +1749,7 @@ pub fn call_standard(
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
-        "join_thread" => {
+        JOIN_THREAD => {
             use Thread;
 
             rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
@@ -1704,7 +1784,7 @@ pub fn call_standard(
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
-        "save_data_file" => {
+        SAVE_DATA_FILE => {
             use std::error::Error;
             use std::fs::File;
 
@@ -1740,7 +1820,7 @@ pub fn call_standard(
             rt.pop_fn(call.name.clone());
             Expect::Something
         }
-        "json_from_meta_data" => {
+        JSON_FROM_META_DATA => {
             use std::error::Error;
 
             rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
