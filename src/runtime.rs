@@ -357,8 +357,7 @@ impl Runtime {
             Block(ref block) => self.block(block, module),
             Return(ref item, ref ret) => {
                 // Assign return value and then break the flow.
-                let _flow = try!(self.assign_specific(ast::AssignOp::Set,
-                    &item, ret, module));
+                let _flow = try!(self.assign(ast::AssignOp::Set, &item, ret, module));
                 Ok((Expect::Something, Flow::Return))
             }
             ReturnVoid(_) => {
@@ -378,7 +377,7 @@ impl Runtime {
             BinOp(ref binop) => Ok((Expect::Something,
                                     try!(self.binop(binop, side, module)))),
             Assign(ref assign) => Ok((Expect::Nothing,
-                                      try!(self.assign(assign, module)))),
+                                      try!(self.assign(assign.op, &assign.left, &assign.right, module)))),
             Number(ref num) => {
                 self.number(num);
                 Ok((Expect::Something, Flow::Continue))
@@ -1005,16 +1004,7 @@ impl Runtime {
         Ok(Flow::Continue)
     }
 
-    #[inline(always)]
     fn assign(
-        &mut self,
-        assign: &ast::Assign,
-        module: &Module
-    ) -> Result<Flow, String> {
-        self.assign_specific(assign.op, &assign.left, &assign.right, module)
-    }
-
-    fn assign_specific(
         &mut self,
         op: ast::AssignOp,
         left: &ast::Expression,
@@ -1024,8 +1014,410 @@ impl Runtime {
         use ast::AssignOp::*;
         use ast::Expression;
 
-        if op == Assign {
-            match *left {
+        if op != Assign {
+            // Evaluate right side before left because the left leaves
+            // an raw pointer on the stack which might point to wrong place
+            // if there are side effects of the right side affecting it.
+            match try!(self.expression(right, Side::Right, module)) {
+                (Expect::Something, Flow::Continue) => {}
+                (_, Flow::Return) => { return Ok(Flow::Return); }
+                _ => return Err(module.error(right.source_range(),
+                        &format!("{}\nExpected something from the right side",
+                            self.stack_trace()), self))
+            };
+            match try!(self.expression(left, Side::LeftInsert(false), module)) {
+                (Expect::Something, Flow::Continue) => {}
+                (_, Flow::Return) => { return Ok(Flow::Return); }
+                _ => return Err(module.error(left.source_range(),
+                        &format!("{}\nExpected something from the left side",
+                            self.stack_trace()), self))
+            };
+            if let (Some(a), Some(b)) = (self.stack.pop(), self.stack.pop()) {
+                let mut r = match a {
+                    Variable::UnsafeRef(mut r) => {
+                        // If reference, use a shallow clone to type check,
+                        // without affecting the original object.
+                        unsafe {
+                            if let Variable::Ref(ind) = *r.0 {
+                                *r.0 = self.stack[ind].clone()
+                            }
+                        }
+                        r
+                    }
+                    Variable::Ref(ind) => {
+                        UnsafeRef(&mut self.stack[ind] as *mut Variable)
+                    }
+                    x => panic!("Expected reference, found `{}`", self.typeof_var(&x))
+                };
+
+                match *self.resolve(&b) {
+                    Variable::F64(b, ref sec) => {
+                        unsafe {
+                            match *r.0 {
+                                Variable::F64(ref mut n, ref mut n_sec) => {
+                                    match op {
+                                        Set => *n = b,
+                                        Add => *n += b,
+                                        Sub => *n -= b,
+                                        Mul => *n *= b,
+                                        Div => *n /= b,
+                                        Rem => *n %= b,
+                                        Pow => *n = n.powf(b),
+                                        Assign => {}
+                                    };
+                                    *n_sec = sec.clone()
+                                }
+                                Variable::Return => {
+                                    if let Set = op {
+                                        *r.0 = Variable::F64(b, sec.clone())
+                                    } else {
+                                        return Err(module.error(
+                                            left.source_range(),
+                                            &format!("{}\nReturn has no value",
+                                                self.stack_trace()), self))
+                                    }
+                                }
+                                Variable::Link(ref mut n) => {
+                                    if let Add = op {
+                                        try!(n.push(&Variable::f64(b)));
+                                    } else {
+                                        return Err(module.error(
+                                            left.source_range(),
+                                            &format!("{}\nCan not use this assignment \
+                                            operator with `link` and `number`",
+                                                self.stack_trace()), self));
+                                    }
+                                }
+                                _ => return Err(module.error(
+                                        left.source_range(),
+                                        &format!("{}\nExpected assigning to a number",
+                                            self.stack_trace()), self))
+                            };
+                        }
+                    }
+                    Variable::Vec4(b) => {
+                        unsafe {
+                            match *r.0 {
+                                Variable::Vec4(ref mut n) => {
+                                    match op {
+                                        Set => *n = b,
+                                        Add => *n = [n[0] + b[0], n[1] + b[1],
+                                                     n[2] + b[2], n[3] + b[3]],
+                                        Sub => *n = [n[0] - b[0], n[1] - b[1],
+                                                     n[2] - b[2], n[3] - b[3]],
+                                        Mul => *n = [n[0] * b[0], n[1] * b[1],
+                                                     n[2] * b[2], n[3] * b[3]],
+                                        Div => *n = [n[0] / b[0], n[1] / b[1],
+                                                     n[2] / b[2], n[3] / b[3]],
+                                        Rem => *n = [n[0] % b[0], n[1] % b[1],
+                                                     n[2] % b[2], n[3] % b[3]],
+                                        Pow => *n = [n[0].powf(b[0]), n[1].powf(b[1]),
+                                                     n[2].powf(b[2]), n[3].powf(b[3])],
+                                        Assign => {}
+                                    }
+                                }
+                                Variable::Return => {
+                                    if let Set = op {
+                                        *r.0 = Variable::Vec4(b)
+                                    } else {
+                                        return Err(module.error(
+                                            left.source_range(),
+                                            &format!("{}\nReturn has no value",
+                                                self.stack_trace()), self))
+                                    }
+                                }
+                                _ => return Err(module.error(
+                                        left.source_range(),
+                                        &format!("{}\nExpected assigning to a vec4",
+                                            self.stack_trace()), self))
+                            };
+                        }
+                    }
+                    Variable::Bool(b, ref sec) => {
+                        unsafe {
+                            match *r.0 {
+                                Variable::Bool(ref mut n, ref mut n_sec) => {
+                                    match op {
+                                        Set => *n = b,
+                                        _ => unimplemented!()
+                                    };
+                                    *n_sec = sec.clone();
+                                }
+                                Variable::Return => {
+                                    if let Set = op {
+                                        *r.0 = Variable::Bool(b, sec.clone())
+                                    } else {
+                                        return Err(module.error(
+                                            left.source_range(),
+                                            &format!("{}\nReturn has no value",
+                                                self.stack_trace()), self))
+                                    }
+                                }
+                                Variable::Link(ref mut n) => {
+                                    if let Add = op {
+                                        try!(n.push(&Variable::bool(b)));
+                                    } else {
+                                        return Err(module.error(
+                                            left.source_range(),
+                                            &format!("{}\nCan not use this assignment \
+                                            operator with `link` and `bool`",
+                                                self.stack_trace()), self));
+                                    }
+                                }
+                                _ => return Err(module.error(
+                                        left.source_range(),
+                                        &format!("{}\nExpected assigning to a bool",
+                                            self.stack_trace()), self))
+                            };
+                        }
+                    }
+                    Variable::Text(ref b) => {
+                        unsafe {
+                            match *r.0 {
+                                Variable::Text(ref mut n) => {
+                                    match op {
+                                        Set => *n = b.clone(),
+                                        Add => Arc::make_mut(n).push_str(b),
+                                        _ => unimplemented!()
+                                    }
+                                }
+                                Variable::Return => {
+                                    if let Set = op {
+                                        *r.0 = Variable::Text(b.clone())
+                                    } else {
+                                        return Err(module.error(
+                                            left.source_range(),
+                                            &format!("{}\nReturn has no value",
+                                                self.stack_trace()), self))
+                                    }
+                                }
+                                Variable::Link(ref mut n) => {
+                                    if let Add = op {
+                                        try!(n.push(&Variable::Text(b.clone())));
+                                    } else {
+                                        return Err(module.error(
+                                            left.source_range(),
+                                            &format!("{}\nCan not use this assignment \
+                                            operator with `link` and `text`",
+                                                self.stack_trace()), self));
+                                    }
+                                }
+                                _ => return Err(module.error(
+                                    left.source_range(),
+                                    &format!("{}\nExpected assigning to text",
+                                        self.stack_trace()), self))
+                            }
+                        }
+                    }
+                    Variable::Object(ref b) => {
+                        unsafe {
+                            match *r.0 {
+                                Variable::Object(ref mut n) => {
+                                    if let Set = op {
+                                        // Check address to avoid unsafe
+                                        // reading and writing to same memory.
+                                        let n_addr = n as *const _ as usize;
+                                        let b_addr = b as *const _ as usize;
+                                        if n_addr != b_addr {
+                                            *r.0 = Variable::Object(b.clone())
+                                        }
+                                        // *n = obj.clone()
+                                    } else {
+                                        unimplemented!()
+                                    }
+                                }
+                                Variable::Return => {
+                                    if let Set = op {
+                                        *r.0 = Variable::Object(b.clone())
+                                    } else {
+                                        return Err(module.error(
+                                            left.source_range(),
+                                            &format!("{}\nReturn has no value",
+                                                self.stack_trace()), self))
+                                    }
+                                }
+                                _ => return Err(module.error(
+                                    left.source_range(),
+                                    &format!("{}\nExpected assigning to object",
+                                        self.stack_trace()), self))
+                            }
+                        }
+                    }
+                    Variable::Array(ref b) => {
+                        unsafe {
+                            match *r.0 {
+                                Variable::Array(ref mut n) => {
+                                    if let Set = op {
+                                        // Check address to avoid unsafe
+                                        // reading and writing to same memory.
+                                        let n_addr = n as *const _ as usize;
+                                        let b_addr = b as *const _ as usize;
+                                        if n_addr != b_addr {
+                                            *r.0 = Variable::Array(b.clone())
+                                        }
+                                        // *n = arr.clone();
+                                    } else {
+                                        unimplemented!()
+                                    }
+                                }
+                                Variable::Return => {
+                                    if let Set = op {
+                                        *r.0 = Variable::Array(b.clone())
+                                    } else {
+                                        return Err(module.error(
+                                            left.source_range(),
+                                            &format!("{}\nReturn has no value",
+                                                self.stack_trace()), self))
+                                    }
+                                }
+                                _ => return Err(module.error(
+                                    left.source_range(),
+                                    &format!("{}\nExpected assigning to array",
+                                        self.stack_trace()), self))
+                            }
+                        }
+                    }
+                    Variable::Link(ref b) => {
+                        unsafe {
+                            match *r.0 {
+                                Variable::Link(ref mut n) => {
+                                    match op {
+                                        Set => *n = b.clone(),
+                                        Add => **n = n.add(b),
+                                        Sub => **n = b.add(n),
+                                        _ => unimplemented!()
+                                    }
+                                }
+                                Variable::Return => {
+                                    if let Set = op {
+                                        *r.0 = Variable::Link(b.clone())
+                                    } else {
+                                        return Err(module.error(
+                                            left.source_range(),
+                                            &format!("{}\nReturn has no value",
+                                                self.stack_trace()), self))
+                                    }
+                                }
+                                _ => return Err(module.error(
+                                    left.source_range(),
+                                    &format!("{}\nExpected assigning to link",
+                                        self.stack_trace()), self))
+                            }
+                        }
+                    }
+                    Variable::Option(ref b) => {
+                        unsafe {
+                            match *r.0 {
+                                Variable::Option(ref mut n) => {
+                                    if let Set = op {
+                                        // Check address to avoid unsafe
+                                        // reading and writing to same memory.
+                                        let n_addr = n as *const _ as usize;
+                                        let b_addr = b as *const _ as usize;
+                                        if n_addr != b_addr {
+                                            *r.0 = Variable::Option(b.clone())
+                                        }
+                                    } else {
+                                        unimplemented!()
+                                    }
+                                }
+                                Variable::Return => {
+                                    if let Set = op {
+                                        *r.0 = Variable::Option(b.clone())
+                                    } else {
+                                        return Err(module.error(
+                                            left.source_range(),
+                                            &format!("{}\nReturn has no value",
+                                                self.stack_trace()), self))
+                                    }
+                                }
+                                _ => return Err(module.error(
+                                    left.source_range(),
+                                    &format!("{}\nExpected assigning to option",
+                                        self.stack_trace()), self))
+                            }
+                        }
+                    }
+                    Variable::Result(ref b) => {
+                        unsafe {
+                            match *r.0 {
+                                Variable::Result(ref mut n) => {
+                                    if let Set = op {
+                                        // Check address to avoid unsafe
+                                        // reading and writing to same memory.
+                                        let n_addr = n as *const _ as usize;
+                                        let b_addr = b as *const _ as usize;
+                                        if n_addr != b_addr {
+                                            *r.0 = Variable::Result(b.clone())
+                                        }
+                                    } else {
+                                        unimplemented!()
+                                    }
+                                }
+                                Variable::Return => {
+                                    if let Set = op {
+                                        *r.0 = Variable::Result(b.clone())
+                                    } else {
+                                        return Err(module.error(
+                                            left.source_range(),
+                                            &format!("{}\nReturn has no value",
+                                                self.stack_trace()), self))
+                                    }
+                                }
+                                _ => return Err(module.error(
+                                    left.source_range(),
+                                    &format!("{}\nExpected assigning to result",
+                                        self.stack_trace()), self))
+                            }
+                        }
+                    }
+                    Variable::RustObject(ref b) => {
+                        unsafe {
+                            match *r.0 {
+                                Variable::RustObject(ref mut n) => {
+                                    if let Set = op {
+                                        // Check address to avoid unsafe
+                                        // reading and writing to same memory.
+                                        let n_addr = n as *const _ as usize;
+                                        let b_addr = b as *const _ as usize;
+                                        if n_addr != b_addr {
+                                            *r.0 = Variable::RustObject(b.clone())
+                                        }
+                                    } else {
+                                        unimplemented!()
+                                    }
+                                }
+                                Variable::Return => {
+                                    if let Set = op {
+                                        *r.0 = Variable::RustObject(b.clone())
+                                    } else {
+                                        return Err(module.error(
+                                            left.source_range(),
+                                            &format!("{}\nReturn has no value",
+                                                self.stack_trace()), self))
+                                    }
+                                }
+                                _ => return Err(module.error(
+                                    left.source_range(),
+                                    &format!(
+                                        "{}\nExpected assigning to rust_object",
+                                        self.stack_trace()), self))
+                            }
+                        }
+                    }
+                    ref x => {
+                        return Err(module.error(
+                            left.source_range(),
+                            &format!("{}\nCan not use this assignment operator with `{}`",
+                                self.stack_trace(), self.typeof_var(x)), self));
+                    }
+                };
+                Ok(Flow::Continue)
+            } else {
+                panic!("{}", TINVOTS);
+            }
+        } else {
+            return match *left {
                 Expression::Item(ref item) => {
                     match try!(self.expression(right, Side::Right, module)) {
                         (_, Flow::Return) => { return Ok(Flow::Return); }
@@ -1068,409 +1460,6 @@ impl Runtime {
                 _ => return Err(module.error(left.source_range(),
                                 &format!("{}\nExpected item",
                                     self.stack_trace()), self))
-            }
-        } else {
-            // Evaluate right side before left because the left leaves
-            // an raw pointer on the stack which might point to wrong place
-            // if there are side effects of the right side affecting it.
-            match try!(self.expression(right, Side::Right, module)) {
-                (_, Flow::Return) => { return Ok(Flow::Return); }
-                (Expect::Something, Flow::Continue) => {}
-                _ => return Err(module.error(right.source_range(),
-                        &format!("{}\nExpected something from the right side",
-                            self.stack_trace()), self))
-            };
-            match try!(self.expression(left, Side::LeftInsert(false), module)) {
-                (_, Flow::Return) => { return Ok(Flow::Return); }
-                (Expect::Something, Flow::Continue) => {}
-                _ => return Err(module.error(left.source_range(),
-                        &format!("{}\nExpected something from the left side",
-                            self.stack_trace()), self))
-            };
-            match (self.stack.pop(), self.stack.pop()) {
-                (Some(a), Some(b)) => {
-                    let mut r = match a {
-                        Variable::Ref(ind) => {
-                            UnsafeRef(&mut self.stack[ind] as *mut Variable)
-                        }
-                        Variable::UnsafeRef(mut r) => {
-                            // If reference, use a shallow clone to type check,
-                            // without affecting the original object.
-                            unsafe {
-                                if let Variable::Ref(ind) = *r.0 {
-                                    *r.0 = self.stack[ind].clone()
-                                }
-                            }
-                            r
-                        }
-                        x => panic!("Expected reference, found `{}`", self.typeof_var(&x))
-                    };
-
-                    match self.resolve(&b) {
-                        &Variable::F64(b, ref sec) => {
-                            unsafe {
-                                match *r.0 {
-                                    Variable::F64(ref mut n, ref mut n_sec) => {
-                                        match op {
-                                            Set => *n = b,
-                                            Add => *n += b,
-                                            Sub => *n -= b,
-                                            Mul => *n *= b,
-                                            Div => *n /= b,
-                                            Rem => *n %= b,
-                                            Pow => *n = n.powf(b),
-                                            Assign => {}
-                                        };
-                                        *n_sec = sec.clone()
-                                    }
-                                    Variable::Return => {
-                                        if let Set = op {
-                                            *r.0 = Variable::F64(b, sec.clone())
-                                        } else {
-                                            return Err(module.error(
-                                                left.source_range(),
-                                                &format!("{}\nReturn has no value",
-                                                    self.stack_trace()), self))
-                                        }
-                                    }
-                                    Variable::Link(ref mut n) => {
-                                        if let Add = op {
-                                            try!(n.push(&Variable::f64(b)));
-                                        } else {
-                                            return Err(module.error(
-                                                left.source_range(),
-                                                &format!("{}\nCan not use this assignment \
-                                                operator with `link` and `number`",
-                                                    self.stack_trace()), self));
-                                        }
-                                    }
-                                    _ => return Err(module.error(
-                                            left.source_range(),
-                                            &format!("{}\nExpected assigning to a number",
-                                                self.stack_trace()), self))
-                                };
-                            }
-                        }
-                        &Variable::Vec4(b) => {
-                            unsafe {
-                                match *r.0 {
-                                    Variable::Vec4(ref mut n) => {
-                                        match op {
-                                            Set => *n = b,
-                                            Add => *n = [n[0] + b[0], n[1] + b[1],
-                                                         n[2] + b[2], n[3] + b[3]],
-                                            Sub => *n = [n[0] - b[0], n[1] - b[1],
-                                                         n[2] - b[2], n[3] - b[3]],
-                                            Mul => *n = [n[0] * b[0], n[1] * b[1],
-                                                         n[2] * b[2], n[3] * b[3]],
-                                            Div => *n = [n[0] / b[0], n[1] / b[1],
-                                                         n[2] / b[2], n[3] / b[3]],
-                                            Rem => *n = [n[0] % b[0], n[1] % b[1],
-                                                         n[2] % b[2], n[3] % b[3]],
-                                            Pow => *n = [n[0].powf(b[0]), n[1].powf(b[1]),
-                                                         n[2].powf(b[2]), n[3].powf(b[3])],
-                                            Assign => {}
-                                        }
-                                    }
-                                    Variable::Return => {
-                                        if let Set = op {
-                                            *r.0 = Variable::Vec4(b)
-                                        } else {
-                                            return Err(module.error(
-                                                left.source_range(),
-                                                &format!("{}\nReturn has no value",
-                                                    self.stack_trace()), self))
-                                        }
-                                    }
-                                    _ => return Err(module.error(
-                                            left.source_range(),
-                                            &format!("{}\nExpected assigning to a vec4",
-                                                self.stack_trace()), self))
-                                };
-                            }
-                        }
-                        &Variable::Bool(b, ref sec) => {
-                            unsafe {
-                                match *r.0 {
-                                    Variable::Bool(ref mut n, ref mut n_sec) => {
-                                        match op {
-                                            Set => *n = b,
-                                            _ => unimplemented!()
-                                        };
-                                        *n_sec = sec.clone();
-                                    }
-                                    Variable::Return => {
-                                        if let Set = op {
-                                            *r.0 = Variable::Bool(b, sec.clone())
-                                        } else {
-                                            return Err(module.error(
-                                                left.source_range(),
-                                                &format!("{}\nReturn has no value",
-                                                    self.stack_trace()), self))
-                                        }
-                                    }
-                                    Variable::Link(ref mut n) => {
-                                        if let Add = op {
-                                            try!(n.push(&Variable::bool(b)));
-                                        } else {
-                                            return Err(module.error(
-                                                left.source_range(),
-                                                &format!("{}\nCan not use this assignment \
-                                                operator with `link` and `bool`",
-                                                    self.stack_trace()), self));
-                                        }
-                                    }
-                                    _ => return Err(module.error(
-                                            left.source_range(),
-                                            &format!("{}\nExpected assigning to a bool",
-                                                self.stack_trace()), self))
-                                };
-                            }
-                        }
-                        &Variable::Text(ref b) => {
-                            unsafe {
-                                match *r.0 {
-                                    Variable::Text(ref mut n) => {
-                                        match op {
-                                            Set => *n = b.clone(),
-                                            Add => Arc::make_mut(n).push_str(b),
-                                            _ => unimplemented!()
-                                        }
-                                    }
-                                    Variable::Return => {
-                                        if let Set = op {
-                                            *r.0 = Variable::Text(b.clone())
-                                        } else {
-                                            return Err(module.error(
-                                                left.source_range(),
-                                                &format!("{}\nReturn has no value",
-                                                    self.stack_trace()), self))
-                                        }
-                                    }
-                                    Variable::Link(ref mut n) => {
-                                        if let Add = op {
-                                            try!(n.push(&Variable::Text(b.clone())));
-                                        } else {
-                                            return Err(module.error(
-                                                left.source_range(),
-                                                &format!("{}\nCan not use this assignment \
-                                                operator with `link` and `text`",
-                                                    self.stack_trace()), self));
-                                        }
-                                    }
-                                    _ => return Err(module.error(
-                                        left.source_range(),
-                                        &format!("{}\nExpected assigning to text",
-                                            self.stack_trace()), self))
-                                }
-                            }
-                        }
-                        &Variable::Object(ref b) => {
-                            unsafe {
-                                match *r.0 {
-                                    Variable::Object(ref mut n) => {
-                                        if let Set = op {
-                                            // Check address to avoid unsafe
-                                            // reading and writing to same memory.
-                                            let n_addr = n as *const _ as usize;
-                                            let b_addr = b as *const _ as usize;
-                                            if n_addr != b_addr {
-                                                *r.0 = Variable::Object(b.clone())
-                                            }
-                                            // *n = obj.clone()
-                                        } else {
-                                            unimplemented!()
-                                        }
-                                    }
-                                    Variable::Return => {
-                                        if let Set = op {
-                                            *r.0 = Variable::Object(b.clone())
-                                        } else {
-                                            return Err(module.error(
-                                                left.source_range(),
-                                                &format!("{}\nReturn has no value",
-                                                    self.stack_trace()), self))
-                                        }
-                                    }
-                                    _ => return Err(module.error(
-                                        left.source_range(),
-                                        &format!("{}\nExpected assigning to object",
-                                            self.stack_trace()), self))
-                                }
-                            }
-                        }
-                        &Variable::Array(ref b) => {
-                            unsafe {
-                                match *r.0 {
-                                    Variable::Array(ref mut n) => {
-                                        if let Set = op {
-                                            // Check address to avoid unsafe
-                                            // reading and writing to same memory.
-                                            let n_addr = n as *const _ as usize;
-                                            let b_addr = b as *const _ as usize;
-                                            if n_addr != b_addr {
-                                                *r.0 = Variable::Array(b.clone())
-                                            }
-                                            // *n = arr.clone();
-                                        } else {
-                                            unimplemented!()
-                                        }
-                                    }
-                                    Variable::Return => {
-                                        if let Set = op {
-                                            *r.0 = Variable::Array(b.clone())
-                                        } else {
-                                            return Err(module.error(
-                                                left.source_range(),
-                                                &format!("{}\nReturn has no value",
-                                                    self.stack_trace()), self))
-                                        }
-                                    }
-                                    _ => return Err(module.error(
-                                        left.source_range(),
-                                        &format!("{}\nExpected assigning to array",
-                                            self.stack_trace()), self))
-                                }
-                            }
-                        }
-                        &Variable::Link(ref b) => {
-                            unsafe {
-                                match *r.0 {
-                                    Variable::Link(ref mut n) => {
-                                        match op {
-                                            Set => *n = b.clone(),
-                                            Add => **n = n.add(b),
-                                            Sub => **n = b.add(n),
-                                            _ => unimplemented!()
-                                        }
-                                    }
-                                    Variable::Return => {
-                                        if let Set = op {
-                                            *r.0 = Variable::Link(b.clone())
-                                        } else {
-                                            return Err(module.error(
-                                                left.source_range(),
-                                                &format!("{}\nReturn has no value",
-                                                    self.stack_trace()), self))
-                                        }
-                                    }
-                                    _ => return Err(module.error(
-                                        left.source_range(),
-                                        &format!("{}\nExpected assigning to link",
-                                            self.stack_trace()), self))
-                                }
-                            }
-                        }
-                        &Variable::Option(ref b) => {
-                            unsafe {
-                                match *r.0 {
-                                    Variable::Option(ref mut n) => {
-                                        if let Set = op {
-                                            // Check address to avoid unsafe
-                                            // reading and writing to same memory.
-                                            let n_addr = n as *const _ as usize;
-                                            let b_addr = b as *const _ as usize;
-                                            if n_addr != b_addr {
-                                                *r.0 = Variable::Option(b.clone())
-                                            }
-                                        } else {
-                                            unimplemented!()
-                                        }
-                                    }
-                                    Variable::Return => {
-                                        if let Set = op {
-                                            *r.0 = Variable::Option(b.clone())
-                                        } else {
-                                            return Err(module.error(
-                                                left.source_range(),
-                                                &format!("{}\nReturn has no value",
-                                                    self.stack_trace()), self))
-                                        }
-                                    }
-                                    _ => return Err(module.error(
-                                        left.source_range(),
-                                        &format!("{}\nExpected assigning to option",
-                                            self.stack_trace()), self))
-                                }
-                            }
-                        }
-                        &Variable::Result(ref b) => {
-                            unsafe {
-                                match *r.0 {
-                                    Variable::Result(ref mut n) => {
-                                        if let Set = op {
-                                            // Check address to avoid unsafe
-                                            // reading and writing to same memory.
-                                            let n_addr = n as *const _ as usize;
-                                            let b_addr = b as *const _ as usize;
-                                            if n_addr != b_addr {
-                                                *r.0 = Variable::Result(b.clone())
-                                            }
-                                        } else {
-                                            unimplemented!()
-                                        }
-                                    }
-                                    Variable::Return => {
-                                        if let Set = op {
-                                            *r.0 = Variable::Result(b.clone())
-                                        } else {
-                                            return Err(module.error(
-                                                left.source_range(),
-                                                &format!("{}\nReturn has no value",
-                                                    self.stack_trace()), self))
-                                        }
-                                    }
-                                    _ => return Err(module.error(
-                                        left.source_range(),
-                                        &format!("{}\nExpected assigning to result",
-                                            self.stack_trace()), self))
-                                }
-                            }
-                        }
-                        &Variable::RustObject(ref b) => {
-                            unsafe {
-                                match *r.0 {
-                                    Variable::RustObject(ref mut n) => {
-                                        if let Set = op {
-                                            // Check address to avoid unsafe
-                                            // reading and writing to same memory.
-                                            let n_addr = n as *const _ as usize;
-                                            let b_addr = b as *const _ as usize;
-                                            if n_addr != b_addr {
-                                                *r.0 = Variable::RustObject(b.clone())
-                                            }
-                                        } else {
-                                            unimplemented!()
-                                        }
-                                    }
-                                    Variable::Return => {
-                                        if let Set = op {
-                                            *r.0 = Variable::RustObject(b.clone())
-                                        } else {
-                                            return Err(module.error(
-                                                left.source_range(),
-                                                &format!("{}\nReturn has no value",
-                                                    self.stack_trace()), self))
-                                        }
-                                    }
-                                    _ => return Err(module.error(
-                                        left.source_range(),
-                                        &format!(
-                                            "{}\nExpected assigning to rust_object",
-                                            self.stack_trace()), self))
-                                }
-                            }
-                        }
-                        x => {
-                            return Err(module.error(
-                                left.source_range(),
-                                &format!("{}\nCan not use this assignment operator with `{}`",
-                                    self.stack_trace(), self.typeof_var(x)), self));
-                        }
-                    };
-                    Ok(Flow::Continue)
-                }
-                _ => panic!("Expected two variables on the stack")
             }
         }
     }
