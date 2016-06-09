@@ -2,8 +2,8 @@ fn main() {
     n := 100
     min := unwrap(min i n { f(i, n) })
     max := unwrap(max i n { f(i, n) })
-    println("min: " + to_string(min))
-    println("max: " + to_string(max))
+    println("min: " + str(min))
+    println("max: " + str(max))
 }
 
 fn f(i, n) -> {
