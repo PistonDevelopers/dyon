@@ -47,9 +47,9 @@ const SWAP: usize = 26;
 const TRIM: usize = 27;
 const TRIM_LEFT: usize = 28;
 const TRIM_RIGHT: usize = 29;
-const TO_STRING: usize = 30;
+const STR: usize = 30;
 const JSON_STRING: usize = 31;
-const TO_STRING_COLOR: usize = 32;
+const STR_COLOR: usize = 32;
 const SRGB_TO_LINEAR_COLOR: usize = 33;
 const LINEAR_TO_SRGB_COLOR: usize = 34;
 const TYPEOF: usize = 35;
@@ -133,9 +133,9 @@ const TABLE: &'static [(usize, fn(
     (TRIM, trim),
     (TRIM_LEFT, trim_left),
     (TRIM_RIGHT, trim_right),
-    (TO_STRING, to_string),
+    (STR, to_string),
     (JSON_STRING, json_string),
-    (TO_STRING_COLOR, to_string_color),
+    (STR_COLOR, to_string_color),
     (SRGB_TO_LINEAR_COLOR, srgb_to_linear_color),
     (LINEAR_TO_SRGB_COLOR, linear_to_srgb_color),
     (TYPEOF, _typeof),
@@ -268,9 +268,9 @@ pub fn standard(f: &mut Prelude) {
     sarg(f, "trim", TRIM, Type::Text, Type::Text);
     sarg(f, "trim_left", TRIM_LEFT, Type::Text, Type::Text);
     sarg(f, "trim_right", TRIM_RIGHT, Type::Text, Type::Text);
-    sarg(f, "to_string", TO_STRING, Type::Any, Type::Text);
+    sarg(f, "str", STR, Type::Any, Type::Text);
     sarg(f, "json_string", JSON_STRING, Type::Text, Type::Text);
-    sarg(f, "to_string_color", TO_STRING_COLOR, Type::Vec4, Type::Text);
+    sarg(f, "str_color", STR_COLOR, Type::Vec4, Type::Text);
     sarg(f, "srgb_to_linear_color", SRGB_TO_LINEAR_COLOR, Type::Vec4, Type::Vec4);
     sarg(f, "linear_to_srgb_color", LINEAR_TO_SRGB_COLOR, Type::Vec4, Type::Vec4);
     sarg(f, "typeof", TYPEOF, Type::Any, Type::Text);

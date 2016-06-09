@@ -29,18 +29,18 @@ fn main() {
             if tries == 0 {
                 println("Sorry, you lost")
                 sleep(0.5)
-                println("The number was " + to_string(x))
+                println("The number was " + str(x))
                 println("Try again")
                 sleep(1.5)
                 continue 'start
             }
-            println("You have now " + to_string(tries) + " tries left")
+            println("You have now " + str(tries) + " tries left")
             sleep(1)
 
             if x < guess {
-                println("The number is smaller than " + to_string(guess))
+                println("The number is smaller than " + str(guess))
             } else {
-                println("The number is larger than " + to_string(guess))
+                println("The number is larger than " + str(guess))
             }
         }
     }
