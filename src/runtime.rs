@@ -750,11 +750,7 @@ impl Runtime {
                                 self.stack_trace(),
                                 f.name), source))
                     }
-                    (true, Some(ref x))
-                        if match x {
-                            &Variable::Return => true,
-                            _ => false
-                        } => {
+                    (true, Some(Variable::Return)) => {
                         // TODO: Could return the last value on the stack.
                         //       Requires .pop_fn delayed after.
                         let source = call.custom_source.as_ref().unwrap_or(
@@ -767,7 +763,8 @@ impl Runtime {
                                 self.stack_trace(),
                                 f.name), source))
                     }
-                    (_, b) => {
+                    (returns, b) => {
+                        if returns { self.stack.pop(); }
                         return Ok((b, Flow::Continue))
                     }
                 }
