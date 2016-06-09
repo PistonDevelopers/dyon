@@ -1,11 +1,9 @@
+fn foo() -> res {
+    err("")?
+}
+
 fn main() {
-    println(unwrap(bar(2)))
-}
-
-fn foo(x) -> res {
-    return ok(ok("hi")?)
-}
-
-fn bar(x) -> res {
-    return ok(foo(x)?)
+    data := 2
+    _ := foo()
+    println(data)
 }
