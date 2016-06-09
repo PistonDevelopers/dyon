@@ -14,7 +14,7 @@ fn to_code(syntax: [[]]) -> res[str] {
         i += i_name[0]
         name := i_name[1]
         code += link {
-            "fn __"name"_data_index_name(data: [[]], index: f64, name: opt[str]) -> res {\n"
+            "fn __"name"__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {\n"
         }
         i += start_node(data: syntax, index: i, name: "rule")?
 
@@ -269,7 +269,7 @@ fn to_code(syntax: [[]]) -> res[str] {
     return ok(code)
 }
 
-fn read_type_data_index(data: [[]], index: f64) -> opt[[]] {
+fn read_type__data_index(data: [[]], index: f64) -> opt[[]] {
     tbool := read_bool(data: data, index: index, name: "bool")
     if tbool != none() { return some([1, "bool"]) }
     tf64 := read_bool(data: data, index: index, name: "f64")
@@ -279,7 +279,7 @@ fn read_type_data_index(data: [[]], index: f64) -> opt[[]] {
     return none()
 }
 
-fn read_f64_data_index_name(data: [[]], index: f64, name: str) -> opt[[]] {
+fn read_f64__data_index_name(data: [[]], index: f64, name: str) -> opt[[]] {
     if index >= len(data) { return none() }
     return if (data[index][2] == "f64") && (data[index][3] == name) {
         some([1, data[index][4]])
@@ -288,7 +288,7 @@ fn read_f64_data_index_name(data: [[]], index: f64, name: str) -> opt[[]] {
     }
 }
 
-fn read_bool_data_index_name(data: [[]], index: f64, name: str) -> opt[[]] {
+fn read_bool__data_index_name(data: [[]], index: f64, name: str) -> opt[[]] {
     if index >= len(data) { return none() }
     return if (data[index][2] == "bool") && (data[index][3] == name) {
         some([1, data[index][4]])
@@ -297,7 +297,7 @@ fn read_bool_data_index_name(data: [[]], index: f64, name: str) -> opt[[]] {
     }
 }
 
-fn read_str_data_index_name(data: [[]], index: f64, name: str) -> opt[[]] {
+fn read_str__data_index_name(data: [[]], index: f64, name: str) -> opt[[]] {
     if index >= len(data) { return none() }
     return if (data[index][2] == "str") && (data[index][3] == name) {
         some([1, data[index][4]])
@@ -306,7 +306,7 @@ fn read_str_data_index_name(data: [[]], index: f64, name: str) -> opt[[]] {
     }
 }
 
-fn start_node_data_index_name(data: [[]], index: f64, name: str) -> opt[f64] {
+fn start_node__data_index_name(data: [[]], index: f64, name: str) -> opt[f64] {
     if index >= len(data) { return none() }
     return if (data[index][2] == "start") && (data[index][3] == name) {
         some(1)
@@ -315,7 +315,7 @@ fn start_node_data_index_name(data: [[]], index: f64, name: str) -> opt[f64] {
     }
 }
 
-fn end_node_data_index_name(data: [[]], index: f64, name: str) -> opt[f64] {
+fn end_node__data_index_name(data: [[]], index: f64, name: str) -> opt[f64] {
     if index >= len(data) { return none() }
     return if (data[index][2] == "end") && (data[index][3] == name) {
         some(1)
@@ -324,7 +324,7 @@ fn end_node_data_index_name(data: [[]], index: f64, name: str) -> opt[f64] {
     }
 }
 
-fn ignore_data_index(data: [[]], index: f64) -> f64 {
+fn ignore__data_index(data: [[]], index: f64) -> f64 {
     level := 0
     i := index
     for i [index, len(data)) {

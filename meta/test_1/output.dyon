@@ -1,4 +1,4 @@
-fn __pos_data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
+fn __pos__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
     start := index
     i := index
     if name != none() {
@@ -59,7 +59,7 @@ fn __pos_data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
     return ok([i - start, (x, y)])
 }
 
-fn __doc_data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
+fn __doc__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
     start := index
     i := index
     if name != none() {

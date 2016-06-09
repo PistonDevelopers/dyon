@@ -6,6 +6,14 @@ fn why(var: bool) -> [any] { ... }
 /// This can be used with the value of `min` and `max` loops.
 fn where(var: f64) -> [any] { ... }
 
+/// Adds message to derived information for the truth value of `var`.
+/// This can be used with the value of `∃`/`any` and `∀`/`all` loops.
+fn explain_why(var: bool, msg: any) -> bool { ... }
+
+/// Adds message to derived information for the value of `var`.
+/// This can be used with the value of `min` and `max` loops.
+fn explain_where(var: f64, msg: any) -> f64 { ... }
+
 /// Prints out variable to standard output, adding newline character.
 fn println(var: any) { ... }
 
@@ -79,15 +87,15 @@ fn json_string(text: str) -> str { ... }
 
 /// Returns a HTML hex color string.
 /// The vector is clamped in range `(0, 0, 0, 0)` to `(1, 1, 1, 1).
-fn str_color(color: vec4) -> str { ... }
+fn str__color(color: vec4) -> str { ... }
 
 /// Converts from sRGB color space to linear color space.
 /// This is used before mathematical operations on colors.
-fn srgb_to_linear_color(color: vec4) -> vec4 { ... }
+fn srgb_to_linear__color(color: vec4) -> vec4 { ... }
 
 /// Converts from linear color space to sRGB.
 /// This is used after mathematical operations on colors.
-fn linear_to_srgb_color(color: vec4) -> vec4 { ... }
+fn linear_to_srgb__color(color: vec4) -> vec4 { ... }
 
 /// Returns simple description of variable type.
 fn typeof(var: any) -> str { ... }
@@ -146,7 +154,7 @@ fn load(source: str) -> res[any] { ... }
 
 /// Loads module from source, using imports as dependencies.
 /// Returns `ok(module)` if the loading succeeds.
-fn load_source_imports(source: str, imports: [any]) -> res[any] { ... }
+fn load__source_imports(source: str, imports: [any]) -> res[any] { ... }
 
 /// Calls function in module with arguments.
 fn call(module: any, function: str, arguments: [any]) { ... }
@@ -205,37 +213,37 @@ fn s(v: vec4, ind: f64) -> f64 { ... }
 /// Returns 4D vector with length 1,
 /// pointing in the direction when starting at `(1, 0)`
 /// and rotating around the z axis.
-fn dir_angle(angle: f64) -> vec4 { ... }
+fn dir__angle(angle: f64) -> vec4 { ... }
 
 /// Loads meta data from a file, using a meta syntax to parse the document.
 /// The meta language used is [Piston-Meta](https://github.com/PistonDevelopers/meta).
-fn load_meta_file(meta_file: str, file: str) -> res[[[any]]] { ... }
+fn load__meta_file(meta_file: str, file: str) -> res[[[any]]] { ... }
 
 /// Loads meta data from an url, using a meta syntax to parse the document.
 /// The meta language used is [Piston-Meta](https://github.com/PistonDevelopers/meta)
-fn load_meta_url(meta_file: str, url: str) -> res[[any]] { ... }
+fn load__meta_url(meta_file: str, url: str) -> res[[any]] { ... }
 
 /// Downloads a file from an url.
 /// Returns `ok(file)` if the downloading succeeded.
 /// Designed to be easy to use with threads.
-fn download_url_file(url: str, file: str) -> res[str] { ... }
+fn download__url_file(url: str, file: str) -> res[str] { ... }
 
 /// Saves a string to a file.
 /// Returns `ok(file)` if the saving succeeded.
 /// Designed to be easy to use with threads.
-fn save_string_file(string: str, file: str) -> res[str] { ... }
+fn save__string_file(string: str, file: str) -> res[str] { ... }
 
 /// Loads a string from file.
 /// Returns `ok(text)` if the loading succeeded.
-fn load_string_file(file: str) -> res[str] { ... }
+fn load_string__file(file: str) -> res[str] { ... }
 
 /// Waits for thread to finish and returns the result.
-fn join_thread(t: thr[any]) -> res[any] { ... }
+fn join__thread(t: thr[any]) -> res[any] { ... }
 
 /// Saves data to file, replacing any existing file.
 /// Returns `ok(file)` if saving succeeded.
 /// Designed to be easy to use with threads.
-fn save_data_file(data: any, file: str) -> res[str] { ... }
+fn save__data_file(data: any, file: str) -> res[str] { ... }
 
 /// Generates JSON data from meta data.
 fn json_from_meta_data(meta_data: [[any]]) -> str { ... }

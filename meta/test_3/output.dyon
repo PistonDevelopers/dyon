@@ -1,4 +1,4 @@
-fn __john_data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
+fn __john__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
     start := index
     i := index
     if name != none() {
@@ -31,7 +31,7 @@ fn __john_data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
     return ok([i - start, {first_name: "John"}])
 }
 
-fn __peter_data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
+fn __peter__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
     start := index
     i := index
     if name != none() {
@@ -64,7 +64,7 @@ fn __peter_data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
     return ok([i - start, {first_name: "Peter"}])
 }
 
-fn __person_data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
+fn __person__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
     start := index
     i := index
     if name != none() {
@@ -93,7 +93,7 @@ fn __person_data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
     return err("Expected one of `john`, `peter`")?
 }
 
-fn __people_data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
+fn __people__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
     start := index
     i := index
     if name != none() {

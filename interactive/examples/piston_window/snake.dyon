@@ -45,7 +45,7 @@ fn init_data(settings: Settings) -> Data {
     return clone(data)
 }
 
-fn init_snake_body_parts_size(parts: f64, size: vec4) -> [] {
+fn init_snake_body__parts_size(parts: f64, size: vec4) -> [] {
     body := []
     // end := [(parts - 1) * size, (parts - 1) * size]
     end := (0, 0)

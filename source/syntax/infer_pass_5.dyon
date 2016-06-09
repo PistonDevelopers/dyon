@@ -1,4 +1,4 @@
-multiply_matrix_matrix(a: [vec4], b: [vec4]) = sift i {(
+multiply__matrix_matrix(a: [vec4], b: [vec4]) = sift i {(
         a[i] *. (x(b[0]), x(b[1]), x(b[2]), x(b[3])),
         a[i] *. (y(b[0]), y(b[1]), y(b[2]), y(b[3])),
         a[i] *. (z(b[0]), z(b[1]), z(b[2]), z(b[3])),
@@ -12,7 +12,7 @@ translate(v: vec4) = [
     (0, 0, 0, 1)
 ]
 
-fn print_matrix(matrix: [vec4]) {
+fn print__matrix(matrix: [vec4]) {
     for i {
         print(x(matrix[i]))
         print(",")

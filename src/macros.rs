@@ -16,6 +16,7 @@ macro_rules! dyon_fn_pop {
 #[macro_export]
 macro_rules! dyon_fn {
     (fn $name:ident () -> $rt:ty $b:block) => {
+        #[allow(non_snake_case)]
         pub fn $name(rt: &mut $crate::Runtime) -> Result<(), String> {
             fn inner() -> $rt {
                 $b
@@ -27,6 +28,7 @@ macro_rules! dyon_fn {
     };
     (fn $name:ident ($($arg:tt : $t:ty),+) -> $rt:ty $b:block) => {
         dyon_macro_items!{
+            #[allow(non_snake_case)]
             pub fn $name(rt: &mut $crate::Runtime) -> Result<(), String> {
                 fn inner($($arg: $t),+) -> $rt {
                     $b
@@ -39,6 +41,7 @@ macro_rules! dyon_fn {
         }
     };
     (fn $name:ident () $b:block) => {
+        #[allow(non_snake_case)]
         pub fn $name(_: &mut $crate::Runtime) -> Result<(), String> {
             fn inner() {
                 $b
@@ -50,6 +53,7 @@ macro_rules! dyon_fn {
     };
     (fn $name:ident ($($arg:tt : $t:ty),+) $b:block) => {
         dyon_macro_items!{
+            #[allow(non_snake_case)]
             pub fn $name(rt: &mut $crate::Runtime) -> Result<(), String> {
                 fn inner($($arg: $t),+) {
                     $b

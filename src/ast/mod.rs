@@ -1493,8 +1493,13 @@ impl Call {
                 break;
             } else if let Ok((range, val)) = convert.meta_string("word") {
                 convert.update(range);
-                if name.len() != 0 { name.push('_'); }
-                name.push_str(&val);
+                if name.len() != 0 {
+                    name.push('_');
+                    name.push_str(&val);
+                } else {
+                    name.push_str(&val);
+                    name.push('_');
+                }
             } else if let Ok((range, val)) = Expression::from_meta_data(
                 "call_arg", convert, ignored) {
                 let mut peek = convert.clone();

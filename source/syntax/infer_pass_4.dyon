@@ -8,14 +8,14 @@ fn init() -> {
     }
 }
 
-fn update_world_dt(mut world, dt) {
+fn update__world_dt(mut world, dt) {
     objs := world.objects_to_move
     for i {
         world[objs[i]].pos = move(obj: world[objs[i]], dt: dt)
     }
 }
 
-fn move_obj_dt(obj, dt) -> vec4 {
+fn move__obj_dt(obj, dt) -> vec4 {
     return obj.pos + dt * obj.vel
 }
 

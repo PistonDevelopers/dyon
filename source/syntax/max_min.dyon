@@ -1,4 +1,4 @@
-fn min_numbers(list: 'return) -> {
+fn min__numbers(list: 'return) -> {
     n := len(list)
     if n == 0 { return [] }
     return = list[0]
@@ -9,7 +9,7 @@ fn min_numbers(list: 'return) -> {
     }
 }
 
-fn max_numbers(list: 'return) -> {
+fn max__numbers(list: 'return) -> {
     n := len(list)
     if n == 0 { return [] }
     return = list[0]

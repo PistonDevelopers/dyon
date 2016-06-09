@@ -1,4 +1,4 @@
-fn up_to(n) -> {
+fn up__to(n) -> {
     x := []
     for i := 0; i < n; i += 1 {
         push(mut x, i)
@@ -6,7 +6,7 @@ fn up_to(n) -> {
     return clone(x)
 }
 
-fn say_msg_to(msg, person) {
+fn say__msg_to(msg, person) {
     print(person + "! ")
     println(msg)
 }
@@ -16,7 +16,7 @@ fn main() {
     println(up(to: n))
 
     // Normal call syntax.
-    say_msg_to("hi!", "you there")
+    say__msg_to("hi!", "you there")
     // Named arguments call syntax.
     say(msg: "hi!", to: "you there")
 }

@@ -1,4 +1,4 @@
-fn __line_data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
+fn __line__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
     start := index
     i := index
     if name != none() {
@@ -31,7 +31,7 @@ fn __line_data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
     return ok([i - start, line])
 }
 
-fn __photo_data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
+fn __photo__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
     start := index
     i := index
     if name != none() {
@@ -56,7 +56,7 @@ fn __photo_data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
     return ok([i - start, arr])
 }
 
-fn __person_data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
+fn __person__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
     start := index
     i := index
     if name != none() {
@@ -142,7 +142,7 @@ fn __person_data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
         }])
 }
 
-fn __doc_data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
+fn __doc__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
     start := index
     i := index
     if name != none() {
