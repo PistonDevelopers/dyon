@@ -26,7 +26,7 @@ fn focus() -> bool { ... }
 fn focus_args() -> opt[bool] { ... }
 
 /// Sets title of window.
-fn set_title(text: str) { ... }
+fn set__title(text: str) { ... }
 
 /// Returns the delta time for update event.
 fn update_dt() -> opt[f64] { ... }

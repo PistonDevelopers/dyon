@@ -30,17 +30,17 @@ fn main() {
     v := (x, y, z, w)
     fv := f(xyzw v)
     // fv := f(x, y, z, w)
-    println("fv: " + to_string(fv))
+    println("fv: " + str(fv))
 
     grad := (vec4 j f(xyzw eps(v,j,eps))-fv)/eps
-    println("Gradient: " + to_string(grad))
-    println(" error: " + to_string(df(xyzw v) - grad))
+    println("Gradient: " + str(grad))
+    println(" error: " + str(df(xyzw v) - grad))
 
     lapl := (vec4 j (f(xyzw eps(v,j,eps))+f(xyzw eps(v,j,-eps)))-2*fv)/eps^2
-    println("Laplacian: " + to_string(lapl))
-    println(" error: " + to_string(ddf(xyzw v) - lapl))
+    println("Laplacian: " + str(lapl))
+    println(" error: " + str(ddf(xyzw v) - lapl))
 
     lapl_x := (f(x+eps,y,z,w)+f(x-eps,y,z,w)-2*f(x,y,z,w))/eps^2
-    println("Laplacian (x): " + to_string(lapl_x))
-    println(" error: " + to_string(x(ddf(xyzw v)) - lapl_x))
+    println("Laplacian (x): " + str(lapl_x))
+    println(" error: " + str(x(ddf(xyzw v)) - lapl_x))
 }

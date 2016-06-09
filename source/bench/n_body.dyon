@@ -56,7 +56,7 @@ fn bodies() -> [{}] {
 }
 
 /// Computes all pairwise position differences between the planets.
-fn pairwise_diffs_bodies_diff(bodies: [{}], mut diff: [vec4]) {
+fn pairwise_diffs__bodies_diff(bodies: [{}], mut diff: [vec4]) {
     n := len(bodies)
     k := 0
     for i n, j [i+1, n) {
@@ -66,7 +66,7 @@ fn pairwise_diffs_bodies_diff(bodies: [{}], mut diff: [vec4]) {
 }
 
 /// Computes the magnitude of the force between each pair of planets.
-fn magnitudes_diff_dt_mag(diff: [vec4], dt: f64, mut mag: [f64]) {
+fn magnitudes__diff_dt_mag(diff: [vec4], dt: f64, mut mag: [f64]) {
     for i {
         mag[i] = dt / |diff[i]|^3
     }
@@ -74,7 +74,7 @@ fn magnitudes_diff_dt_mag(diff: [vec4], dt: f64, mut mag: [f64]) {
 
 /// Updates the velocities of the planets by computing their gravitational
 /// accelerations and performing one step of Euler integration.
-fn update_velocities_bodies_dt_diff_mag(
+fn update_velocities__bodies_dt_diff_mag(
     mut bodies: [{}], dt: f64, mut diff: [vec4], mut mag: [f64]
 ) {
     pairwise_diffs(bodies: bodies, diff: mut diff)
@@ -97,7 +97,7 @@ fn update_velocities_bodies_dt_diff_mag(
 /// Note: the `diff` & `mag` arrays are effectively scratch space. They're
 /// provided as arguments to avoid re-zeroing them every time `advance` is
 /// called.
-fn advance_bodies_dt_diff_mag(
+fn advance__bodies_dt_diff_mag(
     mut bodies: [{}],
     dt: f64,
     mut diff: [vec4],

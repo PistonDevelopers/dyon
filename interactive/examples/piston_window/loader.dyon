@@ -55,7 +55,7 @@ fn main() {
     }
 }
 
-fn new_loader_interval(interval: f64) -> Loader {
+fn new_loader__interval(interval: f64) -> Loader {
     return {
         time: 0,
         last_reload: 0,
@@ -69,7 +69,7 @@ fn should_reload(loader: Loader) -> bool {
           ((loader.last_reload + loader.reload_interval) < loader.time)
 }
 
-fn event_loader_source_settings_module_imports(
+fn event__loader_source_settings_module_imports(
     mut loader: Loader,
     source: str,
     mut settings: Settings,

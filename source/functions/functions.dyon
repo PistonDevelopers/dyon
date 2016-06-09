@@ -6,7 +6,7 @@ Functions are categorized into different types:
 - loaded (imported and local functions)
 */
 
-fn print_function(f) {
+fn print__function(f) {
     print(f.name)
     print("(")
     n := len(f.arguments)

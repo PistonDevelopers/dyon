@@ -11,7 +11,7 @@ fn main() {
     call({name: "Carl"})
 }
 
-fn new_person_name(name: str) -> Person {} {
+fn new_person__name(name: str) -> Person {} {
     return { name: clone(name) }
 }
 

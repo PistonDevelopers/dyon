@@ -1,3 +1,5 @@
+#![allow(non_snake_case)]
+
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::io;
@@ -49,9 +51,9 @@ const TRIM_LEFT: usize = 28;
 const TRIM_RIGHT: usize = 29;
 const STR: usize = 30;
 const JSON_STRING: usize = 31;
-const STR_COLOR: usize = 32;
-const SRGB_TO_LINEAR_COLOR: usize = 33;
-const LINEAR_TO_SRGB_COLOR: usize = 34;
+const STR__COLOR: usize = 32;
+const SRGB_TO_LINEAR__COLOR: usize = 33;
+const LINEAR_TO_SRGB__COLOR: usize = 34;
 const TYPEOF: usize = 35;
 const ROUND: usize = 36;
 const ABS: usize = 37;
@@ -69,7 +71,7 @@ const LN: usize = 48;
 const LOG2: usize = 49;
 const LOG10: usize = 50;
 const LOAD: usize = 51;
-const LOAD_SOURCE_IMPORTS: usize = 52;
+const LOAD__SOURCE_IMPORTS: usize = 52;
 const CALL: usize = 53;
 const CALL_RET: usize = 54;
 const FUNCTIONS: usize = 55;
@@ -84,14 +86,14 @@ const IS_OK: usize = 63;
 const MIN: usize = 64;
 const MAX: usize = 65;
 const S: usize = 66;
-const DIR_ANGLE: usize = 67;
-const LOAD_META_FILE: usize = 68;
-const LOAD_META_URL: usize = 69;
-const DOWNLOAD_URL_FILE: usize = 70;
-const SAVE_STRING_FILE: usize = 71;
-const LOAD_STRING_FILE: usize = 72;
-const JOIN_THREAD: usize = 73;
-const SAVE_DATA_FILE: usize = 74;
+const DIR__ANGLE: usize = 67;
+const LOAD__META_FILE: usize = 68;
+const LOAD__META_URL: usize = 69;
+const DOWNLOAD__URL_FILE: usize = 70;
+const SAVE__STRING_FILE: usize = 71;
+const LOAD_STRING__FILE: usize = 72;
+const JOIN__THREAD: usize = 73;
+const SAVE__DATA_FILE: usize = 74;
 const JSON_FROM_META_DATA: usize = 75;
 
 const TABLE: &'static [(usize, fn(
@@ -133,11 +135,11 @@ const TABLE: &'static [(usize, fn(
     (TRIM, trim),
     (TRIM_LEFT, trim_left),
     (TRIM_RIGHT, trim_right),
-    (STR, to_string),
+    (STR, _str),
     (JSON_STRING, json_string),
-    (STR_COLOR, to_string_color),
-    (SRGB_TO_LINEAR_COLOR, srgb_to_linear_color),
-    (LINEAR_TO_SRGB_COLOR, linear_to_srgb_color),
+    (STR__COLOR, str__color),
+    (SRGB_TO_LINEAR__COLOR, srgb_to_linear__color),
+    (LINEAR_TO_SRGB__COLOR, linear_to_srgb__color),
     (TYPEOF, _typeof),
     (ROUND, round),
     (ABS, abs),
@@ -155,7 +157,7 @@ const TABLE: &'static [(usize, fn(
     (LOG2, log2),
     (LOG10, log10),
     (LOAD, load),
-    (LOAD_SOURCE_IMPORTS, load_source_imports),
+    (LOAD__SOURCE_IMPORTS, load__source_imports),
     (CALL, _call),
     (CALL_RET, call_ret),
     (FUNCTIONS, functions),
@@ -170,14 +172,14 @@ const TABLE: &'static [(usize, fn(
     (MIN, min),
     (MAX, max),
     (S, s),
-    (DIR_ANGLE, dir_angle),
-    (LOAD_META_FILE, load_meta_file),
-    (LOAD_META_URL, load_meta_url),
-    (DOWNLOAD_URL_FILE, download_url_file),
-    (SAVE_STRING_FILE, save_string_file),
-    (LOAD_STRING_FILE, load_string_file),
-    (JOIN_THREAD, join_thread),
-    (SAVE_DATA_FILE, save_data_file),
+    (DIR__ANGLE, dir__angle),
+    (LOAD__META_FILE, load__meta_file),
+    (LOAD__META_URL, load__meta_url),
+    (DOWNLOAD__URL_FILE, download__url_file),
+    (SAVE__STRING_FILE, save__string_file),
+    (LOAD_STRING__FILE, load_string__file),
+    (JOIN__THREAD, join__thread),
+    (SAVE__DATA_FILE, save__data_file),
     (JSON_FROM_META_DATA, json_from_meta_data),
 ];
 
@@ -270,9 +272,9 @@ pub fn standard(f: &mut Prelude) {
     sarg(f, "trim_right", TRIM_RIGHT, Type::Text, Type::Text);
     sarg(f, "str", STR, Type::Any, Type::Text);
     sarg(f, "json_string", JSON_STRING, Type::Text, Type::Text);
-    sarg(f, "str_color", STR_COLOR, Type::Vec4, Type::Text);
-    sarg(f, "srgb_to_linear_color", SRGB_TO_LINEAR_COLOR, Type::Vec4, Type::Vec4);
-    sarg(f, "linear_to_srgb_color", LINEAR_TO_SRGB_COLOR, Type::Vec4, Type::Vec4);
+    sarg(f, "str__color", STR__COLOR, Type::Vec4, Type::Text);
+    sarg(f, "srgb_to_linear__color", SRGB_TO_LINEAR__COLOR, Type::Vec4, Type::Vec4);
+    sarg(f, "linear_to_srgb__color", LINEAR_TO_SRGB__COLOR, Type::Vec4, Type::Vec4);
     sarg(f, "typeof", TYPEOF, Type::Any, Type::Text);
     sarg(f, "round", ROUND, Type::F64, Type::F64);
     sarg(f, "abs", ABS, Type::F64, Type::F64);
@@ -290,7 +292,7 @@ pub fn standard(f: &mut Prelude) {
     sarg(f, "log2", LOG2, Type::F64, Type::F64);
     sarg(f, "log10", LOG10, Type::F64, Type::F64);
     sarg(f, "load", LOAD, Type::Text, Type::result());
-    f.intrinsic(Arc::new("load_source_imports".into()), LOAD_SOURCE_IMPORTS, PreludeFunction {
+    f.intrinsic(Arc::new("load__source_imports".into()), LOAD__SOURCE_IMPORTS, PreludeFunction {
         lts: vec![Lt::Default; 2],
         tys: vec![Type::Text, Type::array()],
         ret: Type::result()
@@ -329,30 +331,30 @@ pub fn standard(f: &mut Prelude) {
         tys: vec![Type::Vec4, Type::F64],
         ret: Type::F64
     });
-    sarg(f, "dir_angle", DIR_ANGLE, Type::F64, Type::Vec4);
-    f.intrinsic(Arc::new("load_meta_file".into()), LOAD_META_FILE, PreludeFunction {
+    sarg(f, "dir__angle", DIR__ANGLE, Type::F64, Type::Vec4);
+    f.intrinsic(Arc::new("load__meta_file".into()), LOAD__META_FILE, PreludeFunction {
         lts: vec![Lt::Default; 2],
         tys: vec![Type::Text; 2],
         ret: Type::Result(Box::new(Type::Array(Box::new(Type::array()))))
     });
-    f.intrinsic(Arc::new("load_meta_url".into()), LOAD_META_URL, PreludeFunction {
+    f.intrinsic(Arc::new("load__meta_url".into()), LOAD__META_URL, PreludeFunction {
         lts: vec![Lt::Default; 2],
         tys: vec![Type::Text; 2],
         ret: Type::Result(Box::new(Type::array()))
     });
-    f.intrinsic(Arc::new("download_url_file".into()), DOWNLOAD_URL_FILE, PreludeFunction {
+    f.intrinsic(Arc::new("download__url_file".into()), DOWNLOAD__URL_FILE, PreludeFunction {
         lts: vec![Lt::Default; 2],
         tys: vec![Type::Text; 2],
         ret: Type::Result(Box::new(Type::Text))
     });
-    f.intrinsic(Arc::new("save_string_file".into()), SAVE_STRING_FILE, PreludeFunction {
+    f.intrinsic(Arc::new("save__string_file".into()), SAVE__STRING_FILE, PreludeFunction {
         lts: vec![Lt::Default; 2],
         tys: vec![Type::Text; 2],
         ret: Type::Result(Box::new(Type::Text))
     });
-    sarg(f, "load_string_file", LOAD_STRING_FILE, Type::Text, Type::Result(Box::new(Type::Text)));
-    sarg(f, "join_thread", JOIN_THREAD, Type::thread(), Type::Result(Box::new(Type::Any)));
-    f.intrinsic(Arc::new("save_data_file".into()), SAVE_DATA_FILE, PreludeFunction {
+    sarg(f, "load_string__file", LOAD_STRING__FILE, Type::Text, Type::Result(Box::new(Type::Text)));
+    sarg(f, "join__thread", JOIN__THREAD, Type::thread(), Type::Result(Box::new(Type::Any)));
+    f.intrinsic(Arc::new("save__data_file".into()), SAVE__DATA_FILE, PreludeFunction {
         lts: vec![Lt::Default; 2],
         tys: vec![Type::Any, Type::Text],
         ret: Type::Result(Box::new(Type::Text))
@@ -691,7 +693,6 @@ fn _where(
         x => return Err(module.error(call.args[0].source_range(),
             &rt.expected(x, "f64"), rt))
     }));
-    rt.pop_fn(call.name.clone());
     Ok(Some(v))
 }
 
@@ -699,11 +700,10 @@ fn explain_why(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Module,
-    st: usize,
-    lc: usize,
-    cu: usize,
+    _st: usize,
+    _lc: usize,
+    _cu: usize,
 ) -> Result<Option<Variable>, String> {
-    rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
     let why = rt.stack.pop().expect(TINVOTS);
     let val = rt.stack.pop().expect(TINVOTS);
     let (val, why) = match rt.resolve(&val) {
@@ -720,7 +720,6 @@ fn explain_why(
         x => return Err(module.error(call.args[0].source_range(),
             &rt.expected(x, "bool"), rt))
     };
-    rt.pop_fn(call.name.clone());
     Ok(Some(Variable::Bool(val, Some(why))))
 }
 
@@ -1411,7 +1410,7 @@ fn trim_right(
     Ok(Some(Variable::Text(v)))
 }
 
-fn to_string(
+fn _str(
     rt: &mut Runtime,
     call: &ast::Call,
     _module: &Module,
@@ -1442,7 +1441,7 @@ fn json_string(
     Ok(Some(Variable::Text(Arc::new(String::from_utf8(buf).unwrap()))))
 }
 
-fn to_string_color(
+fn str__color(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Module,
@@ -1480,7 +1479,7 @@ fn to_string_color(
     Ok(Some(Variable::Text(Arc::new(String::from_utf8(buf).unwrap()))))
 }
 
-fn srgb_to_linear_color(
+fn srgb_to_linear__color(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Module,
@@ -1506,7 +1505,7 @@ fn srgb_to_linear_color(
     )))
 }
 
-fn linear_to_srgb_color(
+fn linear_to_srgb__color(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Module,
@@ -1623,7 +1622,7 @@ fn load(
     Ok(Some(v))
 }
 
-fn load_source_imports(
+fn load__source_imports(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Module,
@@ -2188,7 +2187,7 @@ fn unwrap_err(
     }))
 }
 
-fn dir_angle(
+fn dir__angle(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Module,
@@ -2206,7 +2205,7 @@ fn dir_angle(
     }))
 }
 
-fn load_meta_file(
+fn load__meta_file(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Module,
@@ -2238,7 +2237,7 @@ fn load_meta_file(
     })))
 }
 
-fn load_meta_url(
+fn load__meta_url(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Module,
@@ -2270,7 +2269,7 @@ fn load_meta_url(
     })))
 }
 
-fn download_url_file(
+fn download__url_file(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Module,
@@ -2303,7 +2302,7 @@ fn download_url_file(
     })))
 }
 
-fn save_string_file(
+fn save__string_file(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Module,
@@ -2347,7 +2346,7 @@ fn save_string_file(
     })))
 }
 
-fn load_string_file(
+fn load_string__file(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Module,
@@ -2390,7 +2389,7 @@ fn load_string_file(
     })))
 }
 
-fn join_thread(
+fn join__thread(
     rt: &mut Runtime,
     call: &ast::Call,
     _module: &Module,
@@ -2433,7 +2432,7 @@ fn join_thread(
     Ok(Some(v))
 }
 
-fn save_data_file(
+fn save__data_file(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Module,

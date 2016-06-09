@@ -54,8 +54,8 @@ pub fn add_functions<W: Any + AdvancedWindow>(module: &mut Module) {
         tys: vec![],
         ret: Type::Option(Box::new(Type::Bool)),
     });
-    module.add(Arc::new("set_title".into()),
-        set_title::<W>, PreludeFunction {
+    module.add(Arc::new("set__title".into()),
+        set__title::<W>, PreludeFunction {
             lts: vec![Lt::Default],
             tys: vec![Type::Text],
             ret: Type::Void
@@ -162,7 +162,8 @@ pub fn release_keyboard_key(rt: &mut Runtime) -> Result<(), String> {
     }
 }
 
-pub fn set_title<W: Any + AdvancedWindow>(rt: &mut Runtime) -> Result<(), String> {
+#[allow(non_snake_case)]
+pub fn set__title<W: Any + AdvancedWindow>(rt: &mut Runtime) -> Result<(), String> {
     use std::sync::Arc;
 
     let window = unsafe { &mut *Current::<W>::new() };

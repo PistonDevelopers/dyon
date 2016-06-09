@@ -1,9 +1,9 @@
-fn foo_val(a) -> {
+fn foo__val(a) -> {
     // return err("hi")
     return ok(a + 3)
 }
 
-fn bar_val(a) -> {
+fn bar__val(a) -> {
     x := foo(val: a)?
     return ok(x + 2)
 }

@@ -2,33 +2,33 @@
 Wraps a nice interface around draw list commands.
 */
 
-fn clear_color(color: vec4)
+fn clear__color(color: vec4)
 ~ mut draw_list: [[]] {
     push(mut draw_list, ["clear", color])
 }
 
-fn line_color_radius_from_to(color: vec4, radius: f64, from: vec4, to: vec4)
+fn line__color_radius_from_to(color: vec4, radius: f64, from: vec4, to: vec4)
 ~ mut draw_list: [[]] {
     push(mut draw_list, ["line_color_radius_from_to", color, radius, from, to])
 }
 
-fn rectangle_color_corner_size(color: vec4, corner: vec4, size: vec4)
+fn rectangle__color_corner_size(color: vec4, corner: vec4, size: vec4)
 ~ mut draw_list: [[]] {
     push(mut draw_list, ["rectangle_color_corner_size", color, corner, size])
 }
 
-fn ellipse_color_corner_size(color: vec4, corner: vec4, size: vec4)
+fn ellipse__color_corner_size(color: vec4, corner: vec4, size: vec4)
 ~ mut draw_list: [[]] {
     ellipse(color: color, corner: corner, size: size, resolution: 16)
 }
 
-fn ellipse_color_corner_size_resolution
+fn ellipse__color_corner_size_resolution
 (color: vec4, corner: vec4, size: vec4, resolution: f64)
 ~ mut draw_list: [[]] {
     push(mut draw_list, ["ellipse_color_corner_size_resolution", color, corner, size, resolution])
 }
 
-fn circle_color_center_radius(color: vec4, center: vec4, radius: f64)
+fn circle__color_center_radius(color: vec4, center: vec4, radius: f64)
 ~ mut draw_list: [[]] {
     width := 2 * radius
     ellipse(color: color, corner: center - radius, size: (width, width))

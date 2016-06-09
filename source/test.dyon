@@ -1,5 +1,11 @@
 fn main() {
-    x := 0
-    for i 100_000_000 { x = sqrt(x+1) }
-    println("x " + to_string(x))
+    println(unwrap(bar(2)))
+}
+
+fn foo(x) -> res {
+    return ok(ok("hi")?)
+}
+
+fn bar(x) -> res {
+    return ok(foo(x)?)
 }
