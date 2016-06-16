@@ -113,6 +113,7 @@ fn test_typechk() {
     test_fail_src("source/typechk/return_6.dyon");
     test_fail_src("source/typechk/return_7.dyon");
     test_fail_src("source/typechk/return_8.dyon");
+    test_src("source/typechk/return_9.dyon");
     test_src("source/typechk/add.dyon");
     test_src("source/typechk/mat_expr.dyon");
     test_src("source/typechk/or.dyon");
@@ -126,7 +127,6 @@ fn test_typechk() {
     test_src("source/typechk/call_4.dyon");
     test_src("source/typechk/obj.dyon");
     test_fail_src("source/typechk/go.dyon");
-    test_fail_src("source/typechk/threads.dyon");
     test_fail_src("source/typechk/unused_result.dyon");
     test_fail_src("source/typechk/unused_result_2.dyon");
     test_src("source/typechk/res.dyon");

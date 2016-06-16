@@ -24,6 +24,11 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                 }
                 Kind::Fn => {
                     if let Some(ch) = nodes[i].find_child_by_kind(nodes, Kind::Expr) {
+                        // If the block is unreachable at the end,
+                        // this does not tell anything about the type of the function.
+                        if nodes[ch].ty == Some(Type::Unreachable) {
+                            continue 'node;
+                        }
                         // Infer return type from body of function.
                         this_ty = nodes[ch].ty.clone();
                     }
@@ -188,10 +193,38 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                     if nodes[i].children.len() == 0 { continue 'node; }
                     let ch = nodes[i].children[0];
                     if nodes[ch].item_ids() { continue 'node; }
+                    let ty = match nodes[ch].ty {
+                        None => continue 'node,
+                        Some(ref ty) => ty.clone()
+                    };
                     if nodes[ch].kind == Kind::Return {
+                        // Find function and check return type.
+                        let mut p = i;
+                        loop {
+                            p = match nodes[p].parent {
+                                None => break,
+                                Some(p) => p
+                            };
+                            if nodes[p].kind == Kind::Fn {
+                                if nodes[p].ty.is_none() {
+                                    // Infer return type of function.
+                                    nodes[p].ty = Some(ty.clone());
+                                } else if let Some(ref fn_ty) = nodes[p].ty {
+                                    if !ty.goes_with(fn_ty) {
+                                        return Err(nodes[ch].source.wrap(
+                                            format!("Type mismatch (#350):\n\
+                                            Expected `{}`, found `{}`",
+                                            fn_ty.description(), ty.description())
+                                        ));
+                                    }
+                                }
+                                break;
+                            }
+                        }
                         this_ty = Some(Type::Unreachable);
-                    } else if let Some(ref ty) = nodes[ch].ty {
-                        this_ty = Some(nodes[i].inner_type(ty));
+                    } else {
+                        // Propagate type.
+                        this_ty = Some(nodes[i].inner_type(&ty));
                     }
                 }
                 Kind::Add => {
