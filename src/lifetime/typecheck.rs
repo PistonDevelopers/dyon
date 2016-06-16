@@ -4,7 +4,48 @@ use super::kind::Kind;
 use Prelude;
 use Type;
 
+/// Runs type checking.
+///
+/// The type checking consists of 2 steps:
+///
+/// 1. Propagate types across graph nodes, check for direct conflicts
+/// 2. After type propagation, check for missing or conflicting types
+///
+/// ### Step 1 - Propagate types
+///
+/// Step 1 runs as long any type information is propagated in the graph.
+/// It stops when no further type information can be inferred.
+///
+/// This step is necessary to infer types of expressions, and can be quite complicated.
+/// Instead of picking the next place to check, it simply loops over all nodes
+/// looking for those that have no type information yet.
+/// This is not the fastest algorithm, but easy to reason about.
+///
+/// When a node gets type information, it will no longer be checked.
+/// Therefore, some nodes might delay setting a type to itself even it is known
+/// because the node serves as a propagation point for other nodes.
+///
+/// For example, when declaring a local variable:
+///
+/// ```ignore
+/// x := 2 + a
+/// ```
+///
+/// It is known that a declaration always return `void`, but this knowledge is not always used.
+/// Since the type of the left argument depends on the right one,
+/// the assignment waits with setting type information until the type of the right expression
+/// is known. Then it copies the type over to the left expression and then set itself to `void`.
+///
+/// ### Step 2 - After type propagation
+///
+/// This step is used to check conflicts between multiple ways of inferring types.
+///
+/// For example, the type of an `if` expression is inferred from the true block.
+/// The type propagation step uses this assumption without checking the whole `if` expression.
+/// After type propagation, all blocks in the `if` expression should have some type information,
+/// but no further propagation is necessary, so it only need to check for consistency.
 pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>> {
+    // Type propagation.
     let mut changed;
     loop {
         changed = false;
@@ -357,6 +398,8 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
         }
         if !changed { break; }
     }
+
+    // After type propagation.
     for i in 0..nodes.len() {
         let kind = nodes[i].kind;
         match kind {
