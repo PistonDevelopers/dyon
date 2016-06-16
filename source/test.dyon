@@ -1,5 +1,11 @@
-foo(list) = min i { list[i] }
+foo() = {
+    return 2
+}
 
 fn main() {
-    println(foo([1, 2, 3]))
+    bar(foo() * 3)
+}
+
+fn bar(a: f64) {
+    println(a)
 }

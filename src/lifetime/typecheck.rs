@@ -85,7 +85,8 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                                     (&Some(ref ch_ty), &Some(ref arg_ty)) => {
                                         if !ch_ty.goes_with(arg_ty) {
                                             return Err(nodes[i].source.wrap(
-                                                format!("Type mismatch: Expected `{}`, found `{}`",
+                                                format!("Type mismatch (#100):\n\
+                                                    Expected `{}`, found `{}`",
                                                     arg_ty.description(), ch_ty.description())));
                                         }
                                     }
@@ -97,7 +98,8 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                                 if let Some(ref ty) = expr_type {
                                     if !ty.goes_with(&f.tys[j]) {
                                         return Err(nodes[i].source.wrap(
-                                            format!("Type mismatch: Expected `{}`, found `{}`",
+                                            format!("Type mismatch (#200):\n\
+                                                Expected `{}`, found `{}`",
                                                 f.tys[j].description(), ty.description())
                                         ))
                                     }
@@ -145,7 +147,8 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                             Kind::Vec4UnLoop => {
                                 if nodes[i].try {
                                     return Err(nodes[i].source.wrap(
-                                        "Can not use `?` with a number".into()));
+                                        "Type mismatch (#300):\n\
+                                        Can not use `?` with a number".into()));
                                 }
                                 // All indices are numbers.
                                 this_ty = Some(Type::F64);
@@ -200,8 +203,9 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                             it_ty = if let Some(ref it) = it_ty {
                                 match it.add(ty) {
                                     None => return Err(nodes[ch].source.wrap(
-                                        format!("Type mismatch: Binary operator can not be used with `{}` and `{}`",
-                                        it.description(), ty.description()))),
+                                        format!("Type mismatch (#400):\n\
+                                            Binary operator can not be used with `{}` and `{}`",
+                                            it.description(), ty.description()))),
                                     x => x
                                 }
                             } else {
@@ -222,8 +226,9 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                             it_ty = if let Some(ref it) = it_ty {
                                 match it.mul(ty) {
                                     None => return Err(nodes[ch].source.wrap(
-                                        format!("Type mismatch: Binary operator can not be used with `{}` and `{}`",
-                                        it.description(), ty.description()))),
+                                        format!("Type mismatch (#500):\n\
+                                            Binary operator can not be used with `{}` and `{}`",
+                                            it.description(), ty.description()))),
                                     x => x
                                 }
                             } else {
@@ -253,7 +258,8 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                                 this_ty = Some(ty);
                             } else {
                                 return Err(nodes[i].source.wrap(
-                                    format!("Type mismatch: Binary operator can not be used \
+                                    format!("Type mismatch (#600):\n\
+                                        Binary operator can not be used \
                                              with `{}` and `{}`", base_ty.description(),
                                              exp_ty.description())));
                             }
@@ -290,7 +296,7 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                     if let Some(ref ty) = expr_type {
                         if !ty.goes_with(&Type::F64) {
                             return Err(nodes[i].source.wrap(
-                                format!("Type mismatch: Expected `f64`, found `{}`",
+                                format!("Type mismatch (#700):\nExpected `f64`, found `{}`",
                                     expr_type.as_ref().unwrap().description())));
                         }
                     }
@@ -326,7 +332,7 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                     try!(check_fn(i, nodes, ty))
                 } else {
                     return Err(nodes[i].source.wrap(
-                        format!("Could not infer type of function `{}`",
+                        format!("Type mismatch (#800):\nCould not infer type of function `{}`",
                         nodes[i].name().unwrap())
                     ));
                 }
@@ -337,7 +343,7 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                         match nodes[decl].ty {
                             None | Some(Type::Void) => {
                                 return Err(nodes[i].source.wrap(
-                                    format!("Requires `->` on `{}`",
+                                    format!("Type mismatch (#900):\nRequires `->` on `{}`",
                                     nodes[decl].name().unwrap())
                                 ));
                             }
@@ -360,7 +366,8 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                             (&Some(ref left_ty), &Some(ref right_ty)) => {
                                 if !left_ty.add_assign(&right_ty) {
                                     return Err(nodes[i].source.wrap(
-                                        format!("Assignment operator can not be used with `{}` and `{}`",
+                                        format!("Type mismatch (#1000):\n\
+                                        Assignment operator can not be used with `{}` and `{}`",
                                             left_ty.description(), right_ty.description())
                                     ))
                                 }
@@ -400,7 +407,8 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                     if let Some(ref ty) = nodes[ch].ty {
                         if ty != &Type::Void && ty != &Type::Unreachable {
                             return Err(nodes[ch].source.wrap(
-                                format!("Unused result `{}`", ty.description())
+                                format!("Type mismatch (#1100):\nUnused result `{}`",
+                                    ty.description())
                             ));
                         }
                     }
@@ -419,7 +427,7 @@ fn check_fn(n: usize, nodes: &Vec<Node>, ty: &Type) -> Result<(), Range<String>>
                 if let Some(ref ret_ty) = nodes[ch].ty {
                     if !ty.goes_with(ret_ty) {
                         return Err(nodes[ch].source.wrap(
-                            format!("Type mismatch: Expected `{}`, found `{}`",
+                            format!("Type mismatch (#1200):\nExpected `{}`, found `{}`",
                                 ty.description(), ret_ty.description())));
                     }
                 }
@@ -427,7 +435,7 @@ fn check_fn(n: usize, nodes: &Vec<Node>, ty: &Type) -> Result<(), Range<String>>
             Kind::ReturnVoid => {
                 if !ty.goes_with(&Type::Void) {
                     return Err(nodes[ch].source.wrap(
-                        format!("Type mismatch: Expected `{}`, found `{}`",
+                        format!("Type mismatch (#1300):\nExpected `{}`, found `{}`",
                             ty.description(), Type::Void.description())));
                 }
             }
@@ -443,7 +451,7 @@ fn check_if(n: usize, nodes: &Vec<Node>) -> Result<(), Range<String>> {
         if let Some(ref cond_ty) = nodes[ch].ty {
             if !Type::Bool.goes_with(cond_ty) {
                 return Err(nodes[ch].source.wrap(
-                    format!("Type mismatch: Expected `{}`, found `{}`",
+                    format!("Type mismatch (#1400):\nExpected `{}`, found `{}`",
                         Type::Bool.description(), cond_ty.description())));
             }
         }
@@ -460,7 +468,7 @@ fn check_if(n: usize, nodes: &Vec<Node>) -> Result<(), Range<String>> {
             if let Some(ref cond_ty) = nodes[ch].ty {
                 if !Type::Bool.goes_with(cond_ty) {
                     return Err(nodes[ch].source.wrap(
-                        format!("Type mismatch: Expected `{}`, found `{}`",
+                        format!("Type mismatch (#1500):\nExpected `{}`, found `{}`",
                             Type::Bool.description(), cond_ty.description())));
                 }
             }
@@ -468,7 +476,7 @@ fn check_if(n: usize, nodes: &Vec<Node>) -> Result<(), Range<String>> {
             if let Some(ref else_if_type) = nodes[ch].ty {
                 if !else_if_type.goes_with(&true_type) {
                     return Err(nodes[ch].source.wrap(
-                        format!("Type mismatch: Expected `{}`, found `{}`",
+                        format!("Type mismatch (#1600):\nExpected `{}`, found `{}`",
                             true_type.description(), else_if_type.description())));
                 }
             }
@@ -479,7 +487,7 @@ fn check_if(n: usize, nodes: &Vec<Node>) -> Result<(), Range<String>> {
         if let Some(ref else_type) = nodes[eb].ty {
             if !else_type.goes_with(&true_type) {
                 return Err(nodes[eb].source.wrap(
-                    format!("Type mismatch: Expected `{}`, found `{}`",
+                    format!("Type mismatch (#1700):\nExpected `{}`, found `{}`",
                         true_type.description(), else_type.description())));
             }
         }
