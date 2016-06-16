@@ -1,6 +1,6 @@
 foo() = {
     return 2
-    return false
+    false
 }
 
 fn main() {
