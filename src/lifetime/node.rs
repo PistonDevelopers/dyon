@@ -291,6 +291,7 @@ pub fn convert_meta_data(
                     Kind::Array | Kind::ArrayFill => Some(Type::array()),
                     Kind::Vec4 | Kind::Vec4UnLoop => Some(Type::Vec4),
                     Kind::Object => Some(Type::object()),
+                    Kind::Sift => Some(Type::array()),
                     Kind::Sum => Some(Type::F64),
                     Kind::Swizzle => Some(Type::F64),
                     Kind::Compare => Some(Type::Bool),
