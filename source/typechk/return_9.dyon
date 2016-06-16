@@ -1,0 +1,11 @@
+foo() = {
+    return 2
+}
+
+fn main() {
+    bar(foo() * 3)
+}
+
+fn bar(a: f64) {
+    println(a)
+}
