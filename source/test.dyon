@@ -1,9 +1,5 @@
-fn foo() -> res {
-    err("")?
-}
+foo(list) = min i { list[i] }
 
 fn main() {
-    data := 2
-    _ := foo()
-    println(data)
+    println(foo([1, 2, 3]))
 }
