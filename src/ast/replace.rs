@@ -187,6 +187,9 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
         E::SumVec4(ref for_n_expr) => {
             E::ForN(Box::new(number_for_n(for_n_expr, name, val)))
         }
+        E::Prod(ref for_n_expr) => {
+            E::ForN(Box::new(number_for_n(for_n_expr, name, val)))
+        }
         E::Min(ref for_n_expr) => {
             E::ForN(Box::new(number_for_n(for_n_expr, name, val)))
         }

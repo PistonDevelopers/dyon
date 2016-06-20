@@ -1,8 +1,5 @@
-foo() = {
-    if false { return 2 }
-    false
-}
-
 fn main() {
-    println(foo())
+    list := sift i [1, 100) { if (i % 13) != 0 { continue } else { clone(i) } }
+    println(list)
+    println(prod i { list[i] })
 }
