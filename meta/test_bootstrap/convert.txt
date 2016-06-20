@@ -1,0 +1,16 @@
+meta {
+    f64 := [f64: bool] => "\"f64\"";
+    type := select {f64};
+    field := [name: str, type <- type] => {name: name, type: type};
+    rep_fields := repeat field:"field";
+    expr := [code: str] => code;
+    fields := [fs <- rep_fields, expr <- expr:"expr"] =>
+        {op: "fields", fields: fs, expr: expr};
+    repeat := [rule: str, as: str] => {op: "repeat", rule: rule, as: as};
+    rule := select {fields:"fields", repeat:"repeat"};
+    decl := [name: str, rule <- rule:"rule"] => {name: name, rule: rule};
+    rules := repeat decl:"decl";
+    doc := [rules <- rules:"rules", start: str] => {rules: rules, start: start};
+    -----------------
+    doc
+}
