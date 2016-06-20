@@ -449,9 +449,9 @@ impl Runtime {
         side: Side,
         module: &Module
     ) -> Result<(Option<Variable>, Flow), String> {
-        let v = match self.expression(expr, side, module) {
-            Ok((Some(x), Flow::Continue)) => x,
-            Ok((x, Flow::Return)) => { return Ok((x, Flow::Return)); }
+        let v = match try!(self.expression(expr, side, module)) {
+            (Some(x), Flow::Continue) => x,
+            (x, Flow::Return) => { return Ok((x, Flow::Return)); }
             _ => return Err(module.error(expr.source_range(),
                             &format!("{}\nExpected something",
                                 self.stack_trace()), self))
