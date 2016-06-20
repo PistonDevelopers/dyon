@@ -405,6 +405,20 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
         match kind {
             Kind::Fn => {
                 if let Some(ref ty) = nodes[i].ty {
+                    // Check inferred type matches the one of the block.
+                    // This is used by mathematical expressions where return type is inferred.
+                    if let Some(ch) = nodes[i].find_child_by_kind(nodes, Kind::Expr) {
+                        if let Some(ref ch_ty) = nodes[ch].ty {
+                            if !ty.goes_with(ch_ty) {
+                                return Err(nodes[ch].source.wrap(
+                                    format!("Type mismatch (#750):\nExpected `{}`, found `{}`",
+                                        ty.description(), ch_ty.description())
+                                ));
+                            }
+                        }
+                    }
+
+                    // Check all return statements.
                     try!(check_fn(i, nodes, ty))
                 } else {
                     return Err(nodes[i].source.wrap(
@@ -496,6 +510,7 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
     Ok(())
 }
 
+/// Checks all returns recursively in function.
 fn check_fn(n: usize, nodes: &Vec<Node>, ty: &Type) -> Result<(), Range<String>> {
     for &ch in &nodes[n].children {
         match nodes[ch].kind {
