@@ -89,7 +89,7 @@ impl Node {
         use super::kind::Kind::*;
 
         match self.kind {
-            Pow | Sum | SumVec4 | Min | Max | Any | All |
+            Pow | Sum | Prod | SumVec4 | Min | Max | Any | All |
             Vec4 | Vec4UnLoop | Swizzle |
             Assign | For | ForN | Link => false,
             Add | Mul | Compare => self.children.len() == 1,
@@ -167,6 +167,7 @@ impl Node {
                 (_, Kind::Sift) => {}
                 (_, Kind::SumVec4) => {}
                 (_, Kind::Sum) => {}
+                (_, Kind::Prod) => {}
                 (_, Kind::Min) => {}
                 (_, Kind::Max) => {}
                 (_, Kind::Any) => {}
@@ -292,7 +293,7 @@ pub fn convert_meta_data(
                     Kind::Vec4 | Kind::Vec4UnLoop => Some(Type::Vec4),
                     Kind::Object => Some(Type::object()),
                     Kind::Sift => Some(Type::array()),
-                    Kind::Sum => Some(Type::F64),
+                    Kind::Sum | Kind::Prod => Some(Type::F64),
                     Kind::Swizzle => Some(Type::F64),
                     Kind::Compare => Some(Type::Bool),
                     Kind::Link => Some(Type::Link),

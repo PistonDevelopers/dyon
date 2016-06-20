@@ -1,0 +1,6 @@
+fn main() {
+    list := [1, 2, 3, 4]
+    foo(prod i { list[i] })
+}
+
+fn foo(a: bool) {}

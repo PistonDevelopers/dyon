@@ -31,6 +31,7 @@ pub enum Kind {
     ForN,
     Sum,
     SumVec4,
+    Prod,
     Min,
     Max,
     Sift,
@@ -108,6 +109,7 @@ impl Kind {
             "for_n" => Kind::ForN,
             "sum" => Kind::Sum,
             "sum_vec4" => Kind::SumVec4,
+            "prod" => Kind::Prod,
             "min" => Kind::Min,
             "max" => Kind::Max,
             "sift" => Kind::Sift,
@@ -158,7 +160,7 @@ impl Kind {
         use self::Kind::*;
 
         match *self {
-            ForN | Sum | SumVec4 | Min | Max | Sift
+            ForN | Sum | Prod | SumVec4 | Min | Max | Sift
             | Any | All => true,
             _ => false
         }

@@ -116,21 +116,22 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\""
 // Allow whitespace, but no new line.
 46 wn = .r?({" " "\t" "\r"})
 
-50 short_loops = {sum:"sum" sum_vec4:"sum_vec4" min:"min" max:"max" sift:"sift"
+50 short_loops = {sum:"sum" prod:"prod" sum_vec4:"sum_vec4" min:"min" max:"max" sift:"sift"
     any:"any" all:"all" vec4_un_loop:"vec4_un_loop"}
 51 sum = [label {"sum" "∑"} short_body]
-52 min = [label "min" short_body]
-52 max = [label "max" short_body]
-53 sift = [label "sift" short_body]
-54 any = [label {"any" "∃"} short_body]
-55 all = [label {"all" "∀"} short_body]
-56 sum_vec4 = [label {"sum_vec4" "∑vec4"} short_body]
-57 vec4_un_loop = ["vec" {"4":"4" "3":"3" "2":"2"}
+52 prod = [label {"prod" "∏"} short_body]
+53 min = [label "min" short_body]
+54 max = [label "max" short_body]
+55 sift = [label "sift" short_body]
+56 any = [label {"any" "∃"} short_body]
+57 all = [label {"all" "∀"} short_body]
+58 sum_vec4 = [label {"sum_vec4" "∑vec4"} short_body]
+59 vec4_un_loop = ["vec" {"4":"4" "3":"3" "2":"2"}
                    w .._seps!:"name" w expr:"expr"]
-58 swizzle = [sw:"sw0" sw:"sw1" ?sw:"sw2" ?sw:"sw3" w expr:"expr"]
-59 sw = {"x":"x" "y":"y" "z":"z" "w":"w"}
+60 swizzle = [sw:"sw0" sw:"sw1" ?sw:"sw2" ?sw:"sw3" w expr:"expr"]
+61 sw = {"x":"x" "y":"y" "z":"z" "w":"w"}
 
-60 type = {
+70 type = {
     "any":"any"
     "bool":"bool"
     "f64":"f64"
