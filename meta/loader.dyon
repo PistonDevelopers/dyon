@@ -2,20 +2,20 @@
 fn main() {
     // Test the generated code.
     test := true
-    folder := "test_3"
+    folder := "test_bootstrap"
 
     generator := unwrap(load("meta/generator.dyon"))
 
     if test {
-        output := unwrap(load(
-            source: "meta/" + folder + "/output.dyon",
-            imports: [generator]
-        ))
-
         meta_data := load(meta: "meta/" + folder + "/syntax.txt",
                           file: "meta/" + folder + "/data.txt")
         data := unwrap(meta_data)
         println(json_from_meta_data(data))
+
+        output := unwrap(load(
+            source: "meta/" + folder + "/output.dyon",
+            imports: [generator]
+        ))
         data := unwrap(call_ret(output, "convert", [data]))
 
         if folder == "test_2" {
