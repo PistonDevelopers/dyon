@@ -1,112 +1,126 @@
 fn __line__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
-    start := index
-    i := index
+    S := index
+    I := index
     if name != none() {
-        node := start_node(data: data, index: i, name: unwrap(name))
+        node := start_node(data: data, index: I, name: unwrap(name))
         if node == none() { return err("Expected `" + unwrap(name) + "`")? }
-        i += unwrap(node)
+        I += unwrap(node)
     }
     _line := none()
     loop {
-        if i >= len(data) { return err("Unexpected end")? }
+        if I >= len(data) { break }
         if (_line != none()) { break }
-        i_line := read_str(data: data, index: i, name: "line")
+        i_line := read_str(data: data, index: I, name: "line")
         if i_line != none() {
             i_line := unwrap(i_line)
-            i += i_line[0]
-            _line = some(i_line[1])
-            continue
+            if i_line[0] > 0 {
+                I += i_line[0]
+                _line = some(i_line[1])
+                continue
+            }
         }
-        i += ignore(data: data, index: i)
+        if name != none() {
+            I += ignore(data: data, index: I)
+        }
         break
     }
     if name != none() {
-        i += end_node(data: data, index: i, name: unwrap(name))?
+        I += end_node(data: data, index: I, name: unwrap(name))?
     }
     line := if _line != none() {
         unwrap(_line)
     } else {
         return err("Could find `line`")?
     }
-    return ok([i - start, line])
+    return ok([I - S, line])
 }
 
 fn __photo__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
-    start := index
-    i := index
+    S := index
+    I := index
     if name != none() {
-        node := start_node(data: data, index: i, name: unwrap(name))
+        node := start_node(data: data, index: I, name: unwrap(name))
         if node == none() { return err("Expected `" + unwrap(name) + "`")? }
-        i += unwrap(node)
+        I += unwrap(node)
     }
     arr := []
     loop {
-        _line := __line(data: data, index: i, name: none())
+        _line := __line(data: data, index: I, name: none())
         if is_err(_line) {
             break
         } else {
             i_line := unwrap(_line)
-            i += i_line[0]
+            I += i_line[0]
             push(mut arr, i_line[1])
         }
     }
     if name != none() {
-        i += end_node(data: data, index: i, name: unwrap(name))?
+        I += end_node(data: data, index: I, name: unwrap(name))?
     }
-    return ok([i - start, arr])
+    return ok([I - S, arr])
 }
 
 fn __person__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
-    start := index
-    i := index
+    S := index
+    I := index
     if name != none() {
-        node := start_node(data: data, index: i, name: unwrap(name))
+        node := start_node(data: data, index: I, name: unwrap(name))
         if node == none() { return err("Expected `" + unwrap(name) + "`")? }
-        i += unwrap(node)
+        I += unwrap(node)
     }
     _first_name := none()
     _last_name := none()
     _age := none()
     _ph := none()
     loop {
-        if i >= len(data) { return err("Unexpected end")? }
+        if I >= len(data) { break }
         if (_first_name != none()) &&
            (_last_name != none()) &&
            (_age != none()) &&
            (_ph != none()) { break }
-        i_first_name := read_str(data: data, index: i, name: "first_name")
+        i_first_name := read_str(data: data, index: I, name: "first_name")
         if i_first_name != none() {
             i_first_name := unwrap(i_first_name)
-            i += i_first_name[0]
-            _first_name = some(i_first_name[1])
-            continue
+            if i_first_name[0] > 0 {
+                I += i_first_name[0]
+                _first_name = some(i_first_name[1])
+                continue
+            }
         }
-        i_last_name := read_str(data: data, index: i, name: "last_name")
+        i_last_name := read_str(data: data, index: I, name: "last_name")
         if i_last_name != none() {
             i_last_name := unwrap(i_last_name)
-            i += i_last_name[0]
-            _last_name = some(i_last_name[1])
-            continue
+            if i_last_name[0] > 0 {
+                I += i_last_name[0]
+                _last_name = some(i_last_name[1])
+                continue
+            }
         }
-        i_age := read_f64(data: data, index: i, name: "age")
+        i_age := read_f64(data: data, index: I, name: "age")
         if i_age != none() {
             i_age := unwrap(i_age)
-            i += i_age[0]
-            _age = some(i_age[1])
-            continue
+            if i_age[0] > 0 {
+                I += i_age[0]
+                _age = some(i_age[1])
+                continue
+            }
         }
-        i_ph := __photo(data: data, index: i, name: some("photo"))
+        i_ph := __photo(data: data, index: I, name: some("photo"))
         if !is_err(i_ph) {
             i_ph := unwrap(i_ph)
-            i += i_ph[0]
-            _ph = some(i_ph[1])
-            continue
+            if i_ph[0] > 0 {
+                I += i_ph[0]
+                _ph = some(i_ph[1])
+                continue
+            }
         }
-        i += ignore(data: data, index: i)
+        if name != none() {
+            I += ignore(data: data, index: I)
+        }
         break
     }
     if name != none() {
-        i += end_node(data: data, index: i, name: unwrap(name))?
+        I += end_node(data: data, index: I, name: unwrap(name))?
     }
     first_name := if _first_name != none() {
         unwrap(_first_name)
@@ -128,7 +142,7 @@ fn __person__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
     } else {
         return err("Could find `ph`")?
     }
-    return ok([i - start, {
+    return ok([I - S, {
             first_name: first_name,
             last_name: last_name,
             age: age,
@@ -143,32 +157,32 @@ fn __person__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
 }
 
 fn __doc__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
-    start := index
-    i := index
+    S := index
+    I := index
     if name != none() {
-        node := start_node(data: data, index: i, name: unwrap(name))
+        node := start_node(data: data, index: I, name: unwrap(name))
         if node == none() { return err("Expected `" + unwrap(name) + "`")? }
-        i += unwrap(node)
+        I += unwrap(node)
     }
     arr := []
     loop {
-        _person := __person(data: data, index: i, name: some("person"))
+        _person := __person(data: data, index: I, name: some("person"))
         if is_err(_person) {
             break
         } else {
             i_person := unwrap(_person)
-            i += i_person[0]
+            I += i_person[0]
             push(mut arr, i_person[1])
         }
     }
     if name != none() {
-        i += end_node(data: data, index: i, name: unwrap(name))?
+        I += end_node(data: data, index: I, name: unwrap(name))?
     }
-    return ok([i - start, arr])
+    return ok([I - S, arr])
 }
 
 fn convert(data) -> res {
-    i := 0
-    r := __doc(data: data, index: i, name: none())?
+    I := 0
+    r := __doc(data: data, index: I, name: none())?
     return ok(r[1])
 }
