@@ -1,38 +1,153 @@
 {
+    start: "doc",
     rules: [
         {
-            name: "john",
-            expr: "{first_name: \"John\"}",
-            fields: [
-                {
-                    name: "john",
-                    type: "bool",
-                    optional: false
-                }
-            ]
+            expr: "str(\"f64\")",
+            fields: [{type: "bool", optional: false, name: "f64"}],
+            name: "f64"
         },
         {
-            name: "peter",
-            expr: "{first_name: \"Peter\"}",
-            fields: [
-                {
-                    name: "peter",
-                    type: "bool",
-                    optional: false
-                }
-            ]
+            expr: "str(\"str\")",
+            fields: [{type: "bool", optional: false, name: "str"}],
+            name: "str"
+        },
+        {
+            expr: "str(\"bool\")",
+            fields: [{type: "bool", optional: false, name: "bool"}],
+            name: "bool"
         },
         {
             select: [
-                {rule: "john", as: none(), op: "ref"},
-                {rule: "peter", as: none(), op: "ref"}
+                {as: none(), op: "ref", rule: "f64"},
+                {as: none(), op: "ref", rule: "str"},
+                {as: none(), op: "ref", rule: "bool"}
             ],
-            name: "person"
+            name: "ty"
         },
         {
-            name: "people",
-            repeat: {rule: "person", as: some("person")}
+            expr: "{op: \"type\", val: ty, optional: opt == some(true)}",
+            fields: [
+                {type: "bool", optional: true, name: "opt"},
+                {ref: {as: none(), rule: "ty"}, name: "ty"}
+            ],
+            name: "type"
+        },
+        {
+            expr: "{op: \"ref\", rule: rule, as: as}",
+            fields: [
+                {type: "str", optional: false, name: "rule"},
+                {type: "str", optional: true, name: "as"}
+            ],
+            name: "ref"
+        },
+        {
+            select: [
+                {as: none(), op: "ref", rule: "type"},
+                {as: none(), op: "ref", rule: "ref"}
+            ],
+            name: "type_or_ref"
+        },
+        {
+            expr: "if tr.op == \"type\" {
+                {name: name, type: tr.val, optional: tr.optional}
+            } else {
+                {name: name, ref: {rule: tr.rule, as: tr.as}}
+            }",
+            fields: [
+                {type: "str", optional: false, name: "name"},
+                {
+                    ref: {as: none(), rule: "type_or_ref"},
+                    name: "tr"
+                }
+            ],
+            name: "field"
+        },
+        {
+            repeat: {as: some("field"), rule: "field"},
+            name: "rep_fields"
+        },
+        {
+            expr: "code",
+            fields: [{type: "str", optional: false, name: "code"}],
+            name: "expr"
+        },
+        {
+            expr: "{op: \"fields\", fields: fs, expr: expr}",
+            fields: [
+                {
+                    ref: {as: none(), rule: "rep_fields"},
+                    name: "fs"
+                },
+                {
+                    ref: {as: some("expr"), rule: "expr"},
+                    name: "expr"
+                }
+            ],
+            name: "fields"
+        },
+        {
+            expr: "{op: \"repeat\", rule: ref.rule, as: ref.as}",
+            fields: [
+                {
+                    ref: {as: none(), rule: "ref"},
+                    name: "ref"
+                }
+            ],
+            name: "repeat"
+        },
+        {
+            repeat: {as: some("ref"), rule: "ref"},
+            name: "sel"
+        },
+        {
+            expr: "{op: \"select\", rules: sel}",
+            fields: [
+                {
+                    ref: {as: none(), rule: "sel"},
+                    name: "sel"
+                }
+            ],
+            name: "select"
+        },
+        {
+            select: [
+                {as: some("fields"), op: "ref", rule: "fields"},
+                {as: some("repeat"), op: "ref", rule: "repeat"},
+                {as: some("select"), op: "ref", rule: "select"}
+            ],
+            name: "rule"
+        },
+        {
+            expr: "if rule.op == \"fields\" {
+                {name: name, fields: rule.fields, expr: rule.expr}
+            } else if rule.op == \"repeat\" {
+                {name: name, repeat: {rule: rule.rule, as: rule.as}}
+            } else if rule.op == \"select\" {
+                {name: name, select: rule.rules}
+            }",
+            fields: [
+                {type: "str", optional: false, name: "name"},
+                {
+                    ref: {as: some("rule"), rule: "rule"},
+                    name: "rule"
+                }
+            ],
+            name: "decl"
+        },
+        {
+            repeat: {as: some("decl"), rule: "decl"},
+            name: "rules"
+        },
+        {
+            expr: "{rules: rules, start: start}",
+            fields: [
+                {
+                    ref: {as: some("rules"), rule: "rules"},
+                    name: "rules"
+                },
+                {type: "str", optional: false, name: "start"}
+            ],
+            name: "doc"
         }
-    ],
-    start: "people"
+    ]
 }

@@ -23,7 +23,11 @@ meta {
     sel := repeat ref:"ref";
     select := [sel <- sel]
         => {op: "select", rules: sel};
-    rule := select {fields:"fields", repeat:"repeat", select:"select"};
+    rule := select {
+            fields:"fields",
+            repeat:"repeat",
+            select:"select"
+        };
     decl := [name: str, rule <- rule:"rule"]
         => if rule.op == "fields" {
             {name: name, fields: rule.fields, expr: rule.expr}
@@ -35,6 +39,6 @@ meta {
     rules := repeat decl:"decl";
     doc := [rules <- rules:"rules", start: str]
         => {rules: rules, start: start};
-    ------------------------------------------------------------
+    -----------------------------------------------------------
     doc
 }
