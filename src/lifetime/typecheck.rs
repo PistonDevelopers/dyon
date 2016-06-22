@@ -190,7 +190,8 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                         match nodes[decl].kind {
                             Kind::Sum | Kind::Min | Kind::Max |
                             Kind::Any | Kind::All | Kind::Sift |
-                            Kind::Vec4UnLoop => {
+                            Kind::Vec4UnLoop |
+                            Kind::ForN => {
                                 if nodes[i].try {
                                     return Err(nodes[i].source.wrap(
                                         "Type mismatch (#300):\n\
