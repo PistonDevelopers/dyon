@@ -30,9 +30,83 @@ fn __f64__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
     f64 := if _f64 != none() {
         unwrap(_f64)
     } else {
-        return err("Could find `f64`")?
+        return err("Could not find `f64`")?
     }
-    return ok([I - S, "f64"])
+    return ok([I - S, {op: "type", val: "f64"}])
+}
+
+fn __str__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
+    S := index
+    I := index
+    if name != none() {
+        node := start_node(data: data, index: I, name: unwrap(name))
+        if node == none() { return err("Expected `" + unwrap(name) + "`")? }
+        I += unwrap(node)
+    }
+    _str := none()
+    loop {
+        if I >= len(data) { break }
+        if (_str != none()) { break }
+        i_str := read_bool(data: data, index: I, name: "str")
+        if i_str != none() {
+            i_str := unwrap(i_str)
+            if i_str[0] > 0 {
+                I += i_str[0]
+                _str = some(i_str[1])
+                continue
+            }
+        }
+        if name != none() {
+            I += ignore(data: data, index: I)
+        }
+        break
+    }
+    if name != none() {
+        I += end_node(data: data, index: I, name: unwrap(name))?
+    }
+    str := if _str != none() {
+        unwrap(_str)
+    } else {
+        return err("Could not find `str`")?
+    }
+    return ok([I - S, {op: "type", val: "str"}])
+}
+
+fn __bool__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
+    S := index
+    I := index
+    if name != none() {
+        node := start_node(data: data, index: I, name: unwrap(name))
+        if node == none() { return err("Expected `" + unwrap(name) + "`")? }
+        I += unwrap(node)
+    }
+    _bool := none()
+    loop {
+        if I >= len(data) { break }
+        if (_bool != none()) { break }
+        i_bool := read_bool(data: data, index: I, name: "bool")
+        if i_bool != none() {
+            i_bool := unwrap(i_bool)
+            if i_bool[0] > 0 {
+                I += i_bool[0]
+                _bool = some(i_bool[1])
+                continue
+            }
+        }
+        if name != none() {
+            I += ignore(data: data, index: I)
+        }
+        break
+    }
+    if name != none() {
+        I += end_node(data: data, index: I, name: unwrap(name))?
+    }
+    bool := if _bool != none() {
+        unwrap(_bool)
+    } else {
+        return err("Could not find `bool`")?
+    }
+    return ok([I - S, {op: "type", val: "bool"}])
 }
 
 fn __type__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
@@ -52,7 +126,103 @@ fn __type__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
         }
         return ok([I - S, i_f64[1]])
     }
-    return err("Expected one of `f64`")?
+    _str := __str(data: data, index: I, name: none())
+    if is_ok(_str) {
+        i_str := unwrap(_str)
+        I += i_str[0]
+        if name != none() {
+            I += end_node(data: data, index: I, name: unwrap(name))?
+        }
+        return ok([I - S, i_str[1]])
+    }
+    _bool := __bool(data: data, index: I, name: none())
+    if is_ok(_bool) {
+        i_bool := unwrap(_bool)
+        I += i_bool[0]
+        if name != none() {
+            I += end_node(data: data, index: I, name: unwrap(name))?
+        }
+        return ok([I - S, i_bool[1]])
+    }
+    return err("Expected one of `f64`, `str`, `bool`")?
+}
+
+fn __ref__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
+    S := index
+    I := index
+    if name != none() {
+        node := start_node(data: data, index: I, name: unwrap(name))
+        if node == none() { return err("Expected `" + unwrap(name) + "`")? }
+        I += unwrap(node)
+    }
+    _rule := none()
+    _as := none()
+    loop {
+        if I >= len(data) { break }
+        if (_rule != none()) &&
+           (_as != none()) { break }
+        i_rule := read_str(data: data, index: I, name: "rule")
+        if i_rule != none() {
+            i_rule := unwrap(i_rule)
+            if i_rule[0] > 0 {
+                I += i_rule[0]
+                _rule = some(i_rule[1])
+                continue
+            }
+        }
+        i_as := read_str(data: data, index: I, name: "as")
+        if i_as != none() {
+            i_as := unwrap(i_as)
+            if i_as[0] > 0 {
+                I += i_as[0]
+                _as = some(i_as[1])
+                continue
+            }
+        }
+        if name != none() {
+            I += ignore(data: data, index: I)
+        }
+        break
+    }
+    if name != none() {
+        I += end_node(data: data, index: I, name: unwrap(name))?
+    }
+    rule := if _rule != none() {
+        unwrap(_rule)
+    } else {
+        return err("Could not find `rule`")?
+    }
+    as := _as
+    return ok([I - S, {op: "ref", rule: rule, as: as}])
+}
+
+fn __type_or_ref__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
+    S := index
+    I := index
+    if name != none() {
+        node := start_node(data: data, index: I, name: unwrap(name))
+        if node == none() { return err("Expected `" + unwrap(name) + "`")? }
+        I += unwrap(node)
+    }
+    _type := __type(data: data, index: I, name: none())
+    if is_ok(_type) {
+        i_type := unwrap(_type)
+        I += i_type[0]
+        if name != none() {
+            I += end_node(data: data, index: I, name: unwrap(name))?
+        }
+        return ok([I - S, i_type[1]])
+    }
+    _ref := __ref(data: data, index: I, name: none())
+    if is_ok(_ref) {
+        i_ref := unwrap(_ref)
+        I += i_ref[0]
+        if name != none() {
+            I += end_node(data: data, index: I, name: unwrap(name))?
+        }
+        return ok([I - S, i_ref[1]])
+    }
+    return err("Expected one of `type`, `ref`")?
 }
 
 fn __field__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
@@ -64,11 +234,11 @@ fn __field__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
         I += unwrap(node)
     }
     _name := none()
-    _type := none()
+    _tr := none()
     loop {
         if I >= len(data) { break }
         if (_name != none()) &&
-           (_type != none()) { break }
+           (_tr != none()) { break }
         i_name := read_str(data: data, index: I, name: "name")
         if i_name != none() {
             i_name := unwrap(i_name)
@@ -78,12 +248,12 @@ fn __field__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
                 continue
             }
         }
-        i_type := __type(data: data, index: I, name: none())
-        if !is_err(i_type) {
-            i_type := unwrap(i_type)
-            if i_type[0] > 0 {
-                I += i_type[0]
-                _type = some(i_type[1])
+        i_tr := __type_or_ref(data: data, index: I, name: none())
+        if !is_err(i_tr) {
+            i_tr := unwrap(i_tr)
+            if i_tr[0] > 0 {
+                I += i_tr[0]
+                _tr = some(i_tr[1])
                 continue
             }
         }
@@ -98,14 +268,18 @@ fn __field__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
     name := if _name != none() {
         unwrap(_name)
     } else {
-        return err("Could find `name`")?
+        return err("Could not find `name`")?
     }
-    type := if _type != none() {
-        unwrap(_type)
+    tr := if _tr != none() {
+        unwrap(_tr)
     } else {
-        return err("Could find `type`")?
+        return err("Could not find `tr`")?
     }
-    return ok([I - S, {name: name, type: type}])
+    return ok([I - S, if tr.op == "type" {
+            {name: name, type: tr.val}
+        } else {
+            {name: name, ref: {rule: tr.rule, as: tr.as}}
+        }])
 }
 
 fn __rep_fields__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
@@ -165,7 +339,7 @@ fn __expr__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
     code := if _code != none() {
         unwrap(_code)
     } else {
-        return err("Could find `code`")?
+        return err("Could not find `code`")?
     }
     return ok([I - S, code])
 }
@@ -213,12 +387,12 @@ fn __fields__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
     fs := if _fs != none() {
         unwrap(_fs)
     } else {
-        return err("Could find `fs`")?
+        return err("Could not find `fs`")?
     }
     expr := if _expr != none() {
         unwrap(_expr)
     } else {
-        return err("Could find `expr`")?
+        return err("Could not find `expr`")?
     }
     return ok([I - S, {op: "fields", fields: fs, expr: expr}])
 }
@@ -231,27 +405,16 @@ fn __repeat__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
         if node == none() { return err("Expected `" + unwrap(name) + "`")? }
         I += unwrap(node)
     }
-    _rule := none()
-    _as := none()
+    _ref := none()
     loop {
         if I >= len(data) { break }
-        if (_rule != none()) &&
-           (_as != none()) { break }
-        i_rule := read_str(data: data, index: I, name: "rule")
-        if i_rule != none() {
-            i_rule := unwrap(i_rule)
-            if i_rule[0] > 0 {
-                I += i_rule[0]
-                _rule = some(i_rule[1])
-                continue
-            }
-        }
-        i_as := read_str(data: data, index: I, name: "as")
-        if i_as != none() {
-            i_as := unwrap(i_as)
-            if i_as[0] > 0 {
-                I += i_as[0]
-                _as = some(i_as[1])
+        if (_ref != none()) { break }
+        i_ref := __ref(data: data, index: I, name: none())
+        if !is_err(i_ref) {
+            i_ref := unwrap(i_ref)
+            if i_ref[0] > 0 {
+                I += i_ref[0]
+                _ref = some(i_ref[1])
                 continue
             }
         }
@@ -263,17 +426,12 @@ fn __repeat__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
     if name != none() {
         I += end_node(data: data, index: I, name: unwrap(name))?
     }
-    rule := if _rule != none() {
-        unwrap(_rule)
+    ref := if _ref != none() {
+        unwrap(_ref)
     } else {
-        return err("Could find `rule`")?
+        return err("Could not find `ref`")?
     }
-    as := if _as != none() {
-        unwrap(_as)
-    } else {
-        return err("Could find `as`")?
-    }
-    return ok([I - S, {op: "repeat", rule: rule, as: as}])
+    return ok([I - S, {op: "repeat", rule: ref.rule, as: ref.as}])
 }
 
 fn __rule__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
@@ -348,14 +506,18 @@ fn __decl__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
     name := if _name != none() {
         unwrap(_name)
     } else {
-        return err("Could find `name`")?
+        return err("Could not find `name`")?
     }
     rule := if _rule != none() {
         unwrap(_rule)
     } else {
-        return err("Could find `rule`")?
+        return err("Could not find `rule`")?
     }
-    return ok([I - S, {name: name, rule: rule}])
+    return ok([I - S, if rule.op == "fields" {
+            {name: name, fields: rule.fields, expr: rule.expr}
+        } else if rule.op == "repeat" {
+            {name: name, repeat: {rule: rule.rule, as: rule.as}}
+        }])
 }
 
 fn __rules__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
@@ -426,12 +588,12 @@ fn __doc__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
     rules := if _rules != none() {
         unwrap(_rules)
     } else {
-        return err("Could find `rules`")?
+        return err("Could not find `rules`")?
     }
     start := if _start != none() {
         unwrap(_start)
     } else {
-        return err("Could find `start`")?
+        return err("Could not find `start`")?
     }
     return ok([I - S, {rules: rules, start: start}])
 }

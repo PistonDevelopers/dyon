@@ -10,6 +10,7 @@ _seps:".:;,[]{}()?!=<>\""
     "bool":"bool"
     "f64":"f64"
     "str":"str"
+    ["opt":"opt" .w? "[" .w? type .w? "]"]
 }
 97 field = [reserved .._seps!:"name" .w?
             {[":" .w? type] ["<-" .w? ref]}]

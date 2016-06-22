@@ -1,5 +1,6 @@
 meta {
-  pos := [x: f64, y: f64, z: f64] => (x, y, z);
+  pos := [x: f64, y: f64, z: opt[f64]]
+    => (x, y, if z == none() { 0 } else { unwrap(z) });
   doc := repeat pos:"pos";
   -----------------------
   doc

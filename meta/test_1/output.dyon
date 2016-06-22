@@ -52,19 +52,15 @@ fn __pos__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
     x := if _x != none() {
         unwrap(_x)
     } else {
-        return err("Could find `x`")?
+        return err("Could not find `x`")?
     }
     y := if _y != none() {
         unwrap(_y)
     } else {
-        return err("Could find `y`")?
+        return err("Could not find `y`")?
     }
-    z := if _z != none() {
-        unwrap(_z)
-    } else {
-        return err("Could find `z`")?
-    }
-    return ok([I - S, (x, y, z)])
+    z := _z
+    return ok([I - S, (x, y, if z == none() { 0 } else { unwrap(z) })])
 }
 
 fn __doc__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
