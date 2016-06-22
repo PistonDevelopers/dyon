@@ -1,7 +1,5 @@
 fn main() {
-    println(foo())
-}
-
-fn foo() -> {
-    return = 3
+    a := {x: 0}
+    println(has(a, "x"))
+    println(has(a, "y"))
 }

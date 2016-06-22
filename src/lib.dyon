@@ -247,3 +247,6 @@ fn save__data_file(data: any, file: str) -> res[str] { ... }
 
 /// Generates JSON data from meta data.
 fn json_from_meta_data(meta_data: [[any]]) -> str { ... }
+
+/// Returns `true` if object has key.
+fn has(obj: {}, key: str) -> bool { ... }

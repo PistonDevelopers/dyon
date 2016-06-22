@@ -95,6 +95,7 @@ const LOAD_STRING__FILE: usize = 72;
 const JOIN__THREAD: usize = 73;
 const SAVE__DATA_FILE: usize = 74;
 const JSON_FROM_META_DATA: usize = 75;
+const HAS: usize = 76;
 
 const TABLE: &'static [(usize, fn(
         &mut Runtime,
@@ -181,6 +182,7 @@ const TABLE: &'static [(usize, fn(
     (JOIN__THREAD, join__thread),
     (SAVE__DATA_FILE, save__data_file),
     (JSON_FROM_META_DATA, json_from_meta_data),
+    (HAS, has),
 ];
 
 pub fn standard(f: &mut Prelude) {
@@ -360,6 +362,11 @@ pub fn standard(f: &mut Prelude) {
         ret: Type::Result(Box::new(Type::Text))
     });
     sarg(f, "json_from_meta_data", JSON_FROM_META_DATA, Type::Array(Box::new(Type::array())), Type::Text);
+    f.intrinsic(Arc::new("has".into()), HAS, PreludeFunction {
+        lts: vec![Lt::Default; 2],
+        tys: vec![Type::Object, Type::Text],
+        ret: Type::Bool
+    });
 }
 
 enum EscapeString {
@@ -2500,4 +2507,29 @@ fn json_from_meta_data(
     };
     rt.pop_fn(call.name.clone());
     Ok(Some(Variable::Text(Arc::new(json))))
+}
+
+fn has(
+    rt: &mut Runtime,
+    call: &ast::Call,
+    module: &Module,
+    st: usize,
+    lc: usize,
+    cu: usize
+) -> Result<Option<Variable>, String> {
+    rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
+    let key = rt.stack.pop().expect(TINVOTS);
+    let key = match rt.resolve(&key) {
+        &Variable::Text(ref t) => t.clone(),
+        x => return Err(module.error(call.args[1].source_range(),
+                        &rt.expected(x, "str"), rt))
+    };
+    let obj = rt.stack.pop().expect(TINVOTS);
+    let res = match rt.resolve(&obj) {
+        &Variable::Object(ref obj) => obj.contains_key(&key),
+        x => return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(x, "array"), rt))
+    };
+    rt.pop_fn(call.name.clone());
+    Ok(Some(Variable::bool(res)))
 }
