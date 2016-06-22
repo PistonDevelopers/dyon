@@ -116,6 +116,8 @@ fn test_typechk() {
     test_src("source/typechk/return_9.dyon");
     test_fail_src("source/typechk/return_10.dyon");
     test_fail_src("source/typechk/return_11.dyon");
+    test_fail_src("source/typechk/return_12.dyon");
+    test_src("source/typechk/return_13.dyon");
     test_src("source/typechk/add.dyon");
     test_src("source/typechk/mat_expr.dyon");
     test_src("source/typechk/or.dyon");
