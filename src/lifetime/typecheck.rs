@@ -423,7 +423,17 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                     }
 
                     // Check all return statements.
-                    try!(check_fn(i, nodes, ty))
+                    let mut found_return = false;
+                    try!(check_fn(i, nodes, ty, &mut found_return));
+                    // Report if there is no return statement.
+                    if !found_return &&
+                       ty != &Type::Void &&
+                       nodes[i].find_child_by_kind(nodes, Kind::Expr).is_none() {
+                        return Err(nodes[i].source.wrap(
+                            format!("Type mismatch (#775):\nExpected `{}`, found `void`",
+                                ty.description())
+                        ));
+                    }
                 } else {
                     return Err(nodes[i].source.wrap(
                         format!("Type mismatch (#800):\nCould not infer type of function `{}`",
@@ -515,7 +525,12 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
 }
 
 /// Checks all returns recursively in function.
-fn check_fn(n: usize, nodes: &Vec<Node>, ty: &Type) -> Result<(), Range<String>> {
+fn check_fn(
+    n: usize,
+    nodes: &Vec<Node>,
+    ty: &Type,
+    found_return: &mut bool
+) -> Result<(), Range<String>> {
     for &ch in &nodes[n].children {
         match nodes[ch].kind {
             Kind::Return => {
@@ -526,6 +541,7 @@ fn check_fn(n: usize, nodes: &Vec<Node>, ty: &Type) -> Result<(), Range<String>>
                                 ty.description(), ret_ty.description())));
                     }
                 }
+                *found_return = true;
             }
             Kind::ReturnVoid => {
                 if !ty.goes_with(&Type::Void) {
@@ -533,10 +549,24 @@ fn check_fn(n: usize, nodes: &Vec<Node>, ty: &Type) -> Result<(), Range<String>>
                         format!("Type mismatch (#1300):\nExpected `{}`, found `{}`",
                             ty.description(), Type::Void.description())));
                 }
+                *found_return = true;
+            }
+            Kind::Item => {
+                if nodes[ch].name().as_ref().map(|n| &***n == "return") == Some(true) {
+                    if let Some(parent) = nodes[ch].parent {
+                        if nodes[parent].kind == Kind::Left {
+                            if let Some(parent) = nodes[parent].parent {
+                                if nodes[parent].kind == Kind::Assign {
+                                    *found_return = true;
+                                }
+                            }
+                        }
+                    }
+                }
             }
             _ => {}
         }
-        try!(check_fn(ch, nodes, ty));
+        try!(check_fn(ch, nodes, ty, found_return));
     }
     Ok(())
 }

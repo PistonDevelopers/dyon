@@ -2,13 +2,15 @@ meta {
     f64 := [f64: bool] => {op: "type", val: "f64"};
     str := [str: bool] => {op: "type", val: "str"};
     bool := [bool: bool] => {op: "type", val: "bool"};
-    type := select {f64, str, bool};
+    ty := select {f64, str, bool};
+    type := [opt: opt[bool], ty <- ty]
+        => {op: ty.op, val: ty.val, optional: opt == some(true)};
     ref := [rule: str, as: opt[str]]
         => {op: "ref", rule: rule, as: as};
     type_or_ref := select {type, ref};
     field := [name: str, tr <- type_or_ref]
         => if tr.op == "type" {
-            {name: name, type: tr.val}
+            {name: name, type: tr.val, optional: tr.optional}
         } else {
             {name: name, ref: {rule: tr.rule, as: tr.as}}
         };
@@ -18,13 +20,27 @@ meta {
         => {op: "fields", fields: fs, expr: expr};
     repeat := [ref <- ref]
         => {op: "repeat", rule: ref.rule, as: ref.as};
-    rule := select {fields:"fields", repeat:"repeat"};
+    select := repeat ref:"ref";
+    rule := select {fields:"fields", repeat:"repeat", select:"select"};
     decl := [name: str, rule <- rule:"rule"]
-        => if rule.op == "fields" {
-            {name: name, fields: rule.fields, expr: rule.expr}
-        } else if rule.op == "repeat" {
-            {name: name, repeat: {rule: rule.rule, as: rule.as}}
-        };
+        => if typeof(rule) == "object" {
+              if rule.op == "fields" {
+                  {
+                      name: clone(name),
+                      fields: clone(rule.fields),
+                      expr: clone(rule.expr)
+                  }
+              } else if rule.op == "repeat" {
+                  {
+                      name: clone(name),
+                      repeat: {rule: clone(rule.rule), as: clone(rule.as)}
+                  }
+              }
+          } else if typeof(rule) == "array" {
+              {name: clone(name), select: sift i {
+                  {rule: clone(rule[i].rule), as: clone(rule[i].as)}
+              }}
+          };
     rules := repeat decl:"decl";
     doc := [rules <- rules:"rules", start: str]
         => {rules: rules, start: start};

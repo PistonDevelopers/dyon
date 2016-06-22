@@ -1,42 +1,29 @@
 {
-  start: "doc",
-  rules: [
-    {
-      name: "line",
-      fields: [{type: "str", name: "line"}],
-      expr: "line"
-    },
-    {
-      name: "photo",
-      repeat: {rule: "line", as: none()}
-    },
-    {
-      fields: [
-        {type: "str", name: "first_name"},
-        {type: "str", name: "last_name"},
-        {type: "f64", name: "age"},
+    rules: [
         {
-          name: "ph",
-          ref: {rule: "photo", as: some("photo")}
+            name: "john",
+            fields: [
+                {name: "john", optional: false, type: "bool"}
+            ],
+            expr: "{first_name: \"John\"}"
+        },
+        {
+            name: "peter",
+            fields: [
+                {name: "peter", optional: false, type: "bool"}
+            ],
+            expr: "{first_name: \"Peter\"}"
+        },
+        {
+            name: "person", select: [
+                {as: none(), rule: "john"},
+                {as: none(), rule: "peter"}
+            ]
+        },
+        {
+            name: "people",
+            repeat: {as: some("person"), rule: "person"}
         }
-      ],
-    name: "person",
-    expr: "{
-        first_name: first_name,
-        last_name: last_name,
-        age: age,
-        photo: {
-              buf := \"\"
-              for i len(ph) {
-                  buf += ph[i] + \"\\n\"
-              }
-              clone(buf)
-          }
-      }"
-    },
-    {
-      name: "doc", 
-      repeat: {rule: "person", as: some("person")}
-    }
-  ]
+    ],
+    start: "people"
 }
