@@ -1,6 +1,24 @@
 meta {
-  pos := [x: f64, y: f64, z: f64] => (x, y, z);
-  doc := repeat pos:"pos";
-  -----------------------
-  doc
+    line := [line: str] => line;
+    photo := repeat line;
+    person := [
+            first_name: str,
+            last_name: str,
+            age: f64,
+            ph <- photo:"photo",
+        ] => {
+            first_name: first_name,
+            last_name: last_name,
+            age: age,
+            photo: {
+                buf := ""
+                for i len(ph) {
+                    buf += ph[i] + "\n"
+                }
+                clone(buf)
+            }
+        };
+    doc := repeat person:"person";
+    -------------------------------
+    doc
 }

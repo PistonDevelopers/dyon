@@ -41,12 +41,13 @@ fn to_code(syntax: [[]]) -> res[str] {
                 i += i_name[0]
 
                 i_ty := read_type(data: syntax, index: i)
-                ty := if i_ty != none() {
+                ty := none()
+                opt := false
+                if i_ty != none() {
                     i_ty := unwrap(i_ty)
                     i += i_ty[0]
-                    some(i_ty[1])
-                } else {
-                    none()
+                    ty = some(i_ty[1])
+                    opt = clone(i_ty[2])
                 }
 
                 i_rule := read_str(data: syntax, index: i, name: "rule")
@@ -65,7 +66,7 @@ fn to_code(syntax: [[]]) -> res[str] {
                         some(i_as[1])
                     } else { none() }
 
-                push(mut gen_fields, [i_name[1], ty, rule, as])
+                push(mut gen_fields, [i_name[1], ty, rule, as, opt])
 
                 i += end_node(data: syntax, index: i, name: "field")?
             }
@@ -128,12 +129,19 @@ fn to_code(syntax: [[]]) -> res[str] {
             }
             for i len(gen_fields) {
                 name := gen_fields[i][0]
-                code += link {
-                    "    "name" := if _"name" != none() {\n"
-                    "        unwrap(_"name")\n"
-                    "    } else {\n"
-                    "        return err(\"Could find `"name"`\")?\n"
-                    "    }\n"
+                opt := gen_fields[i][4]
+                if opt {
+                    code += link {
+                        "    "name" := _"name"\n"
+                    }
+                } else {
+                    code += link {
+                        "    "name" := if _"name" != none() {\n"
+                        "        unwrap(_"name")\n"
+                        "    } else {\n"
+                        "        return err(\"Could not find `"name"`\")?\n"
+                        "    }\n"
+                    }
                 }
             }
             i += start_node(data: syntax, index: i, name: "expr")?
@@ -274,12 +282,20 @@ fn to_code(syntax: [[]]) -> res[str] {
 }
 
 fn read_type__data_index(data: [[]], index: f64) -> opt[[]] {
-    tbool := read_bool(data: data, index: index, name: "bool")
-    if tbool != none() { return some([1, "bool"]) }
-    tf64 := read_bool(data: data, index: index, name: "f64")
-    if tf64 != none() { return some([1, "f64"]) }
-    tstr := read_bool(data: data, index: index, name: "str")
-    if tstr != none() { return some([1, "str"]) }
+    offset := 0
+    opt := read_bool(data: data, index: index, name: "opt")
+    opt := if opt == none() {
+            false
+        } else {
+            offset += 1
+            true
+        }
+    tbool := read_bool(data: data, index: index + offset, name: "bool")
+    if tbool != none() { return some([1 + offset, "bool", opt]) }
+    tf64 := read_bool(data: data, index: index + offset, name: "f64")
+    if tf64 != none() { return some([1 + offset, "f64", opt]) }
+    tstr := read_bool(data: data, index: index + offset, name: "str")
+    if tstr != none() { return some([1 + offset, "str", opt]) }
     return none()
 }
 
