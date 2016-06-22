@@ -32,7 +32,7 @@ fn __f64__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
     } else {
         return err("Could not find `f64`")?
     }
-    return ok([I - S, {op: "type", val: "f64"}])
+    return ok([I - S, str("f64")])
 }
 
 fn __str__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
@@ -69,7 +69,7 @@ fn __str__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
     } else {
         return err("Could not find `str`")?
     }
-    return ok([I - S, {op: "type", val: "str"}])
+    return ok([I - S, str("str")])
 }
 
 fn __bool__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
@@ -106,7 +106,7 @@ fn __bool__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
     } else {
         return err("Could not find `bool`")?
     }
-    return ok([I - S, {op: "type", val: "bool"}])
+    return ok([I - S, str("bool")])
 }
 
 fn __ty__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
@@ -193,7 +193,7 @@ fn __type__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
     } else {
         return err("Could not find `ty`")?
     }
-    return ok([I - S, {op: ty.op, val: ty.val, optional: opt == some(true)}])
+    return ok([I - S, {op: "type", val: ty, optional: opt == some(true)}])
 }
 
 fn __ref__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
@@ -483,7 +483,7 @@ fn __repeat__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
     return ok([I - S, {op: "repeat", rule: ref.rule, as: ref.as}])
 }
 
-fn __select__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
+fn __sel__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
     S := index
     I := index
     if name != none() {
@@ -506,6 +506,43 @@ fn __select__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
         I += end_node(data: data, index: I, name: unwrap(name))?
     }
     return ok([I - S, arr])
+}
+
+fn __select__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
+    S := index
+    I := index
+    if name != none() {
+        node := start_node(data: data, index: I, name: unwrap(name))
+        if node == none() { return err("Expected `" + unwrap(name) + "`")? }
+        I += unwrap(node)
+    }
+    _sel := none()
+    loop {
+        if I >= len(data) { break }
+        if (_sel != none()) { break }
+        i_sel := __sel(data: data, index: I, name: none())
+        if !is_err(i_sel) {
+            i_sel := unwrap(i_sel)
+            if i_sel[0] > 0 {
+                I += i_sel[0]
+                _sel = some(i_sel[1])
+                continue
+            }
+        }
+        if name != none() {
+            I += ignore(data: data, index: I)
+        }
+        break
+    }
+    if name != none() {
+        I += end_node(data: data, index: I, name: unwrap(name))?
+    }
+    sel := if _sel != none() {
+        unwrap(_sel)
+    } else {
+        return err("Could not find `sel`")?
+    }
+    return ok([I - S, {op: "select", rules: sel}])
 }
 
 fn __rule__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
@@ -596,24 +633,13 @@ fn __decl__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
     } else {
         return err("Could not find `rule`")?
     }
-    return ok([I - S, if typeof(rule) == "object" {
-              if rule.op == "fields" {
-                  {
-                      name: clone(name),
-                      fields: clone(rule.fields),
-                      expr: clone(rule.expr)
-                  }
-              } else if rule.op == "repeat" {
-                  {
-                      name: clone(name),
-                      repeat: {rule: clone(rule.rule), as: clone(rule.as)}
-                  }
-              }
-          } else if typeof(rule) == "array" {
-              {name: clone(name), select: sift i {
-                  {rule: clone(rule[i].rule), as: clone(rule[i].as)}
-              }}
-          }])
+    return ok([I - S, if rule.op == "fields" {
+            {name: name, fields: rule.fields, expr: rule.expr}
+        } else if rule.op == "repeat" {
+            {name: name, repeat: {rule: rule.rule, as: rule.as}}
+        } else if rule.op == "select" {
+            {name: name, select: rule.rules}
+        }])
 }
 
 fn __rules__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {

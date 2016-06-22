@@ -406,18 +406,19 @@ mod tests {
     #[test]
     fn variable_size() {
         use std::mem::size_of;
+        use std::sync::Arc;
         use super::*;
 
         /*
         Ref(usize),
         Return,
-        Bool(bool),
-        F64(f64),
+        Bool(bool, Option<Box<Vec<Variable>>>),
+        F64(f64, Option<Box<Vec<Variable>>>),
         Vec4([f32; 4]),
         Text(Arc<String>),
         Array(Array),
         Object(Object),
-        Link(Link),
+        Link(Box<Link>),
         UnsafeRef(UnsafeRef),
         RustObject(RustObject),
         Option(Option<Box<Variable>>),
@@ -425,10 +426,14 @@ mod tests {
         Thread(Thread),
         */
 
-        println!("Link {}", size_of::<Link>());
+        println!("Link {}", size_of::<Box<Link>>());
         println!("[f32; 4] {}", size_of::<[f32; 4]>());
         println!("Result {}", size_of::<Result<Box<Variable>, Box<Error>>>());
         println!("Thread {}", size_of::<Thread>());
+        println!("Secret {}", size_of::<Option<Box<Vec<Variable>>>>());
+        println!("Text {}", size_of::<Arc<String>>());
+        println!("Array {}", size_of::<Array>());
+        println!("Object {}", size_of::<Object>());
         assert_eq!(size_of::<Variable>(), 24);
     }
 
