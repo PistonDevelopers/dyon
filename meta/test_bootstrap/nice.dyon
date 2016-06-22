@@ -1,18 +1,29 @@
 {
     rules: [
         {
-            name: "pos",
+            name: "john",
             fields: [
-                {name: "x", optional: false, type: "f64"},
-                {name: "y", optional: false, type: "f64"},
-                {name: "z", optional: true, type: "f64"}
+                {name: "john", optional: false, type: "bool"}
             ],
-            expr: "(x, y, if z == none() { 0 } else { unwrap(z) })"
+            expr: "{first_name: \"John\"}"
         },
         {
-            name: "doc",
-            repeat: {as: some("pos"), rule: "pos"}
+            name: "peter",
+            fields: [
+                {name: "peter", optional: false, type: "bool"}
+            ],
+            expr: "{first_name: \"Peter\"}"
+        },
+        {
+            name: "person", select: [
+                {as: none(), rule: "john"},
+                {as: none(), rule: "peter"}
+            ]
+        },
+        {
+            name: "people",
+            repeat: {as: some("person"), rule: "person"}
         }
     ],
-    start: "doc"
+    start: "people"
 }

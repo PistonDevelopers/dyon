@@ -1,7 +1,8 @@
 meta {
-  pos := [x: f64, y: f64, z: opt[f64]]
-    => (x, y, if z == none() { 0 } else { unwrap(z) });
-  doc := repeat pos:"pos";
-  -----------------------
-  doc
+    john := [john: bool] => {first_name: "John"};
+    peter := [peter: bool] => {first_name: "Peter"};
+    person := select {john, peter};
+    people := repeat person:"person";
+    ------------------------------------------------
+    people
 }
