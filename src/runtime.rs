@@ -3243,7 +3243,7 @@ impl Runtime {
             (&Variable::Text(_), _) =>
                 return Err(module.error(binop.source_range,
                 &format!("{}\nThe right argument must be a string. \
-                Try the `to_string` function", self.stack_trace()), self)),
+                Try the `str` function", self.stack_trace()), self)),
             (&Variable::Link(ref a), &Variable::Link(ref b)) => {
                 match binop.op {
                     Add => {

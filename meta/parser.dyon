@@ -1,0 +1,728 @@
+fn __f64__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
+    S := index
+    I := index
+    if name != none() {
+        node := start_node(data: data, index: I, name: unwrap(name))
+        if node == none() { return err("Expected `" + unwrap(name) + "`")? }
+        I += unwrap(node)
+    }
+    _f64 := none()
+    loop {
+        if I >= len(data) { break }
+        if (_f64 != none()) { break }
+        i_f64 := read_bool(data: data, index: I, name: "f64")
+        if i_f64 != none() {
+            i_f64 := unwrap(i_f64)
+            if i_f64[0] > 0 {
+                I += i_f64[0]
+                _f64 = some(i_f64[1])
+                continue
+            }
+        }
+        if name != none() {
+            I += ignore(data: data, index: I)
+        }
+        break
+    }
+    if name != none() {
+        I += end_node(data: data, index: I, name: unwrap(name))?
+    }
+    f64 := if _f64 != none() {
+        unwrap(_f64)
+    } else {
+        return err("Could not find `f64`")?
+    }
+    return ok([I - S, str("f64")])
+}
+
+fn __str__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
+    S := index
+    I := index
+    if name != none() {
+        node := start_node(data: data, index: I, name: unwrap(name))
+        if node == none() { return err("Expected `" + unwrap(name) + "`")? }
+        I += unwrap(node)
+    }
+    _str := none()
+    loop {
+        if I >= len(data) { break }
+        if (_str != none()) { break }
+        i_str := read_bool(data: data, index: I, name: "str")
+        if i_str != none() {
+            i_str := unwrap(i_str)
+            if i_str[0] > 0 {
+                I += i_str[0]
+                _str = some(i_str[1])
+                continue
+            }
+        }
+        if name != none() {
+            I += ignore(data: data, index: I)
+        }
+        break
+    }
+    if name != none() {
+        I += end_node(data: data, index: I, name: unwrap(name))?
+    }
+    str := if _str != none() {
+        unwrap(_str)
+    } else {
+        return err("Could not find `str`")?
+    }
+    return ok([I - S, str("str")])
+}
+
+fn __bool__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
+    S := index
+    I := index
+    if name != none() {
+        node := start_node(data: data, index: I, name: unwrap(name))
+        if node == none() { return err("Expected `" + unwrap(name) + "`")? }
+        I += unwrap(node)
+    }
+    _bool := none()
+    loop {
+        if I >= len(data) { break }
+        if (_bool != none()) { break }
+        i_bool := read_bool(data: data, index: I, name: "bool")
+        if i_bool != none() {
+            i_bool := unwrap(i_bool)
+            if i_bool[0] > 0 {
+                I += i_bool[0]
+                _bool = some(i_bool[1])
+                continue
+            }
+        }
+        if name != none() {
+            I += ignore(data: data, index: I)
+        }
+        break
+    }
+    if name != none() {
+        I += end_node(data: data, index: I, name: unwrap(name))?
+    }
+    bool := if _bool != none() {
+        unwrap(_bool)
+    } else {
+        return err("Could not find `bool`")?
+    }
+    return ok([I - S, str("bool")])
+}
+
+fn __ty__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
+    S := index
+    I := index
+    if name != none() {
+        node := start_node(data: data, index: I, name: unwrap(name))
+        if node == none() { return err("Expected `" + unwrap(name) + "`")? }
+        I += unwrap(node)
+    }
+    _f64 := __f64(data: data, index: I, name: none())
+    if is_ok(_f64) {
+        i_f64 := unwrap(_f64)
+        I += i_f64[0]
+        if name != none() {
+            I += end_node(data: data, index: I, name: unwrap(name))?
+        }
+        return ok([I - S, i_f64[1]])
+    }
+    _str := __str(data: data, index: I, name: none())
+    if is_ok(_str) {
+        i_str := unwrap(_str)
+        I += i_str[0]
+        if name != none() {
+            I += end_node(data: data, index: I, name: unwrap(name))?
+        }
+        return ok([I - S, i_str[1]])
+    }
+    _bool := __bool(data: data, index: I, name: none())
+    if is_ok(_bool) {
+        i_bool := unwrap(_bool)
+        I += i_bool[0]
+        if name != none() {
+            I += end_node(data: data, index: I, name: unwrap(name))?
+        }
+        return ok([I - S, i_bool[1]])
+    }
+    return err("Expected one of `f64`, `str`, `bool`")?
+}
+
+fn __type__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
+    S := index
+    I := index
+    if name != none() {
+        node := start_node(data: data, index: I, name: unwrap(name))
+        if node == none() { return err("Expected `" + unwrap(name) + "`")? }
+        I += unwrap(node)
+    }
+    _opt := none()
+    _ty := none()
+    loop {
+        if I >= len(data) { break }
+        if (_opt != none()) &&
+           (_ty != none()) { break }
+        i_opt := read_bool(data: data, index: I, name: "opt")
+        if i_opt != none() {
+            i_opt := unwrap(i_opt)
+            if i_opt[0] > 0 {
+                I += i_opt[0]
+                _opt = some(i_opt[1])
+                continue
+            }
+        }
+        i_ty := __ty(data: data, index: I, name: none())
+        if !is_err(i_ty) {
+            i_ty := unwrap(i_ty)
+            if i_ty[0] > 0 {
+                I += i_ty[0]
+                _ty = some(i_ty[1])
+                continue
+            }
+        }
+        if name != none() {
+            I += ignore(data: data, index: I)
+        }
+        break
+    }
+    if name != none() {
+        I += end_node(data: data, index: I, name: unwrap(name))?
+    }
+    opt := _opt
+    ty := if _ty != none() {
+        unwrap(_ty)
+    } else {
+        return err("Could not find `ty`")?
+    }
+    return ok([I - S, {op: "type", val: ty, optional: opt == some(true)}])
+}
+
+fn __ref__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
+    S := index
+    I := index
+    if name != none() {
+        node := start_node(data: data, index: I, name: unwrap(name))
+        if node == none() { return err("Expected `" + unwrap(name) + "`")? }
+        I += unwrap(node)
+    }
+    _rule := none()
+    _as := none()
+    loop {
+        if I >= len(data) { break }
+        if (_rule != none()) &&
+           (_as != none()) { break }
+        i_rule := read_str(data: data, index: I, name: "rule")
+        if i_rule != none() {
+            i_rule := unwrap(i_rule)
+            if i_rule[0] > 0 {
+                I += i_rule[0]
+                _rule = some(i_rule[1])
+                continue
+            }
+        }
+        i_as := read_str(data: data, index: I, name: "as")
+        if i_as != none() {
+            i_as := unwrap(i_as)
+            if i_as[0] > 0 {
+                I += i_as[0]
+                _as = some(i_as[1])
+                continue
+            }
+        }
+        if name != none() {
+            I += ignore(data: data, index: I)
+        }
+        break
+    }
+    if name != none() {
+        I += end_node(data: data, index: I, name: unwrap(name))?
+    }
+    rule := if _rule != none() {
+        unwrap(_rule)
+    } else {
+        return err("Could not find `rule`")?
+    }
+    as := _as
+    return ok([I - S, {op: "ref", rule: rule, as: as}])
+}
+
+fn __type_or_ref__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
+    S := index
+    I := index
+    if name != none() {
+        node := start_node(data: data, index: I, name: unwrap(name))
+        if node == none() { return err("Expected `" + unwrap(name) + "`")? }
+        I += unwrap(node)
+    }
+    _type := __type(data: data, index: I, name: none())
+    if is_ok(_type) {
+        i_type := unwrap(_type)
+        I += i_type[0]
+        if name != none() {
+            I += end_node(data: data, index: I, name: unwrap(name))?
+        }
+        return ok([I - S, i_type[1]])
+    }
+    _ref := __ref(data: data, index: I, name: none())
+    if is_ok(_ref) {
+        i_ref := unwrap(_ref)
+        I += i_ref[0]
+        if name != none() {
+            I += end_node(data: data, index: I, name: unwrap(name))?
+        }
+        return ok([I - S, i_ref[1]])
+    }
+    return err("Expected one of `type`, `ref`")?
+}
+
+fn __field__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
+    S := index
+    I := index
+    if name != none() {
+        node := start_node(data: data, index: I, name: unwrap(name))
+        if node == none() { return err("Expected `" + unwrap(name) + "`")? }
+        I += unwrap(node)
+    }
+    _name := none()
+    _tr := none()
+    loop {
+        if I >= len(data) { break }
+        if (_name != none()) &&
+           (_tr != none()) { break }
+        i_name := read_str(data: data, index: I, name: "name")
+        if i_name != none() {
+            i_name := unwrap(i_name)
+            if i_name[0] > 0 {
+                I += i_name[0]
+                _name = some(i_name[1])
+                continue
+            }
+        }
+        i_tr := __type_or_ref(data: data, index: I, name: none())
+        if !is_err(i_tr) {
+            i_tr := unwrap(i_tr)
+            if i_tr[0] > 0 {
+                I += i_tr[0]
+                _tr = some(i_tr[1])
+                continue
+            }
+        }
+        if name != none() {
+            I += ignore(data: data, index: I)
+        }
+        break
+    }
+    if name != none() {
+        I += end_node(data: data, index: I, name: unwrap(name))?
+    }
+    name := if _name != none() {
+        unwrap(_name)
+    } else {
+        return err("Could not find `name`")?
+    }
+    tr := if _tr != none() {
+        unwrap(_tr)
+    } else {
+        return err("Could not find `tr`")?
+    }
+    return ok([I - S, if tr.op == "type" {
+                {name: name, type: tr.val, optional: tr.optional}
+            } else {
+                {name: name, ref: {rule: tr.rule, as: tr.as}}
+            }])
+}
+
+fn __rep_fields__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
+    S := index
+    I := index
+    if name != none() {
+        node := start_node(data: data, index: I, name: unwrap(name))
+        if node == none() { return err("Expected `" + unwrap(name) + "`")? }
+        I += unwrap(node)
+    }
+    arr := []
+    loop {
+        _field := __field(data: data, index: I, name: some("field"))
+        if is_err(_field) {
+            break
+        } else {
+            i_field := unwrap(_field)
+            I += i_field[0]
+            push(mut arr, i_field[1])
+        }
+    }
+    if name != none() {
+        I += end_node(data: data, index: I, name: unwrap(name))?
+    }
+    return ok([I - S, arr])
+}
+
+fn __expr__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
+    S := index
+    I := index
+    if name != none() {
+        node := start_node(data: data, index: I, name: unwrap(name))
+        if node == none() { return err("Expected `" + unwrap(name) + "`")? }
+        I += unwrap(node)
+    }
+    _code := none()
+    loop {
+        if I >= len(data) { break }
+        if (_code != none()) { break }
+        i_code := read_str(data: data, index: I, name: "code")
+        if i_code != none() {
+            i_code := unwrap(i_code)
+            if i_code[0] > 0 {
+                I += i_code[0]
+                _code = some(i_code[1])
+                continue
+            }
+        }
+        if name != none() {
+            I += ignore(data: data, index: I)
+        }
+        break
+    }
+    if name != none() {
+        I += end_node(data: data, index: I, name: unwrap(name))?
+    }
+    code := if _code != none() {
+        unwrap(_code)
+    } else {
+        return err("Could not find `code`")?
+    }
+    return ok([I - S, code])
+}
+
+fn __fields__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
+    S := index
+    I := index
+    if name != none() {
+        node := start_node(data: data, index: I, name: unwrap(name))
+        if node == none() { return err("Expected `" + unwrap(name) + "`")? }
+        I += unwrap(node)
+    }
+    _fs := none()
+    _expr := none()
+    loop {
+        if I >= len(data) { break }
+        if (_fs != none()) &&
+           (_expr != none()) { break }
+        i_fs := __rep_fields(data: data, index: I, name: none())
+        if !is_err(i_fs) {
+            i_fs := unwrap(i_fs)
+            if i_fs[0] > 0 {
+                I += i_fs[0]
+                _fs = some(i_fs[1])
+                continue
+            }
+        }
+        i_expr := __expr(data: data, index: I, name: some("expr"))
+        if !is_err(i_expr) {
+            i_expr := unwrap(i_expr)
+            if i_expr[0] > 0 {
+                I += i_expr[0]
+                _expr = some(i_expr[1])
+                continue
+            }
+        }
+        if name != none() {
+            I += ignore(data: data, index: I)
+        }
+        break
+    }
+    if name != none() {
+        I += end_node(data: data, index: I, name: unwrap(name))?
+    }
+    fs := if _fs != none() {
+        unwrap(_fs)
+    } else {
+        return err("Could not find `fs`")?
+    }
+    expr := if _expr != none() {
+        unwrap(_expr)
+    } else {
+        return err("Could not find `expr`")?
+    }
+    return ok([I - S, {op: "fields", fields: fs, expr: expr}])
+}
+
+fn __repeat__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
+    S := index
+    I := index
+    if name != none() {
+        node := start_node(data: data, index: I, name: unwrap(name))
+        if node == none() { return err("Expected `" + unwrap(name) + "`")? }
+        I += unwrap(node)
+    }
+    _ref := none()
+    loop {
+        if I >= len(data) { break }
+        if (_ref != none()) { break }
+        i_ref := __ref(data: data, index: I, name: none())
+        if !is_err(i_ref) {
+            i_ref := unwrap(i_ref)
+            if i_ref[0] > 0 {
+                I += i_ref[0]
+                _ref = some(i_ref[1])
+                continue
+            }
+        }
+        if name != none() {
+            I += ignore(data: data, index: I)
+        }
+        break
+    }
+    if name != none() {
+        I += end_node(data: data, index: I, name: unwrap(name))?
+    }
+    ref := if _ref != none() {
+        unwrap(_ref)
+    } else {
+        return err("Could not find `ref`")?
+    }
+    return ok([I - S, {op: "repeat", rule: ref.rule, as: ref.as}])
+}
+
+fn __sel__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
+    S := index
+    I := index
+    if name != none() {
+        node := start_node(data: data, index: I, name: unwrap(name))
+        if node == none() { return err("Expected `" + unwrap(name) + "`")? }
+        I += unwrap(node)
+    }
+    arr := []
+    loop {
+        _ref := __ref(data: data, index: I, name: some("ref"))
+        if is_err(_ref) {
+            break
+        } else {
+            i_ref := unwrap(_ref)
+            I += i_ref[0]
+            push(mut arr, i_ref[1])
+        }
+    }
+    if name != none() {
+        I += end_node(data: data, index: I, name: unwrap(name))?
+    }
+    return ok([I - S, arr])
+}
+
+fn __select__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
+    S := index
+    I := index
+    if name != none() {
+        node := start_node(data: data, index: I, name: unwrap(name))
+        if node == none() { return err("Expected `" + unwrap(name) + "`")? }
+        I += unwrap(node)
+    }
+    _sel := none()
+    loop {
+        if I >= len(data) { break }
+        if (_sel != none()) { break }
+        i_sel := __sel(data: data, index: I, name: none())
+        if !is_err(i_sel) {
+            i_sel := unwrap(i_sel)
+            if i_sel[0] > 0 {
+                I += i_sel[0]
+                _sel = some(i_sel[1])
+                continue
+            }
+        }
+        if name != none() {
+            I += ignore(data: data, index: I)
+        }
+        break
+    }
+    if name != none() {
+        I += end_node(data: data, index: I, name: unwrap(name))?
+    }
+    sel := if _sel != none() {
+        unwrap(_sel)
+    } else {
+        return err("Could not find `sel`")?
+    }
+    return ok([I - S, {op: "select", rules: sel}])
+}
+
+fn __rule__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
+    S := index
+    I := index
+    if name != none() {
+        node := start_node(data: data, index: I, name: unwrap(name))
+        if node == none() { return err("Expected `" + unwrap(name) + "`")? }
+        I += unwrap(node)
+    }
+    _fields := __fields(data: data, index: I, name: some("fields"))
+    if is_ok(_fields) {
+        i_fields := unwrap(_fields)
+        I += i_fields[0]
+        if name != none() {
+            I += end_node(data: data, index: I, name: unwrap(name))?
+        }
+        return ok([I - S, i_fields[1]])
+    }
+    _repeat := __repeat(data: data, index: I, name: some("repeat"))
+    if is_ok(_repeat) {
+        i_repeat := unwrap(_repeat)
+        I += i_repeat[0]
+        if name != none() {
+            I += end_node(data: data, index: I, name: unwrap(name))?
+        }
+        return ok([I - S, i_repeat[1]])
+    }
+    _select := __select(data: data, index: I, name: some("select"))
+    if is_ok(_select) {
+        i_select := unwrap(_select)
+        I += i_select[0]
+        if name != none() {
+            I += end_node(data: data, index: I, name: unwrap(name))?
+        }
+        return ok([I - S, i_select[1]])
+    }
+    return err("Expected one of `fields`, `repeat`, `select`")?
+}
+
+fn __decl__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
+    S := index
+    I := index
+    if name != none() {
+        node := start_node(data: data, index: I, name: unwrap(name))
+        if node == none() { return err("Expected `" + unwrap(name) + "`")? }
+        I += unwrap(node)
+    }
+    _name := none()
+    _rule := none()
+    loop {
+        if I >= len(data) { break }
+        if (_name != none()) &&
+           (_rule != none()) { break }
+        i_name := read_str(data: data, index: I, name: "name")
+        if i_name != none() {
+            i_name := unwrap(i_name)
+            if i_name[0] > 0 {
+                I += i_name[0]
+                _name = some(i_name[1])
+                continue
+            }
+        }
+        i_rule := __rule(data: data, index: I, name: some("rule"))
+        if !is_err(i_rule) {
+            i_rule := unwrap(i_rule)
+            if i_rule[0] > 0 {
+                I += i_rule[0]
+                _rule = some(i_rule[1])
+                continue
+            }
+        }
+        if name != none() {
+            I += ignore(data: data, index: I)
+        }
+        break
+    }
+    if name != none() {
+        I += end_node(data: data, index: I, name: unwrap(name))?
+    }
+    name := if _name != none() {
+        unwrap(_name)
+    } else {
+        return err("Could not find `name`")?
+    }
+    rule := if _rule != none() {
+        unwrap(_rule)
+    } else {
+        return err("Could not find `rule`")?
+    }
+    return ok([I - S, if rule.op == "fields" {
+                {name: name, fields: rule.fields, expr: rule.expr}
+            } else if rule.op == "repeat" {
+                {name: name, repeat: {rule: rule.rule, as: rule.as}}
+            } else if rule.op == "select" {
+                {name: name, select: rule.rules}
+            }])
+}
+
+fn __rules__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
+    S := index
+    I := index
+    if name != none() {
+        node := start_node(data: data, index: I, name: unwrap(name))
+        if node == none() { return err("Expected `" + unwrap(name) + "`")? }
+        I += unwrap(node)
+    }
+    arr := []
+    loop {
+        _decl := __decl(data: data, index: I, name: some("decl"))
+        if is_err(_decl) {
+            break
+        } else {
+            i_decl := unwrap(_decl)
+            I += i_decl[0]
+            push(mut arr, i_decl[1])
+        }
+    }
+    if name != none() {
+        I += end_node(data: data, index: I, name: unwrap(name))?
+    }
+    return ok([I - S, arr])
+}
+
+fn __doc__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
+    S := index
+    I := index
+    if name != none() {
+        node := start_node(data: data, index: I, name: unwrap(name))
+        if node == none() { return err("Expected `" + unwrap(name) + "`")? }
+        I += unwrap(node)
+    }
+    _rules := none()
+    _start := none()
+    loop {
+        if I >= len(data) { break }
+        if (_rules != none()) &&
+           (_start != none()) { break }
+        i_rules := __rules(data: data, index: I, name: some("rules"))
+        if !is_err(i_rules) {
+            i_rules := unwrap(i_rules)
+            if i_rules[0] > 0 {
+                I += i_rules[0]
+                _rules = some(i_rules[1])
+                continue
+            }
+        }
+        i_start := read_str(data: data, index: I, name: "start")
+        if i_start != none() {
+            i_start := unwrap(i_start)
+            if i_start[0] > 0 {
+                I += i_start[0]
+                _start = some(i_start[1])
+                continue
+            }
+        }
+        if name != none() {
+            I += ignore(data: data, index: I)
+        }
+        break
+    }
+    if name != none() {
+        I += end_node(data: data, index: I, name: unwrap(name))?
+    }
+    rules := if _rules != none() {
+        unwrap(_rules)
+    } else {
+        return err("Could not find `rules`")?
+    }
+    start := if _start != none() {
+        unwrap(_start)
+    } else {
+        return err("Could not find `start`")?
+    }
+    return ok([I - S, {rules: rules, start: start}])
+}
+
+fn convert(data) -> res {
+    I := 0
+    r := __doc(data: data, index: I, name: none())?
+    return ok(r[1])
+}
+

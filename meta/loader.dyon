@@ -1,10 +1,22 @@
 
 fn main() {
+    // Generate parser.
+    gen_parser := false
+
     // Test the generated code.
     test := true
     folder := "test_bootstrap"
 
-    generator := unwrap(load("meta/generator.dyon"))
+    generator := unwrap(load("meta/generator2.dyon"))
+
+    if gen_parser {
+        // Use pre-converted meta conversion rules for conversion rule syntax.
+        self_meta := call_ret(generator, "self_meta", [])
+        // Get the code required to parse from meta data to conversion rules.
+        code := unwrap(call_ret(generator, "to_code", [self_meta]))
+        // Store the code as the parser, which is a required step before generating code.
+        _ := unwrap(save(string: str(code), file: "meta/parser.dyon"))
+    }
 
     if test {
         meta_data := load(meta: "meta/" + folder + "/syntax.txt",
@@ -35,8 +47,12 @@ fn main() {
         data := unwrap(meta_data)
         println(json_from_meta_data(data))
 
-        code := unwrap(call_ret(generator, "to_code", [data]))
+        // Load parser and convert to meta rules.
+        parser := unwrap(load(source: "meta/parser.dyon", imports: [generator]))
+        meta := unwrap(call_ret(parser, "convert", [data]))
+        println(meta)
 
+        code := unwrap(call_ret(generator, "to_code", [meta]))
         println(code)
 
         _ := unwrap(save(string: str(code),
