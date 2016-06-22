@@ -342,6 +342,9 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                     }
                 }
                 Kind::Block | Kind::TrueBlock | Kind::ElseIfBlock | Kind::ElseBlock => {
+                    if nodes[i].children.len() == 0 {
+                        this_ty = Some(Type::Void);
+                    }
                     for &ch in nodes[i].children.last() {
                         if nodes[ch].item_ids() { continue 'node; }
                         if let Some(ref ty) = nodes[ch].ty {
