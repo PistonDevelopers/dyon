@@ -1,42 +1,18 @@
 {
-  start: "doc",
-  rules: [
-    {
-      name: "line",
-      fields: [{type: "str", name: "line"}],
-      expr: "line"
-    },
-    {
-      name: "photo",
-      repeat: {rule: "line", as: none()}
-    },
-    {
-      fields: [
-        {type: "str", name: "first_name"},
-        {type: "str", name: "last_name"},
-        {type: "f64", name: "age"},
+    rules: [
         {
-          name: "ph",
-          ref: {rule: "photo", as: some("photo")}
+            name: "pos",
+            fields: [
+                {name: "x", optional: false, type: "f64"},
+                {name: "y", optional: false, type: "f64"},
+                {name: "z", optional: true, type: "f64"}
+            ],
+            expr: "(x, y, if z == none() { 0 } else { unwrap(z) })"
+        },
+        {
+            name: "doc",
+            repeat: {as: some("pos"), rule: "pos"}
         }
-      ],
-    name: "person",
-    expr: "{
-        first_name: first_name,
-        last_name: last_name,
-        age: age,
-        photo: {
-              buf := \"\"
-              for i len(ph) {
-                  buf += ph[i] + \"\\n\"
-              }
-              clone(buf)
-          }
-      }"
-    },
-    {
-      name: "doc", 
-      repeat: {rule: "person", as: some("person")}
-    }
-  ]
+    ],
+    start: "doc"
 }

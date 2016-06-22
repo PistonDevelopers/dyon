@@ -2,13 +2,15 @@ meta {
     f64 := [f64: bool] => {op: "type", val: "f64"};
     str := [str: bool] => {op: "type", val: "str"};
     bool := [bool: bool] => {op: "type", val: "bool"};
-    type := select {f64, str, bool};
+    ty := select {f64, str, bool};
+    type := [opt: opt[bool], ty <- ty]
+        => {op: ty.op, val: ty.val, optional: opt == some(true)};
     ref := [rule: str, as: opt[str]]
         => {op: "ref", rule: rule, as: as};
     type_or_ref := select {type, ref};
     field := [name: str, tr <- type_or_ref]
         => if tr.op == "type" {
-            {name: name, type: tr.val}
+            {name: name, type: tr.val, optional: tr.optional}
         } else {
             {name: name, ref: {rule: tr.rule, as: tr.as}}
         };

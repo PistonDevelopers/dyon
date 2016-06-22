@@ -38,5 +38,8 @@ fn main() {
         code := unwrap(call_ret(generator, "to_code", [data]))
 
         println(code)
+
+        _ := unwrap(save(string: str(code),
+                         file: "meta/" + folder + "/output.dyon"))
     }
 }
