@@ -30,7 +30,7 @@ fn __line__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
     line := if _line != none() {
         unwrap(_line)
     } else {
-        return err("Could find `line`")?
+        return err("Could not find `line`")?
     }
     return ok([I - S, line])
 }
@@ -125,22 +125,22 @@ fn __person__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
     first_name := if _first_name != none() {
         unwrap(_first_name)
     } else {
-        return err("Could find `first_name`")?
+        return err("Could not find `first_name`")?
     }
     last_name := if _last_name != none() {
         unwrap(_last_name)
     } else {
-        return err("Could find `last_name`")?
+        return err("Could not find `last_name`")?
     }
     age := if _age != none() {
         unwrap(_age)
     } else {
-        return err("Could find `age`")?
+        return err("Could not find `age`")?
     }
     ph := if _ph != none() {
         unwrap(_ph)
     } else {
-        return err("Could find `ph`")?
+        return err("Could not find `ph`")?
     }
     return ok([I - S, {
             first_name: first_name,
@@ -186,3 +186,4 @@ fn convert(data) -> res {
     r := __doc(data: data, index: I, name: none())?
     return ok(r[1])
 }
+

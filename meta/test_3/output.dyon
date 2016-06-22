@@ -30,7 +30,7 @@ fn __john__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
     john := if _john != none() {
         unwrap(_john)
     } else {
-        return err("Could find `john`")?
+        return err("Could not find `john`")?
     }
     return ok([I - S, {first_name: "John"}])
 }
@@ -67,7 +67,7 @@ fn __peter__data_index_name(data: [[]], index: f64, name: opt[str]) -> res {
     peter := if _peter != none() {
         unwrap(_peter)
     } else {
-        return err("Could find `peter`")?
+        return err("Could not find `peter`")?
     }
     return ok([I - S, {first_name: "Peter"}])
 }
@@ -131,3 +131,4 @@ fn convert(data) -> res {
     r := __people(data: data, index: I, name: none())?
     return ok(r[1])
 }
+
