@@ -20,26 +20,19 @@ meta {
         => {op: "fields", fields: fs, expr: expr};
     repeat := [ref <- ref]
         => {op: "repeat", rule: ref.rule, as: ref.as};
-    select := repeat ref:"ref";
+    sel := repeat ref:"ref";
+    select := [sel <- sel]
+        => {op: "select", rules: sel};
     rule := select {fields:"fields", repeat:"repeat", select:"select"};
     decl := [name: str, rule <- rule:"rule"]
         => if typeof(rule) == "object" {
               if rule.op == "fields" {
-                  {
-                      name: clone(name),
-                      fields: clone(rule.fields),
-                      expr: clone(rule.expr)
-                  }
+                  {name: name, fields: rule.fields, expr: rule.expr}
               } else if rule.op == "repeat" {
-                  {
-                      name: clone(name),
-                      repeat: {rule: clone(rule.rule), as: clone(rule.as)}
-                  }
+                  {name: name, repeat: {rule: rule.rule, as: rule.as}}
+              } else if rule.op == "select" {
+                  {name: name, select: rule.rules}
               }
-          } else if typeof(rule) == "array" {
-              {name: clone(name), select: sift i {
-                  {rule: clone(rule[i].rule), as: clone(rule[i].as)}
-              }}
           };
     rules := repeat decl:"decl";
     doc := [rules <- rules:"rules", start: str]

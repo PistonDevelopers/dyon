@@ -2,27 +2,36 @@
     rules: [
         {
             name: "john",
+            expr: "{first_name: \"John\"}",
             fields: [
-                {name: "john", optional: false, type: "bool"}
-            ],
-            expr: "{first_name: \"John\"}"
-        },
-        {
-            name: "peter",
-            fields: [
-                {name: "peter", optional: false, type: "bool"}
-            ],
-            expr: "{first_name: \"Peter\"}"
-        },
-        {
-            name: "person", select: [
-                {as: none(), rule: "john"},
-                {as: none(), rule: "peter"}
+                {
+                    name: "john",
+                    type: "bool",
+                    optional: false
+                }
             ]
         },
         {
+            name: "peter",
+            expr: "{first_name: \"Peter\"}",
+            fields: [
+                {
+                    name: "peter",
+                    type: "bool",
+                    optional: false
+                }
+            ]
+        },
+        {
+            select: [
+                {rule: "john", as: none(), op: "ref"},
+                {rule: "peter", as: none(), op: "ref"}
+            ],
+            name: "person"
+        },
+        {
             name: "people",
-            repeat: {as: some("person"), rule: "person"}
+            repeat: {rule: "person", as: some("person")}
         }
     ],
     start: "people"
