@@ -8,7 +8,7 @@ use piston_meta::json;
 
 use runtime::{Flow, Runtime, Side};
 use ast;
-use prelude::{Lt, Prelude, PreludeFunction};
+use prelude::{Lt, Prelude, Dfn};
 
 use FnIndex;
 use Error;
@@ -188,7 +188,7 @@ const TABLE: &'static [(usize, fn(
 
 pub fn standard(f: &mut Prelude) {
     let sarg = |f: &mut Prelude, name: &str, index: usize, ty: Type, ret: Type| {
-        f.intrinsic(Arc::new(name.into()), index, PreludeFunction {
+        f.intrinsic(Arc::new(name.into()), index, Dfn {
             lts: vec![Lt::Default],
             tys: vec![ty],
             ret: ret
@@ -199,22 +199,22 @@ pub fn standard(f: &mut Prelude) {
     sarg(f, "y", Y, Type::Vec4, Type::F64);
     sarg(f, "z", Z, Type::Vec4, Type::F64);
     sarg(f, "w", W, Type::Vec4, Type::F64);
-    f.intrinsic(Arc::new("why".into()), WHY, PreludeFunction {
+    f.intrinsic(Arc::new("why".into()), WHY, Dfn {
         lts: vec![Lt::Default],
         tys: vec![Type::Bool],
         ret: Type::array()
     });
-    f.intrinsic(Arc::new("where".into()), WHERE, PreludeFunction {
+    f.intrinsic(Arc::new("where".into()), WHERE, Dfn {
         lts: vec![Lt::Default],
         tys: vec![Type::F64],
         ret: Type::array()
     });
-    f.intrinsic(Arc::new("explain_why".into()), EXPLAIN_WHY, PreludeFunction {
+    f.intrinsic(Arc::new("explain_why".into()), EXPLAIN_WHY, Dfn {
         lts: vec![Lt::Default; 2],
         tys: vec![Type::Bool, Type::Any],
         ret: Type::Bool
     });
-    f.intrinsic(Arc::new("explain_where".into()), EXPLAIN_WHERE, PreludeFunction {
+    f.intrinsic(Arc::new("explain_where".into()), EXPLAIN_WHERE, Dfn {
         lts: vec![Lt::Default; 2],
         tys: vec![Type::F64, Type::Any],
         ret: Type::F64
@@ -222,18 +222,18 @@ pub fn standard(f: &mut Prelude) {
     sarg(f, "println", PRINTLN, Type::Any, Type::Void);
     sarg(f, "print", PRINT, Type::Any, Type::Void);
     sarg(f, "clone", CLONE, Type::Any, Type::Any);
-    f.intrinsic(Arc::new("debug".into()), DEBUG, PreludeFunction {
+    f.intrinsic(Arc::new("debug".into()), DEBUG, Dfn {
         lts: vec![],
         tys: vec![],
         ret: Type::Void
     });
-    f.intrinsic(Arc::new("backtrace".into()), BACKTRACE, PreludeFunction {
+    f.intrinsic(Arc::new("backtrace".into()), BACKTRACE, Dfn {
         lts: vec![],
         tys: vec![],
         ret: Type::Void
     });
     sarg(f, "sleep", SLEEP, Type::F64, Type::Void);
-    f.intrinsic(Arc::new("random".into()), RANDOM, PreludeFunction {
+    f.intrinsic(Arc::new("random".into()), RANDOM, Dfn {
         lts: vec![],
         tys: vec![],
         ret: Type::F64
@@ -242,30 +242,30 @@ pub fn standard(f: &mut Prelude) {
     sarg(f, "tail", TAIL, Type::Link, Type::Link);
     sarg(f, "is_empty", IS_EMPTY, Type::Link, Type::Bool);
     sarg(f, "read_number", READ_NUMBER, Type::Text, Type::F64);
-    f.intrinsic(Arc::new("read_line".into()), READ_LINE, PreludeFunction {
+    f.intrinsic(Arc::new("read_line".into()), READ_LINE, Dfn {
         lts: vec![],
         tys: vec![],
         ret: Type::Text
     });
     sarg(f, "len", LEN, Type::array(), Type::F64);
-    f.intrinsic(Arc::new("push_ref(mut,_)".into()), PUSH_REF, PreludeFunction {
+    f.intrinsic(Arc::new("push_ref(mut,_)".into()), PUSH_REF, Dfn {
         lts: vec![Lt::Default, Lt::Arg(0)],
         tys: vec![Type::array(), Type::Any],
         ret: Type::Void
     });
-    f.intrinsic(Arc::new("push(mut,_)".into()), PUSH, PreludeFunction {
+    f.intrinsic(Arc::new("push(mut,_)".into()), PUSH, Dfn {
         lts: vec![Lt::Default; 2],
         tys: vec![Type::array(), Type::Any],
         ret: Type::Void
     });
-    f.intrinsic(Arc::new("pop(mut)".into()), POP, PreludeFunction {
+    f.intrinsic(Arc::new("pop(mut)".into()), POP, Dfn {
         lts: vec![Lt::Return],
         tys: vec![Type::array()],
         ret: Type::Any
     });
     sarg(f, "reverse(mut)", REVERSE, Type::array(), Type::Void);
     sarg(f, "clear(mut)", CLEAR, Type::array(), Type::Void);
-    f.intrinsic(Arc::new("swap(mut,_,_)".into()), SWAP, PreludeFunction {
+    f.intrinsic(Arc::new("swap(mut,_,_)".into()), SWAP, Dfn {
         lts: vec![Lt::Default; 3],
         tys: vec![Type::array(), Type::F64, Type::F64],
         ret: Type::Void
@@ -295,27 +295,27 @@ pub fn standard(f: &mut Prelude) {
     sarg(f, "log2", LOG2, Type::F64, Type::F64);
     sarg(f, "log10", LOG10, Type::F64, Type::F64);
     sarg(f, "load", LOAD, Type::Text, Type::result());
-    f.intrinsic(Arc::new("load__source_imports".into()), LOAD__SOURCE_IMPORTS, PreludeFunction {
+    f.intrinsic(Arc::new("load__source_imports".into()), LOAD__SOURCE_IMPORTS, Dfn {
         lts: vec![Lt::Default; 2],
         tys: vec![Type::Text, Type::array()],
         ret: Type::result()
     });
-    f.intrinsic(Arc::new("call".into()), CALL, PreludeFunction {
+    f.intrinsic(Arc::new("call".into()), CALL, Dfn {
         lts: vec![Lt::Default; 3],
         tys: vec![Type::Any, Type::Text, Type::array()],
         ret: Type::Void
     });
-    f.intrinsic(Arc::new("call_ret".into()), CALL_RET, PreludeFunction {
+    f.intrinsic(Arc::new("call_ret".into()), CALL_RET, Dfn {
         lts: vec![Lt::Default; 3],
         tys: vec![Type::Any, Type::Text, Type::array()],
         ret: Type::Any
     });
-    f.intrinsic(Arc::new("functions".into()), FUNCTIONS, PreludeFunction {
+    f.intrinsic(Arc::new("functions".into()), FUNCTIONS, Dfn {
         lts: vec![],
         tys: vec![],
         ret: Type::Any
     });
-    f.intrinsic(Arc::new("none".into()), NONE, PreludeFunction {
+    f.intrinsic(Arc::new("none".into()), NONE, Dfn {
         lts: vec![],
         tys: vec![],
         ret: Type::option()
@@ -329,41 +329,41 @@ pub fn standard(f: &mut Prelude) {
     sarg(f, "is_ok", IS_OK, Type::result(), Type::Bool);
     sarg(f, "min", MIN, Type::Array(Box::new(Type::F64)), Type::F64);
     sarg(f, "max", MAX, Type::Array(Box::new(Type::F64)), Type::F64);
-    f.intrinsic(Arc::new("s".into()), S, PreludeFunction {
+    f.intrinsic(Arc::new("s".into()), S, Dfn {
         lts: vec![Lt::Default; 2],
         tys: vec![Type::Vec4, Type::F64],
         ret: Type::F64
     });
     sarg(f, "dir__angle", DIR__ANGLE, Type::F64, Type::Vec4);
-    f.intrinsic(Arc::new("load__meta_file".into()), LOAD__META_FILE, PreludeFunction {
+    f.intrinsic(Arc::new("load__meta_file".into()), LOAD__META_FILE, Dfn {
         lts: vec![Lt::Default; 2],
         tys: vec![Type::Text; 2],
         ret: Type::Result(Box::new(Type::Array(Box::new(Type::array()))))
     });
-    f.intrinsic(Arc::new("load__meta_url".into()), LOAD__META_URL, PreludeFunction {
+    f.intrinsic(Arc::new("load__meta_url".into()), LOAD__META_URL, Dfn {
         lts: vec![Lt::Default; 2],
         tys: vec![Type::Text; 2],
         ret: Type::Result(Box::new(Type::array()))
     });
-    f.intrinsic(Arc::new("download__url_file".into()), DOWNLOAD__URL_FILE, PreludeFunction {
+    f.intrinsic(Arc::new("download__url_file".into()), DOWNLOAD__URL_FILE, Dfn {
         lts: vec![Lt::Default; 2],
         tys: vec![Type::Text; 2],
         ret: Type::Result(Box::new(Type::Text))
     });
-    f.intrinsic(Arc::new("save__string_file".into()), SAVE__STRING_FILE, PreludeFunction {
+    f.intrinsic(Arc::new("save__string_file".into()), SAVE__STRING_FILE, Dfn {
         lts: vec![Lt::Default; 2],
         tys: vec![Type::Text; 2],
         ret: Type::Result(Box::new(Type::Text))
     });
     sarg(f, "load_string__file", LOAD_STRING__FILE, Type::Text, Type::Result(Box::new(Type::Text)));
     sarg(f, "join__thread", JOIN__THREAD, Type::thread(), Type::Result(Box::new(Type::Any)));
-    f.intrinsic(Arc::new("save__data_file".into()), SAVE__DATA_FILE, PreludeFunction {
+    f.intrinsic(Arc::new("save__data_file".into()), SAVE__DATA_FILE, Dfn {
         lts: vec![Lt::Default; 2],
         tys: vec![Type::Any, Type::Text],
         ret: Type::Result(Box::new(Type::Text))
     });
     sarg(f, "json_from_meta_data", JSON_FROM_META_DATA, Type::Array(Box::new(Type::array())), Type::Text);
-    f.intrinsic(Arc::new("has".into()), HAS, PreludeFunction {
+    f.intrinsic(Arc::new("has".into()), HAS, Dfn {
         lts: vec![Lt::Default; 2],
         tys: vec![Type::Object, Type::Text],
         ret: Type::Bool

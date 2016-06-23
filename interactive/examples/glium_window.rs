@@ -48,18 +48,18 @@ fn load_module() -> Option<Module> {
     use std::sync::Arc;
     use dyon_functions::*;
     use dyon_interactive::add_functions;
-    use dyon::{Lt, Module, PreludeFunction, Type};
+    use dyon::{Lt, Module, Dfn, Type};
     use glium_graphics::GliumWindow;
 
     let mut module = Module::new();
     add_functions::<GliumWindow>(&mut module);
-    module.add(Arc::new("draw".into()), draw, PreludeFunction {
+    module.add(Arc::new("draw".into()), draw, Dfn {
         lts: vec![Lt::Default],
         tys: vec![Type::array()],
         ret: Type::Void
     });
     module.add(Arc::new("next_event".into()),
-        next_event, PreludeFunction {
+        next_event, Dfn {
             lts: vec![],
             tys: vec![],
             ret: Type::Bool

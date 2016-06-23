@@ -14,66 +14,66 @@ use self::graphics::{Context, Graphics};
 pub const NO_EVENT: &'static str = "No event";
 
 pub fn add_functions<W: Any + AdvancedWindow>(module: &mut Module) {
-    module.add(Arc::new("window_size".into()), window_size::<W>, PreludeFunction {
+    module.add(Arc::new("window_size".into()), window_size::<W>, Dfn {
         lts: vec![],
         tys: vec![],
         ret: Type::Vec4
     });
-    module.add(Arc::new("window_draw_size".into()), window_draw_size::<W>, PreludeFunction {
+    module.add(Arc::new("window_draw_size".into()), window_draw_size::<W>, Dfn {
         lts: vec![],
         tys: vec![],
         ret: Type::Vec4
     });
-    module.add(Arc::new("render".into()), render, PreludeFunction {
+    module.add(Arc::new("render".into()), render, Dfn {
         lts: vec![],
         tys: vec![],
         ret: Type::Bool
     });
-    module.add(Arc::new("update".into()), update, PreludeFunction {
+    module.add(Arc::new("update".into()), update, Dfn {
         lts: vec![],
         tys: vec![],
         ret: Type::Bool
     });
-    module.add(Arc::new("press".into()), press, PreludeFunction {
+    module.add(Arc::new("press".into()), press, Dfn {
         lts: vec![],
         tys: vec![],
         ret: Type::Bool
     });
-    module.add(Arc::new("release".into()), release, PreludeFunction {
+    module.add(Arc::new("release".into()), release, Dfn {
         lts: vec![],
         tys: vec![],
         ret: Type::Bool
     });
-    module.add(Arc::new("focus".into()), focus, PreludeFunction {
+    module.add(Arc::new("focus".into()), focus, Dfn {
         lts: vec![],
         tys: vec![],
         ret: Type::Bool,
     });
-    module.add(Arc::new("focus_arg".into()), focus_arg, PreludeFunction {
+    module.add(Arc::new("focus_arg".into()), focus_arg, Dfn {
         lts: vec![],
         tys: vec![],
         ret: Type::Option(Box::new(Type::Bool)),
     });
     module.add(Arc::new("set__title".into()),
-        set__title::<W>, PreludeFunction {
+        set__title::<W>, Dfn {
             lts: vec![Lt::Default],
             tys: vec![Type::Text],
             ret: Type::Void
         });
     module.add(Arc::new("update_dt".into()),
-        update_dt, PreludeFunction {
+        update_dt, Dfn {
             lts: vec![],
             tys: vec![],
             ret: Type::Option(Box::new(Type::F64))
         });
     module.add(Arc::new("press_keyboard_key".into()),
-        press_keyboard_key, PreludeFunction {
+        press_keyboard_key, Dfn {
             lts: vec![],
             tys: vec![],
             ret: Type::Option(Box::new(Type::F64))
         });
     module.add(Arc::new("release_keyboard_key".into()),
-        release_keyboard_key, PreludeFunction {
+        release_keyboard_key, Dfn {
             lts: vec![],
             tys: vec![],
             ret: Type::Option(Box::new(Type::F64))

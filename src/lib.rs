@@ -24,7 +24,7 @@ pub mod macros;
 pub mod vec4;
 
 pub use runtime::Runtime;
-pub use prelude::{Lt, Prelude, PreludeFunction};
+pub use prelude::{Lt, Prelude, Dfn};
 pub use ty::Type;
 pub use link::Link;
 pub use vec4::Vec4;
@@ -203,7 +203,7 @@ pub enum FnIndex {
 pub struct FnExternal {
     pub name: Arc<String>,
     pub f: fn(&mut Runtime) -> Result<(), String>,
-    pub p: PreludeFunction,
+    pub p: Dfn,
 }
 
 impl Clone for FnExternal {
@@ -282,7 +282,7 @@ impl Module {
         &mut self,
         name: Arc<String>,
         f: fn(&mut Runtime) -> Result<(), String>,
-        prelude_function: PreludeFunction
+        prelude_function: Dfn
     ) {
         self.ext_prelude.push(FnExternal {
             name: name.clone(),
