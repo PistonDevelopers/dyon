@@ -153,6 +153,8 @@ fn test_typechk() {
     test_fail_src("source/typechk/mul_ad_hoc.dyon");
     test_src("source/typechk/unop.dyon");
     test_fail_src("source/typechk/prod.dyon");
+    test_src("source/typechk/closure.dyon");
+    test_fail_src("source/typechk/closure_2.dyon");
 }
 
 #[test]

@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use piston_meta::bootstrap::Convert;
 use range::Range;
+use Dfn;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Type {
@@ -22,6 +23,7 @@ pub enum Type {
     Result(Box<Type>),
     Thread(Box<Type>),
     AdHoc(Arc<String>, Box<Type>),
+    Closure(Box<Dfn>),
 }
 
 impl Type {
@@ -80,6 +82,20 @@ impl Type {
             }
             &AdHoc(ref ad, ref ty) => {
                 (&**ad).clone() + " " + &ty.description()
+            }
+            &Closure(ref closure) => {
+                let mut s = String::new();
+                s.push_str("\\(");
+                for (i, ty) in closure.tys.iter().enumerate() {
+                    s.push_str(&ty.description());
+                    if i + 1 < closure.tys.len() {
+                        s.push(',');
+                    }
+                    s.push_str(" -> ");
+                    s.push_str(&closure.ret.description());
+                }
+                s.push(')');
+                s
             }
         }
     }
@@ -328,6 +344,23 @@ impl Type {
                     Type::Object
                 };
                 ty = Some(Type::AdHoc(val, Box::new(inner_ty)));
+            } else if let Ok(range) = convert.start_node("closure_type") {
+                convert.update(range);
+                let mut lts = vec![];
+                let mut tys = vec![];
+                while let Ok((range, val)) = Type::from_meta_data(
+                        "cl_arg", convert, ignored) {
+                    use Lt;
+
+                    convert.update(range);
+                    lts.push(Lt::Default);
+                    tys.push(val);
+                }
+                let (range, ret) = try!(Type::from_meta_data("cl_ret", convert, ignored));
+                convert.update(range);
+                let range = try!(convert.end_node("closure_type"));
+                convert.update(range);
+                ty = Some(Type::Closure(Box::new(Dfn { lts: lts, tys: tys, ret: ret })));
             } else {
                 let range = convert.ignore();
                 convert.update(range);

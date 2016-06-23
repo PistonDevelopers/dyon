@@ -1,0 +1,10 @@
+fn main() {
+    a := foo()
+    bar(a)
+}
+
+fn foo() -> \(f64) -> f64 {
+    return \(x) = x + 1
+}
+
+fn bar(a: \(f64) -> f64) {}

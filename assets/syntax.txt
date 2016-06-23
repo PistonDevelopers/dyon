@@ -156,8 +156,11 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\u005c"
     "{}":"obj_any"
     ["thr" ?w "[" ?w type:"thr" ?w "]"]
     "thr":"thr_any"
+    closure_type:"closure_type"
     [.._seps!:"ad_hoc" ?[?w type:"ad_hoc_ty"]]
 }
+71 closure_type = ["\u005c(" ?w .s?.(, type:"cl_arg") ?w ")"
+    ?w "->" ?w type:"cl_ret"]
 
 101 + = [?w {"+":"+" "||":"+" "∨":"+" "or":"+"} ?w]
 102 - = [wn "-":"-" ?w]

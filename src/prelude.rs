@@ -16,7 +16,7 @@ pub enum Lt {
 
 /// Stores preloaded function constraints.
 /// These are already checked.
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct Dfn {
     pub lts: Vec<Lt>,
     pub tys: Vec<Type>,

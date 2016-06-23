@@ -75,6 +75,9 @@ pub enum Kind {
     LinkItem,
     Closure,
     CallClosure,
+    ClosureType,
+    ClArg,
+    ClRet,
 }
 
 impl Kind {
@@ -156,6 +159,9 @@ impl Kind {
             "closure" => Kind::Closure,
             "call_closure" => Kind::CallClosure,
             "named_call_closure" => Kind::CallClosure,
+            "closure_type" => Kind::ClosureType,
+            "cl_arg" => Kind::ClArg,
+            "cl_ret" => Kind::ClRet,
             _ => return None
         })
     }
