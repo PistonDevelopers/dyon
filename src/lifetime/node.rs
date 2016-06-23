@@ -183,6 +183,9 @@ impl Node {
                 (_, Kind::Add) => {}
                 (_, Kind::Mul) => {}
                 (_, Kind::Call) => {}
+                (_, Kind::Closure) => {}
+                (_, Kind::CallClosure) => {}
+                (_, Kind::Arg) => { continue }
                 (_, Kind::Item) => {}
                 (_, Kind::UnOp) => {
                     // The result of all unary operators does not depend
@@ -224,7 +227,7 @@ impl Node {
                     // The result of array fill does not depend on `n`.
                     continue
                 }
-                (Kind::Call, Kind::CallArg) => {
+                (Kind::Call, Kind::CallArg) | (Kind::CallClosure, Kind::CallArg) => {
                     // If there is no return lifetime on the declared argument,
                     // there is no need to check it, because the computed value
                     // does not depend on the lifetime of that argument.

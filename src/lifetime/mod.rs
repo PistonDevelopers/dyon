@@ -197,6 +197,21 @@ pub fn check(
                 Some(new_parent) => {
                     child = parent;
                     parent = new_parent;
+                    if nodes[parent].kind == Kind::Closure {
+                        // Search among closure arugments.
+                        for &j in &nodes[parent].children {
+                            let arg = &nodes[j];
+                            match arg.kind {
+                                Kind::Arg | Kind::Current => {}
+                                _ => continue
+                            };
+                            if Some(true) == arg.name().map(|n|
+                                &**n == &**nodes[i].name().unwrap()) {
+                                it = Some(j);
+                                break 'search;
+                            }
+                        }
+                    }
                 }
                 None => break
             }
@@ -223,6 +238,7 @@ pub fn check(
                     if Some(true) == arg.name().map(|n|
                         &**n == &**nodes[i].name().unwrap()) {
                         found = Some(j);
+                        break;
                     }
                 }
                 match found {

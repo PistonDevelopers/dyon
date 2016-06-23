@@ -8,20 +8,29 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\""
 
 0 fn = {
     ["fn" .w! .."("!:"name" ?w "(" ?w args ?w ")" ?w ?currents ?w {
-        ["->":"returns" ?w ?type:"ret_type"]
-        !"->":!"returns"
-    } ?w block:"block"]
-    [.."("!:"name" ?w "(" ?w args ?w ")" ?w ?currents
-        ?w "=" ?w expr:"expr"]
+            ["->":"returns" ?w ?type:"ret_type"]
+            !"->":!"returns"
+        } ?w block:"block"]
+    [.."("!:"name" ?w "(" ?w args ?w ")" ?w ?currents ?w "=" ?w expr:"expr"]
 }
 1 args = .s?.(, arg:"arg")
 2 arg = [?"mut":"mut" ?w .._seps!:"name" ?[?w ":" ?w
          ?["'" ?w .._seps!:"lifetime"] ?w ?type:"type"]]
+3 closure = {
+    ["\u005c(" ?w args ?w ")" ?w ?currents ?w {
+                ["->":"returns" ?w ?type:"ret_type"]
+                !"->":!"returns"
+        } ?w block:"block"]
+    ["\u005c(" ?w args ?w ")" ?w ?currents ?w "=" ?w expr:"expr"]
+}
+4 call_closure = ["\u005c" call]
+5 named_call_closure = ["\u005c" named_call]
 3 currents = ["~" ?w .s!.(, current:"current")]
 4 current = [?"mut":"mut" ?w .._seps!:"name" ?[?w ":" ?w type:"type"]]
 // Support both multi-line expressions and single line.
 5 block = ["{" ?w {.l([?w expr:"expr" ?w]) [?w expr:"expr"]} ?w "}"]
 6 expr = [{
+    closure:"closure"
     object:"object"
     arr
     ["return" wn expr:"return"]
@@ -44,6 +53,7 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\""
     ["mut":"mut" ?w item:"item"]
     swizzle:"swizzle"
     [{
+        closure:"closure"
         object:"object"
         arr
         if:"if"
@@ -55,6 +65,7 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\""
     } try]
 }
 8 lexpr = [{
+    closure:"closure"
     object:"object"
     arr
     short_loops
@@ -111,7 +122,9 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\""
 43 , = [?w "," ?w]
 44 arr = {array:"array" array_fill:"array_fill"}
 45 items = {vec4:"vec4" link:"link" ["(" ?w expr ?w ")"] unop:"unop"
-            text go:"go" call:"call" named_call:"named_call"
+            text go:"go"
+            call_closure:"call_closure" named_call_closure:"named_call_closure"
+            call:"call" named_call:"named_call"
             num bool color item:"item"}
 // Allow whitespace, but no new line.
 46 wn = .r?({" " "\t" "\r"})
