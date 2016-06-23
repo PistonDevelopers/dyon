@@ -125,6 +125,10 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                         };
 
                         for &j in &js {
+                            if nodes[parent].kind == Kind::CallClosure {
+                                // TODO: Check argument type against closure.
+                                continue;
+                            }
                             if let Some(decl) = nodes[parent].declaration {
                                 let arg = nodes[decl].children[j];
                                 match (&expr_type, &nodes[arg].ty) {
@@ -392,6 +396,40 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                         };
 
                     this_ty = Some(true_type);
+                }
+                Kind::Arg => {
+                    this_ty = Some(Type::Any);
+                }
+                Kind::Closure => {
+                    let mut lts = vec![];
+                    let mut tys = vec![];
+                    let mut ret: Option<Type> = None;
+                    let mut all_args = true;
+                    for &ch in &nodes[i].children {
+                        if nodes[ch].kind == Kind::Arg {
+                            if let Some(ref ty) = nodes[ch].ty {
+                                use Lt;
+
+                                lts.push(Lt::Default);
+                                tys.push(ty.clone());
+                            } else {
+                                all_args = false;
+                                break;
+                            }
+                        }
+                        if nodes[ch].kind == Kind::Expr {
+                            ret = nodes[ch].ty.clone();
+                        }
+                    }
+                    if all_args && ret.is_some() {
+                        use Dfn;
+
+                        this_ty = Some(Type::Closure(Box::new(Dfn {
+                            lts: lts,
+                            tys: tys,
+                            ret: ret.unwrap()
+                        })));
+                    }
                 }
                 _ => {}
             }

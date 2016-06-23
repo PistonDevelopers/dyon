@@ -7,6 +7,7 @@ use super::{
     Block,
     BinOpExpression,
     Call,
+    CallClosure,
     Compare,
     Expression,
     For,
@@ -251,6 +252,10 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
                 source_range: swizzle_expr.source_range,
             }))
         }
+        E::Closure(_) => expr.clone(),
+        E::CallClosure(ref call_expr) => {
+            E::CallClosure(Box::new(number_call_closure(call_expr, name, val)))
+        }
     }
 }
 
@@ -264,6 +269,18 @@ fn number_call(call_expr: &Call, name: &Arc<String>, val: f64) -> Call {
         args: new_args,
         f_index: call_expr.f_index.clone(),
         custom_source: None,
+        source_range: call_expr.source_range,
+    }
+}
+
+fn number_call_closure(call_expr: &CallClosure, name: &Arc<String>, val: f64) -> CallClosure {
+    let mut new_args: Vec<Expression> = vec![];
+    for arg in &call_expr.args {
+        new_args.push(number(arg, name, val));
+    }
+    CallClosure {
+        item: call_expr.item.clone(),
+        args: new_args,
         source_range: call_expr.source_range,
     }
 }

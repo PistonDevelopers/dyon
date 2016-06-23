@@ -64,6 +64,7 @@ fn test_syntax() {
     test_fail_src("source/syntax/lifetime_12.dyon");
     test_fail_src("source/syntax/lifetime_13.dyon");
     test_fail_src("source/syntax/lifetime_14.dyon");
+    test_src("source/syntax/lifetime_15.dyon");
     test_src("source/syntax/insert.dyon");
     test_src("source/syntax/named_call.dyon");
     test_src("source/syntax/max_min.dyon");
@@ -100,6 +101,9 @@ fn test_syntax() {
     test_src("source/syntax/space_before_function.dyon");
     test_src("source/syntax/current.dyon");
     test_fail_src("source/syntax/mut.dyon");
+    test_src("source/syntax/closure.dyon");
+    test_src("source/syntax/closure_2.dyon");
+    test_src("source/syntax/closure_3.dyon");
 }
 
 #[test]
@@ -149,6 +153,11 @@ fn test_typechk() {
     test_fail_src("source/typechk/mul_ad_hoc.dyon");
     test_src("source/typechk/unop.dyon");
     test_fail_src("source/typechk/prod.dyon");
+    test_src("source/typechk/closure.dyon");
+    test_fail_src("source/typechk/closure_2.dyon");
+    test_fail_src("source/typechk/closure_3.dyon");
+    test_src("source/typechk/closure_4.dyon");
+    test_fail_src("source/typechk/closure_5.dyon");
 }
 
 #[test]

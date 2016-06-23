@@ -91,7 +91,8 @@ impl Node {
         match self.kind {
             Pow | Sum | Prod | SumVec4 | Min | Max | Any | All |
             Vec4 | Vec4UnLoop | Swizzle |
-            Assign | For | ForN | Link => false,
+            Assign | For | ForN | Link |
+            Closure | CallClosure => false,
             Add | Mul | Compare => self.children.len() == 1,
             _ => true
         }
@@ -183,6 +184,11 @@ impl Node {
                 (_, Kind::Add) => {}
                 (_, Kind::Mul) => {}
                 (_, Kind::Call) => {}
+                (_, Kind::Closure) => {}
+                (_, Kind::CallClosure) => {}
+                (_, Kind::Arg) => { continue }
+                (_, Kind::Current) => { continue }
+                (Kind::CallClosure, Kind::Item) => { continue }
                 (_, Kind::Item) => {}
                 (_, Kind::UnOp) => {
                     // The result of all unary operators does not depend
@@ -224,7 +230,7 @@ impl Node {
                     // The result of array fill does not depend on `n`.
                     continue
                 }
-                (Kind::Call, Kind::CallArg) => {
+                (Kind::Call, Kind::CallArg) | (Kind::CallClosure, Kind::CallArg) => {
                     // If there is no return lifetime on the declared argument,
                     // there is no need to check it, because the computed value
                     // does not depend on the lifetime of that argument.
@@ -348,7 +354,9 @@ pub fn convert_meta_data(
                         let i = *parents.last().unwrap();
                         if nodes[i].names.len() == 0 {
                             let mut name = val.clone();
-                            Arc::make_mut(&mut name).push('_');
+                            if nodes[i].kind != Kind::CallClosure {
+                                Arc::make_mut(&mut name).push('_');
+                            }
                             nodes[i].names.push(name);
                         } else if let Some(ref mut name) = nodes[i].names.get_mut(0) {
                             let name = Arc::make_mut(name);

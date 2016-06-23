@@ -32,6 +32,18 @@ pub fn check(
     for i in 0..nodes.len() {
         match nodes[i].kind {
             Kind::Fn | Kind::Call => {}
+            Kind::CallClosure => {
+                let word = nodes[i].name().map(|n| n.clone());
+                if let Some(ref word) = word {
+                    // Append named syntax to item.
+                    let item = nodes[i].find_child_by_kind(&nodes, Kind::Item).unwrap();
+                    if nodes[item].children.len() == 0 {
+                        Arc::make_mut(&mut nodes[item].names[0]).push_str(&format!("__{}", word));
+                    }
+                    // Ignore when using object property,
+                    // because the key is unknown anyway.
+                }
+            }
             _ => continue
         };
         let mutable_args = nodes[i].children.iter()
@@ -197,6 +209,11 @@ pub fn check(
                 Some(new_parent) => {
                     child = parent;
                     parent = new_parent;
+                    if nodes[parent].kind == Kind::Closure {
+                        // Do not search further because all captured
+                        // variables must be explicit using current objects.
+                        break 'search;
+                    }
                 }
                 None => break
             }
@@ -205,7 +222,8 @@ pub fn check(
         match it {
             Some(it) => nodes[i].declaration = Some(it),
             None => {
-                if nodes[parent].kind != Kind::Fn {
+                if nodes[parent].kind != Kind::Fn &&
+                   nodes[parent].kind != Kind::Closure {
                     panic!("Top parent is not a function");
                 }
                 if nodes[i].name().is_none() {
@@ -223,6 +241,7 @@ pub fn check(
                     if Some(true) == arg.name().map(|n|
                         &**n == &**nodes[i].name().unwrap()) {
                         found = Some(j);
+                        break;
                     }
                 }
                 match found {

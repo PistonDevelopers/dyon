@@ -18,27 +18,27 @@ fn load_module() -> Option<dyon::Module> {
     use dyon::*;
 
     let mut module = Module::new();
-    module.add(Arc::new("say_hello".into()), say_hello, PreludeFunction {
+    module.add(Arc::new("say_hello".into()), say_hello, Dfn {
         lts: vec![],
         tys: vec![],
         ret: Type::Void
     });
-    module.add(Arc::new("homer".into()), homer, PreludeFunction {
+    module.add(Arc::new("homer".into()), homer, Dfn {
         lts: vec![],
         tys: vec![],
         ret: Type::Any
     });
-    module.add(Arc::new("age".into()), age, PreludeFunction {
+    module.add(Arc::new("age".into()), age, Dfn {
         lts: vec![Lt::Default],
         tys: vec![Type::Any],
         ret: Type::Any
     });
-    module.add(Arc::new("mr".into()), mr, PreludeFunction {
+    module.add(Arc::new("mr".into()), mr, Dfn {
         lts: vec![Lt::Default; 2],
         tys: vec![Type::Text; 2],
         ret: Type::Text
     });
-    module.add(Arc::new("origo".into()), origo, PreludeFunction {
+    module.add(Arc::new("origo".into()), origo, Dfn {
         lts: vec![],
         tys: vec![],
         ret: Type::Object,

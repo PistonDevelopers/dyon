@@ -73,6 +73,11 @@ pub enum Kind {
     Sw3,
     Link,
     LinkItem,
+    Closure,
+    CallClosure,
+    ClosureType,
+    ClArg,
+    ClRet,
 }
 
 impl Kind {
@@ -151,6 +156,12 @@ impl Kind {
             "sw3" => Kind::Sw3,
             "link" => Kind::Link,
             "link_item" => Kind::LinkItem,
+            "closure" => Kind::Closure,
+            "call_closure" => Kind::CallClosure,
+            "named_call_closure" => Kind::CallClosure,
+            "closure_type" => Kind::ClosureType,
+            "cl_arg" => Kind::ClArg,
+            "cl_ret" => Kind::ClRet,
             _ => return None
         })
     }

@@ -6,7 +6,7 @@ extern crate dyon_interactive;
 use std::sync::Arc;
 use piston_window::*;
 use current::CurrentGuard;
-use dyon::{error, load, Lt, Module, PreludeFunction, Runtime, Type};
+use dyon::{error, load, Lt, Module, Dfn, Runtime, Type};
 
 fn main() {
     let mut window: PistonWindow =
@@ -37,13 +37,13 @@ fn load_module() -> Option<Module> {
 
     let mut module = Module::new();
     add_functions::<PistonWindow>(&mut module);
-    module.add(Arc::new("draw".into()), draw, PreludeFunction {
+    module.add(Arc::new("draw".into()), draw, Dfn {
         lts: vec![Lt::Default],
         tys: vec![Type::array()],
         ret: Type::Void
     });
     module.add(Arc::new("next_event".into()),
-        next_event, PreludeFunction {
+        next_event, Dfn {
             lts: vec![],
             tys: vec![],
             ret: Type::Bool

@@ -24,7 +24,7 @@ pub mod macros;
 pub mod vec4;
 
 pub use runtime::Runtime;
-pub use prelude::{Lt, Prelude, PreludeFunction};
+pub use prelude::{Lt, Prelude, Dfn};
 pub use ty::Type;
 pub use link::Link;
 pub use vec4::Vec4;
@@ -114,6 +114,8 @@ pub enum Variable {
     Option(Option<Box<Variable>>),
     Result(Result<Box<Variable>, Box<Error>>),
     Thread(Thread),
+    // Stores closure AST, relative function index.
+    Closure(Arc<ast::Closure>, usize),
 }
 
 /// This is requires because `UnsafeRef(*mut Variable)` can not be sent across threads.
@@ -167,6 +169,7 @@ impl Variable {
             // `err(x)` always uses deep clone, so it does not contain references.
             Result(Err(ref err)) => Result(Err(err.clone())),
             Thread(_) => self.clone(),
+            Closure(_, _) => self.clone(),
         }
     }
 }
@@ -200,7 +203,7 @@ pub enum FnIndex {
 pub struct FnExternal {
     pub name: Arc<String>,
     pub f: fn(&mut Runtime) -> Result<(), String>,
-    pub p: PreludeFunction,
+    pub p: Dfn,
 }
 
 impl Clone for FnExternal {
@@ -279,7 +282,7 @@ impl Module {
         &mut self,
         name: Arc<String>,
         f: fn(&mut Runtime) -> Result<(), String>,
-        prelude_function: PreludeFunction
+        prelude_function: Dfn
     ) {
         self.ext_prelude.push(FnExternal {
             name: name.clone(),

@@ -1,0 +1,5 @@
+fn main() {
+    foo(\(x: f64) = x + 1)
+}
+
+fn foo(a: \(f64) -> bool) {}

@@ -16,15 +16,15 @@ pub enum Lt {
 
 /// Stores preloaded function constraints.
 /// These are already checked.
-#[derive(Clone)]
-pub struct PreludeFunction {
+#[derive(Clone, PartialEq, Debug)]
+pub struct Dfn {
     pub lts: Vec<Lt>,
     pub tys: Vec<Type>,
     pub ret: Type,
 }
 
-impl PreludeFunction {
-    pub fn new(f: &ast::Function) -> PreludeFunction {
+impl Dfn {
+    pub fn new(f: &ast::Function) -> Dfn {
         let mut lts: Vec<Lt> = vec![];
         let mut tys: Vec<Type> = vec![];
         'next_arg: for arg in &f.args {
@@ -45,7 +45,7 @@ impl PreludeFunction {
             }
             tys.push(arg.ty.clone());
         }
-        PreludeFunction {
+        Dfn {
             lts: lts,
             tys: tys,
             ret: f.ret.clone(),
@@ -57,17 +57,17 @@ impl PreludeFunction {
 
 pub struct Prelude {
     pub functions: HashMap<Arc<String>, usize>,
-    pub list: Vec<PreludeFunction>,
+    pub list: Vec<Dfn>,
 }
 
 impl Prelude {
-    pub fn insert(&mut self, name: Arc<String>, f: PreludeFunction) {
+    pub fn insert(&mut self, name: Arc<String>, f: Dfn) {
         let n = self.list.len();
         self.functions.insert(name, n);
         self.list.push(f);
     }
 
-    pub fn intrinsic(&mut self, name: Arc<String>, index: usize, f: PreludeFunction) {
+    pub fn intrinsic(&mut self, name: Arc<String>, index: usize, f: Dfn) {
         let n = self.list.len();
         assert!(n == index, "{}", name);
         self.functions.insert(name, n);
@@ -94,7 +94,7 @@ impl Prelude {
             prelude.insert(f.name.clone(), f.p.clone());
         }
         for f in &module.functions {
-            prelude.insert(f.name.clone(), PreludeFunction::new(f));
+            prelude.insert(f.name.clone(), Dfn::new(f));
         }
         prelude
     }

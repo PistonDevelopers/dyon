@@ -23,7 +23,7 @@ pub fn convert(
 
     loop {
         if let Ok((range, function)) =
-        Function::from_meta_data(file.clone(), source.clone(), convert, ignored) {
+        Function::from_meta_data(&file, &source, "fn", convert, ignored) {
             convert.update(range);
             module.register(function);
         } else if convert.remaining_data_len() > 0 {
@@ -53,13 +53,13 @@ pub struct Function {
 
 impl Function {
     pub fn from_meta_data(
-        file: Arc<String>,
-        source: Arc<String>,
+        file: &Arc<String>,
+        source: &Arc<String>,
+        node: &str,
         mut convert: Convert,
         ignored: &mut Vec<Range>
     ) -> Result<(Range, Function), ()> {
         let start = convert.clone();
-        let node = "fn";
         let start_range = try!(convert.start_node(node));
         convert.update(start_range);
 
@@ -92,11 +92,11 @@ impl Function {
                 convert.update(range);
                 ret = Some(val);
             } else if let Ok((range, val)) = Block::from_meta_data(
-                "block", convert, ignored) {
+                    file, source, "block", convert, ignored) {
                 convert.update(range);
                 block = Some(val);
             } else if let Ok((range, val)) = Expression::from_meta_data(
-                "expr", convert, ignored) {
+                    file, source, "expr", convert, ignored) {
                 convert.update(range);
                 expr = Some(val);
                 ret = Some(Type::Any);
@@ -145,8 +145,8 @@ impl Function {
         Ok((convert.subtract(start), Function {
             resolved: Cell::new(false),
             name: name,
-            file: file,
-            source: source,
+            file: file.clone(),
+            source: source.clone(),
             args: args,
             currents: currents,
             block: block,
@@ -168,6 +168,114 @@ impl Function {
         }
         self.block.resolve_locals(relative, &mut stack, module);
         self.resolved.set(true);
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Closure {
+    pub file: Arc<String>,
+    pub source: Arc<String>,
+    pub args: Vec<Arg>,
+    pub currents: Vec<Current>,
+    pub block: Block,
+    pub ret: Type,
+    pub source_range: Range,
+}
+
+impl Closure {
+    pub fn from_meta_data(
+        file: &Arc<String>,
+        source: &Arc<String>,
+        node: &str,
+        mut convert: Convert,
+        ignored: &mut Vec<Range>
+    ) -> Result<(Range, Closure), ()> {
+        let start = convert.clone();
+        let start_range = try!(convert.start_node(node));
+        convert.update(start_range);
+
+        let mut args: Vec<Arg> = vec![];
+        let mut currents: Vec<Current> = vec![];
+        let mut block: Option<Block> = None;
+        let mut expr: Option<Expression> = None;
+        let mut ret: Option<Type> = None;
+        loop {
+            if let Ok(range) = convert.end_node(node) {
+                convert.update(range);
+                break;
+            } else if let Ok((range, val)) = Arg::from_meta_data(
+                    convert, ignored) {
+                convert.update(range);
+                args.push(val);
+            } else if let Ok((range, val)) = Current::from_meta_data(
+                    convert, ignored) {
+                convert.update(range);
+                currents.push(val);
+            } else if let Ok((range, val)) = convert.meta_bool("returns") {
+                convert.update(range);
+                ret = Some(if val { Type::Any } else { Type::Void })
+            } else if let Ok((range, val)) = Type::from_meta_data(
+                    "ret_type", convert, ignored) {
+                convert.update(range);
+                ret = Some(val);
+            } else if let Ok((range, val)) = Block::from_meta_data(
+                    file, source, "block", convert, ignored) {
+                convert.update(range);
+                block = Some(val);
+            } else if let Ok((range, val)) = Expression::from_meta_data(
+                    file, source, "expr", convert, ignored) {
+                convert.update(range);
+                expr = Some(val);
+                ret = Some(Type::Any);
+            } else {
+                let range = convert.ignore();
+                convert.update(range);
+                ignored.push(range);
+            }
+        }
+
+        let block = match expr {
+            None => try!(block.ok_or(())),
+            Some(expr) => {
+                let source_range = expr.source_range();
+                let item = Expression::Item(Item {
+                        name: Arc::new("return".into()),
+                        current: false,
+                        stack_id: Cell::new(None),
+                        static_stack_id: Cell::new(None),
+                        try: false,
+                        ids: vec![],
+                        try_ids: vec![],
+                        source_range: source_range,
+                    });
+                Block {
+                    expressions: vec![Expression::Return(Box::new(item), Box::new(expr))],
+                    source_range: source_range
+                }
+            }
+        };
+        let ret = try!(ret.ok_or(()));
+        Ok((convert.subtract(start), Closure {
+            file: file.clone(),
+            source: source.clone(),
+            args: args,
+            currents: currents,
+            block: block,
+            ret: ret,
+            source_range: convert.source(start).unwrap(),
+        }))
+    }
+
+    pub fn returns(&self) -> bool { self.ret != Type::Void }
+
+    pub fn resolve_locals(&self, relative: usize, stack: &mut Vec<Option<Arc<String>>>, module: &Module) {
+        if self.returns() {
+            stack.push(Some(Arc::new("return".into())));
+        }
+        for arg in &self.args {
+            stack.push(Some(arg.name.clone()));
+        }
+        self.block.resolve_locals(relative, stack, module);
     }
 }
 
@@ -285,8 +393,13 @@ pub struct Block {
 }
 
 impl Block {
-    pub fn from_meta_data(node: &str, mut convert: Convert, ignored: &mut Vec<Range>)
-    -> Result<(Range, Block), ()> {
+    pub fn from_meta_data(
+        file: &Arc<String>,
+        source: &Arc<String>,
+        node: &str,
+        mut convert: Convert,
+        ignored: &mut Vec<Range>
+    ) -> Result<(Range, Block), ()> {
         let start = convert.clone();
         let start_range = try!(convert.start_node(node));
         convert.update(start_range);
@@ -297,7 +410,7 @@ impl Block {
                 convert.update(range);
                 break;
             } else if let Ok((range, val)) = Expression::from_meta_data(
-                "expr", convert, ignored) {
+                    file, source, "expr", convert, ignored) {
                 convert.update(range);
                 expressions.push(val);
             } else {
@@ -339,6 +452,7 @@ pub enum Expression {
     Continue(Continue),
     Block(Block),
     Go(Box<Go>),
+    // TODO: Check size, perhaps use `Box<Call>`?
     Call(Call),
     Item(Item),
     BinOp(Box<BinOpExpression>),
@@ -363,6 +477,8 @@ pub enum Expression {
     Variable(Range, Variable),
     Try(Box<Expression>),
     Swizzle(Box<Swizzle>),
+    Closure(Arc<Closure>),
+    CallClosure(Box<CallClosure>),
 }
 
 // Required because the `Sync` impl of `Variable` is unsafe.
@@ -370,6 +486,8 @@ unsafe impl Sync for Expression {}
 
 impl Expression {
     pub fn from_meta_data(
+        file: &Arc<String>,
+        source: &Arc<String>,
         node: &str,
         mut convert: Convert,
         ignored: &mut Vec<Range>)
@@ -387,23 +505,23 @@ impl Expression {
                 // Ignore `mut` since it is handled by lifetime checker.
                 convert.update(range);
             } else if let Ok((range, val)) = Link::from_meta_data(
-                    convert, ignored) {
+                    file, source, convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::Link(val));
             } else if let Ok((range, val)) = Object::from_meta_data(
-                    convert, ignored) {
+                    file, source, convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::Object(Box::new(val)));
             } else if let Ok((range, val)) = Array::from_meta_data(
-                    convert, ignored) {
+                    file, source, convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::Array(Box::new(val)));
             } else if let Ok((range, val)) = ArrayFill::from_meta_data(
-                    convert, ignored) {
+                    file, source, convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::ArrayFill(Box::new(val)));
             } else if let Ok((range, val)) = Expression::from_meta_data(
-                "return", convert, ignored) {
+                    file, source, "return", convert, ignored) {
                 convert.update(range);
                 let item = Expression::Item(Item {
                         name: Arc::new("return".into()),
@@ -429,15 +547,15 @@ impl Expression {
                 convert.update(range);
                 result = Some(Expression::Continue(val));
             } else if let Ok((range, val)) = Block::from_meta_data(
-                "block", convert, ignored) {
+                    file, source, "block", convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::Block(val));
             } else if let Ok((range, val)) = Add::from_meta_data(
-                convert, ignored) {
+                    file, source, convert, ignored) {
                 convert.update(range);
                 result = Some(val.to_expression());
             } else if let Ok((range, val)) = Item::from_meta_data(
-                    convert, ignored) {
+                    file, source, convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::Item(val));
             } else if let Ok((range, val)) = convert.meta_string("text") {
@@ -453,11 +571,11 @@ impl Expression {
                     source_range: convert.source(start).unwrap(),
                 }));
             } else if let Ok((range, val)) = Vec4::from_meta_data(
-                    convert, ignored) {
+                    file, source, convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::Vec4(val));
             } else if let Ok((range, val)) = Vec4UnLoop::from_meta_data(
-                    convert, ignored) {
+                    file, source, convert, ignored) {
                 convert.update(range);
                 result = Some(val.to_expression());
             } else if let Ok((range, val)) = convert.meta_bool("bool") {
@@ -478,84 +596,96 @@ impl Expression {
                     return Err(());
                 }
             } else if let Ok((range, val)) = Go::from_meta_data(
-                    convert, ignored) {
+                    file, source, convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::Go(Box::new(val)));
             } else if let Ok((range, val)) = Call::from_meta_data(
-                    convert, ignored) {
+                    file, source, convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::Call(val));
             } else if let Ok((range, val)) = Call::named_from_meta_data(
-                    convert, ignored) {
+                    file, source, convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::Call(val));
             } else if let Ok((range, val)) = Assign::from_meta_data(
-                    convert, ignored) {
+                    file, source, convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::Assign(Box::new(val)));
             } else if let Ok((range, val)) = For::from_meta_data(
-                    convert, ignored) {
+                    file, source, convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::For(Box::new(val)));
             } else if let Ok((range, val)) = ForN::from_meta_data(
-                    "for_n", convert, ignored) {
+                    file, source, "for_n", convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::ForN(Box::new(val)));
             } else if let Ok((range, val)) = ForN::from_meta_data(
-                    "sum", convert, ignored) {
+                    file, source, "sum", convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::Sum(Box::new(val)));
             } else if let Ok((range, val)) = ForN::from_meta_data(
-                    "sum_vec4", convert, ignored) {
+                    file, source, "sum_vec4", convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::SumVec4(Box::new(val)));
             } else if let Ok((range, val)) = ForN::from_meta_data(
-                    "prod", convert, ignored) {
+                    file, source, "prod", convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::Prod(Box::new(val)));
             } else if let Ok((range, val)) = ForN::from_meta_data(
-                    "min", convert, ignored) {
+                    file, source, "min", convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::Min(Box::new(val)));
             } else if let Ok((range, val)) = ForN::from_meta_data(
-                    "max", convert, ignored) {
+                    file, source, "max", convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::Max(Box::new(val)));
             } else if let Ok((range, val)) = ForN::from_meta_data(
-                    "sift", convert, ignored) {
+                    file, source, "sift", convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::Sift(Box::new(val)));
             } else if let Ok((range, val)) = ForN::from_meta_data(
-                    "any", convert, ignored) {
+                    file, source, "any", convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::Any(Box::new(val)));
             } else if let Ok((range, val)) = ForN::from_meta_data(
-                    "all", convert, ignored) {
+                    file, source, "all", convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::All(Box::new(val)));
             } else if let Ok((range, val)) = Loop::from_meta_data(
-                    convert, ignored) {
+                    file, source, convert, ignored) {
                 convert.update(range);
                 result = Some(val.to_expression());
             } else if let Ok((range, val)) = If::from_meta_data(
-                    convert, ignored) {
+                    file, source, convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::If(Box::new(val)));
             } else if let Ok((range, val)) = Compare::from_meta_data(
-                    convert, ignored) {
+                    file, source, convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::Compare(Box::new(val)));
             } else if let Ok((range, val)) = UnOpExpression::from_meta_data(
-                    convert, ignored) {
+                    file, source, convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::UnOp(Box::new(val)));
             } else if let Ok((range, _)) = convert.meta_bool("try") {
                 convert.update(range);
                 result = Some(Expression::Try(Box::new(result.unwrap())));
             } else if let Ok((range, val)) = Swizzle::from_meta_data(
-                    convert, ignored) {
+                    file, source, convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::Swizzle(Box::new(val)));
+            } else if let Ok((range, val)) = Closure::from_meta_data(
+                    file, source, "closure", convert, ignored) {
+                convert.update(range);
+                result = Some(Expression::Closure(Arc::new(val)));
+            } else if let Ok((range, val)) = CallClosure::from_meta_data(
+                    file, source, convert, ignored) {
+                convert.update(range);
+                result = Some(Expression::CallClosure(Box::new(val)));
+            } else if let Ok((range, val)) = CallClosure::named_from_meta_data(
+                    file, source, convert, ignored) {
+                convert.update(range);
+                result = Some(Expression::CallClosure(Box::new(val)));
             } else {
                 let range = convert.ignore();
                 convert.update(range);
@@ -605,6 +735,8 @@ impl Expression {
             Variable(range, _) => range,
             Try(ref expr) => expr.source_range(),
             Swizzle(ref swizzle) => swizzle.source_range,
+            Closure(ref closure) => closure.source_range,
+            CallClosure(ref call) => call.source_range,
         }
     }
 
@@ -652,6 +784,8 @@ impl Expression {
             Variable(_, _) => {}
             Try(ref expr) => expr.resolve_locals(relative, stack, module),
             Swizzle(ref swizzle) => swizzle.expr.resolve_locals(relative, stack, module),
+            Closure(ref closure) => closure.resolve_locals(relative, stack, module),
+            CallClosure(ref call) => call.resolve_locals(relative, stack, module),
         }
     }
 }
@@ -664,6 +798,8 @@ pub struct Link {
 
 impl Link {
     pub fn from_meta_data(
+        file: &Arc<String>,
+        source: &Arc<String>,
         mut convert: Convert,
         ignored: &mut Vec<Range>)
     -> Result<(Range, Link), ()> {
@@ -678,7 +814,7 @@ impl Link {
                 convert.update(range);
                 break;
             } else if let Ok((range, val)) = Expression::from_meta_data(
-                    "link_item", convert, ignored) {
+                    file, source, "link_item", convert, ignored) {
                 convert.update(range);
                 items.push(val);
             } else {
@@ -716,6 +852,8 @@ pub struct Object {
 
 impl Object {
     pub fn from_meta_data(
+        file: &Arc<String>,
+        source: &Arc<String>,
         mut convert: Convert,
         ignored: &mut Vec<Range>)
     -> Result<(Range, Object), ()> {
@@ -730,7 +868,7 @@ impl Object {
                 convert.update(range);
                 break;
             } else if let Ok((range, val)) = Object::key_value_from_meta_data(
-                convert, ignored) {
+                    file, source, convert, ignored) {
                 convert.update(range);
                 key_values.push(val);
             } else {
@@ -747,6 +885,8 @@ impl Object {
     }
 
     pub fn key_value_from_meta_data(
+        file: &Arc<String>,
+        source: &Arc<String>,
         mut convert: Convert,
         ignored: &mut Vec<Range>)
     -> Result<(Range, (Arc<String>, Expression)), ()> {
@@ -765,7 +905,7 @@ impl Object {
                 convert.update(range);
                 key = Some(val);
             } else if let Ok((range, val)) = Expression::from_meta_data(
-                "val", convert, ignored) {
+                    file, source, "val", convert, ignored) {
                 convert.update(range);
                 value = Some(val);
             } else {
@@ -802,6 +942,8 @@ pub struct Array {
 
 impl Array {
     pub fn from_meta_data(
+        file: &Arc<String>,
+        source: &Arc<String>,
         mut convert: Convert,
         ignored: &mut Vec<Range>)
     -> Result<(Range, Array), ()> {
@@ -816,7 +958,7 @@ impl Array {
                 convert.update(range);
                 break;
             } else if let Ok((range, val)) = Expression::from_meta_data(
-                "array_item", convert, ignored) {
+                    file, source, "array_item", convert, ignored) {
                 convert.update(range);
                 items.push(val);
             } else {
@@ -855,6 +997,8 @@ pub struct ArrayFill {
 
 impl ArrayFill {
     pub fn from_meta_data(
+        file: &Arc<String>,
+        source: &Arc<String>,
         mut convert: Convert,
         ignored: &mut Vec<Range>)
     -> Result<(Range, ArrayFill), ()> {
@@ -870,11 +1014,11 @@ impl ArrayFill {
                 convert.update(range);
                 break;
             } else if let Ok((range, val)) = Expression::from_meta_data(
-                "fill", convert, ignored) {
+                    file, source, "fill", convert, ignored) {
                 convert.update(range);
                 fill = Some(val);
             } else if let Ok((range, val)) = Expression::from_meta_data(
-                "n", convert, ignored) {
+                    file, source, "n", convert, ignored) {
                 convert.update(range);
                 n = Some(val);
             } else {
@@ -916,6 +1060,8 @@ pub struct Add {
 
 impl Add {
     pub fn from_meta_data(
+        file: &Arc<String>,
+        source: &Arc<String>,
         mut convert: Convert,
         ignored: &mut Vec<Range>)
     -> Result<(Range, Add), ()> {
@@ -931,7 +1077,7 @@ impl Add {
                 convert.update(range);
                 break;
             } else if let Ok((range, val)) = Mul::from_meta_data(
-                convert, ignored) {
+                    file, source, convert, ignored) {
                 convert.update(range);
                 items.push(val);
             } else if let Ok((range, _)) = convert.meta_bool("+") {
@@ -983,6 +1129,8 @@ pub struct Mul {
 
 impl Mul {
     pub fn from_meta_data(
+        file: &Arc<String>,
+        source: &Arc<String>,
         mut convert: Convert,
         ignored: &mut Vec<Range>)
     -> Result<(Range, Mul), ()> {
@@ -998,7 +1146,7 @@ impl Mul {
                 convert.update(range);
                 break;
             } else if let Ok((range, val)) = MulVar::from_meta_data(
-                convert, ignored) {
+                    file, source, convert, ignored) {
                 convert.update(range);
                 items.push(val);
             } else if let Ok((range, _)) = convert.meta_bool("*.") {
@@ -1058,13 +1206,16 @@ pub enum MulVar {
 
 impl MulVar {
     pub fn from_meta_data(
+        file: &Arc<String>,
+        source: &Arc<String>,
         convert: Convert,
         ignored: &mut Vec<Range>)
     -> Result<(Range, MulVar), ()> {
         if let Ok((range, val)) = Expression::from_meta_data(
-            "val", convert, ignored) {
+                file, source, "val", convert, ignored) {
             Ok((range, MulVar::Val(val)))
-        } else if let Ok((range, val)) = Pow::from_meta_data(convert, ignored) {
+        } else if let Ok((range, val)) = Pow::from_meta_data(
+                file, source, convert, ignored) {
             Ok((range, MulVar::Pow(val)))
         } else {
             Err(())
@@ -1093,6 +1244,8 @@ pub struct Pow {
 
 impl Pow {
     pub fn from_meta_data(
+        file: &Arc<String>,
+        source: &Arc<String>,
         mut convert: Convert,
         ignored: &mut Vec<Range>)
     -> Result<(Range, Pow), ()> {
@@ -1108,11 +1261,11 @@ impl Pow {
                 convert.update(range);
                 break;
             } else if let Ok((range, val)) = Expression::from_meta_data(
-                "base", convert, ignored) {
+                file, source, "base", convert, ignored) {
                 convert.update(range);
                 base = Some(val);
             } else if let Ok((range, val)) = Expression::from_meta_data(
-                "exp", convert, ignored) {
+                file, source, "exp", convert, ignored) {
                 convert.update(range);
                 exp = Some(val);
             } else {
@@ -1258,6 +1411,8 @@ impl Item {
     }
 
     pub fn from_meta_data(
+        file: &Arc<String>,
+        source: &Arc<String>,
         mut convert: Convert,
         ignored: &mut Vec<Range>)
     -> Result<(Range, Item), ()> {
@@ -1298,7 +1453,7 @@ impl Item {
                 convert.update(range);
                 ids.push(Id::F64(convert.source(start_id).unwrap(), val));
             } else if let Ok((range, val)) = Expression::from_meta_data(
-                "id", convert, ignored) {
+                file, source, "id", convert, ignored) {
                 convert.update(range);
                 ids.push(Id::Expression(val));
             } else if let Ok((range, _)) = convert.meta_bool("try_id") {
@@ -1359,6 +1514,8 @@ pub struct Go {
 
 impl Go {
     pub fn from_meta_data(
+        file: &Arc<String>,
+        source: &Arc<String>,
         mut convert: Convert,
         ignored: &mut Vec<Range>
     ) -> Result<(Range, Go), ()> {
@@ -1372,10 +1529,12 @@ impl Go {
             if let Ok(range) = convert.end_node(node) {
                 convert.update(range);
                 break;
-            } else if let Ok((range, val)) = Call::from_meta_data(convert, ignored) {
+            } else if let Ok((range, val)) = Call::from_meta_data(
+                    file, source, convert, ignored) {
                 convert.update(range);
                 call = Some(val);
-            } else if let Ok((range, val)) = Call::named_from_meta_data(convert, ignored) {
+            } else if let Ok((range, val)) = Call::named_from_meta_data(
+                    file, source, convert, ignored) {
                 convert.update(range);
                 call = Some(val);
             } else {
@@ -1420,6 +1579,8 @@ pub struct Call {
 
 impl Call {
     pub fn from_meta_data(
+        file: &Arc<String>,
+        source: &Arc<String>,
         mut convert: Convert,
         ignored: &mut Vec<Range>)
     -> Result<(Range, Call), ()> {
@@ -1439,7 +1600,7 @@ impl Call {
                 convert.update(range);
                 name = Some(val);
             } else if let Ok((range, val)) = Expression::from_meta_data(
-                "call_arg", convert, ignored) {
+                file, source, "call_arg", convert, ignored) {
                 let mut peek = convert.clone();
                 mutable.push(match peek.start_node("call_arg") {
                     Ok(r) => {
@@ -1483,6 +1644,8 @@ impl Call {
     }
 
     pub fn named_from_meta_data(
+        file: &Arc<String>,
+        source: &Arc<String>,
         mut convert: Convert,
         ignored: &mut Vec<Range>)
     -> Result<(Range, Call), ()> {
@@ -1508,7 +1671,7 @@ impl Call {
                     name.push('_');
                 }
             } else if let Ok((range, val)) = Expression::from_meta_data(
-                "call_arg", convert, ignored) {
+                file, source, "call_arg", convert, ignored) {
                 let mut peek = convert.clone();
                 mutable.push(match peek.start_node("call_arg") {
                     Ok(r) => {
@@ -1604,6 +1767,180 @@ impl Call {
 }
 
 #[derive(Debug, Clone)]
+pub struct CallClosure {
+    pub item: Item,
+    pub args: Vec<Expression>,
+    pub source_range: Range,
+}
+
+impl CallClosure {
+    pub fn from_meta_data(
+        file: &Arc<String>,
+        source: &Arc<String>,
+        mut convert: Convert,
+        ignored: &mut Vec<Range>)
+    -> Result<(Range, CallClosure), ()> {
+        let start = convert.clone();
+        let node = "call_closure";
+        let start_range = try!(convert.start_node(node));
+        convert.update(start_range);
+
+        let mut item: Option<Item> = None;
+        let mut args = vec![];
+        let mut mutable: Vec<bool> = vec![];
+        loop {
+            if let Ok(range) = convert.end_node(node) {
+                convert.update(range);
+                break;
+            } else if let Ok((range, val)) = Item::from_meta_data(
+                    file, source, convert, ignored) {
+                convert.update(range);
+                item = Some(val);
+            } else if let Ok((range, val)) = Expression::from_meta_data(
+                    file, source, "call_arg", convert, ignored) {
+                let mut peek = convert.clone();
+                mutable.push(match peek.start_node("call_arg") {
+                    Ok(r) => {
+                        peek.update(r);
+                        peek.meta_bool("mut").is_ok()
+                    }
+                    _ => unreachable!()
+                });
+                convert.update(range);
+                args.push(val);
+            } else {
+                let range = convert.ignore();
+                convert.update(range);
+                ignored.push(range);
+            }
+        }
+
+        let item = try!(item.ok_or(()));
+        Ok((convert.subtract(start), CallClosure {
+            item: item,
+            args: args,
+            source_range: convert.source(start).unwrap(),
+        }))
+    }
+
+    pub fn named_from_meta_data(
+        file: &Arc<String>,
+        source: &Arc<String>,
+        mut convert: Convert,
+        ignored: &mut Vec<Range>)
+    -> Result<(Range, CallClosure), ()> {
+        let start = convert.clone();
+        let node = "named_call_closure";
+        let start_range = try!(convert.start_node(node));
+        convert.update(start_range);
+
+        let mut item: Option<Item> = None;
+        let mut name = String::new();
+        let mut args = vec![];
+        let mut mutable: Vec<bool> = vec![];
+        loop {
+            if let Ok(range) = convert.end_node(node) {
+                convert.update(range);
+                break;
+            } else if let Ok((range, val)) = Item::from_meta_data(
+                    file, source, convert, ignored) {
+                convert.update(range);
+                item = Some(val);
+            } else if let Ok((range, val)) = convert.meta_string("word") {
+                convert.update(range);
+                if name.len() != 0 {
+                    name.push('_');
+                    name.push_str(&val);
+                } else {
+                    name.push_str(&val);
+                }
+            } else if let Ok((range, val)) = Expression::from_meta_data(
+                file, source, "call_arg", convert, ignored) {
+                let mut peek = convert.clone();
+                mutable.push(match peek.start_node("call_arg") {
+                    Ok(r) => {
+                        peek.update(r);
+                        peek.meta_bool("mut").is_ok()
+                    }
+                    _ => unreachable!()
+                });
+                convert.update(range);
+                args.push(val);
+            } else {
+                let range = convert.ignore();
+                convert.update(range);
+                ignored.push(range);
+            }
+        }
+
+        let mut item = try!(item.ok_or(()));
+        {
+            if item.ids.len() == 0 {
+                // Append name to item.
+                let n = Arc::make_mut(&mut item.name);
+                n.push_str("__");
+                n.push_str(&name);
+            } else {
+                let last = item.ids.len() - 1;
+                if let Id::String(_, ref mut n) = item.ids[last] {
+                    // Append name to last id.
+                    let n = Arc::make_mut(n);
+                    n.push_str("__");
+                    n.push_str(&name);
+                }
+            }
+        }
+        Ok((convert.subtract(start), CallClosure {
+            item: item,
+            args: args,
+            source_range: convert.source(start).unwrap(),
+        }))
+    }
+
+    pub fn resolve_locals(
+        &self,
+        relative: usize,
+        stack: &mut Vec<Option<Arc<String>>>,
+        module: &Module
+    ) {
+        let st = stack.len();
+        self.item.resolve_locals(relative, stack, module);
+        // All closures must return a value.
+        stack.push(Some(Arc::new("return".into())));
+        for arg in &self.args {
+            let arg_st = stack.len();
+            arg.resolve_locals(relative, stack, module);
+            stack.truncate(arg_st);
+            match *arg {
+                Expression::Swizzle(ref swizzle) => {
+                    for _ in 0..swizzle.len() {
+                        stack.push(None);
+                    }
+                }
+                _ => {
+                    stack.push(None);
+                }
+            }
+        }
+        stack.truncate(st);
+    }
+
+    /// Computes number of arguments including swizzles.
+    pub fn arg_len(&self) -> usize {
+        let mut sum = 0;
+        for arg in &self.args {
+            match *arg {
+                Expression::Swizzle(ref swizzle) => {
+                    sum += swizzle.len();
+                }
+                _ => { sum += 1; }
+            }
+        }
+        sum
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct BinOpExpression {
     pub op: BinOp,
     pub left: Expression,
@@ -1635,6 +1972,8 @@ pub struct UnOpExpression {
 
 impl UnOpExpression {
     pub fn from_meta_data(
+        file: &Arc<String>,
+        source: &Arc<String>,
         mut convert: Convert,
         ignored: &mut Vec<Range>)
     -> Result<(Range, UnOpExpression), ()> {
@@ -1659,7 +1998,7 @@ impl UnOpExpression {
                 convert.update(range);
                 unop = Some(UnOp::Norm);
             } else if let Ok((range, val)) = Expression::from_meta_data(
-                "expr", convert, ignored) {
+                file, source, "expr", convert, ignored) {
                 convert.update(range);
                 expr = Some(val);
             } else {
@@ -1700,6 +2039,8 @@ pub struct Assign {
 
 impl Assign {
     pub fn from_meta_data(
+        file: &Arc<String>,
+        source: &Arc<String>,
         mut convert: Convert,
         ignored: &mut Vec<Range>)
     -> Result<(Range, Assign), ()> {
@@ -1740,11 +2081,11 @@ impl Assign {
                 convert.update(range);
                 op = Some(AssignOp::Pow);
             } else if let Ok((range, val)) = Expression::from_meta_data(
-                "left", convert, ignored) {
+                file, source, "left", convert, ignored) {
                 convert.update(range);
                 left = Some(val);
             } else if let Ok((range, val)) = Expression::from_meta_data(
-                "right", convert, ignored) {
+                file, source, "right", convert, ignored) {
                 convert.update(range);
                 right = Some(val);
             } else {
@@ -1823,6 +2164,8 @@ pub struct Vec4 {
 
 impl Vec4 {
     pub fn from_meta_data(
+        file: &Arc<String>,
+        source: &Arc<String>,
         mut convert: Convert,
         ignored: &mut Vec<Range>)
     -> Result<(Range, Vec4), ()> {
@@ -1840,19 +2183,19 @@ impl Vec4 {
                 convert.update(range);
                 break;
             } else if let Ok((range, val)) = Expression::from_meta_data(
-                "x", convert, ignored) {
+                file, source, "x", convert, ignored) {
                 convert.update(range);
                 x = Some(val);
             } else if let Ok((range, val)) = Expression::from_meta_data(
-                "y", convert, ignored) {
+                file, source, "y", convert, ignored) {
                 convert.update(range);
                 y = Some(val);
             } else if let Ok((range, val)) = Expression::from_meta_data(
-                "z", convert, ignored) {
+                file, source, "z", convert, ignored) {
                 convert.update(range);
                 z = Some(val);
             } else if let Ok((range, val)) = Expression::from_meta_data(
-                "w", convert, ignored) {
+                file, source, "w", convert, ignored) {
                 convert.update(range);
                 w = Some(val);
             } else {
@@ -1914,6 +2257,8 @@ pub struct Vec4UnLoop {
 
 impl Vec4UnLoop {
     pub fn from_meta_data(
+        file: &Arc<String>,
+        source: &Arc<String>,
         mut convert: Convert,
         ignored: &mut Vec<Range>)
     -> Result<(Range, Vec4UnLoop), ()> {
@@ -1942,7 +2287,7 @@ impl Vec4UnLoop {
                 convert.update(range);
                 name = Some(val);
             } else if let Ok((range, val)) = Expression::from_meta_data(
-                "expr", convert, ignored) {
+                file, source, "expr", convert, ignored) {
                 convert.update(range);
                 expr = Some(val);
             } else {
@@ -2000,6 +2345,8 @@ pub struct Swizzle {
 
 impl Swizzle {
     pub fn from_meta_data(
+        file: &Arc<String>,
+        source: &Arc<String>,
         mut convert: Convert,
         ignored: &mut Vec<Range>)
     -> Result<(Range, Swizzle), ()> {
@@ -2034,7 +2381,7 @@ impl Swizzle {
                 convert.update(range);
                 sw3 = Some(val.ind);
             } else if let Ok((range, val)) = Expression::from_meta_data(
-                "expr", convert, ignored) {
+                file, source, "expr", convert, ignored) {
                 convert.update(range);
                 expr = Some(val);
             } else {
@@ -2136,6 +2483,8 @@ pub struct For {
 
 impl For {
     pub fn from_meta_data(
+        file: &Arc<String>,
+        source: &Arc<String>,
         mut convert: Convert,
         ignored: &mut Vec<Range>)
     -> Result<(Range, For), ()> {
@@ -2154,19 +2503,19 @@ impl For {
                 convert.update(range);
                 break;
             } else if let Ok((range, val)) = Expression::from_meta_data(
-                "init", convert, ignored) {
+                file, source, "init", convert, ignored) {
                 convert.update(range);
                 init = Some(val);
             } else if let Ok((range, val)) = Expression::from_meta_data(
-                "cond", convert, ignored) {
+                file, source, "cond", convert, ignored) {
                 convert.update(range);
                 cond = Some(val);
             } else if let Ok((range, val)) = Expression::from_meta_data(
-                "step", convert, ignored) {
+                file, source, "step", convert, ignored) {
                 convert.update(range);
                 step = Some(val);
             } else if let Ok((range, val)) = Block::from_meta_data(
-                "block", convert, ignored) {
+                    file, source, "block", convert, ignored) {
                 convert.update(range);
                 block = Some(val);
             } else if let Ok((range, val)) = convert.meta_string("label") {
@@ -2222,6 +2571,8 @@ pub struct ForN {
 
 impl ForN {
     pub fn from_meta_data(
+        file: &Arc<String>,
+        source: &Arc<String>,
         node: &str,
         mut convert: Convert,
         ignored: &mut Vec<Range>)
@@ -2238,7 +2589,7 @@ impl ForN {
                 convert.update(range);
                 break;
             } else if let Ok((range, val)) = Block::from_meta_data(
-                "block", convert, ignored) {
+                    file, source, "block", convert, ignored) {
                 convert.update(range);
                 block = Some(val);
             } else if let Ok((range, val)) = convert.meta_string("label") {
@@ -2249,12 +2600,12 @@ impl ForN {
                 let mut start_expr: Option<Expression> = None;
                 let mut end_expr: Option<Expression> = None;
                 if let Ok((range, val)) = Expression::from_meta_data(
-                    "start", convert, ignored) {
+                    file, source, "start", convert, ignored) {
                     convert.update(range);
                     start_expr = Some(val);
                 }
                 if let Ok((range, val)) = Expression::from_meta_data(
-                    "end", convert, ignored) {
+                    file, source, "end", convert, ignored) {
                     convert.update(range);
                     end_expr = Some(val);
                 }
@@ -2361,6 +2712,8 @@ pub struct Loop {
 
 impl Loop {
     pub fn from_meta_data(
+        file: &Arc<String>,
+        source: &Arc<String>,
         mut convert: Convert,
         ignored: &mut Vec<Range>)
     -> Result<(Range, Loop), ()> {
@@ -2376,7 +2729,7 @@ impl Loop {
                 convert.update(range);
                 break;
             } else if let Ok((range, val)) = Block::from_meta_data(
-                "block", convert, ignored) {
+                    file, source, "block", convert, ignored) {
                 convert.update(range);
                 block = Some(val);
             } else if let Ok((range, val)) = convert.meta_string("label") {
@@ -2507,6 +2860,8 @@ pub struct If {
 
 impl If {
     pub fn from_meta_data(
+        file: &Arc<String>,
+        source: &Arc<String>,
         mut convert: Convert,
         ignored: &mut Vec<Range>)
     -> Result<(Range, If), ()> {
@@ -2525,23 +2880,23 @@ impl If {
                 convert.update(range);
                 break;
             } else if let Ok((range, val)) = Expression::from_meta_data(
-                "cond", convert, ignored) {
+                file, source, "cond", convert, ignored) {
                 convert.update(range);
                 cond = Some(val);
             } else if let Ok((range, val)) = Block::from_meta_data(
-                "true_block", convert, ignored) {
+                    file, source, "true_block", convert, ignored) {
                 convert.update(range);
                 true_block = Some(val);
             } else if let Ok((range, val)) = Expression::from_meta_data(
-                "else_if_cond", convert, ignored) {
+                file, source, "else_if_cond", convert, ignored) {
                 convert.update(range);
                 else_if_conds.push(val);
             } else if let Ok((range, val)) = Block::from_meta_data(
-                "else_if_block", convert, ignored) {
+                    file, source, "else_if_block", convert, ignored) {
                 convert.update(range);
                 else_if_blocks.push(val);
             } else if let Ok((range, val)) = Block::from_meta_data(
-                "else_block", convert, ignored) {
+                    file, source, "else_block", convert, ignored) {
                 convert.update(range);
                 else_block = Some(val);
             } else {
@@ -2601,6 +2956,8 @@ pub struct Compare {
 
 impl Compare {
     pub fn from_meta_data(
+        file: &Arc<String>,
+        source: &Arc<String>,
         mut convert: Convert,
         ignored: &mut Vec<Range>)
     -> Result<(Range, Compare), ()> {
@@ -2635,11 +2992,11 @@ impl Compare {
                 convert.update(range);
                 op = Some(CompareOp::NotEqual);
             } else if let Ok((range, val)) = Expression::from_meta_data(
-                "left", convert, ignored) {
+                file, source, "left", convert, ignored) {
                 convert.update(range);
                 left = Some(val);
             } else if let Ok((range, val)) = Expression::from_meta_data(
-                "right", convert, ignored) {
+                file, source, "right", convert, ignored) {
                 convert.update(range);
                 right = Some(val);
             } else {

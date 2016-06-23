@@ -1,16 +1,86 @@
+/*
 fn main() {
-    a := {b: [0]}
-    loop {
-        c := 2
-        b := [c]
-        m := unwrap(load("source/module.dyon"))
-        // call(m, "lifetime_1(mut,_)", [a, b])
-        // _ := call_ret(m, "lifetime_2", [a])
-        call(m, "lifetime_3", [b, a])
-        // lifetime_3(3, a)
-        break
-    }
-    println(a.b)
+    foo(\(x: f64) = x + 1)
 }
 
-fn lifetime_3(a, b: 'a) {}
+fn foo(a: \(f64) -> bool) {}
+*/
+
+/*
+fn main() {
+    a := foo()
+    bar(a)
+}
+
+fn foo() -> \(f64) -> f64 {
+    return \(x) = x + 1
+}
+
+fn bar(a: \(f64) -> f64) {}
+*/
+
+/*
+fn main() {
+    println(fmap([1, 2, 3], \(x) = x * 2))
+}
+
+fmap(list: [], f) = sift i { \f(list[i]) }
+*/
+
+
+fn main() {
+    a := {foo__x_y: foo(0)}
+    x := any i [1, 3), j [1, 3) { \a.foo(x: i, y: j) }
+    if x {
+        println(why(x))
+    }
+}
+
+foo(cmp: f64) =
+    if cmp < 0 {
+        \(x: f64, y: f64) = x < y
+    } else if cmp > 0 {
+        \(x: f64, y: f64) = x > y
+    } else {
+        \(x: f64, y: f64) = x == y
+    }
+
+
+/*
+fn main() {
+    ~ msg := "hi!"
+    a := \(x, y) ~ mut msg = {
+        msg = "bye!"
+        x < y
+    }
+    println(\a(2, 3)) // prints `true`
+    println(msg) // prints `bye!`
+}
+*/
+
+/*
+fn main() {
+    a := foo()
+    println(\a(0))
+}
+
+fn foo() -> {
+    return \(x) = bar(x)
+}
+
+bar(x) = x + 2
+*/
+
+/*
+fn main() {
+    a := {x: \(x) = x + 2}
+    println(\a.x(0))
+}
+*/
+
+/*
+fn main() {
+    a := {foo__x: \(x) = x + 2}
+    println(\a.foo(x: 0))
+}
+*/
