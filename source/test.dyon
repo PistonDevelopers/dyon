@@ -1,5 +1,8 @@
 fn main() {
-    a := \(x) = clone(x)
-    b := 2 + 3
-    println(\a(b))
+    a := \(x) = x + 5
+    foo(a)
+}
+
+fn foo(a) {
+    println(\a(2))
 }

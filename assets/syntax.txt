@@ -16,13 +16,7 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\""
 1 args = .s?.(, arg:"arg")
 2 arg = [?"mut":"mut" ?w .._seps!:"name" ?[?w ":" ?w
          ?["'" ?w .._seps!:"lifetime"] ?w ?type:"type"]]
-3 closure = {
-    ["\u005c(" ?w args ?w ")" ?w ?currents ?w {
-                ["->":"returns" ?w ?type:"ret_type"]
-                !"->":!"returns"
-        } ?w block:"block"]
-    ["\u005c(" ?w args ?w ")" ?w ?currents ?w "=" ?w expr:"expr"]
-}
+3 closure = ["\u005c(" ?w args ?w ")" ?w ?currents ?w "=" ?w expr:"expr"]
 4 call_closure = ["\u005c" call]
 5 named_call_closure = ["\u005c" named_call]
 3 currents = ["~" ?w .s!.(, current:"current")]
