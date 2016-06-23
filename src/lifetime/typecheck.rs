@@ -125,6 +125,10 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                         };
 
                         for &j in &js {
+                            if nodes[parent].kind == Kind::CallClosure {
+                                // TODO: Check argument type against closure.
+                                continue;
+                            }
                             if let Some(decl) = nodes[parent].declaration {
                                 let arg = nodes[decl].children[j];
                                 match (&expr_type, &nodes[arg].ty) {
@@ -138,8 +142,6 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                                     }
                                     (&None, _) | (_, &None) => {}
                                 }
-                            } else if let None = nodes[parent].name() {
-                                // TODO: Check argument type against closure.
                             } else if let Some(&f) = prelude.functions.get(
                                     nodes[parent].name().unwrap()) {
                                 let f = &prelude.list[f];
