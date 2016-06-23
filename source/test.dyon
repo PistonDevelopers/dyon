@@ -1,11 +1,10 @@
 fn main() {
     ~ world := 0
-    y := 1
-    a := \(x) ~ mut world = {
+    a := {x: \(x) ~ mut world = {
         world += x
         clone(world)
-    }
-    foo(a)
+    }}
+    foo(a.x)
 }
 
 fn foo(a) {
