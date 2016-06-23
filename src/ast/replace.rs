@@ -251,6 +251,7 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
                 source_range: swizzle_expr.source_range,
             }))
         }
+        E::Closure(_) => unimplemented!(),
     }
 }
 

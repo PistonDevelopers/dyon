@@ -372,6 +372,10 @@ impl Runtime {
                 let flow = try!(self.swizzle(sw, module));
                 Ok((None, flow))
             }
+            Closure(_) => {
+                // TODO: Call closure.
+                unimplemented!()
+            }
         }
     }
 

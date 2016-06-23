@@ -201,6 +201,7 @@ fn infer_expr(
             let res = infer_expr(&swizzle_expr.expr, name, decls);
             if res.is_some() { return res; }
         }
+        Closure(_) => unimplemented!(),
     };
     None
 }
