@@ -1,5 +1,16 @@
 fn main() {
-    a := {x: 0}
-    println(has(a, "x"))
-    println(has(a, "y"))
+    a := {b: [0]}
+    loop {
+        c := 2
+        b := [c]
+        m := unwrap(load("source/module.dyon"))
+        // call(m, "lifetime_1(mut,_)", [a, b])
+        // _ := call_ret(m, "lifetime_2", [a])
+        call(m, "lifetime_3", [b, a])
+        // lifetime_3(3, a)
+        break
+    }
+    println(a.b)
 }
+
+fn lifetime_3(a, b: 'a) {}

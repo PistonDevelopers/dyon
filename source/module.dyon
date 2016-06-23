@@ -1,0 +1,9 @@
+fn lifetime_1(mut a, b: 'a) {
+    a.b = b
+}
+
+fn lifetime_2(a: 'return) -> {
+    return a
+}
+
+fn lifetime_3(a, b: 'a) {}

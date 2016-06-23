@@ -18,6 +18,7 @@ use Type;
 use TINVOTS;
 
 mod meta;
+mod lifetimechk;
 
 const X: usize = 0;
 const Y: usize = 1;
@@ -1742,6 +1743,9 @@ fn _call(
                                 rt.stack_trace(),
                                 f.args.len(), args.len()), rt))
                     }
+                    try!(lifetimechk::check(f, &args).map_err(|err|
+                        module.error(call.args[2].source_range(),
+                        &format!("{}\n{}", err, rt.stack_trace()), rt)));
                 }
                 FnIndex::Intrinsic(_) | FnIndex::None | FnIndex::External(_) =>
                     return Err(module.error(
@@ -1819,6 +1823,9 @@ fn call_ret(
                                 rt.stack_trace(),
                                 f.args.len(), args.len()), rt))
                     }
+                    try!(lifetimechk::check(f, &args).map_err(|err|
+                        module.error(call.args[2].source_range(),
+                        &format!("{}\n{}", err, rt.stack_trace()), rt)));
                 }
                 FnIndex::Intrinsic(_) | FnIndex::None | FnIndex::External(_) =>
                     return Err(module.error(
