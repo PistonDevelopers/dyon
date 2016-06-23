@@ -69,6 +69,7 @@ pub struct Runtime {
     pub option_type: Variable,
     pub result_type: Variable,
     pub thread_type: Variable,
+    pub closure_type: Variable,
 }
 
 #[inline(always)]
@@ -228,6 +229,7 @@ impl Runtime {
             option_type: Variable::Text(Arc::new("option".into())),
             result_type: Variable::Text(Arc::new("result".into())),
             thread_type: Variable::Text(Arc::new("thread".into())),
+            closure_type: Variable::Text(Arc::new("closure".into())),
         }
     }
 
@@ -621,6 +623,7 @@ impl Runtime {
             rust_object_type: self.rust_object_type.clone(),
             vec4_type: self.vec4_type.clone(),
             result_type: self.result_type.clone(),
+            closure_type: self.closure_type.clone(),
         };
         let new_module: Module = module.clone();
         let handle: JoinHandle<Result<Variable, String>> = thread::spawn(move || {
@@ -1682,6 +1685,7 @@ impl Runtime {
             &Variable::Option(_) => self.option_type.clone(),
             &Variable::Result(_) => self.result_type.clone(),
             &Variable::Thread(_) => self.thread_type.clone(),
+            &Variable::Closure(_) => self.closure_type.clone(),
         };
         match v {
             Variable::Text(v) => v,

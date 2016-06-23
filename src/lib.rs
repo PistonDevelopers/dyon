@@ -114,6 +114,7 @@ pub enum Variable {
     Option(Option<Box<Variable>>),
     Result(Result<Box<Variable>, Box<Error>>),
     Thread(Thread),
+    Closure(Arc<ast::Closure>),
 }
 
 /// This is requires because `UnsafeRef(*mut Variable)` can not be sent across threads.
@@ -167,6 +168,7 @@ impl Variable {
             // `err(x)` always uses deep clone, so it does not contain references.
             Result(Err(ref err)) => Result(Err(err.clone())),
             Thread(_) => self.clone(),
+            Closure(_) => self.clone(),
         }
     }
 }
