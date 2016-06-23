@@ -374,14 +374,11 @@ impl Runtime {
                 let flow = try!(self.swizzle(sw, module));
                 Ok((None, flow))
             }
-            Closure(_) => {
-                // TODO: Create closure.
-                unimplemented!()
+            Closure(ref closure) => {
+                // Create closure.
+                Ok((Some(::Variable::Closure(closure.clone())), Flow::Continue))
             }
-            CallClosure(_) => {
-                // TODO: Call closure.
-                unimplemented!()
-            }
+            CallClosure(ref call) => self.call_closure(call, module),
         }
     }
 
@@ -639,6 +636,15 @@ impl Runtime {
             }.deep_clone(&new_rt.stack))
         });
         Ok((Some(Variable::Thread(Thread::new(handle))), Flow::Continue))
+    }
+
+    pub fn call_closure(
+        &mut self,
+        call: &ast::CallClosure,
+        module: &Module
+    ) -> Result<(Option<Variable>, Flow), String> {
+        // TODO: Find local.
+        Ok((Some(Variable::bool(true)), Flow::Continue))
     }
 
     pub fn call(

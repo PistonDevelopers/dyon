@@ -179,7 +179,6 @@ pub struct Closure {
     pub currents: Vec<Current>,
     pub block: Block,
     pub ret: Type,
-    pub resolved: Cell<bool>,
     pub source_range: Range,
 }
 
@@ -257,7 +256,6 @@ impl Closure {
         };
         let ret = try!(ret.ok_or(()));
         Ok((convert.subtract(start), Closure {
-            resolved: Cell::new(false),
             file: file.clone(),
             source: source.clone(),
             args: args,
@@ -271,7 +269,6 @@ impl Closure {
     pub fn returns(&self) -> bool { self.ret != Type::Void }
 
     pub fn resolve_locals(&self, relative: usize, stack: &mut Vec<Option<Arc<String>>>, module: &Module) {
-        if self.resolved.get() { return; }
         if self.returns() {
             stack.push(Some(Arc::new("return".into())));
         }
@@ -279,7 +276,6 @@ impl Closure {
             stack.push(Some(arg.name.clone()));
         }
         self.block.resolve_locals(relative, stack, module);
-        self.resolved.set(true);
     }
 }
 
@@ -480,7 +476,7 @@ pub enum Expression {
     Variable(Range, Variable),
     Try(Box<Expression>),
     Swizzle(Box<Swizzle>),
-    Closure(Box<Closure>),
+    Closure(Arc<Closure>),
     CallClosure(CallClosure),
 }
 
@@ -680,7 +676,7 @@ impl Expression {
             } else if let Ok((range, val)) = Closure::from_meta_data(
                     file, source, "closure", convert, ignored) {
                 convert.update(range);
-                result = Some(Expression::Closure(Box::new(val)));
+                result = Some(Expression::Closure(Arc::new(val)));
             } else if let Ok((range, val)) = CallClosure::from_meta_data(
                     file, source, convert, ignored) {
                 convert.update(range);
