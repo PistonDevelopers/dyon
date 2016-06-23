@@ -352,7 +352,9 @@ pub fn convert_meta_data(
                         let i = *parents.last().unwrap();
                         if nodes[i].names.len() == 0 {
                             let mut name = val.clone();
-                            Arc::make_mut(&mut name).push('_');
+                            if nodes[i].kind != Kind::CallClosure {
+                                Arc::make_mut(&mut name).push('_');
+                            }
                             nodes[i].names.push(name);
                         } else if let Some(ref mut name) = nodes[i].names.get_mut(0) {
                             let name = Arc::make_mut(name);
