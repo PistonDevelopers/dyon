@@ -198,19 +198,9 @@ pub fn check(
                     child = parent;
                     parent = new_parent;
                     if nodes[parent].kind == Kind::Closure {
-                        // Search among closure arugments.
-                        for &j in &nodes[parent].children {
-                            let arg = &nodes[j];
-                            match arg.kind {
-                                Kind::Arg | Kind::Current => {}
-                                _ => continue
-                            };
-                            if Some(true) == arg.name().map(|n|
-                                &**n == &**nodes[i].name().unwrap()) {
-                                it = Some(j);
-                                break 'search;
-                            }
-                        }
+                        // Do not search further because all captured
+                        // variables must be explicit using current objects.
+                        break 'search;
                     }
                 }
                 None => break
@@ -220,7 +210,8 @@ pub fn check(
         match it {
             Some(it) => nodes[i].declaration = Some(it),
             None => {
-                if nodes[parent].kind != Kind::Fn {
+                if nodes[parent].kind != Kind::Fn &&
+                   nodes[parent].kind != Kind::Closure {
                     panic!("Top parent is not a function");
                 }
                 if nodes[i].name().is_none() {

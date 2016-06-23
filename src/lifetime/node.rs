@@ -186,6 +186,7 @@ impl Node {
                 (_, Kind::Closure) => {}
                 (_, Kind::CallClosure) => {}
                 (_, Kind::Arg) => { continue }
+                (_, Kind::Current) => { continue }
                 (_, Kind::Item) => {}
                 (_, Kind::UnOp) => {
                     // The result of all unary operators does not depend
