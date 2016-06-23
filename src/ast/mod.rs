@@ -452,6 +452,7 @@ pub enum Expression {
     Continue(Continue),
     Block(Block),
     Go(Box<Go>),
+    // TODO: Check size, perhaps use `Box<Call>`?
     Call(Call),
     Item(Item),
     BinOp(Box<BinOpExpression>),
@@ -477,7 +478,7 @@ pub enum Expression {
     Try(Box<Expression>),
     Swizzle(Box<Swizzle>),
     Closure(Arc<Closure>),
-    CallClosure(CallClosure),
+    CallClosure(Box<CallClosure>),
 }
 
 // Required because the `Sync` impl of `Variable` is unsafe.
@@ -680,11 +681,11 @@ impl Expression {
             } else if let Ok((range, val)) = CallClosure::from_meta_data(
                     file, source, convert, ignored) {
                 convert.update(range);
-                result = Some(Expression::CallClosure(val));
+                result = Some(Expression::CallClosure(Box::new(val)));
             } else if let Ok((range, val)) = CallClosure::named_from_meta_data(
                     file, source, convert, ignored) {
                 convert.update(range);
-                result = Some(Expression::CallClosure(val));
+                result = Some(Expression::CallClosure(Box::new(val)));
             } else {
                 let range = convert.ignore();
                 convert.update(range);
@@ -1767,7 +1768,7 @@ impl Call {
 
 #[derive(Debug, Clone)]
 pub struct CallClosure {
-    pub name: Arc<String>,
+    pub item: Item,
     pub args: Vec<Expression>,
     pub source_range: Range,
 }
@@ -1784,18 +1785,19 @@ impl CallClosure {
         let start_range = try!(convert.start_node(node));
         convert.update(start_range);
 
-        let mut name: Option<Arc<String>> = None;
+        let mut item: Option<Item> = None;
         let mut args = vec![];
         let mut mutable: Vec<bool> = vec![];
         loop {
             if let Ok(range) = convert.end_node(node) {
                 convert.update(range);
                 break;
-            } else if let Ok((range, val)) = convert.meta_string("name") {
+            } else if let Ok((range, val)) = Item::from_meta_data(
+                    file, source, convert, ignored) {
                 convert.update(range);
-                name = Some(val);
+                item = Some(val);
             } else if let Ok((range, val)) = Expression::from_meta_data(
-                file, source, "call_arg", convert, ignored) {
+                    file, source, "call_arg", convert, ignored) {
                 let mut peek = convert.clone();
                 mutable.push(match peek.start_node("call_arg") {
                     Ok(r) => {
@@ -1813,9 +1815,9 @@ impl CallClosure {
             }
         }
 
-        let name = try!(name.ok_or(()));
+        let item = try!(item.ok_or(()));
         Ok((convert.subtract(start), CallClosure {
-            name: name,
+            item: item,
             args: args,
             source_range: convert.source(start).unwrap(),
         }))
@@ -1832,6 +1834,7 @@ impl CallClosure {
         let start_range = try!(convert.start_node(node));
         convert.update(start_range);
 
+        let mut item: Option<Item> = None;
         let mut name = String::new();
         let mut args = vec![];
         let mut mutable: Vec<bool> = vec![];
@@ -1839,6 +1842,10 @@ impl CallClosure {
             if let Ok(range) = convert.end_node(node) {
                 convert.update(range);
                 break;
+            } else if let Ok((range, val)) = Item::from_meta_data(
+                    file, source, convert, ignored) {
+                convert.update(range);
+                item = Some(val);
             } else if let Ok((range, val)) = convert.meta_string("word") {
                 convert.update(range);
                 if name.len() != 0 {
@@ -1846,7 +1853,6 @@ impl CallClosure {
                     name.push_str(&val);
                 } else {
                     name.push_str(&val);
-                    name.push('_');
                 }
             } else if let Ok((range, val)) = Expression::from_meta_data(
                 file, source, "call_arg", convert, ignored) {
@@ -1867,8 +1873,25 @@ impl CallClosure {
             }
         }
 
+        let mut item = try!(item.ok_or(()));
+        {
+            if item.ids.len() == 0 {
+                // Append name to item.
+                let n = Arc::make_mut(&mut item.name);
+                n.push_str("__");
+                n.push_str(&name);
+            } else {
+                let last = item.ids.len() - 1;
+                if let Id::String(_, ref mut n) = item.ids[last] {
+                    // Append name to last id.
+                    let n = Arc::make_mut(n);
+                    n.push_str("__");
+                    n.push_str(&name);
+                }
+            }
+        }
         Ok((convert.subtract(start), CallClosure {
-            name: Arc::new(name),
+            item: item,
             args: args,
             source_range: convert.source(start).unwrap(),
         }))
@@ -1881,6 +1904,7 @@ impl CallClosure {
         module: &Module
     ) {
         let st = stack.len();
+        self.item.resolve_locals(relative, stack, module);
         // All closures must return a value.
         stack.push(Some(Arc::new("return".into())));
         for arg in &self.args {

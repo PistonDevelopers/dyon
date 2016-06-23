@@ -1,14 +1,6 @@
 fn main() {
-    ~ world := 0
-    a := {x: \(x: f64) ~ mut world = {
-        world += x
-        clone(world)
-    }}
-    foo(a.x)
-}
-
-fn foo(a) {
-    for i 10 {
-        println(\a(i))
-    }
+    a__bar := \(x) = x + 1
+    println(\a(bar: 2))
+    x := [{b: {a__bar: a__bar}}]
+    println(\x[0].b.a(bar: 2))
 }

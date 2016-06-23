@@ -32,6 +32,20 @@ pub fn check(
     for i in 0..nodes.len() {
         match nodes[i].kind {
             Kind::Fn | Kind::Call => {}
+            Kind::CallClosure => {
+                let word = nodes[i].name().map(|n| n.clone());
+                if let Some(ref word) = word {
+                    // Append named syntax to item.
+                    // Ends with an extra `_` that should be removed.
+                    let word = word.split_at(word.len() - 1).0;
+                    let item = nodes[i].find_child_by_kind(&nodes, Kind::Item).unwrap();
+                    if nodes[item].children.len() == 0 {
+                        Arc::make_mut(&mut nodes[item].names[0]).push_str(&format!("__{}", word));
+                    }
+                    // Ignore when using object property,
+                    // because the key is unknown anyway.
+                }
+            }
             _ => continue
         };
         let mutable_args = nodes[i].children.iter()

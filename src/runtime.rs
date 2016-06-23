@@ -644,26 +644,22 @@ impl Runtime {
         call: &ast::CallClosure,
         module: &Module
     ) -> Result<(Option<Variable>, Flow), String> {
-        // Find local.
-        let locals = self.local_stack.len() - self.call_stack.last().unwrap().local_len;
-        let mut stack_id = None;
-        for &(ref n, id) in self.local_stack.iter().rev().take(locals) {
-            if n == &call.name {
-                stack_id = Some(if let &Variable::Ref(ref_id) = &self.stack[id] {
-                        ref_id
-                    } else {
-                        id
-                    });
-                break;
-            }
-        }
+        // Find item.
+        let item = match try!(self.item(&call.item, Side::Right, module)) {
+            (Some(x), Flow::Continue) => x,
+            (x, Flow::Return) => { return Ok((x, Flow::Return)); }
+            _ => return Err(module.error(call.item.source_range,
+                            &format!("{}\nExpected something. \
+                            Check that item returns a value.",
+                            self.stack_trace()), self))
+        };
 
-        let (f, new_index) = match &self.stack[stack_id.unwrap()] {
+        let (f, new_index) = match self.resolve(&item) {
             &Variable::Closure(ref f, new_index) => (f.clone(), new_index),
             x => return Err(module.error(call.source_range,
                     &self.expected(x, "closure"), self))
         };
-        
+
         if call.arg_len() != f.args.len() {
             return Err(module.error(call.source_range,
                 &format!("{}\nExpected {} arguments but found {}",
@@ -691,7 +687,7 @@ impl Runtime {
                                 self.stack_trace()), self))
             };
         }
-        self.push_fn(call.name.clone(), new_index, Some(f.file.clone()), st, lc, cu);
+        self.push_fn(call.item.name.clone(), new_index, Some(f.file.clone()), st, lc, cu);
         if f.returns() {
             self.local_stack.push((self.ret.clone(), st - 1));
         }
@@ -719,7 +715,7 @@ impl Runtime {
                             self.stack_trace(), label), self)),
             _ => {}
         }
-        self.pop_fn(call.name.clone());
+        self.pop_fn(call.item.name.clone());
         match (f.returns(), x) {
             (true, None) => {
                 match self.stack.pop().expect(TINVOTS) {
@@ -728,7 +724,7 @@ impl Runtime {
                             call.source_range, &format!(
                             "{}\nFunction `{}` did not return a value",
                             self.stack_trace(),
-                            call.name), self))
+                            call.item.name), self))
                     }
                     x => {
                         // This happens when return is only
@@ -742,7 +738,7 @@ impl Runtime {
                     &format!(
                         "{}\nFunction `{}` should not return a value",
                         self.stack_trace(),
-                        call.name), self))
+                        call.item.name), self))
             }
             (true, Some(Variable::Return)) => {
                 // TODO: Could return the last value on the stack.
@@ -752,7 +748,7 @@ impl Runtime {
                     "{}\nFunction `{}` did not return a value. \
                     Did you forget a `return`?",
                         self.stack_trace(),
-                        call.name), self))
+                        call.item.name), self))
             }
             (returns, b) => {
                 if returns { self.stack.pop(); }
@@ -761,7 +757,7 @@ impl Runtime {
         }
 
         return Err(module.error(call.source_range,
-            &format!("{}\nUnknown closure `{}`", self.stack_trace(), call.name), self))
+            &format!("{}\nUnknown closure `{}`", self.stack_trace(), call.item.name), self))
     }
 
     pub fn call(

@@ -254,7 +254,7 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
         }
         E::Closure(_) => expr.clone(),
         E::CallClosure(ref call_expr) => {
-            E::CallClosure(number_call_closure(call_expr, name, val))
+            E::CallClosure(Box::new(number_call_closure(call_expr, name, val)))
         }
     }
 }
@@ -279,7 +279,7 @@ fn number_call_closure(call_expr: &CallClosure, name: &Arc<String>, val: f64) ->
         new_args.push(number(arg, name, val));
     }
     CallClosure {
-        name: call_expr.name.clone(),
+        item: call_expr.item.clone(),
         args: new_args,
         source_range: call_expr.source_range,
     }
