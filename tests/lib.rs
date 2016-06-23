@@ -100,6 +100,7 @@ fn test_syntax() {
     test_src("source/syntax/space_before_function.dyon");
     test_src("source/syntax/current.dyon");
     test_fail_src("source/syntax/mut.dyon");
+    test_src("source/syntax/closure.dyon");
 }
 
 #[test]

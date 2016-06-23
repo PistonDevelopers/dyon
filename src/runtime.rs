@@ -1435,6 +1435,40 @@ impl Runtime {
                         }
                     }
                 }
+                Variable::Closure(ref b, relative) => {
+                    unsafe {
+                        match *r.0 {
+                            Variable::Closure(ref mut n, _) => {
+                                if let Set = op {
+                                    // Check address to avoid unsafe
+                                    // reading and writing to same memory.
+                                    let n_addr = n as *const _ as usize;
+                                    let b_addr = b as *const _ as usize;
+                                    if n_addr != b_addr {
+                                        *r.0 = Variable::Closure(b.clone(), relative)
+                                    }
+                                } else {
+                                    unimplemented!()
+                                }
+                            }
+                            Variable::Return => {
+                                if let Set = op {
+                                    *r.0 = Variable::Closure(b.clone(), relative)
+                                } else {
+                                    return Err(module.error(
+                                        left.source_range(),
+                                        &format!("{}\nReturn has no value",
+                                            self.stack_trace()), self))
+                                }
+                            }
+                            _ => return Err(module.error(
+                                left.source_range(),
+                                &format!(
+                                    "{}\nExpected assigning to closure",
+                                    self.stack_trace()), self))
+                        }
+                    }
+                }
                 ref x => {
                     return Err(module.error(
                         left.source_range(),
