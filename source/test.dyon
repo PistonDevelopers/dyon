@@ -1,6 +1,6 @@
 fn main() {
     ~ world := 0
-    a := {x: \(x) ~ mut world = {
+    a := {x: \(x: f64) ~ mut world = {
         world += x
         clone(world)
     }}
