@@ -91,7 +91,8 @@ impl Node {
         match self.kind {
             Pow | Sum | Prod | SumVec4 | Min | Max | Any | All |
             Vec4 | Vec4UnLoop | Swizzle |
-            Assign | For | ForN | Link => false,
+            Assign | For | ForN | Link |
+            Closure | CallClosure => false,
             Add | Mul | Compare => self.children.len() == 1,
             _ => true
         }
@@ -187,6 +188,7 @@ impl Node {
                 (_, Kind::CallClosure) => {}
                 (_, Kind::Arg) => { continue }
                 (_, Kind::Current) => { continue }
+                (Kind::CallClosure, Kind::Item) => { continue }
                 (_, Kind::Item) => {}
                 (_, Kind::UnOp) => {
                     // The result of all unary operators does not depend

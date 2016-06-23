@@ -1,3 +1,10 @@
+
+fn main() {
+    println(fmap([1, 2, 3], \(x) = x * 2))
+}
+
+fmap(list: [], f) = sift i { \f(list[i]) }
+
 /*
 fn main() {
     a := {foo__x_y: foo(0)}
@@ -7,15 +14,14 @@ fn main() {
     }
 }
 
-fn foo(cmp) -> {
-    return if cmp < 0 {
+foo(cmp) =
+    if cmp < 0 {
         \(x, y) = x < y
     } else if cmp > 0 {
         \(x, y) = x > y
     } else {
         \(x, y) = x == y
     }
-}
 */
 
 /*
@@ -50,8 +56,9 @@ fn main() {
 }
 */
 
-
+/*
 fn main() {
     a := {foo__x: \(x) = x + 2}
     println(\a.foo(x: 0))
 }
+*/

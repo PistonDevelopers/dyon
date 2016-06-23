@@ -1,0 +1,5 @@
+fn main() {
+    println(fmap([1, 2, 3], \(x) = x * 2))
+}
+
+fmap(list: [], f) = sift i { \f(list[i]) }
