@@ -17,7 +17,8 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\u005c"
 2 arg = [?"mut":"mut" ?w .._seps!:"name" ?[?w ":" ?w
          ?["'" ?w .._seps!:"lifetime"] ?w ?type:"type"]]
 3 imm_arg = [!"mut " .._seps!:"name" ?[?w ":" ?w !"'" ?type:"type"]]
-3 closure = ["\u005c(" ?w .s?.(, imm_arg:"arg") ?w ")" ?w ?currents ?w "=" ?w expr:"expr"]
+3 closure = ["\u005c(" ?w .s?.(, imm_arg:"arg") ?w ")" ?w ?currents
+             ?w "=" ?w expr:"expr"]
 4 call_closure = ["\u005c" item:"item" ?w "(" .s?.(, arg_expr:"call_arg") ?w ")"]
 5 named_call_closure = ["\u005c" item:"item" ?w "(" ?w
     .s?.(, [.._seps!:"word" ?w ":" ?w arg_expr:"call_arg" ?w]) ")"]

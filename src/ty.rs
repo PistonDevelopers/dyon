@@ -89,12 +89,11 @@ impl Type {
                 for (i, ty) in closure.tys.iter().enumerate() {
                     s.push_str(&ty.description());
                     if i + 1 < closure.tys.len() {
-                        s.push(',');
+                        s.push_str(", ");
                     }
-                    s.push_str(" -> ");
-                    s.push_str(&closure.ret.description());
                 }
-                s.push(')');
+                s.push_str(") -> ");
+                s.push_str(&closure.ret.description());
                 s
             }
         }
@@ -176,6 +175,20 @@ impl Type {
             &Thread(ref thr) => {
                 if let &Thread(ref other_thr) = other {
                     thr.goes_with(other_thr)
+                } else if let &Any = other {
+                    true
+                } else {
+                    false
+                }
+            }
+            &Closure(ref cl) => {
+                if let &Closure(ref other_cl) = other {
+                    if cl.tys.len() != other_cl.tys.len() { return false; }
+                    if !cl.tys.iter().zip(other_cl.tys.iter()).all(|(a, b)| a.goes_with(b)) {
+                        return false;
+                    }
+                    if !cl.ret.goes_with(&other_cl.ret) { return false; }
+                    true
                 } else if let &Any = other {
                     true
                 } else {
