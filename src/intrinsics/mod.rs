@@ -495,7 +495,7 @@ fn write_variable<W>(
         Variable::Return => try!(write!(w, "_return")),
         Variable::UnsafeRef(_) => try!(write!(w, "_unsafe_ref")),
         Variable::RustObject(_) => try!(write!(w, "_rust_object")),
-        Variable::Closure(_) => try!(write!(w, "_closure")),
+        Variable::Closure(_, _) => try!(write!(w, "_closure")),
         // ref x => panic!("Could not print out `{:?}`", x)
     }
     Ok(())
@@ -1564,7 +1564,7 @@ fn _typeof(
         &Variable::Option(_) => rt.option_type.clone(),
         &Variable::Result(_) => rt.result_type.clone(),
         &Variable::Thread(_) => rt.thread_type.clone(),
-        &Variable::Closure(_) => rt.closure_type.clone(),
+        &Variable::Closure(_, _) => rt.closure_type.clone(),
     }))
 }
 

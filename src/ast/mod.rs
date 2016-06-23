@@ -1881,24 +1881,8 @@ impl CallClosure {
         module: &Module
     ) {
         let st = stack.len();
-        /* TODO: Look up local variable and check whether it returns.
-        let f_index = module.find_function(&self.name, relative);
-        self.f_index.set(f_index);
-        match f_index {
-            FnIndex::Loaded(f_index) => {
-                let index = (f_index + relative as isize) as usize;
-                if module.functions[index].returns() {
-                    stack.push(Some(Arc::new("return".into())));
-                }
-            }
-            FnIndex::External(_) => {
-                // Don't push return since last value in block
-                // is used as return value.
-            }
-            FnIndex::Intrinsic(_) => {}
-            FnIndex::None => {}
-        }
-        */
+        // All closures must return a value.
+        stack.push(Some(Arc::new("return".into())));
         for arg in &self.args {
             let arg_st = stack.len();
             arg.resolve_locals(relative, stack, module);

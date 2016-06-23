@@ -376,7 +376,8 @@ impl Runtime {
             }
             Closure(ref closure) => {
                 // Create closure.
-                Ok((Some(::Variable::Closure(closure.clone())), Flow::Continue))
+                let relative = self.call_stack.last().map(|c| c.index).unwrap_or(0);
+                Ok((Some(::Variable::Closure(closure.clone(), relative)), Flow::Continue))
             }
             CallClosure(ref call) => self.call_closure(call, module),
         }
@@ -643,8 +644,124 @@ impl Runtime {
         call: &ast::CallClosure,
         module: &Module
     ) -> Result<(Option<Variable>, Flow), String> {
-        // TODO: Find local.
-        Ok((Some(Variable::bool(true)), Flow::Continue))
+        // Find local.
+        let locals = self.local_stack.len() - self.call_stack.last().unwrap().local_len;
+        let mut stack_id = None;
+        for &(ref n, id) in self.local_stack.iter().rev().take(locals) {
+            if n == &call.name {
+                stack_id = Some(if let &Variable::Ref(ref_id) = &self.stack[id] {
+                        ref_id
+                    } else {
+                        id
+                    });
+                break;
+            }
+        }
+
+        let (f, new_index) = match &self.stack[stack_id.unwrap()] {
+            &Variable::Closure(ref f, new_index) => (f.clone(), new_index),
+            x => return Err(module.error(call.source_range,
+                    &self.expected(x, "closure"), self))
+        };
+        
+        if call.arg_len() != f.args.len() {
+            return Err(module.error(call.source_range,
+                &format!("{}\nExpected {} arguments but found {}",
+                self.stack_trace(),
+                f.args.len(),
+                call.arg_len()), self));
+        }
+        // Arguments must be computed.
+        if f.returns() {
+            // Add return value before arguments on the stack.
+            // The stack value should remain, but the local should not.
+            self.stack.push(Variable::Return);
+        }
+        let st = self.stack.len();
+        let lc = self.local_stack.len();
+        let cu = self.current_stack.len();
+        for arg in &call.args {
+            match try!(self.expression(arg, Side::Right, module)) {
+                (Some(x), Flow::Continue) => self.stack.push(x),
+                (None, Flow::Continue) => {}
+                (x, Flow::Return) => { return Ok((x, Flow::Return)); }
+                _ => return Err(module.error(arg.source_range(),
+                                &format!("{}\nExpected something. \
+                                Check that expression returns a value.",
+                                self.stack_trace()), self))
+            };
+        }
+        self.push_fn(call.name.clone(), new_index, Some(f.file.clone()), st, lc, cu);
+        if f.returns() {
+            self.local_stack.push((self.ret.clone(), st - 1));
+        }
+        for (i, arg) in f.args.iter().enumerate() {
+            // Do not resolve locals to keep fixed length from end of stack.
+            self.local_stack.push((arg.name.clone(), st + i));
+        }
+        let (x, flow) = try!(self.block(&f.block, module));
+        match flow {
+            Flow::Break(None) =>
+                return Err(module.error(call.source_range,
+                           &format!("{}\nCan not break from function",
+                                self.stack_trace()), self)),
+            Flow::ContinueLoop(None) =>
+                return Err(module.error(call.source_range,
+                           &format!("{}\nCan not continue from function",
+                                self.stack_trace()), self)),
+            Flow::Break(Some(ref label)) =>
+                return Err(module.error(call.source_range,
+                    &format!("{}\nThere is no loop labeled `{}`",
+                             self.stack_trace(), label), self)),
+            Flow::ContinueLoop(Some(ref label)) =>
+                return Err(module.error(call.source_range,
+                    &format!("{}\nThere is no loop labeled `{}`",
+                            self.stack_trace(), label), self)),
+            _ => {}
+        }
+        self.pop_fn(call.name.clone());
+        match (f.returns(), x) {
+            (true, None) => {
+                match self.stack.pop().expect(TINVOTS) {
+                    Variable::Return => {
+                        return Err(module.error(
+                            call.source_range, &format!(
+                            "{}\nFunction `{}` did not return a value",
+                            self.stack_trace(),
+                            call.name), self))
+                    }
+                    x => {
+                        // This happens when return is only
+                        // assigned to `return = x`.
+                        return Ok((Some(x), Flow::Continue))
+                    }
+                };
+            }
+            (false, Some(_)) => {
+                return Err(module.error(call.source_range,
+                    &format!(
+                        "{}\nFunction `{}` should not return a value",
+                        self.stack_trace(),
+                        call.name), self))
+            }
+            (true, Some(Variable::Return)) => {
+                // TODO: Could return the last value on the stack.
+                //       Requires .pop_fn delayed after.
+                return Err(module.error(call.source_range,
+                    &format!(
+                    "{}\nFunction `{}` did not return a value. \
+                    Did you forget a `return`?",
+                        self.stack_trace(),
+                        call.name), self))
+            }
+            (returns, b) => {
+                if returns { self.stack.pop(); }
+                return Ok((b, Flow::Continue))
+            }
+        }
+
+        return Err(module.error(call.source_range,
+            &format!("{}\nUnknown closure `{}`", self.stack_trace(), call.name), self))
     }
 
     pub fn call(
@@ -1691,7 +1808,7 @@ impl Runtime {
             &Variable::Option(_) => self.option_type.clone(),
             &Variable::Result(_) => self.result_type.clone(),
             &Variable::Thread(_) => self.thread_type.clone(),
-            &Variable::Closure(_) => self.closure_type.clone(),
+            &Variable::Closure(_, _) => self.closure_type.clone(),
         };
         match v {
             Variable::Text(v) => v,

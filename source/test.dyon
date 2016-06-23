@@ -1,4 +1,5 @@
 fn main() {
     a := \(x) = clone(x)
-    println(\a(1))
+    b := 2 + 3
+    println(\a(b))
 }
