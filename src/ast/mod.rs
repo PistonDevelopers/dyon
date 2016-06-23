@@ -269,6 +269,18 @@ impl Closure {
     }
 
     pub fn returns(&self) -> bool { self.ret != Type::Void }
+
+    pub fn resolve_locals(&self, relative: usize, stack: &mut Vec<Option<Arc<String>>>, module: &Module) {
+        if self.resolved.get() { return; }
+        if self.returns() {
+            stack.push(Some(Arc::new("return".into())));
+        }
+        for arg in &self.args {
+            stack.push(Some(arg.name.clone()));
+        }
+        self.block.resolve_locals(relative, stack, module);
+        self.resolved.set(true);
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -469,6 +481,7 @@ pub enum Expression {
     Try(Box<Expression>),
     Swizzle(Box<Swizzle>),
     Closure(Box<Closure>),
+    CallClosure(CallClosure),
 }
 
 // Required because the `Sync` impl of `Variable` is unsafe.
@@ -668,6 +681,14 @@ impl Expression {
                     file, source, "closure", convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::Closure(Box::new(val)));
+            } else if let Ok((range, val)) = CallClosure::from_meta_data(
+                    file, source, convert, ignored) {
+                convert.update(range);
+                result = Some(Expression::CallClosure(val));
+            } else if let Ok((range, val)) = CallClosure::named_from_meta_data(
+                    file, source, convert, ignored) {
+                convert.update(range);
+                result = Some(Expression::CallClosure(val));
             } else {
                 let range = convert.ignore();
                 convert.update(range);
@@ -718,6 +739,7 @@ impl Expression {
             Try(ref expr) => expr.source_range(),
             Swizzle(ref swizzle) => swizzle.source_range,
             Closure(ref closure) => closure.source_range,
+            CallClosure(ref call) => call.source_range,
         }
     }
 
@@ -765,7 +787,8 @@ impl Expression {
             Variable(_, _) => {}
             Try(ref expr) => expr.resolve_locals(relative, stack, module),
             Swizzle(ref swizzle) => swizzle.expr.resolve_locals(relative, stack, module),
-            Closure(_) => unimplemented!(),
+            Closure(ref closure) => closure.resolve_locals(relative, stack, module),
+            CallClosure(ref call) => call.resolve_locals(relative, stack, module),
         }
     }
 }
@@ -1713,6 +1736,173 @@ impl Call {
             FnIndex::Intrinsic(_) => {}
             FnIndex::None => {}
         }
+        for arg in &self.args {
+            let arg_st = stack.len();
+            arg.resolve_locals(relative, stack, module);
+            stack.truncate(arg_st);
+            match *arg {
+                Expression::Swizzle(ref swizzle) => {
+                    for _ in 0..swizzle.len() {
+                        stack.push(None);
+                    }
+                }
+                _ => {
+                    stack.push(None);
+                }
+            }
+        }
+        stack.truncate(st);
+    }
+
+    /// Computes number of arguments including swizzles.
+    pub fn arg_len(&self) -> usize {
+        let mut sum = 0;
+        for arg in &self.args {
+            match *arg {
+                Expression::Swizzle(ref swizzle) => {
+                    sum += swizzle.len();
+                }
+                _ => { sum += 1; }
+            }
+        }
+        sum
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct CallClosure {
+    pub name: Arc<String>,
+    pub args: Vec<Expression>,
+    pub source_range: Range,
+}
+
+impl CallClosure {
+    pub fn from_meta_data(
+        file: &Arc<String>,
+        source: &Arc<String>,
+        mut convert: Convert,
+        ignored: &mut Vec<Range>)
+    -> Result<(Range, CallClosure), ()> {
+        let start = convert.clone();
+        let node = "call_closure";
+        let start_range = try!(convert.start_node(node));
+        convert.update(start_range);
+
+        let mut name: Option<Arc<String>> = None;
+        let mut args = vec![];
+        let mut mutable: Vec<bool> = vec![];
+        loop {
+            if let Ok(range) = convert.end_node(node) {
+                convert.update(range);
+                break;
+            } else if let Ok((range, val)) = convert.meta_string("name") {
+                convert.update(range);
+                name = Some(val);
+            } else if let Ok((range, val)) = Expression::from_meta_data(
+                file, source, "call_arg", convert, ignored) {
+                let mut peek = convert.clone();
+                mutable.push(match peek.start_node("call_arg") {
+                    Ok(r) => {
+                        peek.update(r);
+                        peek.meta_bool("mut").is_ok()
+                    }
+                    _ => unreachable!()
+                });
+                convert.update(range);
+                args.push(val);
+            } else {
+                let range = convert.ignore();
+                convert.update(range);
+                ignored.push(range);
+            }
+        }
+
+        let name = try!(name.ok_or(()));
+        Ok((convert.subtract(start), CallClosure {
+            name: name,
+            args: args,
+            source_range: convert.source(start).unwrap(),
+        }))
+    }
+
+    pub fn named_from_meta_data(
+        file: &Arc<String>,
+        source: &Arc<String>,
+        mut convert: Convert,
+        ignored: &mut Vec<Range>)
+    -> Result<(Range, CallClosure), ()> {
+        let start = convert.clone();
+        let node = "named_call_closure";
+        let start_range = try!(convert.start_node(node));
+        convert.update(start_range);
+
+        let mut name = String::new();
+        let mut args = vec![];
+        let mut mutable: Vec<bool> = vec![];
+        loop {
+            if let Ok(range) = convert.end_node(node) {
+                convert.update(range);
+                break;
+            } else if let Ok((range, val)) = convert.meta_string("word") {
+                convert.update(range);
+                if name.len() != 0 {
+                    name.push('_');
+                    name.push_str(&val);
+                } else {
+                    name.push_str(&val);
+                    name.push('_');
+                }
+            } else if let Ok((range, val)) = Expression::from_meta_data(
+                file, source, "call_arg", convert, ignored) {
+                let mut peek = convert.clone();
+                mutable.push(match peek.start_node("call_arg") {
+                    Ok(r) => {
+                        peek.update(r);
+                        peek.meta_bool("mut").is_ok()
+                    }
+                    _ => unreachable!()
+                });
+                convert.update(range);
+                args.push(val);
+            } else {
+                let range = convert.ignore();
+                convert.update(range);
+                ignored.push(range);
+            }
+        }
+
+        Ok((convert.subtract(start), CallClosure {
+            name: Arc::new(name),
+            args: args,
+            source_range: convert.source(start).unwrap(),
+        }))
+    }
+
+    pub fn resolve_locals(
+        &self,
+        relative: usize,
+        stack: &mut Vec<Option<Arc<String>>>,
+        module: &Module
+    ) {
+        let st = stack.len();
+        /* TODO: Look up local variable and check whether it returns.
+        let f_index = module.find_function(&self.name, relative);
+        self.f_index.set(f_index);
+        match f_index {
+            FnIndex::Loaded(f_index) => {
+                let index = (f_index + relative as isize) as usize;
+                if module.functions[index].returns() {
+                    stack.push(Some(Arc::new("return".into())));
+                }
+            }
+            FnIndex::External(_) => {
+                // Don't push return since last value in block
+                // is used as return value.
+            }
+            FnIndex::Intrinsic(_) => {}
+            FnIndex::None => {}
+        }
+        */
         for arg in &self.args {
             let arg_st = stack.len();
             arg.resolve_locals(relative, stack, module);

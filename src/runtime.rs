@@ -373,6 +373,10 @@ impl Runtime {
                 Ok((None, flow))
             }
             Closure(_) => {
+                // TODO: Create closure.
+                unimplemented!()
+            }
+            CallClosure(_) => {
                 // TODO: Call closure.
                 unimplemented!()
             }

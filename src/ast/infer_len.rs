@@ -6,6 +6,7 @@ use super::{
     AssignOp,
     Block,
     Call,
+    CallClosure,
     Expression,
     ForN,
     Id,
@@ -201,13 +202,29 @@ fn infer_expr(
             let res = infer_expr(&swizzle_expr.expr, name, decls);
             if res.is_some() { return res; }
         }
-        Closure(_) => unimplemented!(),
+        Closure(_) => {}
+        CallClosure(ref call) => {
+            let res = infer_call_closure(call, name, decls);
+            if res.is_some() { return res; }
+        }
     };
     None
 }
 
 fn infer_call(
     call: &Call,
+    name: &str,
+    decls: &mut Vec<Arc<String>>
+) -> Option<Item> {
+    for arg in &call.args {
+        let res = infer_expr(arg, name, decls);
+        if res.is_some() { return res; }
+    }
+    None
+}
+
+fn infer_call_closure(
+    call: &CallClosure,
     name: &str,
     decls: &mut Vec<Arc<String>>
 ) -> Option<Item> {
