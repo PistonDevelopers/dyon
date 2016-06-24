@@ -192,7 +192,7 @@ pub fn check(
             let me = nodes[parent].children.binary_search(&child)
                 .expect("Expected parent to contain child");
             let children = &nodes[parent].children[..me];
-            for &j in children {
+            for &j in children.iter().rev() {
                 if nodes[j].children.len() == 0 { continue; }
                 // Assign is inside an expression.
                 let j = nodes[j].children[0];
