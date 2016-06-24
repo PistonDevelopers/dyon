@@ -88,7 +88,8 @@ pub fn check(
         .filter(|&(_, n)| {
             if n.kind != Kind::Expr { return false; }
             if let Some(parent) = n.parent {
-                if nodes[parent].kind != Kind::Fn { return false; }
+                if nodes[parent].kind != Kind::Fn &&
+                   nodes[parent].kind != Kind::Closure { return false; }
             }
             true
         })
