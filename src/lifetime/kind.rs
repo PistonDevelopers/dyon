@@ -78,6 +78,7 @@ pub enum Kind {
     ClosureType,
     ClArg,
     ClRet,
+    Grab,
 }
 
 impl Kind {
@@ -162,6 +163,7 @@ impl Kind {
             "closure_type" => Kind::ClosureType,
             "cl_arg" => Kind::ClArg,
             "cl_ret" => Kind::ClRet,
+            "grab" => Kind::Grab,
             _ => return None
         })
     }

@@ -374,13 +374,36 @@ impl Runtime {
                 let flow = try!(self.swizzle(sw, module));
                 Ok((None, flow))
             }
-            Closure(ref closure) => {
-                // Create closure.
-                let relative = self.call_stack.last().map(|c| c.index).unwrap_or(0);
-                Ok((Some(::Variable::Closure(closure.clone(), relative)), Flow::Continue))
-            }
+            Closure(ref closure) => self.closure(closure, module),
             CallClosure(ref call) => self.call_closure(call, module),
+            Grab(_) => Err("`grab` expressions must be inside a closure".into()),
         }
+    }
+
+    fn closure(&mut self, closure: &ast::Closure, module: &Module)
+    -> Result<(Option<Variable>, Flow), String> {
+        use grab::{self, Grabbed};
+
+        // Create closure.
+        let relative = self.call_stack.last().map(|c| c.index).unwrap_or(0);
+        // Evaluate `grab` expressions and generate new AST.
+        let new_expr = match try!(grab::grab_expr(self, &closure.expr, Side::Right, module)) {
+            (Grabbed::Expression(x), Flow::Continue) => x,
+            (Grabbed::Variable(x), Flow::Return) => { return Ok((x, Flow::Return)); }
+            _ => return Err(module.error(closure.expr.source_range(),
+                            &format!("{}\nExpected something",
+                                self.stack_trace()), self))
+        };
+
+        Ok((Some(::Variable::Closure(Arc::new(ast::Closure {
+            currents: closure.currents.clone(),
+            args: closure.args.clone(),
+            source_range: closure.source_range.clone(),
+            ret: closure.ret.clone(),
+            file: closure.file.clone(),
+            source: closure.source.clone(),
+            expr: new_expr,
+        }), relative)), Flow::Continue))
     }
 
     fn try_msg(v: &Variable) -> Option<Result<Box<Variable>, Box<::Error>>> {
@@ -695,7 +718,7 @@ impl Runtime {
             // Do not resolve locals to keep fixed length from end of stack.
             self.local_stack.push((arg.name.clone(), st + i));
         }
-        let (x, flow) = try!(self.block(&f.block, module));
+        let (x, flow) = try!(self.expression(&f.expr, Side::Right, module));
         match flow {
             Flow::Break(None) =>
                 return Err(module.error(call.source_range,

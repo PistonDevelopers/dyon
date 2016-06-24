@@ -207,6 +207,7 @@ fn infer_expr(
             let res = infer_call_closure(call, name, decls);
             if res.is_some() { return res; }
         }
+        Grab(_) => {}
     };
     None
 }

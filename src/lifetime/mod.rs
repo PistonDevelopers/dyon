@@ -176,6 +176,7 @@ pub fn check(
         let mut child = i;
         let mut parent = nodes[i].parent.expect("Expected parent");
         let mut it: Option<usize> = None;
+        let mut closure = false;
 
         'search: loop {
             if nodes[parent].kind.is_decl_loop() ||
@@ -210,9 +211,24 @@ pub fn check(
                     child = parent;
                     parent = new_parent;
                     if nodes[parent].kind == Kind::Closure {
-                        // Do not search further because all captured
-                        // variables must be explicit using current objects.
-                        break 'search;
+                        if closure {
+                            // Search only in closure environment one level up.
+                            break 'search;
+                        } else {
+                            closure = true;
+                        }
+                        for &j in &nodes[parent].children {
+                            let arg = &nodes[j];
+                            match arg.kind {
+                                Kind::Arg | Kind::Current => {}
+                                _ => continue
+                            };
+                            if Some(true) == arg.name().map(|n|
+                                &**n == &**nodes[i].name().unwrap()) {
+                                it = Some(j);
+                                break 'search;
+                            }
+                        }
                     }
                 }
                 None => break
