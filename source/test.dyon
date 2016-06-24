@@ -1,13 +1,13 @@
-fn main() {
-    a := 0
-    b := \() = \() = grab a
-}
-
 /*
 fn main() {
-    a := 0
-    b := sift i 3 { \(x) = x + grab i }
-    for i 3 { println(\b[i](i)) }
+    a := 2
+    b := \() = {
+        a := grab a
+        \() = grab a
+    }
+    c := \b()
+    d := \c()
+    println(d)
 }
 */
 
@@ -20,63 +20,8 @@ fn main() {
 }
 */
 
-/*
 fn main() {
     a := \(x) = \(y) = y + grab x
     b := \a(2)
     println(\b(3)) // prints `5`
 }
-*/
-
-/*
-fn main() {
-    a := delta(\(x, y) = x == y)
-    b := delta(\(x, y) = x < y)
-    c := delta(\(x, y) = x > y)
-}
-
-fn delta(cond: \(f64, f64) -> bool) -> \(f64, f64) -> f64 {
-    return \(x, y) = {
-        cond := grab cond
-        if \cond(x, y) { 1 } else { 0 }
-    }
-}
-*/
-
-/*
-fn split(binop: \(any, any) -> any) -> \(any) -> \(any) -> any {
-    return \(x) = {
-        binop := grab binop
-        \(y) = {
-            x := grab x
-            binop := grab binop
-            \binop(x, y)
-        }
-    }
-}
-
-fn join(binop: \(any) -> \(any) -> any) -> \(any, any) -> any {
-    return \(x, y) = {
-        binop := grab binop
-        a := \binop(x)
-        \a(y)
-    }
-}
-
-fn concat(a: \(any) -> \(any) -> any, b: \(any) -> \(any) -> any)
--> \(any) -> \(any) -> \(any) -> any {
-    return \(x) = {
-        a := grab a
-        b := grab b
-        \(y) = {
-            a := grab \a(x)
-            b := grab b
-            \(z) = {
-                a := grab \a(y)
-                b := grab b
-                \b(a)
-            }
-        }
-    }
-}
-*/

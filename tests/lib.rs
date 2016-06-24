@@ -105,6 +105,8 @@ fn test_syntax() {
     test_src("source/syntax/closure_2.dyon");
     test_src("source/syntax/closure_3.dyon");
     test_fail_src("source/syntax/closure_4.dyon");
+    test_src("source/syntax/closure_5.dyon");
+    test_src("source/syntax/closure_6.dyon");
 }
 
 #[test]
