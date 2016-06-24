@@ -14,6 +14,7 @@ pub enum Grabbed {
     Expression(ast::Expression),
     Block(ast::Block),
     Item(ast::Item),
+    ForN(ast::ForN),
 }
 
 pub fn grab_expr(
@@ -42,8 +43,14 @@ pub fn grab_expr(
                 Box::new(match grab_expr(rt, expr, side, module) {
                     Ok((Grabbed::Expression(x), Flow::Continue)) => x,
                     x => return x,
-                }))),
-                Flow::Continue))
+                }))), Flow::Continue))
+        }
+        &E::Try(ref expr) => {
+            Ok((Grabbed::Expression(E::Try(
+                Box::new(match grab_expr(rt, expr, side, module) {
+                    Ok((Grabbed::Expression(x), Flow::Continue)) => x,
+                    x => return x,
+                }))), Flow::Continue))
         }
         &E::BinOp(ref binop_expr) => {
             Ok((Grabbed::Expression(E::BinOp(Box::new(ast::BinOpExpression {
@@ -60,6 +67,12 @@ pub fn grab_expr(
             }))), Flow::Continue))
         }
         &E::Number(_) |
+        &E::Bool(_) |
+        &E::Text(_) |
+        &E::ReturnVoid(_) |
+        &E::Break(_) |
+        &E::Continue(_) |
+        &E::Variable(_, _) |
         &E::Closure(_) =>
             Ok((Grabbed::Expression(expr.clone()), Flow::Continue)),
         &E::Item(ref item) => match grab_item(rt, item, side, module) {
@@ -144,6 +157,46 @@ pub fn grab_expr(
                 source_range: if_expr.source_range.clone(),
             }))), Flow::Continue))
         },
+        &E::Go(ref go) => {
+            let call = &go.call;
+            Ok((Grabbed::Expression(E::Go(Box::new(ast::Go {
+                call: ast::Call {
+                    name: call.name.clone(),
+                    args: {
+                        let mut new_args = vec![];
+                        for arg in &call.args {
+                            new_args.push(match grab_expr(rt, arg, side, module) {
+                                Ok((Grabbed::Expression(x), Flow::Continue)) => x,
+                                x => return x,
+                            });
+                        }
+                        new_args
+                    },
+                    source_range: call.source_range.clone(),
+                    f_index: call.f_index.clone(),
+                    custom_source: call.custom_source.clone(),
+                },
+                source_range: go.source_range.clone(),
+            }))), Flow::Continue))
+        }
+        &E::Call(ref call) => {
+            Ok((Grabbed::Expression(E::Call(ast::Call {
+                name: call.name.clone(),
+                args: {
+                    let mut new_args = vec![];
+                    for arg in &call.args {
+                        new_args.push(match grab_expr(rt, arg, side, module) {
+                            Ok((Grabbed::Expression(x), Flow::Continue)) => x,
+                            x => return x,
+                        });
+                    }
+                    new_args
+                },
+                source_range: call.source_range.clone(),
+                f_index: call.f_index.clone(),
+                custom_source: call.custom_source.clone(),
+            })), Flow::Continue))
+        }
         &E::CallClosure(ref call_closure) => {
             Ok((Grabbed::Expression(E::CallClosure(Box::new(ast::CallClosure {
                 item: match grab_item(rt, &call_closure.item, side, module) {
@@ -163,7 +216,179 @@ pub fn grab_expr(
                 source_range: call_closure.source_range.clone(),
             }))), Flow::Continue))
         }
-        x => panic!("Unimplemented {:#?}", x)
+        &E::ForN(ref for_n) => match grab_for_n(rt, for_n, side, module) {
+            Ok((Grabbed::ForN(x), Flow::Continue)) => {
+                Ok((Grabbed::Expression(E::ForN(Box::new(x))), Flow::Continue))
+            }
+            x => return x,
+        },
+        &E::Sum(ref for_n) => match grab_for_n(rt, for_n, side, module) {
+            Ok((Grabbed::ForN(x), Flow::Continue)) => {
+                Ok((Grabbed::Expression(E::Sum(Box::new(x))), Flow::Continue))
+            }
+            x => return x,
+        },
+        &E::Prod(ref for_n) => match grab_for_n(rt, for_n, side, module) {
+            Ok((Grabbed::ForN(x), Flow::Continue)) => {
+                Ok((Grabbed::Expression(E::Prod(Box::new(x))), Flow::Continue))
+            }
+            x => return x,
+        },
+        &E::Min(ref for_n) => match grab_for_n(rt, for_n, side, module) {
+            Ok((Grabbed::ForN(x), Flow::Continue)) => {
+                Ok((Grabbed::Expression(E::Min(Box::new(x))), Flow::Continue))
+            }
+            x => return x,
+        },
+        &E::Max(ref for_n) => match grab_for_n(rt, for_n, side, module) {
+            Ok((Grabbed::ForN(x), Flow::Continue)) => {
+                Ok((Grabbed::Expression(E::Max(Box::new(x))), Flow::Continue))
+            }
+            x => return x,
+        },
+        &E::Any(ref for_n) => match grab_for_n(rt, for_n, side, module) {
+            Ok((Grabbed::ForN(x), Flow::Continue)) => {
+                Ok((Grabbed::Expression(E::Any(Box::new(x))), Flow::Continue))
+            }
+            x => return x,
+        },
+        &E::All(ref for_n) => match grab_for_n(rt, for_n, side, module) {
+            Ok((Grabbed::ForN(x), Flow::Continue)) => {
+                Ok((Grabbed::Expression(E::All(Box::new(x))), Flow::Continue))
+            }
+            x => return x,
+        },
+        &E::SumVec4(ref for_n) => match grab_for_n(rt, for_n, side, module) {
+            Ok((Grabbed::ForN(x), Flow::Continue)) => {
+                Ok((Grabbed::Expression(E::SumVec4(Box::new(x))), Flow::Continue))
+            }
+            x => return x,
+        },
+        &E::Sift(ref for_n) => match grab_for_n(rt, for_n, side, module) {
+            Ok((Grabbed::ForN(x), Flow::Continue)) => {
+                Ok((Grabbed::Expression(E::Sift(Box::new(x))), Flow::Continue))
+            }
+            x => return x,
+        },
+        &E::UnOp(ref unop) => {
+            Ok((Grabbed::Expression(E::UnOp(Box::new(ast::UnOpExpression {
+                op: unop.op.clone(),
+                expr: match grab_expr(rt, &unop.expr, side, module) {
+                    Ok((Grabbed::Expression(x), Flow::Continue)) => x,
+                    x => return x,
+                },
+                source_range: unop.source_range.clone(),
+            }))), Flow::Continue))
+        }
+        &E::Vec4(ref vec4) => {
+            Ok((Grabbed::Expression(E::Vec4(ast::Vec4 {
+                args: {
+                    let mut new_args = vec![];
+                    for arg in &vec4.args {
+                        new_args.push(match grab_expr(rt, arg, side, module) {
+                            Ok((Grabbed::Expression(x), Flow::Continue)) => x,
+                            x => return x,
+                        });
+                    }
+                    new_args
+                },
+                source_range: vec4.source_range.clone(),
+            })), Flow::Continue))
+        }
+        &E::Link(ref link) => {
+            Ok((Grabbed::Expression(E::Link(ast::Link {
+                items: {
+                    let mut new_items = vec![];
+                    for item in &link.items {
+                        new_items.push(match grab_expr(rt, item, side, module) {
+                            Ok((Grabbed::Expression(x), Flow::Continue)) => x,
+                            x => return x,
+                        });
+                    }
+                    new_items
+                },
+                source_range: link.source_range.clone(),
+            })), Flow::Continue))
+        }
+        &E::Object(ref obj) => {
+            Ok((Grabbed::Expression(E::Object(Box::new(ast::Object {
+                key_values: {
+                    let mut new_key_values = vec![];
+                    for key_value in &obj.key_values {
+                        new_key_values.push((key_value.0.clone(),
+                        match grab_expr(rt, &key_value.1, side, module) {
+                            Ok((Grabbed::Expression(x), Flow::Continue)) => x,
+                            x => return x,
+                        }));
+                    }
+                    new_key_values
+                },
+                source_range: obj.source_range.clone(),
+            }))), Flow::Continue))
+        }
+        &E::Array(ref arr) => {
+            Ok((Grabbed::Expression(E::Array(Box::new(ast::Array {
+                items: {
+                    let mut new_items = vec![];
+                    for item in &arr.items {
+                        new_items.push(match grab_expr(rt, item, side, module) {
+                            Ok((Grabbed::Expression(x), Flow::Continue)) => x,
+                            x => return x,
+                        });
+                    }
+                    new_items
+                },
+                source_range: arr.source_range.clone(),
+            }))), Flow::Continue))
+        }
+        &E::ArrayFill(ref arr_fill) => {
+            Ok((Grabbed::Expression(E::ArrayFill(Box::new(ast::ArrayFill {
+                fill: match grab_expr(rt, &arr_fill.fill, side, module) {
+                    Ok((Grabbed::Expression(x), Flow::Continue)) => x,
+                    x => return x,
+                },
+                n: match grab_expr(rt, &arr_fill.n, side, module) {
+                    Ok((Grabbed::Expression(x), Flow::Continue)) => x,
+                    x => return x,
+                },
+                source_range: arr_fill.source_range.clone(),
+            }))), Flow::Continue))
+        }
+        &E::For(ref for_expr) => {
+            Ok((Grabbed::Expression(E::For(Box::new(ast::For {
+                init: match grab_expr(rt, &for_expr.init, side, module) {
+                    Ok((Grabbed::Expression(x), Flow::Continue)) => x,
+                    x => return x,
+                },
+                cond: match grab_expr(rt, &for_expr.cond, side, module) {
+                    Ok((Grabbed::Expression(x), Flow::Continue)) => x,
+                    x => return x,
+                },
+                step: match grab_expr(rt, &for_expr.step, side, module) {
+                    Ok((Grabbed::Expression(x), Flow::Continue)) => x,
+                    x => return x,
+                },
+                block: match grab_block(rt, &for_expr.block, side, module) {
+                    Ok((Grabbed::Block(x), Flow::Continue)) => x,
+                    x => return x,
+                },
+                label: for_expr.label.clone(),
+                source_range: for_expr.source_range.clone(),
+            }))), Flow::Continue))
+        }
+        &E::Swizzle(ref swizzle) => {
+            Ok((Grabbed::Expression(E::Swizzle(Box::new(ast::Swizzle {
+                sw0: swizzle.sw0.clone(),
+                sw1: swizzle.sw1.clone(),
+                sw2: swizzle.sw2.clone(),
+                sw3: swizzle.sw3.clone(),
+                expr: match grab_expr(rt, &swizzle.expr, side, module) {
+                    Ok((Grabbed::Expression(x), Flow::Continue)) => x,
+                    x => return x,
+                },
+                source_range: swizzle.source_range.clone(),
+            }))), Flow::Continue))
+        }
     }
 }
 
@@ -218,5 +443,24 @@ fn grab_item(
         },
         try_ids: item.try_ids.clone(),
         source_range: item.source_range.clone(),
+    }), Flow::Continue))
+}
+
+fn grab_for_n(
+    rt: &mut Runtime,
+    for_n: &ast::ForN,
+    side: Side,
+    module: &Module,
+) -> Result<(Grabbed, Flow), String> {
+    Ok((Grabbed::ForN(ast::ForN {
+        name: for_n.name.clone(),
+        start: for_n.start.clone(),
+        end: for_n.end.clone(),
+        block: match grab_block(rt, &for_n.block, side, module) {
+            Ok((Grabbed::Block(x), Flow::Continue)) => x,
+            x => return x,
+        },
+        label: for_n.label.clone(),
+        source_range: for_n.source_range.clone()
     }), Flow::Continue))
 }

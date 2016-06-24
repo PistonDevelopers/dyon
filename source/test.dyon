@@ -21,7 +21,13 @@ fn main() {
 */
 
 fn main() {
-    a := \(x) = \(y) = y + grab x
-    b := \a(2)
-    println(\b(3)) // prints `5`
+    c := (1, 2)
+    a := \(x) = {
+        (xy grab c, x)
+    }
+    println(\a(2))
+}
+
+fn foo(a) -> f64 {
+    return a + 24
 }
