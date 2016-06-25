@@ -168,6 +168,15 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                         this_ty = Some(prelude.list[f].ret.clone());
                     }
                 }
+                Kind::CallClosure => {
+                    if let Some(item) = nodes[i].find_child_by_kind(nodes, Kind::Item) {
+                        if let Some(decl) = nodes[item].declaration {
+                            if let Some(Type::Closure(ref ty)) = nodes[decl].ty {
+                                this_ty = Some(ty.ret.clone());
+                            }
+                        }
+                    }
+                }
                 Kind::Assign => {
                     let left = match nodes[i].find_child_by_kind(nodes, Kind::Left) {
                         None => continue,

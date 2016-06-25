@@ -162,6 +162,7 @@ fn test_typechk() {
     test_fail_src("source/typechk/closure_3.dyon");
     test_src("source/typechk/closure_4.dyon");
     test_fail_src("source/typechk/closure_5.dyon");
+    test_src("source/typechk/closure_6.dyon");
     test_src("source/typechk/local.dyon");
 }
 
