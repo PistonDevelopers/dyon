@@ -163,6 +163,8 @@ fn test_typechk() {
     test_src("source/typechk/closure_4.dyon");
     test_fail_src("source/typechk/closure_5.dyon");
     test_src("source/typechk/closure_6.dyon");
+    test_fail_src("source/typechk/closure_7.dyon");
+    test_src("source/typechk/closure_8.dyon");
     test_src("source/typechk/local.dyon");
 }
 

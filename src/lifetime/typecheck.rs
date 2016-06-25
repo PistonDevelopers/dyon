@@ -170,9 +170,22 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                 }
                 Kind::CallClosure => {
                     if let Some(item) = nodes[i].find_child_by_kind(nodes, Kind::Item) {
+                        if nodes[item].item_ids() { continue 'node; }
                         if let Some(decl) = nodes[item].declaration {
-                            if let Some(Type::Closure(ref ty)) = nodes[decl].ty {
-                                this_ty = Some(ty.ret.clone());
+                            if let Some(ref ty) = nodes[decl].ty {
+                                match ty {
+                                    &Type::Closure(ref ty) => {
+                                        this_ty = Some(ty.ret.clone());
+                                    }
+                                    &Type::Any => {
+                                        this_ty = Some(Type::Any);
+                                    }
+                                    _ => return Err(nodes[item].source.wrap(
+                                            format!("Type mismatch (#250):\n\
+                                                Expected `closure`, found `{}`",
+                                                ty.description()),
+                                    ))
+                                }
                             }
                         }
                     }

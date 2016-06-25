@@ -5,7 +5,7 @@ fn main() {
     println(\a(0))
 }
 
-twice() = \(f: any, v) = \f(\f(v))
+twice() = \(f: bool, v) = \f(\f(v))
 
 fn fmap(f: \(any) -> any, g: \(\(any) -> any, any) -> any) -> \(any) -> any {
     return \(x) = {
