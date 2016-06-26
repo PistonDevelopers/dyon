@@ -1,11 +1,16 @@
 fn main() {
     b := 2
     a := \(x) = {
-        println("hi")
-        println(grab \(y) = {
-            println("five")
-            clone(grab '2 b)
-        })
+        if true {
+            println("hi")
+            println("bye")
+        } else if false {
+            for i 2 {}
+            for j 3 {}
+        } else {
+            println("hi")
+            println("bye")
+        }
         clone(x)
     }
     println(a)

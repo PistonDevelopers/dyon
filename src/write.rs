@@ -609,17 +609,17 @@ pub fn write_if<W: io::Write>(
     try!(write!(w, "if "));
     try!(write_expr(w, rt, &if_expr.cond, tabs));
     try!(write!(w, " "));
-    try!(write_block(w, rt, &if_expr.true_block, tabs + 1));
+    try!(write_block(w, rt, &if_expr.true_block, tabs));
     for (else_if_cond, else_if_block) in if_expr.else_if_conds.iter()
         .zip(if_expr.else_if_blocks.iter()) {
         try!(write!(w, " else if "));
         try!(write_expr(w, rt, else_if_cond, tabs));
         try!(write!(w, " "));
-        try!(write_block(w, rt, else_if_block, tabs + 1));
+        try!(write_block(w, rt, else_if_block, tabs));
     }
     if let Some(ref else_block) = if_expr.else_block {
         try!(write!(w, " else "));
-        try!(write_block(w, rt, else_block, tabs + 1));
+        try!(write_block(w, rt, else_block, tabs));
     }
     Ok(())
 }
