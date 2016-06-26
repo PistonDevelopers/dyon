@@ -631,10 +631,11 @@ pub fn write_grab<W: io::Write>(
     tabs: u32,
 ) -> Result<(), io::Error> {
     if grab.level != 1 {
-        try!(write!(w, "grab '{} ", grab.level));
+        try!(write!(w, "(grab '{} ", grab.level));
     } else {
-        try!(write!(w, "grab "));
+        try!(write!(w, "(grab "));
     }
     try!(write_expr(w, rt, &grab.expr, tabs));
+    try!(write!(w, ")"));
     Ok(())
 }

@@ -1,17 +1,13 @@
 fn main() {
-    b := 2
-    a := \(x) = {
-        if true {
-            println("hi")
-            println("bye")
-        } else if false {
-            for i 2 {}
-            for j 3 {}
-        } else {
-            println("hi")
-            println("bye")
-        }
-        clone(x)
-    }
+    a := \(x) = \(y) = \(z) = z + (grab y) + (grab '2 x)
+    // prints `\(x: any) = \(y: any) = \(z: any) = z + (grab y) + (grab '2 x)`
     println(a)
+    b := \a(1)
+    // prints `\(y: any) = \(z: any) = z + (grab y) + 1`
+    println(b)
+    c := \b(2)
+    // prints `\(z: any) = z + 2 + 1`
+    println(c)
+    d := \c(3)
+    println(d)
 }
