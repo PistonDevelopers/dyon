@@ -129,7 +129,7 @@ pub fn write_variable<W>(
         Variable::Return => try!(write!(w, "_return")),
         Variable::UnsafeRef(_) => try!(write!(w, "_unsafe_ref")),
         Variable::RustObject(_) => try!(write!(w, "_rust_object")),
-        Variable::Closure(ref closure, _) => try!(write_closure(w, closure)),
+        Variable::Closure(ref closure, _) => try!(write_closure(w, rt, closure)),
         // ref x => panic!("Could not print out `{:?}`", x)
     }
     Ok(())
@@ -141,6 +141,7 @@ pub fn print_variable(rt: &Runtime, v: &Variable, escape_string: EscapeString) {
 
 pub fn write_closure<W: io::Write>(
     w: &mut W,
+    rt: &Runtime,
     closure: &ast::Closure
 ) -> Result<(), io::Error> {
     try!(write!(w, "\\("));
@@ -151,7 +152,7 @@ pub fn write_closure<W: io::Write>(
         }
     }
     try!(write!(w, ") = "));
-    try!(write_expr(w, &closure.expr));
+    try!(write_expr(w, rt, &closure.expr));
     Ok(())
 }
 
@@ -164,14 +165,16 @@ pub fn write_arg<W: io::Write>(
 
 pub fn write_expr<W: io::Write>(
     w: &mut W,
+    rt: &Runtime,
     expr: &ast::Expression
 ) -> Result<(), io::Error> {
     use ast::Expression as E;
 
     match expr {
-        &E::BinOp(ref binop) => try!(write_binop(w, binop)),
-        &E::Item(ref item) => try!(write_item(w, item)),
+        &E::BinOp(ref binop) => try!(write_binop(w, rt, binop)),
+        &E::Item(ref item) => try!(write_item(w, rt, item)),
         &E::Number(ref number) => try!(write!(w, "{}", number.num)),
+        &E::Variable(_, ref var) => try!(write_variable(w, rt, var, EscapeString::Json)),
         x => panic!("Unimplemented `{:#?}`", x),
     }
     Ok(())
@@ -179,21 +182,18 @@ pub fn write_expr<W: io::Write>(
 
 pub fn write_binop<W: io::Write>(
     w: &mut W,
+    rt: &Runtime,
     binop: &ast::BinOpExpression
 ) -> Result<(), io::Error> {
-    use ast::BinOp;
-
-    try!(write_expr(w, &binop.left));
-    match binop.op {
-        BinOp::Add => try!(write!(w, " + ")),
-        x => panic!("Unimplemented `{:?}`", x),
-    }
-    try!(write_expr(w, &binop.right));
+    try!(write_expr(w, rt, &binop.left));
+    try!(write!(w, " {} ", binop.op.symbol()));
+    try!(write_expr(w, rt, &binop.right));
     Ok(())
 }
 
 pub fn write_item<W: io::Write>(
     w: &mut W,
+    rt: &Runtime,
     item: &ast::Item
 ) -> Result<(), io::Error> {
     use ast::Id;
@@ -206,7 +206,7 @@ pub fn write_item<W: io::Write>(
         match id {
             &Id::String(_, ref prop) => try!(write!(w, ".{}", prop)),
             &Id::F64(_, ind) => try!(write!(w, "[{}]", ind)),
-            &Id::Expression(ref expr) => try!(write_expr(w, expr)),
+            &Id::Expression(ref expr) => try!(write_expr(w, rt, expr)),
         }
         if item.try_ids.iter().any(|&tr| tr == i) {
             try!(write!(w, "?"));

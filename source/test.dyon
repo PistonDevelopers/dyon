@@ -1,4 +1,5 @@
 fn main() {
-    f := \(x) = x + 1
+    a := 5
+    f := \(x) = x / grab a
     println(f)
 }
