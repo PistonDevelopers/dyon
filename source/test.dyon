@@ -1,7 +1,4 @@
 fn main() {
-    x := 2
-    a := \(x: bool) = {
-        grab x
-    }
-    println(\a(0) + 2)
+    a := grab 2
+    println(a)
 }

@@ -376,7 +376,9 @@ impl Runtime {
             }
             Closure(ref closure) => self.closure(closure, module),
             CallClosure(ref call) => self.call_closure(call, module),
-            Grab(_) => Err("`grab` expressions must be inside a closure".into()),
+            Grab(ref expr) => Err(module.error(expr.source_range(),
+                    &format!("{}\n`grab` expressions must be inside a closure",
+                        self.stack_trace()), self)),
         }
     }
 
