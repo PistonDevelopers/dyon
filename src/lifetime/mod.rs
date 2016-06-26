@@ -177,8 +177,8 @@ pub fn check(
         let mut child = i;
         let mut parent = nodes[i].parent.expect("Expected parent");
         let mut it: Option<usize> = None;
-        let mut closure = false;
-        let mut grab = false;
+        // The grab level to search for declaration.
+        let mut grab = 0;
 
         'search: loop {
             if nodes[parent].kind.is_decl_loop() ||
@@ -204,7 +204,7 @@ pub fn check(
                 let item = nodes[left].children[0];
                 if nodes[item].name() == nodes[i].name() {
                     if nodes[item].item_ids() { continue; }
-                    if grab {
+                    if grab > 0 {
                         return Err(nodes[i].source.wrap(
                             format!("Grabbed `{}` has same name as closure variable",
                             nodes[i].name().expect("Expected name"))));
@@ -218,10 +218,13 @@ pub fn check(
                     child = parent;
                     parent = new_parent;
                     if nodes[parent].kind == Kind::Grab {
-                        grab = true;
+                        grab = nodes[parent].grab_level;
+                        if grab == 0 {
+                            grab = 1;
+                        }
                     }
                     if nodes[parent].kind == Kind::Closure {
-                        if closure {
+                        if grab == 0 {
                             // Search only in closure environment one level up.
                             break 'search;
                         }
@@ -233,7 +236,7 @@ pub fn check(
                             };
                             if Some(true) == arg.name().map(|n|
                                     &**n == &**nodes[i].name().unwrap()) {
-                                if grab {
+                                if grab > 0 {
                                     return Err(nodes[i].source.wrap(
                                         format!("Grabbed `{}` has same name as closure argument",
                                         nodes[i].name().expect("Expected name"))));
@@ -242,8 +245,7 @@ pub fn check(
                                 break 'search;
                             }
                         }
-                        grab = false;
-                        closure = true;
+                        grab -= 1;
                     }
                 }
                 None => break

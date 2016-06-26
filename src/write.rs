@@ -255,10 +255,7 @@ pub fn write_expr<W: io::Write>(
         }
         &E::Swizzle(ref swizzle) => try!(write_swizzle(w, rt, swizzle)),
         &E::Closure(ref closure) => try!(write_closure(w, rt, closure)),
-        &E::Grab(ref expr) => {
-            try!(write!(w, "grab "));
-            try!(write_expr(w, rt, expr));
-        }
+        &E::Grab(ref grab) => try!(write_grab(w, rt, grab)),
         &E::CallClosure(ref call) => try!(write_call_closure(w, rt, call)),
         // x => panic!("Unimplemented `{:#?}`", x),
     }
@@ -403,7 +400,9 @@ pub fn write_call_closure<W: io::Write>(
     rt: &Runtime,
     call: &ast::CallClosure
 ) -> Result<(), io::Error> {
-    try!(write!(w, "\\("));
+    try!(write!(w, "\\"));
+    try!(write_item(w, rt, &call.item));
+    try!(write!(w, "("));
     for (i, arg) in call.args.iter().enumerate() {
         try!(write_expr(w, rt, arg));
         if i + 1 < call.args.len() {
@@ -593,5 +592,19 @@ pub fn write_if<W: io::Write>(
         try!(write!(w, " else "));
         try!(write_block(w, rt, else_block));
     }
+    Ok(())
+}
+
+pub fn write_grab<W: io::Write>(
+    w: &mut W,
+    rt: &Runtime,
+    grab: &ast::Grab
+) -> Result<(), io::Error> {
+    if grab.level != 1 {
+        try!(write!(w, "grab '{} ", grab.level));
+    } else {
+        try!(write!(w, "grab "));
+    }
+    try!(write_expr(w, rt, &grab.expr));
     Ok(())
 }

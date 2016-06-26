@@ -376,7 +376,7 @@ impl Runtime {
             }
             Closure(ref closure) => self.closure(closure, module),
             CallClosure(ref call) => self.call_closure(call, module),
-            Grab(ref expr) => Err(module.error(expr.source_range(),
+            Grab(ref expr) => Err(module.error(expr.source_range,
                     &format!("{}\n`grab` expressions must be inside a closure",
                         self.stack_trace()), self)),
         }
@@ -389,7 +389,7 @@ impl Runtime {
         // Create closure.
         let relative = self.call_stack.last().map(|c| c.index).unwrap_or(0);
         // Evaluate `grab` expressions and generate new AST.
-        let new_expr = match try!(grab::grab_expr(self, &closure.expr, Side::Right, module)) {
+        let new_expr = match try!(grab::grab_expr(1, self, &closure.expr, Side::Right, module)) {
             (Grabbed::Expression(x), Flow::Continue) => x,
             (Grabbed::Variable(x), Flow::Return) => { return Ok((x, Flow::Return)); }
             _ => return Err(module.error(closure.expr.source_range(),

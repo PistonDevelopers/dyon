@@ -269,6 +269,71 @@ impl Closure {
 }
 
 #[derive(Debug, Clone)]
+pub struct Grab {
+    pub level: u16,
+    pub expr: Expression,
+    pub source_range: Range,
+}
+
+impl Grab {
+    pub fn from_meta_data(
+        file: &Arc<String>,
+        source: &Arc<String>,
+        mut convert: Convert,
+        ignored: &mut Vec<Range>
+    ) -> Result<(Range, Grab), ()> {
+        let start = convert.clone();
+        let node = "grab";
+        let start_range = try!(convert.start_node(node));
+        convert.update(start_range);
+
+        let mut level: Option<u16> = None;
+        let mut expr: Option<Expression> = None;
+        loop {
+            if let Ok(range) = convert.end_node(node) {
+                convert.update(range);
+                break;
+            } else if let Ok((range, val)) = convert.meta_f64("grab_level") {
+                convert.update(range);
+                level = Some(val as u16);
+            } else if let Ok((range, val)) = Expression::from_meta_data(
+                    file, source, "expr", convert, ignored) {
+                convert.update(range);
+                expr = Some(val);
+            } else {
+                let range = convert.ignore();
+                convert.update(range);
+                ignored.push(range);
+            }
+        }
+
+        let level = level.unwrap_or(1);
+        let expr = try!(expr.ok_or(()));
+        Ok((convert.subtract(start), Grab {
+            level: level,
+            expr: expr,
+            source_range: convert.source(start).unwrap(),
+        }))
+    }
+
+    pub fn resolve_locals(
+        &self,
+        relative: usize,
+        stack: &mut Vec<Option<Arc<String>>>,
+        closure_stack: &mut Vec<usize>,
+        module: &Module
+    ) {
+        let last = match closure_stack.get(closure_stack.len() - self.level as usize) {
+            None => return,
+            Some(&x) => x,
+        };
+        // Use environment outside closure.
+        let mut tmp_stack: Vec<_> = stack[0..last].into();
+        self.expr.resolve_locals(relative, &mut tmp_stack, closure_stack, module)
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct Arg {
     pub name: Arc<String>,
     pub lifetime: Option<Arc<String>>,
@@ -469,7 +534,7 @@ pub enum Expression {
     Swizzle(Box<Swizzle>),
     Closure(Arc<Closure>),
     CallClosure(Box<CallClosure>),
-    Grab(Box<Expression>),
+    Grab(Box<Grab>),
 }
 
 // Required because the `Sync` impl of `Variable` is unsafe.
@@ -677,8 +742,8 @@ impl Expression {
                     file, source, convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::CallClosure(Box::new(val)));
-            } else if let Ok((range, val)) = Expression::from_meta_data(
-                    file, source, "grab", convert, ignored) {
+            } else if let Ok((range, val)) = Grab::from_meta_data(
+                    file, source, convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::Grab(Box::new(val)));
             } else {
@@ -732,7 +797,7 @@ impl Expression {
             Swizzle(ref swizzle) => swizzle.source_range,
             Closure(ref closure) => closure.source_range,
             CallClosure(ref call) => call.source_range,
-            Grab(ref expr) => expr.source_range(),
+            Grab(ref grab) => grab.source_range,
         }
     }
 
@@ -799,15 +864,7 @@ impl Expression {
                 swizzle.expr.resolve_locals(relative, stack, closure_stack, module),
             Closure(ref closure) => closure.resolve_locals(relative, stack, closure_stack, module),
             CallClosure(ref call) => call.resolve_locals(relative, stack, closure_stack, module),
-            Grab(ref expr) => {
-                let last = match closure_stack.last() {
-                    None => return,
-                    Some(&x) => x,
-                };
-                // Use environment outside closure.
-                let mut tmp_stack: Vec<_> = stack[0..last].into();
-                expr.resolve_locals(relative, &mut tmp_stack, closure_stack, module)
-            }
+            Grab(ref grab) => grab.resolve_locals(relative, stack, closure_stack, module),
         }
     }
 }

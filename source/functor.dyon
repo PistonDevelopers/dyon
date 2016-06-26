@@ -25,6 +25,8 @@ fn main() {
     b := [some({left: 1, right: 2}), some({left: 2, right: 3}), some({left: 3, right: 4})]
     // prints `[some([2, 3]), some([3, 4]), some([4, 5])]`
     println(\a(b))
+
+    println(fjoins([for_each(), maybe(), tree()]))
 }
 
 for_each() = \(f, v) = sift i {\f(v[i])}
@@ -40,9 +42,8 @@ tree() = \(f, v) = {
 
 fn fmap(f: \(any) -> any, g: \(\(any) -> any, any) -> any) -> \(any) -> any {
     return \(x) = {
-        f := grab f
         g := grab g
-        \g(f, x)
+        \g(grab f, x)
     }
 }
 
@@ -52,11 +53,9 @@ fn fjoin(
 ) -> \(\(any) -> any, any) -> any {
     return \(f, v) = {
         a := grab a
-        b := grab b
         \a(\(v) = {
-            f := grab f
-            b := grab b
-            \b(f, v)
+            b := grab '2 b
+            \b(grab f, v)
         }, v)
     }
 }
