@@ -1,5 +1,12 @@
 fn main() {
-    x := 2
-    a := \(y) = \(z) = grab '2 x
+    b := 2
+    a := \(x) = {
+        println("hi")
+        println(grab \(y) = {
+            println("five")
+            clone(grab '2 b)
+        })
+        clone(x)
+    }
     println(a)
 }

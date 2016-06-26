@@ -1299,7 +1299,7 @@ fn _str(
     rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
     let v = rt.stack.pop().expect(TINVOTS);
     let mut buf: Vec<u8> = vec![];
-    write_variable(&mut buf, rt, rt.resolve(&v), EscapeString::None).unwrap();
+    write_variable(&mut buf, rt, rt.resolve(&v), EscapeString::None, 0).unwrap();
     let v = Variable::Text(Arc::new(String::from_utf8(buf).unwrap()));
     rt.pop_fn(call.name.clone());
     Ok(Some(v))
@@ -1317,7 +1317,7 @@ fn json_string(
 
     let v = rt.stack.pop().expect(TINVOTS);
     let mut buf: Vec<u8> = vec![];
-    write_variable(&mut buf, rt, rt.resolve(&v), EscapeString::Json).unwrap();
+    write_variable(&mut buf, rt, rt.resolve(&v), EscapeString::Json, 0).unwrap();
     Ok(Some(Variable::Text(Arc::new(String::from_utf8(buf).unwrap()))))
 }
 
@@ -2041,7 +2041,7 @@ fn unwrap(
             w.extend_from_slice(rt.stack_trace().as_bytes());
             w.extend_from_slice("\n".as_bytes());
             write_variable(&mut w, rt, &err.message,
-                           EscapeString::None).unwrap();
+                           EscapeString::None, 0).unwrap();
             for t in &err.trace {
                 w.extend_from_slice("\n".as_bytes());
                 w.extend_from_slice(t.as_bytes());
@@ -2350,7 +2350,7 @@ fn save__data_file(
                         rt.stack_trace(), file, err.description()), rt))
         }
     };
-    let res = match write_variable(&mut f, rt, &data, EscapeString::Json) {
+    let res = match write_variable(&mut f, rt, &data, EscapeString::Json, 0) {
         Ok(()) => Ok(Box::new(Variable::Text(file.clone()))),
         Err(err) => {
             Err(Box::new(super::Error {
