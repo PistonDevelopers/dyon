@@ -95,6 +95,7 @@ const JOIN__THREAD: usize = 73;
 const SAVE__DATA_FILE: usize = 74;
 const JSON_FROM_META_DATA: usize = 75;
 const HAS: usize = 76;
+const CHARS: usize = 77;
 
 const TABLE: &'static [(usize, fn(
         &mut Runtime,
@@ -182,6 +183,7 @@ const TABLE: &'static [(usize, fn(
     (SAVE__DATA_FILE, save__data_file),
     (JSON_FROM_META_DATA, json_from_meta_data),
     (HAS, has),
+    (CHARS, chars),
 ];
 
 pub fn standard(f: &mut Prelude) {
@@ -366,6 +368,7 @@ pub fn standard(f: &mut Prelude) {
         tys: vec![Type::Object, Type::Text],
         ret: Type::Bool
     });
+    sarg(f, "chars", CHARS, Type::Text, Type::Array(Box::new(Type::Text)));
 }
 
 pub fn call_standard(
@@ -2415,4 +2418,30 @@ fn has(
     };
     rt.pop_fn(call.name.clone());
     Ok(Some(Variable::bool(res)))
+}
+
+fn chars(
+    rt: &mut Runtime,
+    call: &ast::Call,
+    module: &Module,
+    st: usize,
+    lc: usize,
+    cu: usize
+) -> Result<Option<Variable>, String> {
+    rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
+    let t = rt.stack.pop().expect(TINVOTS);
+    let t = match rt.resolve(&t) {
+        &Variable::Text(ref t) => t.clone(),
+        x => return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(x, "str"), rt))
+    };
+    let res = t.chars()
+        .map(|ch| {
+            let mut s = String::new();
+            s.push(ch);
+            Variable::Text(Arc::new(s))
+        })
+        .collect::<Vec<_>>();
+    rt.pop_fn(call.name.clone());
+    Ok(Some(Variable::Array(Arc::new(res))))
 }
