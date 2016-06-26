@@ -1,4 +1,9 @@
 fn main() {
-    f := \(x) = return clone(x)
+    f := \(v: vec4) = {
+        println(\(x) = clone(x))
+        clone(v)
+    }
     println(f)
 }
+
+fn foo() -> f64 { return 3 }

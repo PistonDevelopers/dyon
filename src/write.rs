@@ -174,6 +174,8 @@ pub fn write_expr<W: io::Write>(
         &E::BinOp(ref binop) => try!(write_binop(w, rt, binop)),
         &E::Item(ref item) => try!(write_item(w, rt, item)),
         &E::Number(ref number) => try!(write!(w, "{}", number.num)),
+        &E::Text(ref text) => try!(json::write_string(w, &text.text)),
+        &E::Bool(ref b) => try!(write!(w, "{}", b.val)),
         &E::Variable(_, ref var) => try!(write_variable(w, rt, var, EscapeString::Json)),
         &E::Link(ref link) => try!(write_link(w, rt, link)),
         &E::Object(ref obj) => try!(write_obj(w, rt, obj)),
@@ -185,7 +187,106 @@ pub fn write_expr<W: io::Write>(
             try!(write!(w, " "));
             try!(write_expr(w, rt, expr));
         }
-        x => panic!("Unimplemented `{:#?}`", x),
+        &E::ReturnVoid(_) => try!(write!(w, "return")),
+        &E::Break(ref br) => {
+            if let Some(ref label) = br.label {
+                try!(write!(w, "break '{}", label));
+            } else {
+                try!(write!(w, "break"));
+            }
+        }
+        &E::Continue(ref c) => {
+            if let Some(ref label) = c.label {
+                try!(write!(w, "continue '{}", label));
+            } else {
+                try!(write!(w, "continue"));
+            }
+        }
+        &E::Block(ref b) => try!(write_block(w, rt, b)),
+        &E::Go(ref go) => {
+            try!(write!(w, "go "));
+            try!(write_call(w, rt, &go.call));
+        }
+        &E::Assign(ref assign) => try!(write_assign(w, rt, assign)),
+        &E::Vec4(ref vec4) => try!(write_vec4(w, rt, vec4)),
+        &E::For(ref f) => try!(write_for(w, rt, f)),
+        &E::Compare(ref comp) => try!(write_compare(w, rt, comp)),
+        &E::ForN(ref for_n) => {
+            try!(write!(w, "for "));
+            try!(write_for_n(w, rt, for_n));
+        }
+        &E::Sum(ref for_n) => {
+            try!(write!(w, "sum "));
+            try!(write_for_n(w, rt, for_n));
+        }
+        &E::SumVec4(ref for_n) => {
+            try!(write!(w, "sum_vec4 "));
+            try!(write_for_n(w, rt, for_n));
+        }
+        &E::Prod(ref for_n) => {
+            try!(write!(w, "prod "));
+            try!(write_for_n(w, rt, for_n));
+        }
+        &E::Min(ref for_n) => {
+            try!(write!(w, "min "));
+            try!(write_for_n(w, rt, for_n));
+        }
+        &E::Max(ref for_n) => {
+            try!(write!(w, "max "));
+            try!(write_for_n(w, rt, for_n));
+        }
+        &E::Sift(ref for_n) => {
+            try!(write!(w, "sift "));
+            try!(write_for_n(w, rt, for_n));
+        }
+        &E::Any(ref for_n) => {
+            try!(write!(w, "any "));
+            try!(write_for_n(w, rt, for_n));
+        }
+        &E::All(ref for_n) => {
+            try!(write!(w, "all "));
+            try!(write_for_n(w, rt, for_n));
+        }
+        &E::If(ref if_expr) => try!(write_if(w, rt, if_expr)),
+        &E::UnOp(ref unop) => try!(write_unop(w, rt, unop)),
+        &E::Try(ref expr) => {
+            try!(write_expr(w, rt, expr));
+            try!(write!(w, "?"));
+        }
+        &E::Swizzle(ref swizzle) => try!(write_swizzle(w, rt, swizzle)),
+        &E::Closure(ref closure) => try!(write_closure(w, rt, closure)),
+        &E::Grab(ref expr) => {
+            try!(write!(w, "grab "));
+            try!(write_expr(w, rt, expr));
+        }
+        &E::CallClosure(ref call) => try!(write_call_closure(w, rt, call)),
+        // x => panic!("Unimplemented `{:#?}`", x),
+    }
+    Ok(())
+}
+
+pub fn write_block<W: io::Write>(
+    w: &mut W,
+    rt: &Runtime,
+    block: &ast::Block
+) -> Result<(), io::Error> {
+    match block.expressions.len() {
+        0 => {
+            try!(write!(w, "{{}}"));
+        }
+        1 => {
+            try!(write!(w, "{{ "));
+            try!(write_expr(w, rt, &block.expressions[0]));
+            try!(write!(w, " }}"));
+        }
+        _ => {
+            try!(write!(w, "{{\n"));
+            for expr in &block.expressions {
+                try!(write_expr(w, rt, expr));
+                try!(write!(w, "\n"));
+            }
+            try!(write!(w, "}}"));
+        }
     }
     Ok(())
 }
@@ -198,6 +299,31 @@ pub fn write_binop<W: io::Write>(
     try!(write_expr(w, rt, &binop.left));
     try!(write!(w, " {} ", binop.op.symbol()));
     try!(write_expr(w, rt, &binop.right));
+    Ok(())
+}
+
+pub fn write_unop<W: io::Write>(
+    w: &mut W,
+    rt: &Runtime,
+    unop: &ast::UnOpExpression
+) -> Result<(), io::Error> {
+    use ast::UnOp::*;
+
+    match unop.op {
+        Norm => {
+            try!(write!(w, "|"));
+            try!(write_expr(w, rt, &unop.expr));
+            try!(write!(w, "|"));
+        }
+        Not => {
+            try!(write!(w, "!"));
+            try!(write_expr(w, rt, &unop.expr));
+        }
+        Neg => {
+            try!(write!(w, "-"));
+            try!(write_expr(w, rt, &unop.expr));
+        }
+    }
     Ok(())
 }
 
@@ -272,6 +398,22 @@ pub fn write_call<W: io::Write>(
     Ok(())
 }
 
+pub fn write_call_closure<W: io::Write>(
+    w: &mut W,
+    rt: &Runtime,
+    call: &ast::CallClosure
+) -> Result<(), io::Error> {
+    try!(write!(w, "\\("));
+    for (i, arg) in call.args.iter().enumerate() {
+        try!(write_expr(w, rt, arg));
+        if i + 1 < call.args.len() {
+            try!(write!(w, ", "));
+        }
+    }
+    try!(write!(w, ")"));
+    Ok(())
+}
+
 pub fn write_arr<W: io::Write>(
     w: &mut W,
     rt: &Runtime,
@@ -298,5 +440,158 @@ pub fn write_arr_fill<W: io::Write>(
     try!(write!(w, ", "));
     try!(write_expr(w, rt, &arr_fill.n));
     try!(write!(w, "]"));
+    Ok(())
+}
+
+pub fn write_assign<W: io::Write>(
+    w: &mut W,
+    rt: &Runtime,
+    assign: &ast::Assign
+) -> Result<(), io::Error> {
+    try!(write_expr(w, rt, &assign.left));
+    try!(write!(w, " {} ", assign.op.symbol()));
+    try!(write_expr(w, rt, &assign.right));
+    Ok(())
+}
+
+pub fn write_vec4<W: io::Write>(
+    w: &mut W,
+    rt: &Runtime,
+    vec4: &ast::Vec4
+) -> Result<(), io::Error> {
+    let mut n = vec4.args.len();
+    for expr in vec4.args.iter().rev() {
+        if let &ast::Expression::Number(ref num) = expr {
+            if num.num == 0.0 {
+                n -= 1;
+                continue;
+            }
+        }
+        break;
+    }
+    try!(write!(w, "("));
+    for (i, expr) in vec4.args[0..n].iter().enumerate() {
+        try!(write_expr(w, rt, expr));
+        if i + 1 < n {
+            try!(write!(w, ", "));
+        }
+        if i + 1 == n && i == 0 {
+            try!(write!(w, ","));
+        }
+    }
+    try!(write!(w, ")"));
+    Ok(())
+}
+
+pub fn write_swizzle<W: io::Write>(
+    w: &mut W,
+    rt: &Runtime,
+    swizzle: &ast::Swizzle
+) -> Result<(), io::Error> {
+    let comp = |ind: usize| {
+        match ind {
+            0 => "x",
+            1 => "y",
+            2 => "z",
+            3 => "w",
+            _ => panic!("Wrong swizzle component"),
+        }
+    };
+    try!(write!(w, "{}", comp(swizzle.sw0)));
+    try!(write!(w, "{}", comp(swizzle.sw1)));
+    if let Some(sw2) = swizzle.sw2 {
+        try!(write!(w, "{}", comp(sw2)));
+    }
+    if let Some(sw3) = swizzle.sw3 {
+        try!(write!(w, "{}", comp(sw3)));
+    }
+    try!(write!(w, " "));
+    try!(write_expr(w, rt, &swizzle.expr));
+    Ok(())
+}
+
+pub fn write_for<W: io::Write>(
+    w: &mut W,
+    rt: &Runtime,
+    f: &ast::For
+) -> Result<(), io::Error> {
+    if let ast::Expression::Block(ref b) = f.init {
+        if b.expressions.len() == 0 {
+            if let ast::Expression::Bool(ref b) = f.cond {
+                if b.val {
+                    if let ast::Expression::Block(ref b) = f.step {
+                        if b.expressions.len() == 0 {
+                            try!(write!(w, "loop "));
+                            try!(write_block(w, rt, &f.block));
+                            return Ok(());
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    try!(write!(w, "for "));
+    try!(write_expr(w, rt, &f.init));
+    try!(write!(w, "; "));
+    try!(write_expr(w, rt, &f.cond));
+    try!(write!(w, "; "));
+    try!(write_expr(w, rt, &f.step));
+    try!(write!(w, " "));
+    try!(write_block(w, rt, &f.block));
+    Ok(())
+}
+
+pub fn write_compare<W: io::Write>(
+    w: &mut W,
+    rt: &Runtime,
+    comp: &ast::Compare
+) -> Result<(), io::Error> {
+    try!(write_expr(w, rt, &comp.left));
+    try!(write!(w, " {} ", comp.op.symbol()));
+    try!(write_expr(w, rt, &comp.right));
+    Ok(())
+}
+
+pub fn write_for_n<W: io::Write>(
+    w: &mut W,
+    rt: &Runtime,
+    for_n: &ast::ForN
+) -> Result<(), io::Error> {
+    try!(write!(w, "{} ", for_n.name));
+    if let Some(ref start) = for_n.start {
+        try!(write!(w, "["));
+        try!(write_expr(w, rt, start));
+        try!(write!(w, ", "));
+        try!(write_expr(w, rt, &for_n.end));
+        try!(write!(w, ") "));
+    } else {
+        try!(write_expr(w, rt, &for_n.end));
+        try!(write!(w, " "));
+    }
+    try!(write_block(w, rt, &for_n.block));
+    Ok(())
+}
+
+pub fn write_if<W: io::Write>(
+    w: &mut W,
+    rt: &Runtime,
+    if_expr: &ast::If
+) -> Result<(), io::Error> {
+    try!(write!(w, "if "));
+    try!(write_expr(w, rt, &if_expr.cond));
+    try!(write!(w, " "));
+    try!(write_block(w, rt, &if_expr.true_block));
+    for (else_if_cond, else_if_block) in if_expr.else_if_conds.iter()
+        .zip(if_expr.else_if_blocks.iter()) {
+        try!(write!(w, " else if "));
+        try!(write_expr(w, rt, else_if_cond));
+        try!(write!(w, " "));
+        try!(write_block(w, rt, else_if_block));
+    }
+    if let Some(ref else_block) = if_expr.else_block {
+        try!(write!(w, " else "));
+        try!(write_block(w, rt, else_block));
+    }
     Ok(())
 }

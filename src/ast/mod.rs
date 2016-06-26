@@ -2184,6 +2184,23 @@ pub enum AssignOp {
     Pow,
 }
 
+impl AssignOp {
+    pub fn symbol(&self) -> &'static str {
+        use self::AssignOp::*;
+
+        match *self {
+            Assign => ":=",
+            Set => "=",
+            Add => "+=",
+            Sub => "-=",
+            Mul => "*=",
+            Div => "/=",
+            Rem => "%=",
+            Pow => "^=",
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Number {
     pub num: f64,

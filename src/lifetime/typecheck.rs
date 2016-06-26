@@ -258,6 +258,7 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                 Kind::Exp | Kind::Base | Kind::Right | Kind::ElseIfCond |
                 Kind::UnOp
                  => {
+                     // TODO: Report error for expected unary operator.
                     if nodes[i].children.len() == 0 { continue 'node; }
                     let ch = nodes[i].children[0];
                     if nodes[ch].item_ids() { continue 'node; }
