@@ -46,29 +46,8 @@ fn infer_expr(
             }
         }
         Item(ref item) => {
-            if item.ids.len() == 0 { return None; }
-            for (i, id) in item.ids.iter().enumerate() {
-                if let &Id::Expression(ref expr) = id {
-                    if let &Expression::Item(ref id) = expr {
-                        if &**id.name == name {
-                            return Some(item.trunc(i));
-                        } else {
-                            for decl in decls.iter().rev() {
-                                if &**decl == &**id.name {
-                                    // It was declared after the index we look for,
-                                    // so it is not valid.
-                                    return None;
-                                }
-                            }
-                            let res = infer_expr(expr, name, decls);
-                            if res.is_some() { return res; }
-                        }
-                    } else {
-                        // Can not lift more advanced expressions.
-                        break
-                    }
-                }
-            }
+            let res = infer_item(item, name, decls);
+            if res.is_some() { return res; }
         }
         BinOp(ref binop_expr) => {
             let left = infer_expr(&binop_expr.left, name, decls);
@@ -212,6 +191,37 @@ fn infer_expr(
     None
 }
 
+fn infer_item(
+    item: &Item,
+    name: &str,
+    decls: &mut Vec<Arc<String>>
+) -> Option<Item> {
+    if item.ids.len() == 0 { return None; }
+    for (i, id) in item.ids.iter().enumerate() {
+        if let &Id::Expression(ref expr) = id {
+            if let &Expression::Item(ref id) = expr {
+                if &**id.name == name {
+                    return Some(item.trunc(i));
+                } else {
+                    for decl in decls.iter().rev() {
+                        if &**decl == &**id.name {
+                            // It was declared after the index we look for,
+                            // so it is not valid.
+                            return None;
+                        }
+                    }
+                    let res = infer_expr(expr, name, decls);
+                    if res.is_some() { return res; }
+                }
+            } else {
+                // Can not lift more advanced expressions.
+                break
+            }
+        }
+    }
+    None
+}
+
 fn infer_call(
     call: &Call,
     name: &str,
@@ -229,6 +239,8 @@ fn infer_call_closure(
     name: &str,
     decls: &mut Vec<Arc<String>>
 ) -> Option<Item> {
+    let res = infer_item(&call.item, name, decls);
+    if res.is_some() { return res; }
     for arg in &call.args {
         let res = infer_expr(arg, name, decls);
         if res.is_some() { return res; }

@@ -1,9 +1,6 @@
 fn main() {
-    f := \(v: vec4) = {
-        println(\(x) = clone(x))
-        clone(v)
+    a := sift i 3 { \() = grab i }
+    for i {
+        println(\a[i]())
     }
-    println(f)
 }
-
-fn foo() -> f64 { return 3 }
