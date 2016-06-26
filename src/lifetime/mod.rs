@@ -178,6 +178,7 @@ pub fn check(
         let mut parent = nodes[i].parent.expect("Expected parent");
         let mut it: Option<usize> = None;
         let mut closure = false;
+        let mut grab = false;
 
         'search: loop {
             if nodes[parent].kind.is_decl_loop() ||
@@ -203,6 +204,11 @@ pub fn check(
                 let item = nodes[left].children[0];
                 if nodes[item].name() == nodes[i].name() {
                     if nodes[item].item_ids() { continue; }
+                    if grab {
+                        return Err(nodes[i].source.wrap(
+                            format!("Grabbed `{}` has same name as closure variable",
+                            nodes[i].name().expect("Expected name"))));
+                    }
                     it = Some(item);
                     break 'search;
                 }
@@ -211,12 +217,13 @@ pub fn check(
                 Some(new_parent) => {
                     child = parent;
                     parent = new_parent;
+                    if nodes[parent].kind == Kind::Grab {
+                        grab = true;
+                    }
                     if nodes[parent].kind == Kind::Closure {
                         if closure {
                             // Search only in closure environment one level up.
                             break 'search;
-                        } else {
-                            closure = true;
                         }
                         for &j in &nodes[parent].children {
                             let arg = &nodes[j];
@@ -225,11 +232,18 @@ pub fn check(
                                 _ => continue
                             };
                             if Some(true) == arg.name().map(|n|
-                                &**n == &**nodes[i].name().unwrap()) {
+                                    &**n == &**nodes[i].name().unwrap()) {
+                                if grab {
+                                    return Err(nodes[i].source.wrap(
+                                        format!("Grabbed `{}` has same name as closure argument",
+                                        nodes[i].name().expect("Expected name"))));
+                                }
                                 it = Some(j);
                                 break 'search;
                             }
                         }
+                        grab = false;
+                        closure = true;
                     }
                 }
                 None => break
