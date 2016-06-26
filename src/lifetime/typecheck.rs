@@ -256,7 +256,7 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                 }
                 Kind::Return | Kind::Val | Kind::Expr | Kind::Cond |
                 Kind::Exp | Kind::Base | Kind::Right | Kind::ElseIfCond |
-                Kind::UnOp
+                Kind::UnOp | Kind::Grab
                  => {
                      // TODO: Report error for expected unary operator.
                     if nodes[i].children.len() == 0 { continue 'node; }
@@ -266,6 +266,11 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                         None => continue 'node,
                         Some(ref ty) => ty.clone()
                     };
+                    if nodes[i].kind == Kind::Grab && ty == Type::Void {
+                        return Err(nodes[i].source.wrap(
+                            format!("Type mismatch (#325):\n\
+                                Expected something, found `void`")));
+                    }
                     if nodes[ch].kind == Kind::Return {
                         // Find function and check return type.
                         let mut p = i;
