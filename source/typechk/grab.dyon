@@ -1,0 +1,6 @@
+fn main() {
+    a := sift i 3 { \() = grab println("hi!") }
+    for i {
+        println(\a[i]())
+    }
+}

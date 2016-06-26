@@ -168,6 +168,28 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                         this_ty = Some(prelude.list[f].ret.clone());
                     }
                 }
+                Kind::CallClosure => {
+                    if let Some(item) = nodes[i].find_child_by_kind(nodes, Kind::Item) {
+                        if nodes[item].item_ids() { continue 'node; }
+                        if let Some(decl) = nodes[item].declaration {
+                            if let Some(ref ty) = nodes[decl].ty {
+                                match ty {
+                                    &Type::Closure(ref ty) => {
+                                        this_ty = Some(ty.ret.clone());
+                                    }
+                                    &Type::Any => {
+                                        this_ty = Some(Type::Any);
+                                    }
+                                    _ => return Err(nodes[item].source.wrap(
+                                            format!("Type mismatch (#250):\n\
+                                                Expected `closure`, found `{}`",
+                                                ty.description()),
+                                    ))
+                                }
+                            }
+                        }
+                    }
+                }
                 Kind::Assign => {
                     let left = match nodes[i].find_child_by_kind(nodes, Kind::Left) {
                         None => continue,
@@ -234,8 +256,9 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                 }
                 Kind::Return | Kind::Val | Kind::Expr | Kind::Cond |
                 Kind::Exp | Kind::Base | Kind::Right | Kind::ElseIfCond |
-                Kind::UnOp
+                Kind::UnOp | Kind::Grab
                  => {
+                     // TODO: Report error for expected unary operator.
                     if nodes[i].children.len() == 0 { continue 'node; }
                     let ch = nodes[i].children[0];
                     if nodes[ch].item_ids() { continue 'node; }
@@ -243,6 +266,11 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                         None => continue 'node,
                         Some(ref ty) => ty.clone()
                     };
+                    if nodes[i].kind == Kind::Grab && ty == Type::Void {
+                        return Err(nodes[i].source.wrap(
+                            format!("Type mismatch (#325):\n\
+                                Expected something, found `void`")));
+                    }
                     if nodes[ch].kind == Kind::Return {
                         // Find function and check return type.
                         let mut p = i;
@@ -251,7 +279,8 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                                 None => break,
                                 Some(p) => p
                             };
-                            if nodes[p].kind == Kind::Fn {
+                            if nodes[p].kind == Kind::Fn ||
+                               nodes[p].kind == Kind::Closure {
                                 if nodes[p].ty.is_none() {
                                     // Infer return type of function.
                                     nodes[p].ty = Some(ty.clone());
@@ -602,6 +631,7 @@ fn check_fn(
                     }
                 }
             }
+            Kind::Closure => { continue; }
             _ => {}
         }
         try!(check_fn(ch, nodes, ty, found_return));

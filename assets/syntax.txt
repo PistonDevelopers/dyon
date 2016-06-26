@@ -108,6 +108,7 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\u005c"
 31 assign_op = {":=":":=" "=":"=" "+=":"+=" "-=":"-=" "*=":"*=" "/=":"/=" "%=":"%="}
 32 compare = [lexpr:"left" ?w compare_op ?w expr:"right"]
 33 compare_op = {"==":"==" "!=":"!=" "¬=":"!=" "<=":"<=" "<":"<" ">=":">=" ">":">"}
+34 grab = ["grab" ?[w "'" .$:"grab_level"] w expr:"expr"]
 
 40 label = ?["'" .._seps!:"label" ?w ":" ?w]
 41 short_body = [.w! .s!.(, [.._seps!:"name" ?w
@@ -118,7 +119,8 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\u005c"
 42 try = ?[?w "?":"try"]
 43 , = [?w "," ?w]
 44 arr = {array:"array" array_fill:"array_fill"}
-45 items = {vec4:"vec4" link:"link" ["(" ?w expr ?w ")"] unop:"unop"
+45 items = {vec4:"vec4" link:"link" grab:"grab"
+            ["(" ?w expr ?w ")"] unop:"unop"
             text go:"go"
             call_closure:"call_closure" named_call_closure:"named_call_closure"
             call:"call" named_call:"named_call"

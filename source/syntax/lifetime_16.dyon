@@ -1,0 +1,4 @@
+fn main() {
+    a := \(x) = x
+    println(\a(2))
+}

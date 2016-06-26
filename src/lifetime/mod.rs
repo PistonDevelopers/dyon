@@ -88,7 +88,8 @@ pub fn check(
         .filter(|&(_, n)| {
             if n.kind != Kind::Expr { return false; }
             if let Some(parent) = n.parent {
-                if nodes[parent].kind != Kind::Fn { return false; }
+                if nodes[parent].kind != Kind::Fn &&
+                   nodes[parent].kind != Kind::Closure { return false; }
             }
             true
         })
@@ -176,6 +177,8 @@ pub fn check(
         let mut child = i;
         let mut parent = nodes[i].parent.expect("Expected parent");
         let mut it: Option<usize> = None;
+        // The grab level to search for declaration.
+        let mut grab = 0;
 
         'search: loop {
             if nodes[parent].kind.is_decl_loop() ||
@@ -201,6 +204,11 @@ pub fn check(
                 let item = nodes[left].children[0];
                 if nodes[item].name() == nodes[i].name() {
                     if nodes[item].item_ids() { continue; }
+                    if grab > 0 {
+                        return Err(nodes[i].source.wrap(
+                            format!("Grabbed `{}` has same name as closure variable",
+                            nodes[i].name().expect("Expected name"))));
+                    }
                     it = Some(item);
                     break 'search;
                 }
@@ -209,10 +217,35 @@ pub fn check(
                 Some(new_parent) => {
                     child = parent;
                     parent = new_parent;
+                    if nodes[parent].kind == Kind::Grab {
+                        grab = nodes[parent].grab_level;
+                        if grab == 0 {
+                            grab = 1;
+                        }
+                    }
                     if nodes[parent].kind == Kind::Closure {
-                        // Do not search further because all captured
-                        // variables must be explicit using current objects.
-                        break 'search;
+                        if grab == 0 {
+                            // Search only in closure environment one level up.
+                            break 'search;
+                        }
+                        for &j in &nodes[parent].children {
+                            let arg = &nodes[j];
+                            match arg.kind {
+                                Kind::Arg | Kind::Current => {}
+                                _ => continue
+                            };
+                            if Some(true) == arg.name().map(|n|
+                                    &**n == &**nodes[i].name().unwrap()) {
+                                if grab > 0 {
+                                    return Err(nodes[i].source.wrap(
+                                        format!("Grabbed `{}` has same name as closure argument",
+                                        nodes[i].name().expect("Expected name"))));
+                                }
+                                it = Some(j);
+                                break 'search;
+                            }
+                        }
+                        grab -= 1;
                     }
                 }
                 None => break

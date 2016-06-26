@@ -1,0 +1,18 @@
+fn main() {
+    a := delta(\(x, y) = x == y)
+    b := delta(\(x, y) = x < y)
+    c := delta(\(x, y) = x > y)
+    println(\a(2, 2)) // prints `1`
+    println(\a(3, 2)) // prints `0`
+    println(\b(2, 2)) // prints `0`
+    println(\b(1, 2)) // prints `1`
+    println(\c(2, 2)) // prints `0`
+    println(\c(3, 2)) // prints `1`
+}
+
+fn delta(cond: \(f64, f64) -> bool) -> \(f64, f64) -> f64 {
+    return \(x, y) = {
+        cond := grab cond
+        if \cond(x, y) { 1 } else { 0 }
+    }
+}

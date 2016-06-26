@@ -65,6 +65,7 @@ fn test_syntax() {
     test_fail_src("source/syntax/lifetime_13.dyon");
     test_fail_src("source/syntax/lifetime_14.dyon");
     test_src("source/syntax/lifetime_15.dyon");
+    test_fail_src("source/syntax/lifetime_16.dyon");
     test_src("source/syntax/insert.dyon");
     test_src("source/syntax/named_call.dyon");
     test_src("source/syntax/max_min.dyon");
@@ -104,6 +105,9 @@ fn test_syntax() {
     test_src("source/syntax/closure.dyon");
     test_src("source/syntax/closure_2.dyon");
     test_src("source/syntax/closure_3.dyon");
+    test_fail_src("source/syntax/closure_4.dyon");
+    test_src("source/syntax/closure_5.dyon");
+    test_src("source/syntax/closure_6.dyon");
 }
 
 #[test]
@@ -158,7 +162,14 @@ fn test_typechk() {
     test_fail_src("source/typechk/closure_3.dyon");
     test_src("source/typechk/closure_4.dyon");
     test_fail_src("source/typechk/closure_5.dyon");
+    test_src("source/typechk/closure_6.dyon");
+    test_fail_src("source/typechk/closure_7.dyon");
+    test_src("source/typechk/closure_8.dyon");
+    test_src("source/typechk/closure_9.dyon");
     test_src("source/typechk/local.dyon");
+    test_fail_src("source/typechk/grab.dyon");
+    test_fail_src("source/typechk/grab_2.dyon");
+    test_src("source/typechk/grab_3.dyon");
 }
 
 #[test]

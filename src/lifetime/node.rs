@@ -21,6 +21,8 @@ pub struct Node {
     pub mutable: bool,
     /// Whether there is a `?` operator used on the node.
     pub try: bool,
+    /// The grab level.
+    pub grab_level: u16,
     /// The range in source.
     pub source: Range,
     /// The parent index.
@@ -92,7 +94,7 @@ impl Node {
             Pow | Sum | Prod | SumVec4 | Min | Max | Any | All |
             Vec4 | Vec4UnLoop | Swizzle |
             Assign | For | ForN | Link |
-            Closure | CallClosure => false,
+            Closure | CallClosure | Grab => false,
             Add | Mul | Compare => self.children.len() == 1,
             _ => true
         }
@@ -186,6 +188,7 @@ impl Node {
                 (_, Kind::Call) => {}
                 (_, Kind::Closure) => {}
                 (_, Kind::CallClosure) => {}
+                (_, Kind::Grab) => {}
                 (_, Kind::Arg) => { continue }
                 (_, Kind::Current) => { continue }
                 (Kind::CallClosure, Kind::Item) => { continue }
@@ -317,6 +320,7 @@ pub fn convert_meta_data(
                     ty: ty,
                     mutable: false,
                     try: false,
+                    grab_level: 0,
                     source: Range::empty(0),
                     parent: parent,
                     children: vec![],
@@ -444,11 +448,19 @@ pub fn convert_meta_data(
                     _ => {}
                 }
             }
-            MetaData::F64(ref n, _) => {
+            MetaData::F64(ref n, val) => {
                 match &***n {
                     "num" => {
                         let i = *parents.last().unwrap();
                         nodes[i].ty = Some(Type::F64);
+                    }
+                    "grab_level" => {
+                        if val < 1.0 {
+                            return Err(d.range()
+                                        .wrap(format!("Grab level must be at least `'1`")));
+                        }
+                        let i = *parents.last().unwrap();
+                        nodes[i].grab_level = val as u16;
                     }
                     _ => {}
                 }

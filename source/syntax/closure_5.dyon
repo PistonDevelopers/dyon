@@ -1,0 +1,57 @@
+fn split(binop: \(any, any) -> any) -> \(any) -> \(any) -> any {
+    return \(x) = {
+        binop := grab binop
+        \(y) = {
+            x := grab x
+            binop := grab binop
+            \binop(x, y)
+        }
+    }
+}
+
+fn join(binop: \(any) -> \(any) -> any) -> \(any, any) -> any {
+    return \(x, y) = {
+        binop := grab binop
+        a := \binop(x)
+        \a(y)
+    }
+}
+
+fn concat(a: \(any) -> \(any) -> any, b: \(any) -> \(any) -> any)
+-> \(any) -> \(any) -> \(any) -> any {
+    return \(x) = {
+        a := grab a
+        b := grab b
+        \(y) = {
+            a := grab \a(x)
+            b := grab b
+            \(z) = {
+                a := grab \a(y)
+                b := grab b
+                r := \b(a)
+                \r(z)
+            }
+        }
+    }
+}
+
+fn main() {
+    a := \(x, y) = x < y
+    b := split(a)
+    c := \b(2)
+    d := \c(3)
+    println(d)
+
+    a := \(x, y) = x + y
+    b := split(a)
+    c := join(b)
+    println(\c(1, 2))
+
+    a := \(x, y) = x + y
+    b := split(a)
+    c := concat(b, b)
+    d := \c(1)
+    e := \d(2)
+    f := \e(3)
+    println(f)
+}

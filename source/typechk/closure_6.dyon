@@ -1,0 +1,16 @@
+fn main() {
+    f := \(x) = x + 1
+
+    a := fmap(f, twice())
+    println(\a(0))
+}
+
+twice() = \(f: \(any) -> any, v) = \f(\f(v))
+
+fn fmap(f: \(any) -> any, g: \(\(any) -> any, any) -> any) -> \(any) -> any {
+    return \(x) = {
+        f := grab f
+        g := grab g
+        \g(f, x)
+    }
+}

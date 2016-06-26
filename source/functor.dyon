@@ -1,0 +1,70 @@
+fn main() {
+    f := \(x) = x + 1
+
+    a := fmap(f, for_each())
+    list := [1, 2, 3]
+    println(\a(list)) // prints `[2, 3, 4]`
+
+    a := fmap(f, maybe())
+    b := some(2)
+    println(\a(b)) // prints `some(3)`
+    println(\a(none())) // prints `none()`
+
+    a := fmap(f, tree())
+    b := {left: 1, right: {left: 2, right: 3}}
+    println(\a(b)) // prints `{right: {right: 4, left: 3}, left: 2}`
+
+    // Combine two functors.
+    a := fmap(f, fjoin(for_each(), maybe()))
+    b := [some(1), some(2), some(3)]
+    // prints `[some(2), some(3), some(4)]`
+    println(\a(b))
+
+    // Combine a list of functors.
+    a := fmap(f, fjoins([for_each(), maybe(), tree()]))
+    b := [some({left: 1, right: 2}), some({left: 2, right: 3}), some({left: 3, right: 4})]
+    // prints `[some([2, 3]), some([3, 4]), some([4, 5])]`
+    println(\a(b))
+
+    println(fjoins([for_each(), maybe(), tree()]))
+}
+
+for_each() = \(f, v) = sift i {\f(v[i])}
+maybe() = \(f, v) = if v == none() { none() } else { some(\f(unwrap(v))) }
+tree() = \(f, v) = {
+    if typeof(v) == "object" {
+        t := tree()
+        {left: \t(f, v.left), right: \t(f, v.right)}
+    } else {
+        \f(v)
+    }
+}
+
+fn fmap(f: \(any) -> any, g: \(\(any) -> any, any) -> any) -> \(any) -> any {
+    return \(x) = {
+        g := grab g
+        \g(grab f, x)
+    }
+}
+
+fn fjoin(
+    a: \(\(any) -> any, any) -> any,
+    b: \(\(any) -> any, any) -> any
+) -> \(\(any) -> any, any) -> any {
+    return \(f, v) = {
+        a := grab a
+        \a(\(v) = {
+            b := grab '2 b
+            \b(grab f, v)
+        }, v)
+    }
+}
+
+fn fjoins(fs: [\(\(any) -> any, any) -> any])
+-> \(\(any) -> any, any) -> any {
+    a := fs[0]
+    for i [1, len(fs)) {
+        a = fjoin(a, fs[i])
+    }
+    return clone(a)
+}

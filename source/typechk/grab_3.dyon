@@ -1,0 +1,5 @@
+fn main() {
+    x := 2
+    a := \(y) = \(z) = grab '2 x
+    println(a)
+}

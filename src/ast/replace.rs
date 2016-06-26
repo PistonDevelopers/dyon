@@ -256,6 +256,7 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
         E::CallClosure(ref call_expr) => {
             E::CallClosure(Box::new(number_call_closure(call_expr, name, val)))
         }
+        E::Grab(_) => expr.clone(),
     }
 }
 
