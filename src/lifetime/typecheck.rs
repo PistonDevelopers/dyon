@@ -273,7 +273,8 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                                 None => break,
                                 Some(p) => p
                             };
-                            if nodes[p].kind == Kind::Fn {
+                            if nodes[p].kind == Kind::Fn ||
+                               nodes[p].kind == Kind::Closure {
                                 if nodes[p].ty.is_none() {
                                     // Infer return type of function.
                                     nodes[p].ty = Some(ty.clone());
@@ -624,6 +625,7 @@ fn check_fn(
                     }
                 }
             }
+            Kind::Closure => { continue; }
             _ => {}
         }
         try!(check_fn(ch, nodes, ty, found_return));

@@ -180,6 +180,11 @@ pub fn write_expr<W: io::Write>(
         &E::Array(ref arr) => try!(write_arr(w, rt, arr)),
         &E::ArrayFill(ref arr_fill) => try!(write_arr_fill(w, rt, arr_fill)),
         &E::Call(ref call) => try!(write_call(w, rt, call)),
+        &E::Return(ref ret, ref expr) => {
+            try!(write_expr(w, rt, ret));
+            try!(write!(w, " "));
+            try!(write_expr(w, rt, expr));
+        }
         x => panic!("Unimplemented `{:#?}`", x),
     }
     Ok(())
