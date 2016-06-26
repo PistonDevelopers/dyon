@@ -175,6 +175,11 @@ pub fn write_expr<W: io::Write>(
         &E::Item(ref item) => try!(write_item(w, rt, item)),
         &E::Number(ref number) => try!(write!(w, "{}", number.num)),
         &E::Variable(_, ref var) => try!(write_variable(w, rt, var, EscapeString::Json)),
+        &E::Link(ref link) => try!(write_link(w, rt, link)),
+        &E::Object(ref obj) => try!(write_obj(w, rt, obj)),
+        &E::Array(ref arr) => try!(write_arr(w, rt, arr)),
+        &E::ArrayFill(ref arr_fill) => try!(write_arr_fill(w, rt, arr_fill)),
+        &E::Call(ref call) => try!(write_call(w, rt, call)),
         x => panic!("Unimplemented `{:#?}`", x),
     }
     Ok(())
@@ -212,5 +217,81 @@ pub fn write_item<W: io::Write>(
             try!(write!(w, "?"));
         }
     }
+    Ok(())
+}
+
+pub fn write_link<W: io::Write>(
+    w: &mut W,
+    rt: &Runtime,
+    link: &ast::Link
+) -> Result<(), io::Error> {
+    try!(write!(w, "link {{ "));
+    for item in &link.items {
+        try!(write_expr(w, rt, item));
+        try!(write!(w, " "));
+    }
+    try!(write!(w, "}}"));
+    Ok(())
+}
+
+pub fn write_obj<W: io::Write>(
+    w: &mut W,
+    rt: &Runtime,
+    obj: &ast::Object,
+) -> Result<(), io::Error> {
+    try!(write!(w, "{{"));
+    for (i, key_value) in obj.key_values.iter().enumerate() {
+        try!(write!(w, "{}: ", key_value.0));
+        try!(write_expr(w, rt, &key_value.1));
+        if i + 1 < obj.key_values.len() {
+            try!(write!(w, ", "));
+        }
+    }
+    try!(write!(w, "}}"));
+    Ok(())
+}
+
+pub fn write_call<W: io::Write>(
+    w: &mut W,
+    rt: &Runtime,
+    call: &ast::Call
+) -> Result<(), io::Error> {
+    try!(write!(w, "{}(", call.name));
+    for (i, arg) in call.args.iter().enumerate() {
+        try!(write_expr(w, rt, arg));
+        if i + 1 < call.args.len() {
+            try!(write!(w, ", "));
+        }
+    }
+    try!(write!(w, ")"));
+    Ok(())
+}
+
+pub fn write_arr<W: io::Write>(
+    w: &mut W,
+    rt: &Runtime,
+    arr: &ast::Array
+) -> Result<(), io::Error> {
+    try!(write!(w, "["));
+    for (i, item) in arr.items.iter().enumerate() {
+        try!(write_expr(w, rt, item));
+        if i + 1 < arr.items.len() {
+            try!(write!(w, ", "));
+        }
+    }
+    try!(write!(w, "]"));
+    Ok(())
+}
+
+pub fn write_arr_fill<W: io::Write>(
+    w: &mut W,
+    rt: &Runtime,
+    arr_fill: &ast::ArrayFill
+) -> Result<(), io::Error> {
+    try!(write!(w, "["));
+    try!(write_expr(w, rt, &arr_fill.fill));
+    try!(write!(w, ", "));
+    try!(write_expr(w, rt, &arr_fill.n));
+    try!(write!(w, "]"));
     Ok(())
 }

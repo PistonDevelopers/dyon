@@ -1,5 +1,5 @@
 fn main() {
     a := 5
-    f := \(x) = x / grab a
+    f := \(x) = [clone(x); 3]
     println(f)
 }
