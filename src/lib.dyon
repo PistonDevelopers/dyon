@@ -253,3 +253,7 @@ fn has(obj: {}, key: str) -> bool { ... }
 
 /// Returns characters of a string.
 fn chars(text: str) -> [str] { ... }
+
+/// Returns seconds since last Unix Epoch.
+/// Returns `err(_)` if system clock is adjusted before Unix Epoch.
+fn now() -> f64 { ... }

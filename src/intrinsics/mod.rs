@@ -96,6 +96,7 @@ const SAVE__DATA_FILE: usize = 74;
 const JSON_FROM_META_DATA: usize = 75;
 const HAS: usize = 76;
 const CHARS: usize = 77;
+const NOW: usize = 78;
 
 const TABLE: &'static [(usize, fn(
         &mut Runtime,
@@ -184,6 +185,7 @@ const TABLE: &'static [(usize, fn(
     (JSON_FROM_META_DATA, json_from_meta_data),
     (HAS, has),
     (CHARS, chars),
+    (NOW, now),
 ];
 
 pub fn standard(f: &mut Prelude) {
@@ -369,6 +371,11 @@ pub fn standard(f: &mut Prelude) {
         ret: Type::Bool
     });
     sarg(f, "chars", CHARS, Type::Text, Type::Array(Box::new(Type::Text)));
+    f.intrinsic(Arc::new("now".into()), NOW, Dfn {
+        lts: vec![],
+        tys: vec![],
+        ret: Type::F64
+    });
 }
 
 pub fn call_standard(
@@ -2444,4 +2451,26 @@ fn chars(
         .collect::<Vec<_>>();
     rt.pop_fn(call.name.clone());
     Ok(Some(Variable::Array(Arc::new(res))))
+}
+
+fn now(
+    _rt: &mut Runtime,
+    _call: &ast::Call,
+    _module: &Module,
+    _st: usize,
+    _lc: usize,
+    _cu: usize
+) -> Result<Option<Variable>, String> {
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    let val = match SystemTime::now().duration_since(UNIX_EPOCH) {
+        Ok(val) => Variable::f64(val.as_secs() as f64 +
+                                 val.subsec_nanos() as f64 / 1.0e9),
+        Err(err) => Variable::f64(-{
+            let val = err.duration();
+            val.as_secs() as f64 +
+            val.subsec_nanos() as f64 / 1.0e9
+        })
+    };
+    Ok(Some(val))
 }

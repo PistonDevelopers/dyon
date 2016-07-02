@@ -583,8 +583,8 @@ pub fn check(
         let is_reference = |i: usize| {
             let mut n: usize = call.children[i];
             let mut can_be_item = true;
-            // Item is 4 levels down inside arg/add/mul/val
-            for _ in 0..4 {
+            // Item is some levels down inside arg/add/expr/mul/val
+            loop {
                 let node: &Node = &nodes[n];
                 if node.kind == Kind::Item { break; }
                 if node.children.len() == 0 {

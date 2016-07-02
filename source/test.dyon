@@ -1,4 +1,35 @@
+/*
 fn main() {
-    a := "hello"
-    println(chars(a))
+    x := 2
+    y := 2
+    println(-x) // `-2`
+    println(x^y) // `4`
+    println(-x^y) // `-4`
+    println(-x^y+3) // `-1`
+    println((-x)^y) // `4`
+    println((-x)^y+3) // `7`
+    println(x * y) // `4`
+    println(-x * y + 1) // `-3`
+    println((-x) * (-y)) // `4`
+    println(-x * (-y) + 1) // `5`
+    println(-x * -y) // `4`
+}
+*/
+
+/*
+fn main() {
+    start := now()
+    for i 10_000_000 {}
+    end := now()
+    println(end - start)
+}
+*/
+
+fn main() {
+    println(true)
+    println(!true)
+    println(!false && false) // `false`
+    println(!true && false) // `false`
+    println(!false && true) // `true`
+    println(!true && true) // `true`
 }
