@@ -301,6 +301,15 @@ pub fn grab_expr(
                 source_range: unop.source_range.clone(),
             }))), Flow::Continue))
         }
+        &E::Norm(ref norm) => {
+            Ok((Grabbed::Expression(E::Norm(Box::new(ast::Norm {
+                expr: match grab_expr(level, rt, &norm.expr, side, module) {
+                    Ok((Grabbed::Expression(x), Flow::Continue)) => x,
+                    x => return x,
+                },
+                source_range: norm.source_range.clone(),
+            }))), Flow::Continue))
+        }
         &E::Vec4(ref vec4) => {
             Ok((Grabbed::Expression(E::Vec4(ast::Vec4 {
                 args: {

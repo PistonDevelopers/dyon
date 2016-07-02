@@ -94,7 +94,7 @@ impl Node {
             Pow | Sum | Prod | SumVec4 | Min | Max | Any | All |
             Vec4 | Vec4UnLoop | Swizzle |
             Assign | For | ForN | Link |
-            Closure | CallClosure | Grab => false,
+            Closure | CallClosure | Grab | Norm => false,
             Add | Mul | Compare => self.children.len() == 1,
             _ => true
         }
@@ -185,7 +185,6 @@ impl Node {
                 (_, Kind::Val) => {}
                 (_, Kind::Add) => {}
                 (_, Kind::Mul) => {}
-                (_, Kind::MulExpr) => {}
                 (_, Kind::Call) => {}
                 (_, Kind::Closure) => {}
                 (_, Kind::CallClosure) => {}
@@ -194,6 +193,7 @@ impl Node {
                 (_, Kind::Current) => { continue }
                 (Kind::CallClosure, Kind::Item) => { continue }
                 (_, Kind::Item) => {}
+                (_, Kind::Norm) => {}
                 (_, Kind::UnOp) => {
                     // The result of all unary operators does not depend
                     // on the lifetime of the argument.

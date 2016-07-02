@@ -18,6 +18,7 @@ use super::{
     Item,
     Link,
     Object,
+    Norm,
     Number,
     Swizzle,
     UnOpExpression,
@@ -231,6 +232,12 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
                 left: number(&cmp_expr.left, name, val),
                 right: number(&cmp_expr.right, name, val),
                 source_range: cmp_expr.source_range,
+            }))
+        }
+        E::Norm(ref norm) => {
+            E::Norm(Box::new(Norm {
+                expr: number(&norm.expr, name, val),
+                source_range: norm.source_range,
             }))
         }
         E::UnOp(ref unop_expr) => {

@@ -349,6 +349,7 @@ impl Runtime {
             Go(ref go) => self.go(go, module),
             Call(ref call) => self.call(call, module),
             Item(ref item) => self.item(item, side, module),
+            Norm(ref norm) => self.norm(norm, side, module),
             UnOp(ref unop) => self.unop(unop, side, module),
             BinOp(ref binop) => self.binop(binop, side, module),
             Assign(ref assign) => self.assign(assign.op, &assign.left, &assign.right, module),
@@ -3274,6 +3275,28 @@ impl Runtime {
         };
         Ok((Some(Variable::Vec4([x as f32, y as f32, z as f32, w as f32])), Flow::Continue))
     }
+    fn norm(
+        &mut self,
+        norm: &ast::Norm,
+        side: Side,
+        module: &Module
+    ) -> Result<(Option<Variable>, Flow), String> {
+        let val = match try!(self.expression(&norm.expr, side, module)) {
+            (Some(x), Flow::Continue) => x,
+            (x, Flow::Return) => return Ok((x, Flow::Return)),
+            _ => return Err(module.error(norm.source_range,
+                &format!("{}\nExpected something from unary argument",
+                    self.stack_trace()), self))
+        };
+        let v = match self.resolve(&val) {
+            &Variable::Vec4(b) => {
+                Variable::f64((b[0] * b[0] + b[1] * b[1] + b[2] * b[2]).sqrt() as f64)
+            }
+            x => return Err(module.error(norm.source_range,
+                &self.expected(x, "vec4"), self))
+        };
+        Ok((Some(v), Flow::Continue))
+    }
     fn unop(
         &mut self,
         unop: &ast::UnOpExpression,
@@ -3288,14 +3311,6 @@ impl Runtime {
                     self.stack_trace()), self))
         };
         let v = match self.resolve(&val) {
-            &Variable::Vec4(b) => {
-                Variable::f64(match unop.op {
-                    ast::UnOp::Norm => (b[0] * b[0] + b[1] * b[1] + b[2] * b[2]).sqrt() as f64,
-                    _ => return Err(module.error(unop.source_range,
-                                    &format!("{}\nUnknown vec4 unary operator",
-                                             self.stack_trace()), self))
-                })
-            }
             &Variable::Bool(b, ref sec) => {
                 Variable::Bool(match unop.op {
                     ast::UnOp::Not => !b,

@@ -258,6 +258,7 @@ pub fn write_expr<W: io::Write>(
             try!(write_for_n(w, rt, for_n, tabs));
         }
         &E::If(ref if_expr) => try!(write_if(w, rt, if_expr, tabs)),
+        &E::Norm(ref norm) => try!(write_norm(w, rt, norm, tabs)),
         &E::UnOp(ref unop) => try!(write_unop(w, rt, unop, tabs)),
         &E::Try(ref expr) => {
             try!(write_expr(w, rt, expr, tabs));
@@ -313,6 +314,18 @@ pub fn write_binop<W: io::Write>(
     Ok(())
 }
 
+pub fn write_norm<W: io::Write>(
+    w: &mut W,
+    rt: &Runtime,
+    norm: &ast::Norm,
+    tabs: u32
+) -> Result<(), io::Error> {
+    try!(write!(w, "|"));
+    try!(write_expr(w, rt, &norm.expr, tabs));
+    try!(write!(w, "|"));
+    Ok(())
+}
+
 pub fn write_unop<W: io::Write>(
     w: &mut W,
     rt: &Runtime,
@@ -322,11 +335,6 @@ pub fn write_unop<W: io::Write>(
     use ast::UnOp::*;
 
     match unop.op {
-        Norm => {
-            try!(write!(w, "|"));
-            try!(write_expr(w, rt, &unop.expr, tabs));
-            try!(write!(w, "|"));
-        }
         Not => {
             try!(write!(w, "!"));
             try!(write_expr(w, rt, &unop.expr, tabs));

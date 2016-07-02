@@ -529,6 +529,7 @@ pub enum Expression {
     If(Box<If>),
     Compare(Box<Compare>),
     UnOp(Box<UnOpExpression>),
+    Norm(Box<Norm>),
     Variable(Range, Variable),
     Try(Box<Expression>),
     Swizzle(Box<Swizzle>),
@@ -618,6 +619,10 @@ impl Expression {
                     file, source, convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::Item(val));
+            } else if let Ok((range, val)) = Norm::from_meta_data(
+                    file, source, convert, ignored) {
+                convert.update(range);
+                result = Some(Expression::Norm(Box::new(val)));
             } else if let Ok((range, val)) = convert.meta_string("text") {
                 convert.update(range);
                 result = Some(Expression::Text(Text {
@@ -791,6 +796,7 @@ impl Expression {
             All(ref for_n_expr) => for_n_expr.source_range,
             If(ref if_expr) => if_expr.source_range,
             Compare(ref comp) => comp.source_range,
+            Norm(ref norm) => norm.source_range,
             UnOp(ref unop) => unop.source_range,
             Variable(range, _) => range,
             Try(ref expr) => expr.source_range(),
@@ -857,6 +863,7 @@ impl Expression {
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module),
             If(ref if_expr) => if_expr.resolve_locals(relative, stack, closure_stack, module),
             Compare(ref comp) => comp.resolve_locals(relative, stack, closure_stack, module),
+            Norm(ref norm) => norm.resolve_locals(relative, stack, closure_stack, module),
             UnOp(ref unop) => unop.resolve_locals(relative, stack, closure_stack, module),
             Variable(_, _) => {}
             Try(ref expr) => expr.resolve_locals(relative, stack, closure_stack, module),
@@ -1160,7 +1167,7 @@ impl Add {
                 convert.update(range);
                 break;
             } else if let Ok((range, val)) = Expression::from_meta_data(
-                    file, source, "mul_expr", convert, ignored) {
+                    file, source, "expr", convert, ignored) {
                 convert.update(range);
                 items.push(val);
             } else if let Ok((range, _)) = convert.meta_bool("+") {
@@ -1387,7 +1394,6 @@ impl BinOp {
 pub enum UnOp {
     Not,
     Neg,
-    Norm,
 }
 
 #[derive(Debug, Clone)]
@@ -2009,6 +2015,60 @@ impl CallClosure {
 }
 
 #[derive(Debug, Clone)]
+pub struct Norm {
+    pub expr: Expression,
+    pub source_range: Range,
+}
+
+impl Norm {
+    pub fn from_meta_data(
+        file: &Arc<String>,
+        source: &Arc<String>,
+        mut convert: Convert,
+        ignored: &mut Vec<Range>)
+    -> Result<(Range, Norm), ()> {
+        let start = convert.clone();
+        let node = "norm";
+        let start_range = try!(convert.start_node(node));
+        convert.update(start_range);
+
+        let mut expr: Option<Expression> = None;
+        loop {
+            if let Ok(range) = convert.end_node(node) {
+                convert.update(range);
+                break;
+            } else if let Ok((range, val)) = Expression::from_meta_data(
+                file, source, "expr", convert, ignored) {
+                convert.update(range);
+                expr = Some(val);
+            } else {
+                let range = convert.ignore();
+                convert.update(range);
+                ignored.push(range);
+            }
+        }
+
+        let expr = try!(expr.ok_or(()));
+        Ok((convert.subtract(start), Norm {
+            expr: expr,
+            source_range: convert.source(start).unwrap()
+        }))
+    }
+
+    pub fn resolve_locals(
+        &self,
+        relative: usize,
+        stack: &mut Vec<Option<Arc<String>>>,
+        closure_stack: &mut Vec<usize>,
+        module: &Module
+    ) {
+        let st = stack.len();
+        self.expr.resolve_locals(relative, stack, closure_stack, module);
+        stack.truncate(st);
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct BinOpExpression {
     pub op: BinOp,
     pub left: Expression,
@@ -2063,9 +2123,6 @@ impl UnOpExpression {
             } else if let Ok((range, _)) = convert.meta_bool("-") {
                 convert.update(range);
                 unop = Some(UnOp::Neg);
-            } else if let Ok((range, _)) = convert.meta_bool("norm") {
-                convert.update(range);
-                unop = Some(UnOp::Norm);
             } else if let Ok((range, val)) = Expression::from_meta_data(
                 file, source, "expr", convert, ignored) {
                 convert.update(range);
