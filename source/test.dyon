@@ -1,4 +1,4 @@
-
+/*
 fn main() {
     x := 2
     y := 2
@@ -14,13 +14,11 @@ fn main() {
     println(-x * (-y) + 1) // `5`
     println(-x * -y) // `4`
 }
-
-
-/*
-fn main() {
-    x := 2
-    _ := foo(x)
-}
-
-fn foo(x: 'return) -> { return x }
 */
+
+fn main() {
+    start := now()
+    for i 10_000_000 {}
+    end := now()
+    println(end - start)
+}
