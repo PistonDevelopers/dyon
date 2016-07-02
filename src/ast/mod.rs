@@ -610,6 +610,10 @@ impl Expression {
                     file, source, convert, ignored) {
                 convert.update(range);
                 result = Some(val.to_expression());
+            } else if let Ok((range, val)) = Mul::from_meta_data(
+                    file, source, convert, ignored) {
+                convert.update(range);
+                result = Some(val.to_expression());
             } else if let Ok((range, val)) = Item::from_meta_data(
                     file, source, convert, ignored) {
                 convert.update(range);
@@ -719,10 +723,6 @@ impl Expression {
                     file, source, convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::Compare(Box::new(val)));
-            } else if let Ok((range, val)) = UnOpExpression::from_meta_data(
-                    file, source, convert, ignored) {
-                convert.update(range);
-                result = Some(Expression::UnOp(Box::new(val)));
             } else if let Ok((range, _)) = convert.meta_bool("try") {
                 convert.update(range);
                 result = Some(Expression::Try(Box::new(result.unwrap())));
@@ -1136,7 +1136,7 @@ impl ArrayFill {
 
 #[derive(Debug, Clone)]
 pub struct Add {
-    pub items: Vec<Mul>,
+    pub items: Vec<Expression>,
     pub ops: Vec<BinOp>,
     pub source_range: Range,
 }
@@ -1159,8 +1159,8 @@ impl Add {
             if let Ok(range) = convert.end_node(node) {
                 convert.update(range);
                 break;
-            } else if let Ok((range, val)) = Mul::from_meta_data(
-                    file, source, convert, ignored) {
+            } else if let Ok((range, val)) = Expression::from_meta_data(
+                    file, source, "mul_expr", convert, ignored) {
                 convert.update(range);
                 items.push(val);
             } else if let Ok((range, _)) = convert.meta_bool("+") {
@@ -1188,7 +1188,7 @@ impl Add {
 
     pub fn to_expression(mut self) -> Expression {
         if self.items.len() == 1 {
-            self.items[0].clone().to_expression()
+            self.items[0].clone()
         } else {
             let op = self.ops.pop().unwrap();
             let last = self.items.pop().unwrap();
@@ -1196,7 +1196,7 @@ impl Add {
             Expression::BinOp(Box::new(BinOpExpression {
                 op: op,
                 left: self.to_expression(),
-                right: last.to_expression(),
+                right: last,
                 source_range: source_range
             }))
         }
@@ -1205,7 +1205,7 @@ impl Add {
 
 #[derive(Debug, Clone)]
 pub struct Mul {
-    pub items: Vec<MulVar>,
+    pub items: Vec<Expression>,
     pub ops: Vec<BinOp>,
     pub source_range: Range,
 }
@@ -1228,8 +1228,16 @@ impl Mul {
             if let Ok(range) = convert.end_node(node) {
                 convert.update(range);
                 break;
-            } else if let Ok((range, val)) = MulVar::from_meta_data(
+            } else if let Ok((range, val)) = UnOpExpression::from_meta_data(
                     file, source, convert, ignored) {
+                convert.update(range);
+                items.push(Expression::UnOp(Box::new(val)));
+            } else if let Ok((range, val)) = Pow::from_meta_data(
+                    file, source, convert, ignored) {
+                convert.update(range);
+                items.push(val.to_expression());
+            } else if let Ok((range, val)) = Expression::from_meta_data(
+                    file, source, "val", convert, ignored) {
                 convert.update(range);
                 items.push(val);
             } else if let Ok((range, _)) = convert.meta_bool("*.") {
@@ -1266,7 +1274,7 @@ impl Mul {
 
     pub fn to_expression(mut self) -> Expression {
         if self.items.len() == 1 {
-            self.items[0].clone().to_expression()
+            self.items[0].clone()
         } else {
             let op = self.ops.pop().expect("Expected a binary operation");
             let last = self.items.pop().expect("Expected argument");
@@ -1274,46 +1282,9 @@ impl Mul {
             Expression::BinOp(Box::new(BinOpExpression {
                 op: op,
                 left: self.to_expression(),
-                right: last.to_expression(),
+                right: last,
                 source_range: source_range,
             }))
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub enum MulVar {
-    Pow(Pow),
-    Val(Expression),
-}
-
-impl MulVar {
-    pub fn from_meta_data(
-        file: &Arc<String>,
-        source: &Arc<String>,
-        convert: Convert,
-        ignored: &mut Vec<Range>)
-    -> Result<(Range, MulVar), ()> {
-        if let Ok((range, val)) = Expression::from_meta_data(
-                file, source, "val", convert, ignored) {
-            Ok((range, MulVar::Val(val)))
-        } else if let Ok((range, val)) = Pow::from_meta_data(
-                file, source, convert, ignored) {
-            Ok((range, MulVar::Pow(val)))
-        } else {
-            Err(())
-        }
-    }
-
-    pub fn to_expression(self) -> Expression {
-        match self {
-            MulVar::Pow(a) => Expression::BinOp(Box::new(BinOpExpression {
-                op: BinOp::Pow,
-                left: a.base,
-                right: a.exp,
-                source_range: a.source_range,
-            })),
-            MulVar::Val(a) => a
         }
     }
 }
@@ -1364,6 +1335,15 @@ impl Pow {
             base: base,
             exp: exp,
             source_range: convert.source(start).unwrap()
+        }))
+    }
+
+    pub fn to_expression(self) -> Expression {
+        Expression::BinOp(Box::new(BinOpExpression {
+                op: BinOp::Pow,
+                left: self.base,
+                right: self.exp,
+                source_range: self.source_range,
         }))
     }
 }

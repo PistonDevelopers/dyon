@@ -185,6 +185,7 @@ impl Node {
                 (_, Kind::Val) => {}
                 (_, Kind::Add) => {}
                 (_, Kind::Mul) => {}
+                (_, Kind::MulExpr) => {}
                 (_, Kind::Call) => {}
                 (_, Kind::Closure) => {}
                 (_, Kind::CallClosure) => {}
