@@ -79,7 +79,8 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\u005c"
 15 color = ["#" .._seps!:"color"]
 16 text = .t?:"text"
 17 bool = {"true":"bool" "false":!"bool"}
-18 unop = [{"!":"!" "¬":"!" "-":"-"} ?w mul_expr:"expr"]
+18 unop_not = [{"!":"!" "¬":"!"} ?w lexpr:"expr"]
+18 unop_neg = ["-":"-" ?w mul_expr:"expr"]
 19 norm = ["|" ?w expr:"expr" ?w "|"]
 19 item = [?"~":"current" ?w .._seps!:"name" ?[?w "?":"try_item"]
     ?item_extra:"item_extra"]
@@ -118,7 +119,7 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\u005c"
 43 , = [?w "," ?w]
 44 arr = {array:"array" array_fill:"array_fill"}
 45 items = {vec4:"vec4" link:"link" grab:"grab"
-            ["(" ?w expr ?w ")"] norm:"norm"
+            ["(" ?w expr ?w ")"] unop_not:"unop" norm:"norm"
             text go:"go"
             call_closure:"call_closure" named_call_closure:"named_call_closure"
             call:"call" named_call:"named_call"
@@ -175,7 +176,7 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\u005c"
 104 / = [?w "/":"/" ?w]
 105 % = [?w "%":"%" ?w]
 107 pow = [lexpr:"base" ?w "^" ?w lexpr:"exp"]
-108 mul = .s!({* / %} {unop:"unop" pow:"pow" lexpr:"val"})
+108 mul = .s!({* / %} {unop_neg:"unop" pow:"pow" lexpr:"val"})
 109 mul_expr = {mul:"mul"}
 109 add = .s!({+ -} mul_expr:"expr")
 

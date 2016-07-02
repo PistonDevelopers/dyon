@@ -611,6 +611,10 @@ impl Expression {
                     file, source, convert, ignored) {
                 convert.update(range);
                 result = Some(val.to_expression());
+            } else if let Ok((range, val)) = UnOpExpression::from_meta_data(
+                    file, source, convert, ignored) {
+                convert.update(range);
+                result = Some(Expression::UnOp(Box::new(val)));
             } else if let Ok((range, val)) = Mul::from_meta_data(
                     file, source, convert, ignored) {
                 convert.update(range);

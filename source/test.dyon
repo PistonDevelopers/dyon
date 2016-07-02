@@ -16,9 +16,20 @@ fn main() {
 }
 */
 
+/*
 fn main() {
     start := now()
     for i 10_000_000 {}
     end := now()
     println(end - start)
+}
+*/
+
+fn main() {
+    println(true)
+    println(!true)
+    println(!false && false) // `false`
+    println(!true && false) // `false`
+    println(!false && true) // `true`
+    println(!true && true) // `true`
 }
