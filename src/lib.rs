@@ -304,6 +304,15 @@ pub fn run(source: &str) -> Result<(), String> {
     Ok(())
 }
 
+// Runs a program using a syntax file and the sourcode
+pub fn run_string(code: String) -> Result<(), String> {
+    let mut module = Module::new_intrinsics(Arc::new(Prelude::new_intrinsics().functions));
+    try!(load_string(code, &mut module));
+    let mut runtime = runtime::Runtime::new();
+    try!(runtime.run(&module));
+    Ok(())
+}
+
 /// Loads a source from file.
 pub fn load(source: &str, module: &mut Module) -> Result<(), String> {
     use std::thread;
@@ -388,6 +397,85 @@ pub fn load(source: &str, module: &mut Module) -> Result<(), String> {
 
     Ok(())
 }
+
+// Loads a source from a string
+pub fn load_string(d: String, module: &mut Module) -> Result<(), String> {
+    use std::thread;
+    use piston_meta::{parse_errstr, syntax_errstr, json};
+
+    let syntax = include_str!("../assets/syntax.txt");
+    let syntax_rules = try!(syntax_errstr(syntax));
+
+    let mut data = vec![];
+    try!(parse_errstr(&syntax_rules, &d, &mut data).map_err(
+        |err| format!("In `{}:`\n{}", d, err)
+    ));
+    let check_data = data.clone();
+    let prelude = Arc::new(Prelude::from_module(module));
+    let prelude2 = prelude.clone();
+
+    // Do lifetime checking in parallel directly on meta data.
+    let handle = thread::spawn(move || {
+        let check_data = check_data;
+        lifetime::check(&check_data, &prelude2)
+    });
+
+    // Convert to AST.
+    let mut ignored = vec![];
+    let conv_res = ast::convert(Arc::new("".into()), Arc::new(d.clone()), &data, &mut ignored, module);
+
+    // Check that lifetime checking succeeded.
+    match handle.join().unwrap() {
+        Ok(refined_rets) => {
+            for (name, ty) in &refined_rets {
+                if let FnIndex::Loaded(f_index) = module.find_function(name, 0) {
+                    let f = &mut module.functions[f_index as usize];
+                    f.ret = ty.clone();
+                }
+            }
+        }
+        Err(err_msg) => {
+            use std::io::Write;
+            use piston_meta::ParseErrorHandler;
+
+            let (range, msg) = err_msg.decouple();
+
+            let mut buf: Vec<u8> = vec![];
+            writeln!(&mut buf, "In `{}`:\n", d).unwrap();
+            ParseErrorHandler::new(&d)
+                .write_msg(&mut buf, range, &msg)
+                .unwrap();
+            return Err(String::from_utf8(buf).unwrap())
+        }
+    }
+
+    if ignored.len() > 0 || conv_res.is_err() {
+        use std::io::Write;
+        use piston_meta::ParseErrorHandler;
+
+        let mut buf: Vec<u8> = vec![];
+        if ignored.len() > 0 {
+            writeln!(&mut buf, "Some meta data was ignored in the syntax").unwrap();
+            writeln!(&mut buf, "START IGNORED").unwrap();
+            json::write(&mut buf, &data[ignored[0].iter()]).unwrap();
+            writeln!(&mut buf, "END IGNORED").unwrap();
+
+            writeln!(&mut buf, "In `{}`:\n", d).unwrap();
+            ParseErrorHandler::new(&d)
+                .write_msg(&mut buf,
+                           data[ignored[0].iter()][0].range(),
+                           "Could not understand this")
+                .unwrap();
+        }
+        if let Err(()) = conv_res {
+            writeln!(&mut buf, "Conversion error").unwrap();
+        }
+        return Err(String::from_utf8(buf).unwrap());
+    }
+
+    Ok(())
+}
+
 
 /// Reports and error to standard output.
 pub fn error(res: Result<(), String>) -> bool {
