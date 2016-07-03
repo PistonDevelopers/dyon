@@ -304,24 +304,38 @@ pub fn run(source: &str) -> Result<(), String> {
     Ok(())
 }
 
+// Runs a program using a syntax file and the sourcode
+pub fn run_string(code: String) -> Result<(), String> {
+    let mut module = Module::new_intrinsics(Arc::new(Prelude::new_intrinsics().functions));
+    try!(load_string(code, &mut module));
+    let mut runtime = runtime::Runtime::new();
+    try!(runtime.run(&module));
+    Ok(())
+}
+
 /// Loads a source from file.
 pub fn load(source: &str, module: &mut Module) -> Result<(), String> {
-    use std::thread;
     use std::fs::File;
     use std::io::Read;
+
+    let mut data_file = try!(File::open(source).map_err(|err|
+        format!("Could not open `{}`, {}", source, err)));
+    let mut d = String::new();
+    data_file.read_to_string(&mut d).unwrap();
+    load_string(d, module)
+}
+
+// Loads a source from a string
+pub fn load_string(d: String, module: &mut Module) -> Result<(), String> {
+    use std::thread;
     use piston_meta::{parse_errstr, syntax_errstr, json};
 
     let syntax = include_str!("../assets/syntax.txt");
     let syntax_rules = try!(syntax_errstr(syntax));
 
-    let mut data_file = try!(File::open(source).map_err(|err|
-        format!("Could not open `{}`, {}", source, err)));
-    let mut d = Arc::new(String::new());
-    data_file.read_to_string(Arc::make_mut(&mut d)).unwrap();
-
     let mut data = vec![];
     try!(parse_errstr(&syntax_rules, &d, &mut data).map_err(
-        |err| format!("In `{}:`\n{}", source, err)
+        |err| format!("In `{}:`\n{}", d, err)
     ));
     let check_data = data.clone();
     let prelude = Arc::new(Prelude::from_module(module));
@@ -335,7 +349,7 @@ pub fn load(source: &str, module: &mut Module) -> Result<(), String> {
 
     // Convert to AST.
     let mut ignored = vec![];
-    let conv_res = ast::convert(Arc::new(source.into()), d.clone(), &data, &mut ignored, module);
+    let conv_res = ast::convert(Arc::new("".into()), Arc::new(d.clone()), &data, &mut ignored, module);
 
     // Check that lifetime checking succeeded.
     match handle.join().unwrap() {
@@ -354,7 +368,7 @@ pub fn load(source: &str, module: &mut Module) -> Result<(), String> {
             let (range, msg) = err_msg.decouple();
 
             let mut buf: Vec<u8> = vec![];
-            writeln!(&mut buf, "In `{}`:\n", source).unwrap();
+            writeln!(&mut buf, "In `{}`:\n", d).unwrap();
             ParseErrorHandler::new(&d)
                 .write_msg(&mut buf, range, &msg)
                 .unwrap();
@@ -373,7 +387,7 @@ pub fn load(source: &str, module: &mut Module) -> Result<(), String> {
             json::write(&mut buf, &data[ignored[0].iter()]).unwrap();
             writeln!(&mut buf, "END IGNORED").unwrap();
 
-            writeln!(&mut buf, "In `{}`:\n", source).unwrap();
+            writeln!(&mut buf, "In `{}`:\n", d).unwrap();
             ParseErrorHandler::new(&d)
                 .write_msg(&mut buf,
                            data[ignored[0].iter()][0].range(),
@@ -388,6 +402,7 @@ pub fn load(source: &str, module: &mut Module) -> Result<(), String> {
 
     Ok(())
 }
+
 
 /// Reports and error to standard output.
 pub fn error(res: Result<(), String>) -> bool {
