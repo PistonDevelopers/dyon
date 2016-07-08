@@ -20,13 +20,18 @@ fn main() {
         Some(m) => m
     };
     let mut dyon_runtime = Runtime::new();
+    let factory = window.factory.clone();
+    let font = "assets/FiraSans-Regular.ttf";
+    let mut glyphs = Glyphs::new(font, factory).unwrap();
 
     let mut e: Option<Event> = None;
     let window_guard = CurrentGuard::new(&mut window);
     let event_guard: CurrentGuard<Option<Event>> = CurrentGuard::new(&mut e);
+    let glyphs_guard: CurrentGuard<Glyphs> = CurrentGuard::new(&mut glyphs);
     if error(dyon_runtime.run(&dyon_module)) {
         return;
     }
+    drop(glyphs_guard);
     drop(event_guard);
     drop(window_guard);
 }
@@ -65,9 +70,10 @@ mod dyon_functions {
 
         let window = unsafe { &mut *Current::<PistonWindow>::new() };
         let e = unsafe { &*Current::<Option<Event>>::new() };
+        let glyphs = unsafe { &mut *Current::<Glyphs>::new() };
         if let &Some(ref e) = e {
             window.draw_2d(e, |c, g| {
-                draw_2d(rt, c, g)
+                draw_2d(rt, glyphs, c, g)
             }).unwrap_or(Ok(()))
         } else {
             Err(NO_EVENT.into())

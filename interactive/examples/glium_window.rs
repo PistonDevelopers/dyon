@@ -5,7 +5,7 @@ extern crate dyon;
 extern crate current;
 extern crate dyon_interactive;
 
-use glium_graphics::{Glium2d, GliumWindow, OpenGL};
+use glium_graphics::{Glium2d, GliumWindow, GlyphCache, OpenGL};
 use piston::window::WindowSettings;
 use piston::input::Event;
 use dyon::{error, load, Module, Runtime};
@@ -25,15 +25,20 @@ fn main() {
     let mut g2d = Glium2d::new(opengl, window);
     let mut e: Option<Event> = None;
     let mut target = window.draw();
+    let font = "assets/FiraSans-Regular.ttf";
+    let mut glyphs = GlyphCache::new(font, window.clone())
+        .expect("Could not load font");
 
     {
         let window_guard = CurrentGuard::new(window);
         let event_guard: CurrentGuard<Option<Event>> = CurrentGuard::new(&mut e);
         let g2d_guard = CurrentGuard::new(&mut g2d);
         let target_guard = CurrentGuard::new(&mut target);
+        let glyphs_guard = CurrentGuard::new(&mut glyphs);
         if error(runtime.run(&module)) {
             return;
         }
+        drop(glyphs_guard);
         drop(target_guard);
         drop(g2d_guard);
         drop(event_guard);
@@ -78,16 +83,18 @@ mod dyon_functions {
 
     pub fn draw(rt: &mut Runtime) -> Result<(), String> {
         use piston::input::*;
-        use glium_graphics::Glium2d;
+        use glium_graphics::{Glium2d, GliumWindow, GlyphCache};
         use glium::Frame;
 
         let e = unsafe { &*Current::<Option<Event>>::new() };
         let g2d = unsafe { &mut *Current::<Glium2d>::new() };
         let target = unsafe { &mut *Current::<Frame>::new() };
+        let glyphs = unsafe { &mut *Current::<GlyphCache<GliumWindow>>::new() };
+
         if let &Some(ref e) = e {
             if let Some(args) = e.render_args() {
                 g2d.draw(target, args.viewport(), |c, g| {
-                    draw_2d(rt, c, g)
+                    draw_2d(rt, glyphs, c, g)
                 })
             } else {
                 Ok(())
