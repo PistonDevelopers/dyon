@@ -91,6 +91,8 @@ fn render() ~ settings: Settings, data: Data {
         line(color: walls[i][0], radius: 5, from: walls[i][1], to: walls[i][2])
     }
 
+    text(color: #004400, size: 60, pos: (250, 80), string: "Hello!")
+
     draw(draw_list)
 }
 

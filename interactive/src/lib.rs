@@ -10,6 +10,7 @@ use self::current::Current;
 use self::piston::input::*;
 use self::piston::window::*;
 use self::graphics::{Context, Graphics};
+use self::graphics::character::CharacterCache;
 
 pub const NO_EVENT: &'static str = "No event";
 
@@ -173,7 +174,12 @@ pub fn set__title<W: Any + AdvancedWindow>(rt: &mut Runtime) -> Result<(), Strin
 }
 
 /// Helper method for drawing 2D in Dyon environment.
-pub fn draw_2d<G: Graphics>(rt: &mut Runtime, c: Context, g: &mut G) -> Result<(), String> {
+pub fn draw_2d<C: CharacterCache<Texture = G::Texture>, G: Graphics>(
+    rt: &mut Runtime,
+    glyphs: &mut C,
+    c: Context,
+    g: &mut G
+) -> Result<(), String> {
     use self::graphics::*;
     use self::graphics::types::Matrix2d;
 
@@ -231,6 +237,18 @@ pub fn draw_2d<G: Graphics>(rt: &mut Runtime, c: Context, g: &mut G) -> Result<(
                         Ellipse::new_border(color, border)
                         .resolution(resolution as u32)
                         .draw([corner[0], corner[1], size[0], size[1]], &c.draw_state, transform, g);
+                    }
+                    "text__color_size_pos_string" => {
+                        let color: [f32; 4] = try!(rt.var_vec4(&it[1]));
+                        let size: u32 = try!(rt.var(&it[2]));
+                        let pos: [f64; 2] = try!(rt.var_vec4(&it[3]));
+                        let text: Arc<String> = try!(rt.var(&it[4]));
+                        text::Text::new_color(color, size).draw(
+                            &text,
+                            glyphs,
+                            &c.draw_state,
+                            transform.trans(pos[0], pos[1]), g
+                        );
                     }
                     _ => {}
                 }
