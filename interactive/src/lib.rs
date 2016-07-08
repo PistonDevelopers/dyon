@@ -196,7 +196,7 @@ pub fn draw_2d<C: CharacterCache<Texture = G::Texture>, G: Graphics>(
                         let color: [f32; 4] = try!(rt.var_vec4(&it[1]));
                         clear(color, g);
                     }
-                    "transform_rx_ry" => {
+                    "transform__rx_ry" => {
                         // Changes transform matrix.
                         let rx: [f32; 4] = try!(rt.var_vec4(&it[1]));
                         let ry: [f32; 4] = try!(rt.var_vec4(&it[2]));
@@ -206,20 +206,20 @@ pub fn draw_2d<C: CharacterCache<Texture = G::Texture>, G: Graphics>(
                         ];
                         transform = math::multiply(c.transform, t);
                     }
-                    "line_color_radius_from_to" => {
+                    "line__color_radius_from_to" => {
                         let color: [f32; 4] = try!(rt.var_vec4(&it[1]));
                         let radius: f64 = try!(rt.var(&it[2]));
                         let from: [f64; 2] = try!(rt.var_vec4(&it[3]));
                         let to: [f64; 2] = try!(rt.var_vec4(&it[4]));
                         line(color, radius, [from[0], from[1], to[0], to[1]], transform, g);
                     }
-                    "rectangle_color_corner_size" => {
+                    "rectangle__color_corner_size" => {
                         let color: [f32; 4] = try!(rt.var_vec4(&it[1]));
                         let corner: [f64; 2] = try!(rt.var_vec4(&it[2]));
                         let size: [f64; 2] = try!(rt.var_vec4(&it[3]));
                         rectangle(color, [corner[0], corner[1], size[0], size[1]], transform, g);
                     }
-                    "ellipse_color_corner_size_resolution" => {
+                    "ellipse__color_corner_size_resolution" => {
                         let color: [f32; 4] = try!(rt.var_vec4(&it[1]));
                         let corner: [f64; 2] = try!(rt.var_vec4(&it[2]));
                         let size: [f64; 2] = try!(rt.var_vec4(&it[3]));
@@ -228,7 +228,7 @@ pub fn draw_2d<C: CharacterCache<Texture = G::Texture>, G: Graphics>(
                         .resolution(resolution as u32)
                         .draw([corner[0], corner[1], size[0], size[1]], &c.draw_state, transform, g);
                     }
-                    "ellipse_border_color_corner_size_resolution" => {
+                    "ellipse__border_color_corner_size_resolution" => {
                         let border: f64 = try!(rt.var(&it[1]));
                         let color: [f32; 4] = try!(rt.var_vec4(&it[2]));
                         let corner: [f64; 2] = try!(rt.var_vec4(&it[3]));
