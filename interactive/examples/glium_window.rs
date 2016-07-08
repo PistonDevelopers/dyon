@@ -54,10 +54,10 @@ fn load_module() -> Option<Module> {
     use dyon_functions::*;
     use dyon_interactive::add_functions;
     use dyon::{Lt, Module, Dfn, Type};
-    use glium_graphics::GliumWindow;
+    use glium_graphics::{GliumWindow, GlyphCache};
 
     let mut module = Module::new();
-    add_functions::<GliumWindow>(&mut module);
+    add_functions::<GliumWindow, GlyphCache<GliumWindow>>(&mut module);
     module.add(Arc::new("draw".into()), draw, Dfn {
         lts: vec![Lt::Default],
         tys: vec![Type::array()],
