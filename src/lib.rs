@@ -295,7 +295,7 @@ impl Module {
     }
 }
 
-/// Runs a program using a syntax file and the source file.
+/// Runs a program using a source file.
 pub fn run(source: &str) -> Result<(), String> {
     let mut module = Module::new_intrinsics(Arc::new(Prelude::new_intrinsics().functions));
     try!(load(source, &mut module));
@@ -304,20 +304,38 @@ pub fn run(source: &str) -> Result<(), String> {
     Ok(())
 }
 
-/// Loads a source from file.
+/// Runs a program from a string.
+pub fn run_str(source: &str, d: Arc<String>) -> Result<(), String> {
+    let mut module = Module::new_intrinsics(Arc::new(Prelude::new_intrinsics().functions));
+    try!(load_str(source, d, &mut module));
+    let mut runtime = runtime::Runtime::new();
+    try!(runtime.run(&module));
+    Ok(())
+}
+
+/// Loads source from file.
 pub fn load(source: &str, module: &mut Module) -> Result<(), String> {
-    use std::thread;
     use std::fs::File;
     use std::io::Read;
+
+    let mut data_file = try!(File::open(source).map_err(|err|
+        format!("Could not open `{}`, {}", source, err)));
+    let mut data = Arc::new(String::new());
+    data_file.read_to_string(Arc::make_mut(&mut data)).unwrap();
+    load_str(source, data, module)
+}
+
+/// Loads a source from string.
+///
+/// - source - The name of source file
+/// - d - The data of source file
+/// - module - The module to load the source
+pub fn load_str(source: &str, d: Arc<String>, module: &mut Module) -> Result<(), String> {
+    use std::thread;
     use piston_meta::{parse_errstr, syntax_errstr, json};
 
     let syntax = include_str!("../assets/syntax.txt");
     let syntax_rules = try!(syntax_errstr(syntax));
-
-    let mut data_file = try!(File::open(source).map_err(|err|
-        format!("Could not open `{}`, {}", source, err)));
-    let mut d = Arc::new(String::new());
-    data_file.read_to_string(Arc::make_mut(&mut d)).unwrap();
 
     let mut data = vec![];
     try!(parse_errstr(&syntax_rules, &d, &mut data).map_err(
