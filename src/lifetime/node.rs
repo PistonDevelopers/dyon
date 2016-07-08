@@ -381,6 +381,10 @@ pub fn convert_meta_data(
                         let i = *parents.last().unwrap();
                         nodes[i].ty = Some(Type::Text);
                     }
+                    "color" => {
+                        let i = *parents.last().unwrap();
+                        nodes[i].ty = Some(Type::Vec4);
+                    }
                     _ => {}
                 }
             }
