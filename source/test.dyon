@@ -1,5 +1,5 @@
 fn main() {
-    nan := 0/0
-    println((nan * 0) != 0)
-    println(prod i 3 { i + 1 })
+    println(white())
 }
+
+white() = #ffffff
