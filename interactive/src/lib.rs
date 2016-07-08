@@ -14,7 +14,7 @@ use self::graphics::character::CharacterCache;
 
 pub const NO_EVENT: &'static str = "No event";
 
-pub fn add_functions<W: Any + AdvancedWindow>(module: &mut Module) {
+pub fn add_functions<W: Any + AdvancedWindow, C: Any + CharacterCache>(module: &mut Module) {
     module.add(Arc::new("window_size".into()), window_size::<W>, Dfn {
         lts: vec![],
         tys: vec![],
@@ -78,6 +78,12 @@ pub fn add_functions<W: Any + AdvancedWindow>(module: &mut Module) {
             lts: vec![],
             tys: vec![],
             ret: Type::Option(Box::new(Type::F64))
+        });
+    module.add(Arc::new("width__size_string".into()),
+        width__size_string::<C>, Dfn {
+            lts: vec![Lt::Default; 2],
+            tys: vec![Type::F64, Type::Text],
+            ret: Type::F64
         });
 }
 
@@ -170,6 +176,15 @@ pub fn set__title<W: Any + AdvancedWindow>(rt: &mut Runtime) -> Result<(), Strin
     let window = unsafe { &mut *Current::<W>::new() };
     let title: Arc<String> = try!(rt.pop());
     window.set_title((*title).clone());
+    Ok(())
+}
+
+#[allow(non_snake_case)]
+pub fn width__size_string<C: Any + CharacterCache>(rt: &mut Runtime) -> Result<(), String> {
+    let glyphs = unsafe { &mut *Current::<C>::new() };
+    let s: Arc<String> = try!(rt.pop());
+    let size: u32 = try!(rt.pop());
+    rt.push(glyphs.width(size, &s));
     Ok(())
 }
 

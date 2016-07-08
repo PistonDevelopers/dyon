@@ -41,7 +41,7 @@ fn load_module() -> Option<Module> {
     use dyon_interactive::add_functions;
 
     let mut module = Module::new();
-    add_functions::<PistonWindow>(&mut module);
+    add_functions::<PistonWindow, Glyphs>(&mut module);
     module.add(Arc::new("draw".into()), draw, Dfn {
         lts: vec![Lt::Default],
         tys: vec![Type::array()],
