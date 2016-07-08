@@ -19,11 +19,17 @@ fn release() -> bool { ... }
 /// Returns `true` when window receives or loses focus.
 fn focus() -> bool { ... }
 
+/// Returns `true` when there is a mouse cursor event.
+fn mouse_cursor() -> bool { ... }
+
 /// Returns:
 /// - `some(true)` when window received focus.
 /// - `some(false)` when window looses focus.
 /// - `none` when there is no focus event.
 fn focus_args() -> opt[bool] { ... }
+
+/// Returns the position for mouse cursor event.
+fn mouse_cursor_pos() -> opt[vec4] { ... }
 
 /// Sets title of window.
 fn set__title(text: str) { ... }
