@@ -9,12 +9,12 @@ fn clear__color(color: vec4)
 
 fn line__color_radius_from_to(color: vec4, radius: f64, from: vec4, to: vec4)
 ~ mut draw_list: [[]] {
-    push(mut draw_list, ["line_color_radius_from_to", color, radius, from, to])
+    push(mut draw_list, ["line__color_radius_from_to", color, radius, from, to])
 }
 
 fn rectangle__color_corner_size(color: vec4, corner: vec4, size: vec4)
 ~ mut draw_list: [[]] {
-    push(mut draw_list, ["rectangle_color_corner_size", color, corner, size])
+    push(mut draw_list, ["rectangle__color_corner_size", color, corner, size])
 }
 
 fn ellipse__color_corner_size(color: vec4, corner: vec4, size: vec4)
@@ -25,7 +25,7 @@ fn ellipse__color_corner_size(color: vec4, corner: vec4, size: vec4)
 fn ellipse__color_corner_size_resolution
 (color: vec4, corner: vec4, size: vec4, resolution: f64)
 ~ mut draw_list: [[]] {
-    push(mut draw_list, ["ellipse_color_corner_size_resolution", color, corner, size, resolution])
+    push(mut draw_list, ["ellipse__color_corner_size_resolution", color, corner, size, resolution])
 }
 
 fn circle__color_center_radius(color: vec4, center: vec4, radius: f64)
