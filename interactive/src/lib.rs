@@ -89,6 +89,18 @@ pub fn add_functions<W: Any + AdvancedWindow, C: Any + CharacterCache>(module: &
             tys: vec![],
             ret: Type::Option(Box::new(Type::F64))
         });
+    module.add(Arc::new("press_mouse_button".into()),
+        press_mouse_button, Dfn {
+            lts: vec![],
+            tys: vec![],
+            ret: Type::Option(Box::new(Type::F64))
+        });
+    module.add(Arc::new("release_mouse_button".into()),
+        release_mouse_button, Dfn {
+            lts: vec![],
+            tys: vec![],
+            ret: Type::Option(Box::new(Type::F64))
+        });
     module.add(Arc::new("width__size_string".into()),
         width__size_string::<C>, Dfn {
             lts: vec![Lt::Default; 2],
@@ -182,6 +194,34 @@ pub fn release_keyboard_key(rt: &mut Runtime) -> Result<(), String> {
     if let &Some(ref e) = e {
         if let Some(Button::Keyboard(key)) = e.release_args() {
             rt.push(Some(key as u64 as f64));
+        } else {
+            rt.push::<Option<f64>>(None);
+        }
+        Ok(())
+    } else {
+        Err(NO_EVENT.into())
+    }
+}
+
+pub fn press_mouse_button(rt: &mut Runtime) -> Result<(), String> {
+    let e = unsafe { &*Current::<Option<Event>>::new() };
+    if let &Some(ref e) = e {
+        if let Some(Button::Mouse(button)) = e.press_args() {
+            rt.push(Some(button as u64 as f64));
+        } else {
+            rt.push::<Option<f64>>(None);
+        }
+        Ok(())
+    } else {
+        Err(NO_EVENT.into())
+    }
+}
+
+pub fn release_mouse_button(rt: &mut Runtime) -> Result<(), String> {
+    let e = unsafe { &*Current::<Option<Event>>::new() };
+    if let &Some(ref e) = e {
+        if let Some(Button::Mouse(button)) = e.release_args() {
+            rt.push(Some(button as u64 as f64));
         } else {
             rt.push::<Option<f64>>(None);
         }
