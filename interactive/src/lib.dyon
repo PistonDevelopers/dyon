@@ -42,3 +42,9 @@ fn press_keyboard_key() -> opt[f64] { ... }
 
 /// Returns the keyboard key for release event.
 fn release_keyboard_key() -> opt[f64] { ... }
+
+/// Returns the mouse button for press event.
+fn press_mouse_button() -> opt[f64] { ... }
+
+/// Returns the mouse button for release event.
+fn release_mouse_button() -> opt[f64] { ... }
