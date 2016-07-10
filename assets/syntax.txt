@@ -164,14 +164,14 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\u005c"
 71 closure_type = ["\u005c(" ?w .s?.(, type:"cl_arg") ?w ")"
     ?w "->" ?w type:"cl_ret"]
 
-101 + = [?w {"+":"+" "||":"+" "∨":"+" "or":"+"} ?w]
+101 + = [?w {"+":"+" "||":"+" "∨":"+" ["or":"+" w]} ?w]
 102 - = [wn "-":"-" ?w]
 // Allow whitespace before multiplication sign, but no new line.
 // This prevents `x` on a new line from being interpreted as multiplication sign.
 103 * = [wn {
     "*.":"*." "·":"*."
-    "x":"x" "⨯":"x"
-    "*":"*" "&&":"*" "∧":"*" "and":"*"
+    ["x":"x" w] "⨯":"x"
+    "*":"*" "&&":"*" "∧":"*" ["and":"*" w]
 } ?w]
 104 / = [?w "/":"/" ?w]
 105 % = [?w "%":"%" ?w]
