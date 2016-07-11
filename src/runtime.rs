@@ -713,6 +713,28 @@ impl Runtime {
                                 self.stack_trace()), self))
             };
         }
+
+        // Look for variable in current stack.
+        if f.currents.len() > 0 {
+            for current in &f.currents {
+                let mut res = None;
+                for &(ref cname, ind) in self.current_stack.iter().rev() {
+                    if cname == &current.name {
+                        res = Some(ind);
+                        break;
+                    }
+                }
+                if let Some(ind) = res {
+                    self.local_stack.push((current.name.clone(), self.stack.len()));
+                    self.stack.push(Variable::Ref(ind));
+                } else {
+                    return Err(module.error(call.source_range, &format!(
+                        "{}\nCould not find urrent variable `{}`",
+                            self.stack_trace(), current.name), self));
+                }
+            }
+        }
+
         self.push_fn(call.item.name.clone(), new_index, Some(f.file.clone()), st, lc, cu);
         if f.returns() {
             self.local_stack.push((self.ret.clone(), st - 1));
@@ -846,6 +868,28 @@ impl Runtime {
                                         self.stack_trace()), self))
                     };
                 }
+
+                // Look for variable in current stack.
+                if f.currents.len() > 0 {
+                    for current in &f.currents {
+                        let mut res = None;
+                        for &(ref cname, ind) in self.current_stack.iter().rev() {
+                            if cname == &current.name {
+                                res = Some(ind);
+                                break;
+                            }
+                        }
+                        if let Some(ind) = res {
+                            self.local_stack.push((current.name.clone(), self.stack.len()));
+                            self.stack.push(Variable::Ref(ind));
+                        } else {
+                            return Err(module.error(call.source_range, &format!(
+                                "{}\nCould not find current variable `{}`",
+                                    self.stack_trace(), current.name), self));
+                        }
+                    }
+                }
+
                 self.push_fn(call.name.clone(), new_index, Some(f.file.clone()), st, lc, cu);
                 if f.returns() {
                     self.local_stack.push((self.ret.clone(), st - 1));
@@ -1635,21 +1679,9 @@ impl Runtime {
                                 self.stack_trace(),
                                 &self.call_stack.last().unwrap().fn_name), self));
                         } else {
-                            // Look for variable in current stack.
-                            let mut res = None;
-                            for &(ref cname, ind) in self.current_stack.iter().rev() {
-                                if &**cname == name {
-                                    res = Some(ind);
-                                    break;
-                                }
-                            }
-                            if let Some(res) = res {
-                                res
-                            } else {
-                                return Err(module.error(item.source_range, &format!(
-                                    "{}\nCould not find local or current variable `{}`",
-                                        self.stack_trace(), name), self));
-                            }
+                            return Err(module.error(item.source_range, &format!(
+                                "{}\nCould not find local or current variable `{}`",
+                                    self.stack_trace(), name), self));
                         }
                     }
                 }

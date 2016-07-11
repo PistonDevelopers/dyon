@@ -167,6 +167,9 @@ impl Function {
         for arg in &self.args {
             stack.push(Some(arg.name.clone()));
         }
+        for current in &self.currents {
+            stack.push(Some(current.name.clone()));
+        }
         self.block.resolve_locals(relative, &mut stack, &mut closure_stack, module);
         self.resolved.set(true);
     }
@@ -262,6 +265,9 @@ impl Closure {
         }
         for arg in &self.args {
             stack.push(Some(arg.name.clone()));
+        }
+        for current in &self.currents {
+            stack.push(Some(current.name.clone()));
         }
         self.expr.resolve_locals(relative, stack, closure_stack, module);
         closure_stack.truncate(cs);
