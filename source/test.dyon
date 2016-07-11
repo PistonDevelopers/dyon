@@ -1,6 +1,13 @@
 fn main() {
-    println(false && {
-        println("hi")
+    ~ a := "hi"
+    foo := \() ~ a: str = {
+        println(a)
         true
-    })
+    }
+    foo()
+    _ := \foo()
+}
+
+fn foo() ~ a: str {
+    println(a)
 }
