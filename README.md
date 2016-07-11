@@ -60,6 +60,8 @@ Dyon script files ends with ".dyon".
 - [Ad-hoc types](https://github.com/PistonDevelopers/dyon/issues/236) `fn players() -> [Player str] { ... }`
 - [Current objects](https://github.com/PistonDevelopers/dyon/issues/224) `fn render() ~ world { ... }`
 - [Go-like coroutines with `go`](https://github.com/PistonDevelopers/dyon/issues/163)
+- [Closures](https://github.com/PistonDevelopers/dyon/issues/314) `\(x) = x + 1`
+- [Grab expressions](https://github.com/PistonDevelopers/dyon/issues/316) `\(x) = (grab a) + x`
 - [4D vectors with `f32` precision `(x, y, z, w)`](https://github.com/PistonDevelopers/dyon/issues/144)
 - [Un-loop for 4D vectors](https://github.com/PistonDevelopers/dyon/issues/201) `vec4 i f(i)`
 - [Unpack 4D vectors](https://github.com/PistonDevelopers/dyon/issues/213) `f(xy v)`
@@ -96,6 +98,7 @@ The idea was to make a simple, but convenient scripting language that integrated
 - Current objects to improve prototyping and tailored environments
 - Macros for easier embedding with Rust
 - Secrets to automatically derive meaning from mathematical loops
+- Closures that can be printed out, use current objects and grab from closure environment
 
 Main goals:
 
