@@ -8,6 +8,10 @@ A library for interactive coding with the Piston game engine
 3. In Terminal, go to "dyon/interactive" and type `cargo run --release --example piston_window`
 4. Edit "source/piston_window/snake.rs" while running the demo
 
+### Made with dyon_interactive
+
+- [dyon_asteroids](https://github.com/pistondevelopers/dyon_asteroids)
+
 ## License
 
 Licensed under either of
