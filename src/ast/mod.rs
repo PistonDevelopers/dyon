@@ -1180,6 +1180,9 @@ impl Add {
             } else if let Ok((range, _)) = convert.meta_bool("-") {
                 convert.update(range);
                 ops.push(BinOp::Sub);
+            } else if let Ok((range, _)) = convert.meta_bool("||") {
+                convert.update(range);
+                ops.push(BinOp::OrElse);
             } else {
                 let range = convert.ignore();
                 convert.update(range);
@@ -1266,6 +1269,9 @@ impl Mul {
             } else if let Ok((range, _)) = convert.meta_bool("%") {
                 convert.update(range);
                 ops.push(BinOp::Rem);
+            } else if let Ok((range, _)) = convert.meta_bool("&&") {
+                convert.update(range);
+                ops.push(BinOp::AndAlso);
             } else {
                 let range = convert.ignore();
                 convert.update(range);
@@ -1368,7 +1374,9 @@ pub enum BinOp {
     Cross,
     Div,
     Rem,
-    Pow
+    Pow,
+    OrElse,
+    AndAlso,
 }
 
 impl BinOp {
@@ -1382,13 +1390,15 @@ impl BinOp {
             BinOp::Div => "/",
             BinOp::Rem => "%",
             BinOp::Pow => "^",
+            BinOp::OrElse => "||",
+            BinOp::AndAlso => "&&",
         }
     }
 
     pub fn symbol_bool(self) -> &'static str {
         match self {
-            BinOp::Add => "||",
-            BinOp::Mul => "&&",
+            BinOp::Add => "or",
+            BinOp::Mul => "and",
             _ => self.symbol()
         }
     }
