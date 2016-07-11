@@ -3347,6 +3347,22 @@ impl Runtime {
                 &format!("{}\nExpected something from left argument",
                     self.stack_trace()), self))
         };
+
+        // Check lazy boolean expressions.
+        match binop.op {
+            OrElse => {
+                if let &Variable::Bool(true, ref sec) = self.resolve(&left) {
+                    return Ok((Some(Variable::Bool(true, sec.clone())), Flow::Continue));
+                }
+            }
+            AndAlso => {
+                if let &Variable::Bool(false, ref sec) = self.resolve(&left) {
+                    return Ok((Some(Variable::Bool(false, sec.clone())), Flow::Continue));
+                }
+            }
+            _ => {}
+        }
+
         let right = match try!(self.expression(&binop.right, side, module)) {
             (Some(x), Flow::Continue) => x,
             (x, Flow::Return) => return Ok((x, Flow::Return)),
@@ -3382,7 +3398,11 @@ impl Runtime {
                     Div => Variable::Vec4([a[0] / b[0], a[1] / b[1], a[2] / b[2], a[3] / b[3]]),
                     Rem => Variable::Vec4([a[0] % b[0], a[1] % b[1], a[2] % b[2], a[3] % b[3]]),
                     Pow => Variable::Vec4([a[0].powf(b[0]), a[1].powf(b[1]),
-                                           a[2].powf(b[2]), a[3].powf(b[3])])
+                                           a[2].powf(b[2]), a[3].powf(b[3])]),
+                    AndAlso | OrElse => return Err(module.error(binop.source_range,
+                        &format!("{}\nUnknown operator `{:?}` for `vec4` and `vec4`",
+                            self.stack_trace(),
+                            binop.op.symbol_bool()), self)),
                 }
             }
             (&Variable::Vec4(a), &Variable::F64(b, _)) => {
@@ -3400,6 +3420,10 @@ impl Runtime {
                     Rem => Variable::Vec4([a[0] % b, a[1] % b, a[2] % b, a[3] % b]),
                     Pow => Variable::Vec4([a[0].powf(b), a[1].powf(b),
                                            a[2].powf(b), a[3].powf(b)]),
+                    AndAlso | OrElse => return Err(module.error(binop.source_range,
+                        &format!("{}\nUnknown operator `{:?}` for `vec4` and `f64`",
+                            self.stack_trace(),
+                            binop.op.symbol_bool()), self)),
                 }
             }
             (&Variable::F64(a, _), &Variable::Vec4(b)) => {
@@ -3410,21 +3434,25 @@ impl Runtime {
                     Mul => Variable::Vec4([a * b[0], a * b[1], a * b[2], a * b[3]]),
                     Dot => Variable::f64((a * b[0] + a * b[1] +
                                           a * b[2] + a * b[3]) as f64),
-                    Cross => return Err(module.error(binop.source_range,
-                        &format!("{}\nExpected two vec4 for `{:?}`",
-                            self.stack_trace(), binop.op.symbol()), self)),
                     Div => Variable::Vec4([a / b[0], a / b[1], a / b[2], a / b[3]]),
                     Rem => Variable::Vec4([a % b[0], a % b[1], a % b[2], a % b[3]]),
                     Pow => Variable::Vec4([a.powf(b[0]), a.powf(b[1]),
-                                           a.powf(b[2]), a.powf(b[3])])
+                                           a.powf(b[2]), a.powf(b[3])]),
+                    Cross => return Err(module.error(binop.source_range,
+                        &format!("{}\nExpected two vec4 for `{:?}`",
+                            self.stack_trace(), binop.op.symbol()), self)),
+                    AndAlso | OrElse => return Err(module.error(binop.source_range,
+                        &format!("{}\nUnknown operator `{:?}` for `f64` and `vec4`",
+                            self.stack_trace(),
+                            binop.op.symbol_bool()), self)),
                 }
             }
             (&Variable::Bool(a, ref sec), &Variable::Bool(b, _)) => {
                 Variable::Bool(match binop.op {
-                    Add => a || b,
+                    Add | OrElse => a || b,
                     // Boolean subtraction with lazy precedence.
                     Sub => a && !b,
-                    Mul => a && b,
+                    Mul | AndAlso => a && b,
                     Pow => a ^ b,
                     _ => return Err(module.error(binop.source_range,
                         &format!("{}\nUnknown boolean operator `{:?}`",

@@ -1,8 +1,6 @@
 fn main() {
-    println(white())
-    println(orange())
+    println(false && {
+        println("hi")
+        true
+    })
 }
-
-// Check that `or` is not confused with `orange`.
-white() = #ffffff
-orange() = #ffaa00
