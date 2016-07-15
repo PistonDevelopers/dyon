@@ -977,10 +977,10 @@ impl Runtime {
         }
     }
     
-    pub fn call_str(&mut self, fn_: &str, module: &Module) -> Result<(), String> {
+    pub fn call_str(&mut self, function: &str, module: &Module) -> Result<(), String> {
         use std::cell::Cell;
 
-        let name: Arc<String> = Arc::new(fn_.into());
+        let name: Arc<String> = Arc::new(function.into());
         let call = ast::Call {
             name: name.clone(),
             f_index: Cell::new(module.find_function(&name, 0)),
@@ -994,7 +994,7 @@ impl Runtime {
                 Ok(())
             }
             _ => return Err(module.error(call.source_range,
-                               &format!("Could not find function `{}`",fn_), self))
+                               &format!("Could not find function `{}`",function), self))
         }
     }
 
