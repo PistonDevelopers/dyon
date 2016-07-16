@@ -976,6 +976,27 @@ impl Runtime {
             }
         }
     }
+    
+    pub fn call_str(&mut self, function: &str, module: &Module) -> Result<(), String> {
+        use std::cell::Cell;
+
+        let name: Arc<String> = Arc::new(function.into());
+        let call = ast::Call {
+            name: name.clone(),
+            f_index: Cell::new(module.find_function(&name, 0)),
+            args: vec![],
+            custom_source: None,
+            source_range: Range::empty(0),
+        };
+        match call.f_index.get() {
+            FnIndex::Loaded(f_index) => {
+                try!(self.call(&call, &module));
+                Ok(())
+            }
+            _ => return Err(module.error(call.source_range,
+                               &format!("Could not find function `{}`",function), self))
+        }
+    }
 
     fn swizzle(&mut self, sw: &ast::Swizzle, module: &Module) -> Result<Flow, String> {
         let v = match try!(self.expression(&sw.expr, Side::Right, module)) {
