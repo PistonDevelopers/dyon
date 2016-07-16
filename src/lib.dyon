@@ -29,6 +29,9 @@ fn debug() { ... }
 /// Prints out call stack.
 fn backtrace() { ... }
 
+/// Returns `true` if link is empty.
+fn is_empty(l: link) -> bool { ... }
+
 /// Returns the first item in a link.
 fn head(l: link) -> opt[any] { ... }
 
