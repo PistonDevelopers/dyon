@@ -976,25 +976,26 @@ impl Runtime {
             }
         }
     }
-    
-    pub fn call_str(&mut self, function: &str, module: &Module) -> Result<(), String> {
+
+    pub fn call_str(&mut self, function: &str, args: &[Variable], module: &Module) -> Result<(), String> {
         use std::cell::Cell;
 
         let name: Arc<String> = Arc::new(function.into());
-        let call = ast::Call {
-            name: name.clone(),
-            f_index: Cell::new(module.find_function(&name, 0)),
-            args: vec![],
-            custom_source: None,
-            source_range: Range::empty(0),
-        };
-        match call.f_index.get() {
+        match module.find_function(&name, 0) {
             FnIndex::Loaded(f_index) => {
+                let call = ast::Call {
+                    name: name.clone(),
+                    f_index: Cell::new(FnIndex::Loaded(f_index)),
+                    args: args.iter()
+                            .map(|arg| ast::Expression::Variable(Range::empty(0), arg.clone()))
+                            .collect(),
+                    custom_source: None,
+                    source_range: Range::empty(0),
+                };
                 try!(self.call(&call, &module));
                 Ok(())
             }
-            _ => return Err(module.error(call.source_range,
-                               &format!("Could not find function `{}`",function), self))
+            _ => return Err(format!("Could not find function `{}`",function))
         }
     }
 
