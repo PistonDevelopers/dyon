@@ -363,7 +363,11 @@ pub fn write_item<W: io::Write>(
         match id {
             &Id::String(_, ref prop) => try!(write!(w, ".{}", prop)),
             &Id::F64(_, ind) => try!(write!(w, "[{}]", ind)),
-            &Id::Expression(ref expr) => try!(write_expr(w, rt, expr, tabs)),
+            &Id::Expression(ref expr) => {
+                try!(write!(w, "["));
+                try!(write_expr(w, rt, expr, tabs));
+                try!(write!(w, "]"));
+            }
         }
         if item.try_ids.iter().any(|&tr| tr == i) {
             try!(write!(w, "?"));
