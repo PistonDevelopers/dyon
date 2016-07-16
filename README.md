@@ -1,6 +1,8 @@
 # dyon
 A rusty dynamically typed scripting language
 
+[Tutorial](http://www.piston.rs/dyon-tutorial/)
+
 Notice: This is very early stage in development. Breaking changes will happen!
 
 ![snake](./images/snake.png)
