@@ -1,9 +1,5 @@
 fn main() {
-    a := \() = {
-        list := [[[1, 2], [3, 4]], [[5, 6], [7, 8]]]
-        for i, j, k {
-            println(list[i][j][k])
-        }
-    }
+    x := 2
+    a := \() = grab '2 x
     println(a)
 }

@@ -329,7 +329,15 @@ impl Grab {
         closure_stack: &mut Vec<usize>,
         module: &Module
     ) {
-        let last = match closure_stack.get(closure_stack.len() - self.level as usize) {
+        // Get closure environment.
+        let d = if closure_stack.len() < self.level as usize {
+                // Ignore negative difference, because
+                // lifetime checker will detect too high grab level.
+                0
+            } else {
+                closure_stack.len() - self.level as usize
+            };
+        let last = match closure_stack.get(d) {
             None => return,
             Some(&x) => x,
         };
