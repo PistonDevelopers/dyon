@@ -206,7 +206,8 @@ pub fn check(
                     if nodes[item].item_ids() { continue; }
                     if grab > 0 {
                         return Err(nodes[i].source.wrap(
-                            format!("Grabbed `{}` has same name as closure variable",
+                            format!("Grabbed `{}` has same name as variable.\n\
+                            Perhaps the grab level is set too high?",
                             nodes[i].name().expect("Expected name"))));
                     }
                     it = Some(item);
