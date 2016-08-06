@@ -1976,7 +1976,7 @@ fn min(
             }
             let mut min: f64 = ::std::f64::MAX;
             for v in &**arr {
-                if let &Variable::F64(val, _) = v {
+                if let &Variable::F64(val, _) = rt.resolve(v) {
                     if val < min { min = val }
                 }
             }
@@ -2009,7 +2009,7 @@ fn max(
             }
             let mut max: f64 = ::std::f64::MIN;
             for v in &**arr {
-                if let &Variable::F64(val, _) = v {
+                if let &Variable::F64(val, _) = rt.resolve(v) {
                     if val > max { max = val }
                 }
             }
