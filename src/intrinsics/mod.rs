@@ -1970,14 +1970,10 @@ fn min(
     let v = rt.stack.pop().expect(TINVOTS);
     let v = match rt.resolve(&v) {
         &Variable::Array(ref arr) => {
-            if arr.len() == 0 {
-                return Err(module.error(call.args[0].source_range(),
-                    &format!("{}\nExpected non-empty array", rt.stack_trace()), rt));
-            }
-            let mut min: f64 = ::std::f64::MAX;
+            let mut min: f64 = ::std::f64::NAN;
             for v in &**arr {
                 if let &Variable::F64(val, _) = rt.resolve(v) {
-                    if val < min { min = val }
+                    if val < min || min.is_nan() { min = val }
                 }
             }
             min
@@ -2003,14 +1999,10 @@ fn max(
     let v = rt.stack.pop().expect(TINVOTS);
     let v = match rt.resolve(&v) {
         &Variable::Array(ref arr) => {
-            if arr.len() == 0 {
-                return Err(module.error(call.args[0].source_range(),
-                    &format!("{}\nExpected non-empty array", rt.stack_trace()), rt));
-            }
-            let mut max: f64 = ::std::f64::MIN;
+            let mut max: f64 = ::std::f64::NAN;
             for v in &**arr {
                 if let &Variable::F64(val, _) = rt.resolve(v) {
-                    if val > max { max = val }
+                    if val > max || max.is_nan() { max = val }
                 }
             }
             max

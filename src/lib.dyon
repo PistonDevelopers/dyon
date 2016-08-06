@@ -193,9 +193,11 @@ fn is_err(var: res[any]) -> bool { ... }
 fn is_ok(var: res[any]) -> bool { ... }
 
 /// Returns smallest number in non-empty array.
+/// Returns NaN if array is empty.
 fn min(array: [f64]) -> f64 { ... }
 
 /// Returns highest number in non-empty array.
+/// Returns NaN if array is empty.
 fn max(array: [f64]) -> f64 { ... }
 
 /// Returns x component of 4D vector.
@@ -260,3 +262,6 @@ fn chars(text: str) -> [str] { ... }
 /// Returns seconds since last Unix Epoch.
 /// Returns `err(_)` if system clock is adjusted before Unix Epoch.
 fn now() -> f64 { ... }
+
+/// Returns `true` if number is NaN.
+fn is_nan(v: f64) -> bool { ... }
