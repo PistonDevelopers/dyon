@@ -97,6 +97,7 @@ const JSON_FROM_META_DATA: usize = 75;
 const HAS: usize = 76;
 const CHARS: usize = 77;
 const NOW: usize = 78;
+const IS_NAN: usize = 79;
 
 const TABLE: &'static [(usize, fn(
         &mut Runtime,
@@ -186,6 +187,7 @@ const TABLE: &'static [(usize, fn(
     (HAS, has),
     (CHARS, chars),
     (NOW, now),
+    (IS_NAN, is_nan),
 ];
 
 pub fn standard(f: &mut Prelude) {
@@ -376,6 +378,7 @@ pub fn standard(f: &mut Prelude) {
         tys: vec![],
         ret: Type::F64
     });
+    sarg(f, "is_nan", IS_NAN, Type::F64, Type::Bool);
 }
 
 pub fn call_standard(
@@ -2473,4 +2476,23 @@ fn now(
         })
     };
     Ok(Some(val))
+}
+
+fn is_nan(
+    rt: &mut Runtime,
+    call: &ast::Call,
+    module: &Module,
+    st: usize,
+    lc: usize,
+    cu: usize,
+) -> Result<Option<Variable>, String> {
+    rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
+    let v = rt.stack.pop().expect(TINVOTS);
+    let v = match rt.resolve(&v) {
+        &Variable::F64(ref v, _) => v.clone(),
+        x => return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(x, "number"), rt))
+    };
+    rt.pop_fn(call.name.clone());
+    Ok(Some(Variable::bool(v.is_nan())))
 }
