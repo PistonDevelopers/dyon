@@ -4,6 +4,7 @@ use Error;
 use Object;
 use Runtime;
 use Variable;
+use RustObject;
 
 pub fn obj_field<T: PopVariable>(rt: &Runtime, obj: &Object, name: &str) -> Result<T, String> {
     let var = try!(obj.get(&Arc::new(name.into()))
@@ -29,6 +30,22 @@ pub trait ConvertVec4: Sized {
     /// Converts vec4 to self.
     fn from(val: [f32; 4]) -> Self;
     fn to(&self) -> [f32; 4];
+}
+
+impl PopVariable for Variable {
+    fn pop_var(rt: &Runtime, var: &Variable) -> Result<Self, String> {
+        Ok(var.deep_clone(&rt.stack))
+    }
+}
+
+impl PopVariable for RustObject {
+    fn pop_var(rt: &Runtime, var: &Variable) -> Result<Self, String> {
+        if let &Variable::RustObject(ref robj) = var {
+            Ok(robj.clone())
+        } else {
+            Err(rt.expected(var, "rust_object"))
+        }
+    }
 }
 
 impl PopVariable for String {
@@ -212,6 +229,16 @@ impl<T: PopVariable> PopVariable for Vec<T> {
         } else {
             Err(rt.expected(var, "array"))
         }
+    }
+}
+
+impl PushVariable for Variable {
+    fn push_var(&self) -> Variable { self.clone() }
+}
+
+impl PushVariable for RustObject {
+    fn push_var(&self) -> Variable {
+        Variable::RustObject(self.clone())
     }
 }
 
