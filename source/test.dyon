@@ -1,6 +1,8 @@
 fn main() {
-    x := 0/0
-    println(is_nan(x))
-    x := 3
-    println(is_nan(x))
+    x := 0
+    y := 1
+    println(atan2(y, x))
+    println(pi()/2)
 }
+
+pi() = 3.141592653589793
