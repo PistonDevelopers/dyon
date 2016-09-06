@@ -98,6 +98,7 @@ const HAS: usize = 76;
 const CHARS: usize = 77;
 const NOW: usize = 78;
 const IS_NAN: usize = 79;
+const ATAN2: usize = 80;
 
 const TABLE: &'static [(usize, fn(
         &mut Runtime,
@@ -188,6 +189,7 @@ const TABLE: &'static [(usize, fn(
     (CHARS, chars),
     (NOW, now),
     (IS_NAN, is_nan),
+    (ATAN2, atan2),
 ];
 
 pub fn standard(f: &mut Prelude) {
@@ -379,6 +381,11 @@ pub fn standard(f: &mut Prelude) {
         ret: Type::F64
     });
     sarg(f, "is_nan", IS_NAN, Type::F64, Type::Bool);
+    f.intrinsic(Arc::new("atan2".into()), ATAN2, Dfn {
+        lts: vec![Lt::Default; 2],
+        tys: vec![Type::F64; 2],
+        ret: Type::F64
+    });
 }
 
 pub fn call_standard(
@@ -747,6 +754,29 @@ fn atan(
     _cu: usize,
 ) -> Result<Option<Variable>, String> {
     rt.unary_f64(call, module, |a| a.atan())
+}
+
+fn atan2(
+    rt: &mut Runtime,
+    call: &ast::Call,
+    module: &Module,
+    _st: usize,
+    _lc: usize,
+    _cu: usize,
+) -> Result<Option<Variable>, String> {
+    let x = rt.stack.pop().expect(TINVOTS);
+    let x = match rt.resolve(&x) {
+        &Variable::F64(b, _) => b,
+        x => return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(x, "number"), rt))
+    };
+    let y = rt.stack.pop().expect(TINVOTS);
+    let y = match rt.resolve(&y) {
+        &Variable::F64(b, _) => b,
+        y => return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(y, "number"), rt))
+    };
+    Ok(Some(Variable::f64(y.atan2(x))))
 }
 
 fn exp(
