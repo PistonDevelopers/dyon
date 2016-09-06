@@ -4,6 +4,8 @@ extern crate rand;
 extern crate range;
 extern crate read_color;
 extern crate hyper;
+#[macro_use]
+extern crate lazy_static;
 
 use std::any::Any;
 use std::fmt;
@@ -332,13 +334,20 @@ pub fn load(source: &str, module: &mut Module) -> Result<(), String> {
 /// - module - The module to load the source
 pub fn load_str(source: &str, d: Arc<String>, module: &mut Module) -> Result<(), String> {
     use std::thread;
-    use piston_meta::{parse_errstr, syntax_errstr, json};
+    use piston_meta::{parse_errstr, syntax_errstr, json, Syntax};
 
-    let syntax = include_str!("../assets/syntax.txt");
-    let syntax_rules = try!(syntax_errstr(syntax));
+    lazy_static! {
+        static ref SYNTAX_RULES: Result<Syntax, String> = {
+            let syntax = include_str!("../assets/syntax.txt");
+            syntax_errstr(syntax)
+        };
+    }
+
+    let syntax_rules = try!(SYNTAX_RULES.as_ref()
+        .map_err(|err| err.clone()));
 
     let mut data = vec![];
-    try!(parse_errstr(&syntax_rules, &d, &mut data).map_err(
+    try!(parse_errstr(syntax_rules, &d, &mut data).map_err(
         |err| format!("In `{}:`\n{}", source, err)
     ));
     let check_data = data.clone();
