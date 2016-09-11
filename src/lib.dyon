@@ -133,10 +133,11 @@ fn acos(v: f64) -> f64 { ... }
 /// Returns the tangent of number in radians.
 fn tan(v: f64) -> f64 { ... }
 
-// TODO: Add atan2.
-
 /// Returns the inverse tangent of number in radians.
 fn atan(v: f64) -> f64 { ... }
+
+/// Returns the inverse tangent in radians.
+fn atan2(y: f64, x: f64) -> f64 { ... }
 
 /// Returns the natural exponential of number.
 /// In mathematics this is often written as `e^x`.
