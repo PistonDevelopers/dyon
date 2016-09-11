@@ -48,6 +48,16 @@ impl PopVariable for RustObject {
     }
 }
 
+impl PopVariable for bool {
+    fn pop_var(rt: &Runtime, var: &Variable) -> Result<Self, String> {
+        if let &Variable::Bool(b, _) = var {
+            Ok(b)
+        } else {
+            Err(rt.expected(var, "bool"))
+        }
+    }
+}
+
 impl PopVariable for String {
     fn pop_var(rt: &Runtime, var: &Variable) -> Result<Self, String> {
         if let &Variable::Text(ref s) = var {
