@@ -35,8 +35,14 @@ fn is_empty(l: link) -> bool { ... }
 /// Returns the first item in a link.
 fn head(l: link) -> opt[any] { ... }
 
-/// Returns the whole link except for the first item.
+/// Returns the whole link except first item.
 fn tail(l: link) -> link { ... }
+
+/// Returns the last item in a link.
+fn tip(l: link) -> opt[any] { ... }
+
+/// Returns the whole link except last item.
+fn neck(l: link) -> link { ... }
 
 /// Sleeps for a given amount of seconds.
 fn sleep(seconds: f64) { ... }
