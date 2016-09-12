@@ -55,7 +55,8 @@ impl Node {
 
     pub fn print(&self, nodes: &[Node], indent: u32) {
         for _ in 0..indent { print!(" ") }
-        println!("kind: {:?}, name: {:?}, type: {:?} {{", self.kind, self.name(), self.ty);
+        println!("kind: {:?}, name: {:?}, type: {:?}, decl: {:?} {{",
+            self.kind, self.name(), self.ty, self.declaration);
         for &c in &self.children {
             nodes[c].print(nodes, indent + 1);
         }

@@ -199,7 +199,7 @@ pub fn check(
                 if nodes[j].children.len() == 0 { continue; }
                 // Assign is inside an expression.
                 let j = nodes[j].children[0];
-                if nodes[j].kind != Kind::Assign { continue; }
+                if nodes[j].op != Some(AssignOp::Assign) { continue; }
                 let left = nodes[j].children[0];
                 let item = nodes[left].children[0];
                 if nodes[item].name() == nodes[i].name() {

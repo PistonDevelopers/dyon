@@ -9,17 +9,3 @@ fn main() {
     println(max) // prints `4`
     println(where(max)) // prints `[1, 1]`
 }
-
-/*
-fn main() {
-    a := foo()
-    if a > 0 {
-        println(why(a > 0))
-    }
-    if (a ^ 1) > 0 {
-        println(where(a))
-    }
-}
-
-foo() = min i 3 { i+1 }
-*/

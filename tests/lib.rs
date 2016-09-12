@@ -66,6 +66,7 @@ fn test_syntax() {
     test_fail_src("source/syntax/lifetime_14.dyon");
     test_src("source/syntax/lifetime_15.dyon");
     test_fail_src("source/syntax/lifetime_16.dyon");
+    test_src("source/syntax/lifetime_17.dyon");
     test_src("source/syntax/insert.dyon");
     test_src("source/syntax/named_call.dyon");
     test_src("source/syntax/max_min.dyon");
