@@ -181,6 +181,9 @@ fn unwrap(var: any) -> any { ... }
 /// Unwraps error from `err(x)`.
 fn unwrap_err(var: any) -> any { ... }
 
+/// Unwraps value or using a default.
+fn unwrap_or(var: any, def: any) -> any { ... }
+
 /// Creates `ok(var)` variant of option values.
 fn ok(var: any) -> res[any] { ... }
 

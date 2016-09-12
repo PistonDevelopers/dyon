@@ -99,6 +99,7 @@ const CHARS: usize = 77;
 const NOW: usize = 78;
 const IS_NAN: usize = 79;
 const ATAN2: usize = 80;
+const UNWRAP_OR: usize = 81;
 
 const TABLE: &'static [(usize, fn(
         &mut Runtime,
@@ -190,6 +191,7 @@ const TABLE: &'static [(usize, fn(
     (NOW, now),
     (IS_NAN, is_nan),
     (ATAN2, atan2),
+    (UNWRAP_OR, unwrap_or),
 ];
 
 pub fn standard(f: &mut Prelude) {
@@ -385,6 +387,11 @@ pub fn standard(f: &mut Prelude) {
         lts: vec![Lt::Default; 2],
         tys: vec![Type::F64; 2],
         ret: Type::F64
+    });
+    f.intrinsic(Arc::new("unwrap_or".into()), UNWRAP_OR, Dfn {
+        lts: vec![Lt::Default; 2],
+        tys: vec![Type::Any, Type::Any],
+        ret: Type::Any
     });
 }
 
@@ -2084,6 +2091,33 @@ fn unwrap(
             return Err(module.error(call.args[0].source_range(),
                                     from_utf8(&w).unwrap(), rt));
         }
+        x => {
+            return Err(module.error(call.args[0].source_range(),
+                                    &rt.expected(x, "some(_) or ok(_)"), rt));
+        }
+    };
+    rt.pop_fn(call.name.clone());
+    Ok(Some(v))
+}
+
+fn unwrap_or(
+    rt: &mut Runtime,
+    call: &ast::Call,
+    module: &Module,
+    st: usize,
+    lc: usize,
+    cu: usize,
+) -> Result<Option<Variable>, String> {
+    // Return value does not depend on lifetime of argument since
+    // `ok(x)` and `some(x)` perform a deep clone.
+    rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
+    let def = rt.stack.pop().expect(TINVOTS);
+    let v = rt.stack.pop().expect(TINVOTS);
+    let v = match rt.resolve(&v) {
+        &Variable::Option(Some(ref v)) => (**v).clone(),
+        &Variable::Result(Ok(ref ok)) => (**ok).clone(),
+        &Variable::Option(None) |
+        &Variable::Result(Err(_)) => rt.resolve(&def).clone(),
         x => {
             return Err(module.error(call.args[0].source_range(),
                                     &rt.expected(x, "some(_) or ok(_)"), rt));
