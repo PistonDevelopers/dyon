@@ -307,8 +307,8 @@ pub fn convert_meta_data(
                     Kind::Swizzle => Some(Type::F64),
                     Kind::Compare => Some(Type::Bool),
                     Kind::Link => Some(Type::Link),
-                    Kind::Any | Kind::All => Some(Type::Bool),
-                    Kind::Min | Kind::Max => Some(Type::F64),
+                    Kind::Any | Kind::All => Some(Type::Secret(Box::new(Type::Bool))),
+                    Kind::Min | Kind::Max => Some(Type::Secret(Box::new(Type::F64))),
                     Kind::For | Kind::ForN => Some(Type::Void),
                     _ => None
                 };

@@ -153,6 +153,7 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\\"
     "opt":"opt_any"
     ["res" ?w "[" ?w type:"res" ?w "]"]
     "res":"res_any"
+    ["sec" ?w "[" ?w {"bool":"sec_bool" "f64":"sec_f64"} ?w "]"]
     "[]":"arr_any"
     ["[" ?w type:"arr" ?w "]"]
     "{}":"obj_any"

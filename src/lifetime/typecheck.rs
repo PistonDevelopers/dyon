@@ -133,7 +133,7 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                                 let arg = nodes[decl].children[j];
                                 match (&expr_type, &nodes[arg].ty) {
                                     (&Some(ref ch_ty), &Some(ref arg_ty)) => {
-                                        if !ch_ty.goes_with(arg_ty) {
+                                        if !arg_ty.goes_with(ch_ty) {
                                             return Err(nodes[i].source.wrap(
                                                 format!("Type mismatch (#100):\n\
                                                     Expected `{}`, found `{}`",
@@ -146,7 +146,7 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                                     nodes[parent].name().unwrap()) {
                                 let f = &prelude.list[f];
                                 if let Some(ref ty) = expr_type {
-                                    if !ty.goes_with(&f.tys[j]) {
+                                    if !f.tys[j].goes_with(ty) {
                                         return Err(nodes[i].source.wrap(
                                             format!("Type mismatch (#200):\n\
                                                 Expected `{}`, found `{}`",
@@ -285,7 +285,7 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                                     // Infer return type of function.
                                     nodes[p].ty = Some(ty.clone());
                                 } else if let Some(ref fn_ty) = nodes[p].ty {
-                                    if !ty.goes_with(fn_ty) {
+                                    if !fn_ty.goes_with(&ty) {
                                         return Err(nodes[ch].source.wrap(
                                             format!("Type mismatch (#350):\n\
                                             Expected `{}`, found `{}`",
