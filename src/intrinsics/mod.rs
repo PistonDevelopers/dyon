@@ -100,6 +100,8 @@ const NOW: usize = 78;
 const IS_NAN: usize = 79;
 const ATAN2: usize = 80;
 const UNWRAP_OR: usize = 81;
+const TIP: usize = 82;
+const NECK: usize = 83;
 
 const TABLE: &'static [(usize, fn(
         &mut Runtime,
@@ -192,6 +194,8 @@ const TABLE: &'static [(usize, fn(
     (IS_NAN, is_nan),
     (ATAN2, atan2),
     (UNWRAP_OR, unwrap_or),
+    (TIP, tip),
+    (NECK, neck),
 ];
 
 pub fn standard(f: &mut Prelude) {
@@ -393,6 +397,8 @@ pub fn standard(f: &mut Prelude) {
         tys: vec![Type::Any, Type::Any],
         ret: Type::Any
     });
+    sarg(f, "tip", TIP, Type::Link, Type::Option(Box::new(Type::Any)));
+    sarg(f, "neck", NECK, Type::Link, Type::Link);
 }
 
 pub fn call_standard(
@@ -916,6 +922,25 @@ fn head(
     Ok(Some(v))
 }
 
+fn tip(
+    rt: &mut Runtime,
+    call: &ast::Call,
+    module: &Module,
+    st: usize,
+    lc: usize,
+    cu: usize,
+) -> Result<Option<Variable>, String> {
+    rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
+    let v = rt.stack.pop().expect(TINVOTS);
+    let v = Variable::Option(match rt.resolve(&v) {
+        &Variable::Link(ref link) => link.tip(),
+        x => return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(x, "link"), rt))
+    });
+    rt.pop_fn(call.name.clone());
+    Ok(Some(v))
+}
+
 fn tail(
     rt: &mut Runtime,
     call: &ast::Call,
@@ -928,6 +953,25 @@ fn tail(
     let v = rt.stack.pop().expect(TINVOTS);
     let v = Variable::Link(Box::new(match rt.resolve(&v) {
         &Variable::Link(ref link) => link.tail(),
+        x => return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(x, "link"), rt))
+    }));
+    rt.pop_fn(call.name.clone());
+    Ok(Some(v))
+}
+
+fn neck(
+    rt: &mut Runtime,
+    call: &ast::Call,
+    module: &Module,
+    st: usize,
+    lc: usize,
+    cu: usize,
+) -> Result<Option<Variable>, String> {
+    rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
+    let v = rt.stack.pop().expect(TINVOTS);
+    let v = Variable::Link(Box::new(match rt.resolve(&v) {
+        &Variable::Link(ref link) => link.neck(),
         x => return Err(module.error(call.args[0].source_range(),
                         &rt.expected(x, "link"), rt))
     }));

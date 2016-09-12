@@ -1,5 +1,9 @@
 fn main() {
-    x := none()
-    y := unwrap_or(x, 3)
-    println(y)
+    x := link {1 2}
+    x -= neck(link {3 4})
+    println(x)
+    println(head(x))
+    println(tip(x))
+    println(tail(x))
+    println(neck(x))
 }

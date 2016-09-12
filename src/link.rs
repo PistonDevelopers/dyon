@@ -182,22 +182,49 @@ impl Link {
         }
     }
 
+    pub fn tip(&self) -> Option<Box<Variable>> {
+        if let Some(last) = self.slices.last() {
+            if last.start < last.end {
+                Some(Box::new(last.block.var(last.end - 1)))
+            } else {
+                None
+            }
+        } else { None }
+    }
+
     pub fn tail(&self) -> Link {
         if self.slices.len() == 0 { Link::new() }
         else {
             let first = &self.slices[0];
             let mut l = Link::new();
-            if first.start < first.end {
-                if first.start + 1 < first.end {
-                    l.slices.push(first.clone());
-                    l.slices[0].start += 1;
-                }
+            // No danger of overflow since `BLOCK_SIZE = 124`.
+            if first.start + 1 < first.end {
+                l.slices.push(first.clone());
+                l.slices[0].start += 1;
             }
             for slice in self.slices.iter().skip(1) {
                 l.slices.push(slice.clone())
             }
             l
         }
+    }
+
+    pub fn neck(&self) -> Link {
+        if let Some(last) = self.slices.last() {
+            let mut l = Link::new();
+            for slice in self.slices.iter().take(self.slices.len() - 1) {
+                l.slices.push(slice.clone())
+            }
+            // No danger of overflow since `BLOCK_SIZE = 124`.
+            if last.start + 1 < last.end {
+                l.slices.push(Slice {
+                    block: last.block.clone(),
+                    start: last.start,
+                    end: last.end - 1
+                })
+            }
+            l
+        } else { Link::new() }
     }
 
     pub fn is_empty(&self) -> bool { self.slices.len() == 0 }
