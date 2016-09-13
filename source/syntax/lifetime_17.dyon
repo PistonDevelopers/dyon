@@ -7,5 +7,5 @@ fn main() {
         item
     }
     println(max) // prints `4`
-    println(where(max)) // prints `[1, 1]`
+    println(where(max)) // prints `[1, 0]`
 }
