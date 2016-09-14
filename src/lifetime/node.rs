@@ -306,7 +306,6 @@ pub fn convert_meta_data(
                     Kind::Sift => Some(Type::array()),
                     Kind::Sum | Kind::Prod => Some(Type::F64),
                     Kind::Swizzle => Some(Type::F64),
-                    Kind::Compare => Some(Type::Bool),
                     Kind::Link => Some(Type::Link),
                     Kind::Any | Kind::All => Some(Type::Secret(Box::new(Type::Bool))),
                     Kind::Min | Kind::Max => Some(Type::Secret(Box::new(Type::F64))),

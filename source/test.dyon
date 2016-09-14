@@ -1,25 +1,6 @@
 fn main() {
-    list := [[1, 2], [3, 4]]
-    item := 0
-    max := max i, j {
-        item = list[i][j]
-        if item == 4 { continue }
-        item
-    }
-    println(max) // prints `4`
-    println(where(max)) // prints `[1, 0]`
+    a := foo(explain_where(1, "hi"), 2)
+    println(why(a))
 }
 
-/*
-fn main() {
-    a := foo()
-    if a > 0 {
-        println(why(a > 0))
-    }
-    if (a ^ 1) > 0 {
-        println(where(a))
-    }
-}
-
-foo() = min i 3 { i+1 }
-*/
+foo(x: sec[f64], y) = x < y

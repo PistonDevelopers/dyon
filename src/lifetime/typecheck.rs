@@ -255,8 +255,8 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                     }
                 }
                 Kind::Return | Kind::Val | Kind::Expr | Kind::Cond |
-                Kind::Exp | Kind::Base | Kind::Right | Kind::ElseIfCond |
-                Kind::UnOp | Kind::Grab
+                Kind::Exp | Kind::Base | Kind::Left | Kind::Right |
+                Kind::ElseIfCond | Kind::UnOp | Kind::Grab
                  => {
                      // TODO: Report error for expected unary operator.
                     if nodes[i].children.len() == 0 { continue 'node; }
@@ -371,6 +371,27 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                                              with `{}` and `{}`", base_ty.description(),
                                              exp_ty.description())));
                             }
+                        }
+                        _ => {}
+                    }
+                }
+                Kind::Compare => {
+                    let left = match nodes[i].find_child_by_kind(nodes, Kind::Left) {
+                        None => continue 'node,
+                        Some(x) => x
+                    };
+                    if nodes[left].item_ids() {
+                        continue 'node;
+                    }
+                    match &nodes[left].ty {
+                        &Some(Type::Any) => {
+                            this_ty = Some(Type::Any);
+                        }
+                        &Some(Type::Secret(_)) => {
+                            this_ty = Some(Type::Secret(Box::new(Type::Bool)));
+                        }
+                        &Some(_) => {
+                            this_ty = Some(Type::Bool);
                         }
                         _ => {}
                     }

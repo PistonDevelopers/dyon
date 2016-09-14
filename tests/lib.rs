@@ -180,6 +180,8 @@ fn test_typechk() {
     test_src("source/typechk/secret_6.dyon");
     test_src("source/typechk/secret_7.dyon");
     test_src("source/typechk/secret_8.dyon");
+    test_src("source/typechk/secret_9.dyon");
+    test_fail_src("source/typechk/secret_10.dyon");
 }
 
 #[test]
