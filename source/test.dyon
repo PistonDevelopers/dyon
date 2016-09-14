@@ -1,9 +1,6 @@
 fn main() {
-    x := link {1 2}
-    x -= neck(link {3 4})
-    println(x)
-    println(head(x))
-    println(tip(x))
-    println(tail(x))
-    println(neck(x))
+    a := foo(explain_where(1, "hi"), 2)
+    println(why(a))
 }
+
+foo(x: sec[f64], y) = x < y

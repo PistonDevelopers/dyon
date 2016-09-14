@@ -1,18 +1,18 @@
 /// Returns an array of derived information for the truth value of `var`.
 /// This can be used with the value of `∃`/`any` and `∀`/`all` loops.
-fn why(var: bool) -> [any] { ... }
+fn why(var: sec[bool]) -> [any] { ... }
 
 /// Returns an array of derived information for the value of `var`.
 /// This can be used with the value of `min` and `max` loops.
-fn where(var: f64) -> [any] { ... }
+fn where(var: sec[f64]) -> [any] { ... }
 
 /// Adds message to derived information for the truth value of `var`.
 /// This can be used with the value of `∃`/`any` and `∀`/`all` loops.
-fn explain_why(var: bool, msg: any) -> bool { ... }
+fn explain_why(var: bool, msg: any) -> sec[bool] { ... }
 
 /// Adds message to derived information for the value of `var`.
 /// This can be used with the value of `min` and `max` loops.
-fn explain_where(var: f64, msg: any) -> f64 { ... }
+fn explain_where(var: f64, msg: any) -> sec[f64] { ... }
 
 /// Prints out variable to standard output, adding newline character.
 fn println(var: any) { ... }

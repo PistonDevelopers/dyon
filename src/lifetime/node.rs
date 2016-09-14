@@ -55,7 +55,8 @@ impl Node {
 
     pub fn print(&self, nodes: &[Node], indent: u32) {
         for _ in 0..indent { print!(" ") }
-        println!("kind: {:?}, name: {:?}, type: {:?} {{", self.kind, self.name(), self.ty);
+        println!("kind: {:?}, name: {:?}, type: {:?}, decl: {:?} {{",
+            self.kind, self.name(), self.ty, self.declaration);
         for &c in &self.children {
             nodes[c].print(nodes, indent + 1);
         }
@@ -305,10 +306,9 @@ pub fn convert_meta_data(
                     Kind::Sift => Some(Type::array()),
                     Kind::Sum | Kind::Prod => Some(Type::F64),
                     Kind::Swizzle => Some(Type::F64),
-                    Kind::Compare => Some(Type::Bool),
                     Kind::Link => Some(Type::Link),
-                    Kind::Any | Kind::All => Some(Type::Bool),
-                    Kind::Min | Kind::Max => Some(Type::F64),
+                    Kind::Any | Kind::All => Some(Type::Secret(Box::new(Type::Bool))),
+                    Kind::Min | Kind::Max => Some(Type::Secret(Box::new(Type::F64))),
                     Kind::For | Kind::ForN => Some(Type::Void),
                     _ => None
                 };

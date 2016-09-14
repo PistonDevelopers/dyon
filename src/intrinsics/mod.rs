@@ -213,23 +213,23 @@ pub fn standard(f: &mut Prelude) {
     sarg(f, "w", W, Type::Vec4, Type::F64);
     f.intrinsic(Arc::new("why".into()), WHY, Dfn {
         lts: vec![Lt::Default],
-        tys: vec![Type::Bool],
+        tys: vec![Type::Secret(Box::new(Type::Bool))],
         ret: Type::array()
     });
     f.intrinsic(Arc::new("where".into()), WHERE, Dfn {
         lts: vec![Lt::Default],
-        tys: vec![Type::F64],
+        tys: vec![Type::Secret(Box::new(Type::F64))],
         ret: Type::array()
     });
     f.intrinsic(Arc::new("explain_why".into()), EXPLAIN_WHY, Dfn {
         lts: vec![Lt::Default; 2],
         tys: vec![Type::Bool, Type::Any],
-        ret: Type::Bool
+        ret: Type::Secret(Box::new(Type::Bool))
     });
     f.intrinsic(Arc::new("explain_where".into()), EXPLAIN_WHERE, Dfn {
         lts: vec![Lt::Default; 2],
         tys: vec![Type::F64, Type::Any],
-        ret: Type::F64
+        ret: Type::Secret(Box::new(Type::F64))
     });
     sarg(f, "println", PRINTLN, Type::Any, Type::Void);
     sarg(f, "print", PRINT, Type::Any, Type::Void);

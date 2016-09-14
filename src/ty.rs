@@ -21,6 +21,7 @@ pub enum Type {
     // Rust(Arc<String>),
     Option(Box<Type>),
     Result(Box<Type>),
+    Secret(Box<Type>),
     Thread(Box<Type>),
     AdHoc(Arc<String>, Box<Type>),
     Closure(Box<Dfn>),
@@ -68,6 +69,13 @@ impl Type {
                     res.push_str(&ty.description());
                     res.push(']');
                     res
+                }
+            }
+            &Secret(ref ty) => {
+                match **ty {
+                    Bool => "sec[bool]".into(),
+                    F64 => "sec[f64]".into(),
+                    _ => panic!("Secret only supports `bool` and `f64`")
                 }
             }
             &Thread(ref ty) => {
@@ -119,6 +127,12 @@ impl Type {
         Type::Thread(Box::new(Type::Any))
     }
 
+    /// Returns `true` if a type goes with another type (directional check).
+    ///
+    /// - `bool` (argument) goes with `sec[bool]` (value)
+    /// - `f64` (argument) goes with `sec[f64]` (value)
+    ///
+    /// The opposite is not true, since `sec` contains extra information.
     pub fn goes_with(&self, other: &Type) -> bool {
         use self::Type::*;
 
@@ -128,6 +142,13 @@ impl Type {
             else {
                 return other.goes_with(self)
             }
+        }
+        if let &Secret(ref other_ty) = other {
+            return if let &Secret(ref this_ty) = self {
+                    this_ty.goes_with(other_ty)
+                } else {
+                    self.goes_with(other_ty)
+                };
         }
         match self {
             // Unreachable goes with anything.
@@ -227,8 +248,18 @@ impl Type {
             (&Void, _) | (_, &Void) => None,
             (&Array(_), _) | (_, &Array(_)) => None,
             (&Bool, &Bool) => Some(Bool),
-            (&Text, &Text) => Some(Text),
+            (&Secret(ref a), &Secret(ref b))
+            if **a == Type::Bool && **b == Type::Bool =>
+                Some(Secret(Box::new(Bool))),
+            (&Secret(ref a), &Bool) if **a == Type::Bool => Some(Secret(Box::new(Bool))),
+            (&Bool, &Secret(ref b)) if **b == Type::Bool => Some(Bool),
             (&F64, &F64) => Some(F64),
+            (&Secret(ref a), &Secret(ref b))
+            if **a == Type::F64 && **b == Type::F64 =>
+                Some(Secret(Box::new(F64))),
+            (&Secret(ref a), &F64) if **a == Type::F64 => Some(Secret(Box::new(F64))),
+            (&F64, &Secret(ref b)) if **b == Type::F64 => Some(F64),
+            (&Text, &Text) => Some(Text),
             (&Vec4, &F64) => Some(Vec4),
             (&F64, &Vec4) => Some(Vec4),
             (&Vec4, &Vec4) => Some(Vec4),
@@ -260,7 +291,17 @@ impl Type {
             (&Void, _) | (_, &Void) => None,
             (&Array(_), _) | (_, &Array(_)) => None,
             (&Bool, &Bool) => Some(Bool),
+            (&Secret(ref a), &Secret(ref b))
+            if **a == Type::Bool && **b == Type::Bool =>
+                Some(Secret(Box::new(Bool))),
+            (&Secret(ref a), &Bool) if **a == Type::Bool => Some(Secret(Box::new(Bool))),
+            (&Bool, &Secret(ref b)) if **b == Type::Bool => Some(Bool),
             (&F64, &F64) => Some(F64),
+            (&Secret(ref a), &Secret(ref b))
+            if **a == Type::F64 && **b == Type::F64 =>
+                Some(Secret(Box::new(F64))),
+            (&Secret(ref a), &F64) if **a == Type::F64 => Some(Secret(Box::new(F64))),
+            (&F64, &Secret(ref b)) if **b == Type::F64 => Some(F64),
             (&Vec4, &F64) => Some(Vec4),
             (&F64, &Vec4) => Some(Vec4),
             (&Vec4, &Vec4) => Some(Vec4),
@@ -277,7 +318,17 @@ impl Type {
             (&Void, _) | (_, &Void) => None,
             (&Array(_), _) | (_, &Array(_)) => None,
             (&Bool, &Bool) => Some(Bool),
+            (&Secret(ref a), &Secret(ref b))
+            if **a == Type::Bool && **b == Type::Bool =>
+                Some(Secret(Box::new(Bool))),
+            (&Secret(ref a), &Bool) if **a == Type::Bool => Some(Secret(Box::new(Bool))),
+            (&Bool, &Secret(ref b)) if **b == Type::Bool => Some(Bool),
             (&F64, &F64) => Some(F64),
+            (&Secret(ref a), &Secret(ref b))
+            if **a == Type::F64 && **b == Type::F64 =>
+                Some(Secret(Box::new(F64))),
+            (&Secret(ref a), &F64) if **a == Type::F64 => Some(Secret(Box::new(F64))),
+            (&F64, &Secret(ref b)) if **b == Type::F64 => Some(F64),
             (&Vec4, &F64) => Some(Vec4),
             (&F64, &Vec4) => Some(Vec4),
             (&Vec4, &Vec4) => Some(Vec4),
@@ -304,9 +355,15 @@ impl Type {
             } else if let Ok((range, _)) = convert.meta_bool("bool") {
                 convert.update(range);
                 ty = Some(Type::Bool);
+            } else if let Ok((range, _)) = convert.meta_bool("sec_bool") {
+                convert.update(range);
+                ty = Some(Type::Secret(Box::new(Type::Bool)));
             } else if let Ok((range, _)) = convert.meta_bool("f64") {
                 convert.update(range);
                 ty = Some(Type::F64);
+            } else if let Ok((range, _)) = convert.meta_bool("sec_f64") {
+                convert.update(range);
+                ty = Some(Type::Secret(Box::new(Type::F64)));
             } else if let Ok((range, _)) = convert.meta_bool("str") {
                 convert.update(range);
                 ty = Some(Type::Text);

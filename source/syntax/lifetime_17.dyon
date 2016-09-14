@@ -1,0 +1,11 @@
+fn main() {
+    list := [[1, 2], [3, 4]]
+    item := 0
+    max := max i, j {
+        item = list[i][j]
+        if item == 4 { continue }
+        item
+    }
+    println(max) // prints `4`
+    println(where(max)) // prints `[1, 0]`
+}

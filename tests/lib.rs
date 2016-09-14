@@ -66,6 +66,7 @@ fn test_syntax() {
     test_fail_src("source/syntax/lifetime_14.dyon");
     test_src("source/syntax/lifetime_15.dyon");
     test_fail_src("source/syntax/lifetime_16.dyon");
+    test_src("source/syntax/lifetime_17.dyon");
     test_src("source/syntax/insert.dyon");
     test_src("source/syntax/named_call.dyon");
     test_src("source/syntax/max_min.dyon");
@@ -171,6 +172,16 @@ fn test_typechk() {
     test_fail_src("source/typechk/grab.dyon");
     test_fail_src("source/typechk/grab_2.dyon");
     test_src("source/typechk/grab_3.dyon");
+    test_src("source/typechk/secret.dyon");
+    test_fail_src("source/typechk/secret_2.dyon");
+    test_fail_src("source/typechk/secret_3.dyon");
+    test_src("source/typechk/secret_4.dyon");
+    test_src("source/typechk/secret_5.dyon");
+    test_src("source/typechk/secret_6.dyon");
+    test_src("source/typechk/secret_7.dyon");
+    test_src("source/typechk/secret_8.dyon");
+    test_src("source/typechk/secret_9.dyon");
+    test_fail_src("source/typechk/secret_10.dyon");
 }
 
 #[test]
