@@ -15,7 +15,9 @@ use Variable;
 use Type;
 use TINVOTS;
 
+mod io;
 mod meta;
+mod data;
 mod lifetimechk;
 
 const X: usize = 0;
@@ -102,6 +104,7 @@ const ATAN2: usize = 80;
 const UNWRAP_OR: usize = 81;
 const TIP: usize = 82;
 const NECK: usize = 83;
+const LOAD_DATA__FILE: usize = 84;
 
 const TABLE: &'static [(usize, fn(
         &mut Runtime,
@@ -196,6 +199,7 @@ const TABLE: &'static [(usize, fn(
     (UNWRAP_OR, unwrap_or),
     (TIP, tip),
     (NECK, neck),
+    (LOAD_DATA__FILE, load_data__file),
 ];
 
 pub fn standard(f: &mut Prelude) {
@@ -399,6 +403,7 @@ pub fn standard(f: &mut Prelude) {
     });
     sarg(f, "tip", TIP, Type::Link, Type::Option(Box::new(Type::Any)));
     sarg(f, "neck", NECK, Type::Link, Type::Link);
+    sarg(f, "load_data__file", LOAD_DATA__FILE, Type::Text, Type::Result(Box::new(Type::Any)));
 }
 
 pub fn call_standard(
@@ -2432,6 +2437,34 @@ fn join__thread(
     });
     rt.pop_fn(call.name.clone());
     Ok(Some(v))
+}
+
+fn load_data__file(
+    rt: &mut Runtime,
+    call: &ast::Call,
+    module: &Module,
+    st: usize,
+    lc: usize,
+    cu: usize
+) -> Result<Option<Variable>, String> {
+    rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
+    let file = rt.stack.pop().expect(TINVOTS);
+    let file = match rt.resolve(&file) {
+        &Variable::Text(ref t) => t.clone(),
+        x => return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(x, "string"), rt))
+    };
+    let res = match data::load_file(&file) {
+        Ok(data) => Ok(Box::new(data)),
+        Err(err) => Err(Box::new(super::Error {
+            message: Variable::Text(Arc::new(format!(
+                        "Error loading data from file `{}`:\n{}",
+                        file, err))),
+            trace: vec![]
+        }))
+    };
+    rt.pop_fn(call.name.clone());
+    Ok(Some(Variable::Result(res)))
 }
 
 fn save__data_file(

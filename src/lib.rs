@@ -3,6 +3,7 @@ extern crate piston_meta;
 extern crate rand;
 extern crate range;
 extern crate read_color;
+extern crate read_token;
 extern crate hyper;
 #[macro_use]
 extern crate lazy_static;
