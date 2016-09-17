@@ -1,11 +1,15 @@
 use std::fs::File;
 use std::io::Read;
+use std::collections::HashSet;
+use std::sync::Arc;
 
 use read_token::{NumberSettings, ReadToken};
 
 use super::io::io_error;
 
 use Variable;
+
+type Strings = HashSet<Arc<String>>;
 
 /// Loads data from a file.
 pub fn load_file(file: &str) -> Result<Variable, String> {
@@ -18,7 +22,8 @@ pub fn load_file(file: &str) -> Result<Variable, String> {
 /// Loads data from text.
 pub fn load_data(data: &str) -> Result<Variable, String> {
     let mut read = ReadToken::new(data, 0);
-    expr(&mut read)
+    let mut strings: Strings = HashSet::new();
+    expr(&mut read, &mut strings)
 }
 
 static NUMBER_SETTINGS: NumberSettings = NumberSettings {
@@ -27,18 +32,19 @@ static NUMBER_SETTINGS: NumberSettings = NumberSettings {
 
 const SEPS: &'static str = &"(){}[],.:;\n\"\\";
 
-fn expr(read: &mut ReadToken) -> Result<Variable, String> {
-    use std::sync::Arc;
-
+fn expr(
+    read: &mut ReadToken,
+    strings: &mut Strings
+) -> Result<Variable, String> {
     if let Some(range) = read.tag("{") {
         // Object.
         *read = read.consume(range.length);
-        return object(read);
+        return object(read, strings);
     }
     if let Some(range) = read.tag("[") {
         // Array.
         *read = read.consume(range.length);
-        return array(read);
+        return array(read, strings);
     }
     if let Some(range) = read.tag("(") {
         // Vec4.
@@ -63,14 +69,20 @@ fn expr(read: &mut ReadToken) -> Result<Variable, String> {
     if let Some(range) = read.tag("link") {
         // Link.
         *read = read.consume(range.length);
-        return link(read);
+        return link(read, strings);
     }
     // Text.
     if let Some(range) = read.string() {
         match read.parse_string(range.length) {
             Ok(s) => {
                 *read = read.consume(range.length);
-                return Ok(Variable::Text(Arc::new(s)));
+                return Ok(Variable::Text(
+                    if let Some(s) = strings.get(&s) {
+                        s.clone()
+                    } else {
+                        Arc::new(s)
+                    }
+                ));
             }
             Err(err_range) => return Err(format!("{}", err_range.data)),
         }
@@ -97,8 +109,10 @@ fn expr(read: &mut ReadToken) -> Result<Variable, String> {
     Err("Not implemented".into())
 }
 
-fn object(read: &mut ReadToken) -> Result<Variable, String> {
-    use std::sync::Arc;
+fn object(
+    read: &mut ReadToken,
+    strings: &mut Strings
+) -> Result<Variable, String> {
     use std::collections::HashMap;
 
     let mut res: HashMap<Arc<String>, Variable> = HashMap::new();
@@ -120,7 +134,13 @@ fn object(read: &mut ReadToken) -> Result<Variable, String> {
         if range.length == 0 {
             return Err("Expected key".into());
         } else {
-            key = Arc::new(read.raw_string(range.length));
+            let k = read.raw_string(range.length);
+            // Use reference to existing string to reduce memory.
+            key = if let Some(s) = strings.get(&k) {
+                s.clone()
+            } else {
+                Arc::new(k)
+            };
             *read = read.consume(range.length);
         };
 
@@ -134,14 +154,17 @@ fn object(read: &mut ReadToken) -> Result<Variable, String> {
 
         opt_w(read);
 
-        res.insert(key, try!(expr(read)));
+        res.insert(key, try!(expr(read, strings)));
 
         was_comma = comma(read);
     }
     Ok(Variable::Object(Arc::new(res)))
 }
 
-fn array(read: &mut ReadToken) -> Result<Variable, String> {
+fn array(
+    read: &mut ReadToken,
+    strings: &mut Strings
+) -> Result<Variable, String> {
     use std::sync::Arc;
 
     let mut res = vec![];
@@ -158,13 +181,16 @@ fn array(read: &mut ReadToken) -> Result<Variable, String> {
             return Err("Expected `,`".into());
         }
 
-        res.push(try!(expr(read)));
+        res.push(try!(expr(read, strings)));
         was_comma = comma(read);
     }
     Ok(Variable::Array(Arc::new(res)))
 }
 
-fn link(read: &mut ReadToken) -> Result<Variable, String> {
+fn link(
+    read: &mut ReadToken,
+    strings: &mut Strings
+) -> Result<Variable, String> {
     use Link;
 
     opt_w(read);
@@ -187,7 +213,7 @@ fn link(read: &mut ReadToken) -> Result<Variable, String> {
             break;
         }
 
-        match link.push(&try!(expr(read))) {
+        match link.push(&try!(expr(read, strings))) {
             Ok(()) => {}
             Err(err) => return Err(err),
         };
