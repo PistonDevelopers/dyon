@@ -261,7 +261,10 @@ fn vec4(read: &mut ReadToken, data: &str) -> Result<Variable, String> {
                     comma(read);
                     if let Some(range) = read.number(&NUMBER_SETTINGS) {
                         match read.parse_number(&NUMBER_SETTINGS, range.length) {
-                            Ok(w) => (z, w),
+                            Ok(w) => {
+                                *read = read.consume(range.length);
+                                (z, w)
+                            }
                             Err(err) => return Err(error(range, &format!("{}", err), data)),
                         }
                     } else { (z, 0.0) }
