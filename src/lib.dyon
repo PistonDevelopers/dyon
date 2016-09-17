@@ -232,10 +232,25 @@ fn dir__angle(angle: f64) -> vec4 { ... }
 
 /// Loads meta data from a file, using a meta syntax to parse the document.
 /// The meta language used is [Piston-Meta](https://github.com/PistonDevelopers/meta).
+///
+/// Returns an array of arrays:
+///
+/// - Start character
+/// - Number of characters
+/// - Type of meta data
+/// -- "start" Start of node
+/// -- "end" End of node
+/// -- "str" -> `str`
+/// -- "num" -> `f64`
+/// -- "bool" -> `bool`
+/// - Name of property
+/// - Value
 fn load__meta_file(meta_file: str, file: str) -> res[[[any]]] { ... }
 
 /// Loads meta data from an url, using a meta syntax to parse the document.
 /// The meta language used is [Piston-Meta](https://github.com/PistonDevelopers/meta)
+///
+/// For information about fields, see `load__meta_file`.
 fn load__meta_url(meta_file: str, url: str) -> res[[any]] { ... }
 
 /// Downloads a file from an url.
