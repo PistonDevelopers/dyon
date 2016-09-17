@@ -2477,6 +2477,7 @@ fn save__data_file(
 ) -> Result<Option<Variable>, String> {
     use std::error::Error;
     use std::fs::File;
+    use std::io::BufWriter;
     use write::{write_variable, EscapeString};
 
     rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
@@ -2489,7 +2490,7 @@ fn save__data_file(
     let data = rt.stack.pop().expect(TINVOTS);
 
     let mut f = match File::create(&**file) {
-        Ok(f) => f,
+        Ok(f) => BufWriter::new(f),
         Err(err) => {
             return Err(module.error(call.args[0].source_range(),
                        &format!("{}\nError when creating file `{}`:\n{}",
