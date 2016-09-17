@@ -1,4 +1,4 @@
-_seps: "(){}[],.:;=<>*·+-/%^?|&∧∨!¬∑∃∀\n"
+_seps: "(){}[],.:;\n\"\\"
 
 200 multi_line_comment = ["/*" ..."*/"? .r?({
     [!"*/" "*" ..."*/"?] [multi_line_comment ..."*/"?] ["/" ..."*/"?]
@@ -10,15 +10,17 @@ _seps: "(){}[],.:;=<>*·+-/%^?|&∧∨!¬∑∃∀\n"
     object:"object"
     array:"array"
     vec4:"vec4"
+    ["#" .._seps!:"color"]
+    link:"link"
     .t?:"text"
     .$_:"num"
     {"true":"bool" "false":!"bool"}
-    ["#" .._seps!:"color"]
 }
 2 object = ["{" ?w .s?.(, key_value) ?w "}"]
 3 key_value = [.._seps!:"key" ?w ":" ?w expr]
 4 array = ["[" ?w .s?.(, expr) ?w "]"]
 5 vec4 = ["(" ?w .$_:"x" , .$_:"y" ?[, .$_:"z" ?[, .$_:"w"]] ?w ")"]
+6 link = ["link" ?w "{" ?w .s?.(?w expr:"link_item") "}"]
 
 40 , = [?w "," ?w]
 

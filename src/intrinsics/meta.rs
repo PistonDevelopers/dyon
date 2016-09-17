@@ -3,16 +3,9 @@ use std::io::{self, Read};
 use std::fs::File;
 use std::error::Error;
 use piston_meta::*;
+use super::io::io_error;
 
 use Variable;
-
-fn io_error(action: &str, file: &str, err: &io::Error) -> String {
-    format!("IO Error when attempting to {} `{}`: {}\n{}", action, file, err.description(),
-        match err.cause() {
-            None => "",
-            Some(cause) => cause.description()
-        })
-}
 
 fn load_metarules_data(meta: &str, s: &str, file: &str, d: &str) -> Result<Vec<Variable>, String> {
     let rules = try!(syntax_errstr(&s).map_err(|err|
