@@ -1,5 +1,4 @@
 fn main() {
-    syntax := "assets/syntax-data.txt"
     files := [
         "data/array.dyon",
         "data/bool_false.dyon",

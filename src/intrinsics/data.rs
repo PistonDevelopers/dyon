@@ -3,6 +3,7 @@ use std::io::Read;
 use std::collections::HashSet;
 use std::sync::Arc;
 
+use range::Range;
 use read_token::{NumberSettings, ReadToken};
 
 use super::io::io_error;
@@ -23,7 +24,7 @@ pub fn load_file(file: &str) -> Result<Variable, String> {
 pub fn load_data(data: &str) -> Result<Variable, String> {
     let mut read = ReadToken::new(data, 0);
     let mut strings: Strings = HashSet::new();
-    expr(&mut read, &mut strings)
+    expr(&mut read, &mut strings, data)
 }
 
 static NUMBER_SETTINGS: NumberSettings = NumberSettings {
@@ -34,22 +35,23 @@ const SEPS: &'static str = &"(){}[],.:;\n\"\\";
 
 fn expr(
     read: &mut ReadToken,
-    strings: &mut Strings
+    strings: &mut Strings,
+    data: &str
 ) -> Result<Variable, String> {
     if let Some(range) = read.tag("{") {
         // Object.
         *read = read.consume(range.length);
-        return object(read, strings);
+        return object(read, strings, data);
     }
     if let Some(range) = read.tag("[") {
         // Array.
         *read = read.consume(range.length);
-        return array(read, strings);
+        return array(read, strings, data);
     }
     if let Some(range) = read.tag("(") {
         // Vec4.
         *read = read.consume(range.length);
-        return vec4(read);
+        return vec4(read, data);
     }
     if let Some(range) = read.tag("#") {
         use read_color::rgb_maybe_a;
@@ -63,13 +65,13 @@ fn expr(
                      a.unwrap_or(255) as f32 / 255.0];
             return Ok(Variable::Vec4(v));
         } else {
-            return Err("Expected hex color".into());
+            return Err(error(range, "Expected hex color in format `FFFFFF`or `FFFFFFFF`", data));
         }
     }
     if let Some(range) = read.tag("link") {
         // Link.
         *read = read.consume(range.length);
-        return link(read, strings);
+        return link(read, strings, data);
     }
     // Text.
     if let Some(range) = read.string() {
@@ -84,7 +86,10 @@ fn expr(
                     }
                 ));
             }
-            Err(err_range) => return Err(format!("{}", err_range.data)),
+            Err(err_range) => {
+                let (range, err) = err_range.decouple();
+                return Err(error(range, &format!("{}", err), data))
+            }
         }
     }
     // Number.
@@ -94,7 +99,7 @@ fn expr(
                 *read = read.consume(range.length);
                 return Ok(Variable::f64(val));
             }
-            Err(err) => return Err(format!("{}", err)),
+            Err(err) => return Err(error(range, &format!("{}", err), data)),
         }
     }
     // Boolean.
@@ -106,12 +111,13 @@ fn expr(
         *read = read.consume(range.length);
         return Ok(Variable::bool(true));
     }
-    Err("Not implemented".into())
+    Err(error(read.start(), "Reached end of file", data))
 }
 
 fn object(
     read: &mut ReadToken,
-    strings: &mut Strings
+    strings: &mut Strings,
+    data: &str
 ) -> Result<Variable, String> {
     use std::collections::HashMap;
 
@@ -126,13 +132,13 @@ fn object(
         }
 
         if res.len() > 0 && !was_comma {
-            return Err("Expected `,`".into());
+            return Err(error(read.start(), "Expected `,`", data));
         }
 
         let (range, _) = read.until_any_or_whitespace(SEPS);
         let key: Arc<String>;
         if range.length == 0 {
-            return Err("Expected key".into());
+            return Err(error(range, "Expected key", data));
         } else {
             let k = read.raw_string(range.length);
             // Use reference to existing string to reduce memory.
@@ -149,12 +155,12 @@ fn object(
         if let Some(range) = read.tag(":") {
             *read = read.consume(range.length);
         } else {
-            return Err("Expected `:`".into());
+            return Err(error(read.start(), "Expected `:`", data));
         }
 
         opt_w(read);
 
-        res.insert(key, try!(expr(read, strings)));
+        res.insert(key, try!(expr(read, strings, data)));
 
         was_comma = comma(read);
     }
@@ -163,7 +169,8 @@ fn object(
 
 fn array(
     read: &mut ReadToken,
-    strings: &mut Strings
+    strings: &mut Strings,
+    data: &str
 ) -> Result<Variable, String> {
     use std::sync::Arc;
 
@@ -178,10 +185,10 @@ fn array(
         }
 
         if res.len() > 0 && !was_comma {
-            return Err("Expected `,`".into());
+            return Err(error(read.start(), "Expected `,`", data));
         }
 
-        res.push(try!(expr(read, strings)));
+        res.push(try!(expr(read, strings, data)));
         was_comma = comma(read);
     }
     Ok(Variable::Array(Arc::new(res)))
@@ -189,7 +196,8 @@ fn array(
 
 fn link(
     read: &mut ReadToken,
-    strings: &mut Strings
+    strings: &mut Strings,
+    data: &str
 ) -> Result<Variable, String> {
     use Link;
 
@@ -198,7 +206,7 @@ fn link(
     if let Some(range) = read.tag("{") {
         *read = read.consume(range.length);
     } else {
-        return Err("Expected `{`".into());
+        return Err(error(read.start(), "Expected `{`", data));
     }
 
     let mut link = Link::new();
@@ -213,7 +221,7 @@ fn link(
             break;
         }
 
-        match link.push(&try!(expr(read, strings))) {
+        match link.push(&try!(expr(read, strings, data))) {
             Ok(()) => {}
             Err(err) => return Err(err),
         };
@@ -221,17 +229,17 @@ fn link(
     Ok(Variable::Link(Box::new(link)))
 }
 
-fn vec4(read: &mut ReadToken) -> Result<Variable, String> {
+fn vec4(read: &mut ReadToken, data: &str) -> Result<Variable, String> {
     let x = if let Some(range) = read.number(&NUMBER_SETTINGS) {
         match read.parse_number(&NUMBER_SETTINGS, range.length) {
             Ok(x) => {
                 *read = read.consume(range.length);
                 x
             }
-            Err(err) => return Err(format!("{}", err)),
+            Err(err) => return Err(error(range, &format!("{}", err), data)),
         }
     } else {
-        return Err("Expected x component".into());
+        return Err(error(read.start(), "Expected x component", data));
     };
     comma(read);
     let y = if let Some(range) = read.number(&NUMBER_SETTINGS) {
@@ -240,10 +248,10 @@ fn vec4(read: &mut ReadToken) -> Result<Variable, String> {
                 *read = read.consume(range.length);
                 y
             }
-            Err(err) => return Err(format!("{}", err)),
+            Err(err) => return Err(error(range, &format!("{}", err), data)),
         }
     } else {
-        return Err("Expected y component".into());
+        return Err(error(read.start(), "Expected y component", data));
     };
     let (z, w) = if comma(read) {
         if let Some(range) = read.number(&NUMBER_SETTINGS) {
@@ -254,17 +262,19 @@ fn vec4(read: &mut ReadToken) -> Result<Variable, String> {
                     if let Some(range) = read.number(&NUMBER_SETTINGS) {
                         match read.parse_number(&NUMBER_SETTINGS, range.length) {
                             Ok(w) => (z, w),
-                            Err(err) => return Err(format!("{}", err)),
+                            Err(err) => return Err(error(range, &format!("{}", err), data)),
                         }
                     } else { (z, 0.0) }
                 }
-                Err(err) => return Err(format!("{}", err)),
+                Err(err) => return Err(error(range, &format!("{}", err), data)),
             }
         } else { (0.0, 0.0) }
     } else { (0.0, 0.0) };
     opt_w(read);
     if let Some(range) = read.tag(")") {
         *read = read.consume(range.length);
+    } else {
+        return Err(error(read.start(), "Expected `)`", data));
     }
     Ok(Variable::Vec4([x as f32, y as f32, z as f32, w as f32]))
 }
@@ -287,4 +297,14 @@ fn comma(read: &mut ReadToken) -> bool {
     }
     opt_w(read);
     res
+}
+
+/// Generates error message using Piston-Meta's error handler.
+fn error(range: Range, msg: &str, data: &str) -> String {
+    use piston_meta::ParseErrorHandler;
+
+    let mut handler = ParseErrorHandler::new(data);
+    let mut buf: Vec<u8> = vec![];
+    handler.write_msg(&mut buf, range, msg).unwrap();
+    String::from_utf8(buf).unwrap()
 }
