@@ -77,9 +77,9 @@ but is the result of exploring and testing new ideas.
 [Sven Nilsen](https://github.com/bvssvni/) started this project in early 2016.
 The idea was to make a simple, but convenient scripting language that integrated well with Rust.
 
-- During the first week of coding, it was discovered a way to do lifetime checking on function arguments
-- Dynamic modules with imported prelude were added to explore a different approach to organizing code
-- For nice error handling, added option, result and `?` operator
+- During the first week of coding, a way to do lifetime checking on function arguments was discovered
+- A different approach to code organization was explored by adding dynamic modules with imported preludes
+- Added the `option` and `result` values along with the `?` operator in order to improve error handling
 - To test the design of the language, created a demo for interactive coding
 - Mutability check to improve readability
 - Short For loop to improve readability and performance
