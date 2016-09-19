@@ -3,14 +3,6 @@ A rusty dynamically typed scripting language
 
 [Tutorial](http://www.piston.rs/dyon-tutorial/)
 
-Notice: This is very early stage in development. Breaking changes will happen!
-
-![snake](./images/snake.png)
-
-Libraries that helps setting up a Dyon environment:
-
-- [dyon_interactive](./interactive/README.md) - Interactive coding with the Piston game engine
-
 Dyon script files ends with ".dyon".
 
 ### Editor-plugins
@@ -101,6 +93,7 @@ The idea was to make a simple, but convenient scripting language that integrated
 - Macros for easier embedding with Rust
 - Secrets to automatically derive meaning from mathematical loops
 - Closures that can be printed out, use current objects and grab from closure environment
+- Type safety for secrets, easy load/save of Dyon data
 
 Main goals:
 
