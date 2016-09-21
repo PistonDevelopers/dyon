@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate dyon;
 
-use dyon::Vec4;
+use dyon::{RustObject, Vec4};
 
 fn main() {
     use dyon::{error, Runtime};
@@ -42,6 +42,19 @@ fn load_module() -> Option<dyon::Module> {
         lts: vec![],
         tys: vec![],
         ret: Type::Object,
+    });
+
+    // Register custom Rust object with an ad-hoc type.
+    let ty_custom_object = Type::AdHoc(Arc::new("CustomObject".into()), Box::new(Type::Any));
+    module.add(Arc::new("custom_object".into()), custom_object, Dfn {
+        lts: vec![],
+        tys: vec![],
+        ret: ty_custom_object.clone(),
+    });
+    module.add(Arc::new("print_custom_object".into()), print_custom_object, Dfn {
+        lts: vec![Lt::Default],
+        tys: vec![ty_custom_object.clone()],
+        ret: Type::Void,
     });
     if error(load("source/functions/loader.dyon", &mut module)) {
         None
@@ -90,4 +103,19 @@ dyon_fn!{fn origo() -> PhysicalState {
         pos: [0.0, 1.0, 2.0].into(),
         vel: [3.0, 4.0, 5.0].into()
     }
+}}
+
+// Create a custom Rust object.
+dyon_fn!{fn custom_object() -> RustObject {
+    use std::sync::{Arc, Mutex};
+
+    let val: i32 = 42;
+    Arc::new(Mutex::new(val)) as RustObject
+}}
+
+// Print out the content of a custom Rust object.
+dyon_fn!{fn print_custom_object(obj: RustObject) {
+    let a_guard = obj.lock().unwrap();
+    let a = a_guard.downcast_ref::<i32>().unwrap();
+    println!("Custom value is {}", a);
 }}
