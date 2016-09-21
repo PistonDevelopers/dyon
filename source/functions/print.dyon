@@ -20,4 +20,15 @@ fn main() {
     println(mr(homer.first_name, homer.last_name))
 
     println(origo())
+
+    // Create a custom Rust object.
+    custom_object := custom_object()
+    foo(custom_object)
+}
+
+// Use `any` as ad-hoc inner type because it defaults to `{}`.
+// Rust objects do not have their own static types in Dyon.
+fn foo(custom_object: CustomObject any) {
+    println("Passing custom object")
+    print_custom_object(custom_object)
 }
