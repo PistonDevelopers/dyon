@@ -13,7 +13,7 @@ const STR: u64 = 0x3;
 
 /// Stores link memory in chunks of 1024 bytes.
 pub struct Block {
-    data: [usize; BLOCK_SIZE],
+    data: [u64; BLOCK_SIZE],
     tys: [u64; 4]
 }
 
@@ -37,13 +37,13 @@ impl Block {
             BOOL => Variable::bool(self.data[k] != 0),
             F64 => {
                 Variable::f64(unsafe {
-                    transmute::<usize, f64>(self.data[k])
+                    transmute::<u64, f64>(self.data[k])
                 })
             }
             STR => {
 
                 Variable::Text(unsafe {
-                    transmute::<&usize, &Arc<String>>(&self.data[k])
+                    transmute::<&u64, &Arc<String>>(&self.data[k])
                 }.clone())
             }
             _ => panic!("Invalid type"),
@@ -64,21 +64,21 @@ impl Block {
                 self.tys[i] &= !(0x3 << (j * 2));
                 // Sets new bits.
                 self.tys[i] |= BOOL << (j * 2);
-                self.data[k] = val as usize;
+                self.data[k] = val as u64;
             }
             Variable::F64(val, _) => {
                 // Reset bits.
                 self.tys[i] &= !(0x3 << (j * 2));
                 // Sets new bits.
                 self.tys[i] |= F64 << (j * 2);
-                self.data[k] = unsafe { transmute::<f64, usize>(val) };
+                self.data[k] = unsafe { transmute::<f64, u64>(val) };
             }
             Variable::Text(ref s) => {
                 // Reset bits.
                 self.tys[i] &= !(0x3 << (j * 2));
                 // Sets new bits.
                 self.tys[i] |= STR << (j * 2);
-                self.data[k] = unsafe { transmute::<Arc<String>, usize>(s.clone()) };
+                self.data[k] = unsafe { transmute::<Arc<String>, usize>(s.clone()) as u64 };
             }
             _ => panic!("Expected `str`, `f64`, `bool`")
         }
@@ -100,8 +100,8 @@ impl Clone for Block {
                     unsafe {
                         data[k] = transmute::<Arc<String>, usize>(
                             transmute::<&usize, &Arc<String>>(
-                                &self.data[k]
-                            ).clone());
+                                &(self.data[k] as usize)
+                            ).clone()) as u64;
                     }
                 }
                 _ => {}
@@ -126,7 +126,7 @@ impl Drop for Block {
                 STR => {
                     // Arc<String>
                     unsafe {
-                        drop(transmute::<usize, Arc<String>>(self.data[k]))
+                        drop(transmute::<usize, Arc<String>>(self.data[k] as usize))
                     }
                 }
                 _ => {}
