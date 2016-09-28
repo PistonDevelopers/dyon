@@ -24,6 +24,7 @@ pub fn load_file(file: &str) -> Result<Variable, String> {
 pub fn load_data(data: &str) -> Result<Variable, String> {
     let mut read = ReadToken::new(data, 0);
     let mut strings: Strings = HashSet::new();
+    opt_w(&mut read);
     expr(&mut read, &mut strings, data)
 }
 
@@ -284,9 +285,61 @@ fn vec4(read: &mut ReadToken, data: &str) -> Result<Variable, String> {
 
 /// Reads optional whitespace including comments.
 fn opt_w(read: &mut ReadToken) {
-    let range = read.whitespace();
-    if range.length > 0 {
+    loop {
+        let start = read.clone();
+        let range = read.whitespace();
         *read = read.consume(range.length);
+
+        // Single line comment.
+        if let Some(range) = read.tag("//") {
+            *read = read.consume(range.length);
+            let (range, _) = read.until_any("\n");
+            *read = read.consume(range.length);
+        }
+
+        multi_line_comment(read);
+
+        if read.subtract(&start).length == 0 { break; }
+    }
+}
+
+fn multi_line_comment(read: &mut ReadToken) {
+    // Multi-line comment.
+    if let Some(range) = read.tag("/*") {
+        *read = read.consume(range.length);
+        let (range, _) = read.until_any("*/");
+        *read = read.consume(range.length);
+        loop {
+            let start = read.clone();
+
+            if read.tag("*/").is_none() {
+                if let Some(range) = read.tag("*") {
+                    *read = read.consume(range.length);
+                    let (range, _) = read.until_any("*/");
+                    *read = read.consume(range.length);
+                }
+            }
+
+            let start_multi_line = read.clone();
+            multi_line_comment(read);
+            if read.subtract(&start_multi_line).length > 0 {
+                let (range, _) = read.until_any("*/");
+                *read = read.consume(range.length);
+            } else {
+                *read = start_multi_line;
+                if let Some(range) = read.tag("/") {
+                    *read = read.consume(range.length);
+                    let (range, _) = read.until_any("*/");
+                    *read = read.consume(range.length);
+                }
+            }
+
+            if read.subtract(&start).length == 0 { break; }
+        }
+
+        if let Some(range) = read.tag("*/") {
+            *read = read.consume(range.length);
+        }
     }
 }
 

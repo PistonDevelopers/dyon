@@ -1,17 +1,26 @@
 fn main() {
     files := [
+        "data/array.dyon",
+        "data/bool_false.dyon",
+        "data/bool_true.dyon",
+        "data/color.dyon",
+        "data/link.dyon",
+        "data/number.dyon",
+        "data/obj.dyon",
+        "data/text.dyon",
         "data/vec4_2.dyon",
         "data/vec4_3.dyon",
         "data/vec4_4.dyon",
+        "data/comments.dyon",
+        "data/comments_2.dyon",
+        "data/comments_3.dyon",
+        "data/comments_4.dyon",
+        "data/comments_5.dyon",
     ]
 
-    a := all i {
-        res := load_data(file: files[i])
-        explain_why(is_ok(res), res)
-    }
+    a := all i { is_ok(load_data(file: files[i])) }
     if !a {
         why := why(!a)
         println(files[why[0]])
-        println(unwrap_err(why[1]))
     }
 }
