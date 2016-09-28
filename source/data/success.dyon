@@ -11,6 +11,11 @@ fn main() {
         "data/vec4_2.dyon",
         "data/vec4_3.dyon",
         "data/vec4_4.dyon",
+        "data/comments.dyon",
+        "data/comments_2.dyon",
+        "data/comments_3.dyon",
+        "data/comments_4.dyon",
+        "data/comments_5.dyon",
     ]
 
     a := all i { is_ok(load_data(file: files[i])) }
