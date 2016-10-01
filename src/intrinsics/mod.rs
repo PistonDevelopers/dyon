@@ -1626,6 +1626,15 @@ fn load__source_imports(
                     &Variable::RustObject(ref obj) => {
                         match obj.lock().unwrap().downcast_ref::<Module>() {
                             Some(m) => {
+                                // Add external functions from imports.
+                                for f in &m.ext_prelude {
+                                    let has_external = new_module.ext_prelude.iter()
+                                        .any(|a| a.name == f.name);
+                                    if !has_external {
+                                        new_module.add(f.name.clone(), f.f, f.p.clone());
+                                    }
+                                }
+                                // Register loaded functions from imports.
                                 for f in &m.functions {
                                     new_module.register(f.clone())
                                 }
