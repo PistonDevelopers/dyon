@@ -99,7 +99,7 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\\"
 33 if = ["if" .w! expr:"cond" ?w block:"true_block"
          .r?([?w "else" w "if" ?w expr:"else_if_cond" ?w block:"else_if_block"])
          ?[?w "else" ?w block:"else_block"]]
-34 call = [.._seps!:"name" wn "(" .s?.(, arg_expr:"call_arg") ?w ")"]
+34 call = [.._seps!:"name" wn "(" ?w .s?.(, arg_expr:"call_arg") ?w ")"]
 35 named_call = [.._seps!:"word" wn "(" ?w
     .s?.(, [.._seps!:"word" ?w ":" ?w arg_expr:"call_arg" ?w]) ")"]
 36 go = ["go " ?w {call:"call" named_call:"named_call"}]
