@@ -27,7 +27,7 @@ Dyon script files ends with ".dyon".
 - [Return lifetime](https://github.com/PistonDevelopers/dyon/issues/173) `fn id(x: 'return) -> { return x }`
 - [Checks type at runtime when mutating variable](https://github.com/PistonDevelopers/dyon/issues/19) `a = 2.0 // ERROR: Expected assigning to number`
 - [Objects inserts new key](https://github.com/PistonDevelopers/dyon/issues/19) with `a.x := 0` and checks existence and type with `a.x = 0`
-- [Named argument syntax](https://github.com/PistonDevelopers/dyon/issues/26) based on snake case `foo(bar: b)` is equal to `foo_bar(b)`
+- [Named argument syntax](https://github.com/PistonDevelopers/dyon/issues/26) based on snake case `foo(bar: b)` is equal to `foo__bar(b)`
 - If expression `a := if b < c { 0 } else { 1 }`
 - For loop `for i := 0; i < 10; i += 1 { ... }`
 - [Short For loop](https://github.com/PistonDevelopers/dyon/issues/116) `for i 10 { ... }`
