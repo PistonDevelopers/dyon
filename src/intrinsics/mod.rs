@@ -1,6 +1,5 @@
 #![allow(non_snake_case)]
 
-use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use rand::Rng;
 
@@ -19,6 +18,7 @@ mod io;
 mod meta;
 mod data;
 mod lifetimechk;
+mod functions;
 
 const X: usize = 0;
 const Y: usize = 1;
@@ -105,6 +105,7 @@ const UNWRAP_OR: usize = 81;
 const TIP: usize = 82;
 const NECK: usize = 83;
 const LOAD_DATA__FILE: usize = 84;
+const FUNCTIONS__MODULE: usize = 85;
 
 const TABLE: &'static [(usize, fn(
         &mut Runtime,
@@ -200,6 +201,7 @@ const TABLE: &'static [(usize, fn(
     (TIP, tip),
     (NECK, neck),
     (LOAD_DATA__FILE, load_data__file),
+    (FUNCTIONS__MODULE, functions__module),
 ];
 
 pub fn standard(f: &mut Prelude) {
@@ -404,6 +406,7 @@ pub fn standard(f: &mut Prelude) {
     sarg(f, "tip", TIP, Type::Link, Type::Option(Box::new(Type::Any)));
     sarg(f, "neck", NECK, Type::Link, Type::Link);
     sarg(f, "load_data__file", LOAD_DATA__FILE, Type::Text, Type::Result(Box::new(Type::Any)));
+    sarg(f, "functions__module", FUNCTIONS__MODULE, Type::Any, Type::Any);
 }
 
 pub fn call_standard(
@@ -1846,115 +1849,35 @@ fn functions(
 ) -> Result<Option<Variable>, String> {
     // List available functions in scope.
     rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
-    let mut functions = vec![];
-    let name: Arc<String> = Arc::new("name".into());
-    let arguments: Arc<String> = Arc::new("arguments".into());
-    let returns: Arc<String> = Arc::new("returns".into());
-    let takes: Arc<String> = Arc::new("takes".into());
-    let lifetime: Arc<String> = Arc::new("lifetime".into());
-    let ret_lifetime: Arc<String> = Arc::new("return".into());
-    let ty: Arc<String> = Arc::new("type".into());
-    let intrinsic: Arc<String> = Arc::new("intrinsic".into());
-    let external: Arc<String> = Arc::new("external".into());
-    let loaded: Arc<String> = Arc::new("loaded".into());
-    let mut intrinsics = Prelude::new();
-    standard(&mut intrinsics);
-    for (f_name, &f) in &intrinsics.functions {
-        let f = &intrinsics.list[f];
-        let mut obj = HashMap::new();
-        obj.insert(name.clone(), Variable::Text(f_name.clone()));
-        obj.insert(returns.clone(), Variable::Text(Arc::new(f.ret.description())));
-        obj.insert(ty.clone(), Variable::Text(intrinsic.clone()));
-        let mut args = vec![];
-        for (i, lt) in f.lts.iter().enumerate() {
-            let mut obj_arg = HashMap::new();
-            obj_arg.insert(name.clone(),
-                Variable::Text(Arc::new(format!("arg{}", i).into())));
-            obj_arg.insert(lifetime.clone(), match *lt {
-                Lt::Default => Variable::Option(None),
-                Lt::Arg(ind) => Variable::Option(Some(
-                        Box::new(Variable::Text(
-                            Arc::new(format!("arg{}", ind).into())
-                        ))
-                    )),
-                Lt::Return => Variable::Option(Some(
-                        Box::new(Variable::Text(ret_lifetime.clone()))
-                    )),
-            });
-            obj_arg.insert(takes.clone(),
-                Variable::Text(Arc::new(f.tys[i].description())));
-            args.push(Variable::Object(Arc::new(obj_arg)));
-        }
-        obj.insert(arguments.clone(), Variable::Array(Arc::new(args)));
-        functions.push(Variable::Object(Arc::new(obj)));
-    }
-    for f in &*module.ext_prelude {
-        let mut obj = HashMap::new();
-        obj.insert(name.clone(), Variable::Text(f.name.clone()));
-        obj.insert(returns.clone(), Variable::Text(Arc::new(f.p.ret.description())));
-        obj.insert(ty.clone(), Variable::Text(external.clone()));
-        let mut args = vec![];
-        for (i, lt) in f.p.lts.iter().enumerate() {
-            let mut obj_arg = HashMap::new();
-            obj_arg.insert(name.clone(),
-                Variable::Text(Arc::new(format!("arg{}", i).into())));
-            obj_arg.insert(lifetime.clone(), match *lt {
-                Lt::Default => Variable::Option(None),
-                Lt::Arg(ind) => Variable::Option(Some(
-                        Box::new(Variable::Text(
-                            Arc::new(format!("arg{}", ind).into())
-                        ))
-                    )),
-                Lt::Return => Variable::Option(Some(
-                        Box::new(Variable::Text(ret_lifetime.clone()))
-                    )),
-            });
-            obj_arg.insert(takes.clone(),
-                Variable::Text(Arc::new(f.p.tys[i].description())));
-            args.push(Variable::Object(Arc::new(obj_arg)));
-        }
-        obj.insert(arguments.clone(), Variable::Array(Arc::new(args)));
-        functions.push(Variable::Object(Arc::new(obj)));
-    }
-    for f in &module.functions {
-        let mut obj = HashMap::new();
-        obj.insert(name.clone(), Variable::Text(f.name.clone()));
-        obj.insert(returns.clone(), Variable::Text(Arc::new(f.ret.description())));
-        obj.insert(ty.clone(), Variable::Text(loaded.clone()));
-        let mut args = vec![];
-        for arg in &f.args {
-            let mut obj_arg = HashMap::new();
-            obj_arg.insert(name.clone(),
-                Variable::Text(arg.name.clone()));
-            obj_arg.insert(lifetime.clone(),
-                match arg.lifetime {
-                    None => Variable::Option(None),
-                    Some(ref lt) => Variable::Option(Some(Box::new(
-                            Variable::Text(lt.clone())
-                        )))
-                }
-            );
-            obj_arg.insert(takes.clone(),
-                Variable::Text(Arc::new(arg.ty.description())));
-            args.push(Variable::Object(Arc::new(obj_arg)));
-        }
-        obj.insert(arguments.clone(), Variable::Array(Arc::new(args)));
-        functions.push(Variable::Object(Arc::new(obj)));
-    }
-    // Sort by function names.
-    functions.sort_by(|a, b|
-        match (a, b) {
-            (&Variable::Object(ref a), &Variable::Object(ref b)) => {
-                match (&a[&name], &b[&name]) {
-                    (&Variable::Text(ref a), &Variable::Text(ref b)) => {
-                        a.cmp(b)
-                    }
-                    _ => panic!("Expected two strings")
-                }
-            }
-            _ => panic!("Expected two objects")
-        }
-    );
+    let v = Variable::Array(Arc::new(functions::list_functions(module)));
+    rt.pop_fn(call.name.clone());
+    Ok(Some(v))
+}
+
+fn functions__module(
+    rt: &mut Runtime,
+    call: &ast::Call,
+    module: &Module,
+    st: usize,
+    lc: usize,
+    cu: usize,
+) -> Result<Option<Variable>, String> {
+    // List available functions in scope.
+    rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
+    let m = rt.stack.pop().expect(TINVOTS);
+    let m = match rt.resolve(&m) {
+        &Variable::RustObject(ref obj) => obj.clone(),
+        x => return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(x, "Module"), rt))
+    };
+
+    let functions = match m.lock().unwrap()
+        .downcast_ref::<Module>() {
+        Some(m) => functions::list_functions(m),
+        None => return Err(module.error(call.args[0].source_range(),
+            &format!("{}\nExpected `Module`", rt.stack_trace()), rt))
+    };
+
     let v = Variable::Array(Arc::new(functions));
     rt.pop_fn(call.name.clone());
     Ok(Some(v))
