@@ -175,6 +175,9 @@ fn call_ret(module: any, function: str, arguments: [any]) -> any { ... }
 /// Returns list of available functions, sorted by name.
 fn functions() -> any { ... }
 
+/// Returns list of available functions from within module, sorted by name.
+fn functions__module(module: any) -> any { ... }
+
 /// Creates `none()` variant of option values.
 fn none() -> opt[any] { ... }
 
