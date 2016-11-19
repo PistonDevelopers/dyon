@@ -328,7 +328,7 @@ impl Runtime {
         &mut self,
         expr: &ast::Expression,
         side: Side,
-        module: &Module
+        module: &Arc<Module>
     ) -> Result<(Option<Variable>, Flow), String> {
         use ast::Expression::*;
 
@@ -383,7 +383,7 @@ impl Runtime {
         }
     }
 
-    fn closure(&mut self, closure: &ast::Closure, module: &Module)
+    fn closure(&mut self, closure: &ast::Closure, module: &Arc<Module>)
     -> Result<(Option<Variable>, Flow), String> {
         use grab::{self, Grabbed};
 
@@ -481,7 +481,7 @@ impl Runtime {
         &mut self,
         expr: &ast::Expression,
         side: Side,
-        module: &Module
+        module: &Arc<Module>
     ) -> Result<(Option<Variable>, Flow), String> {
         let v = match try!(self.expression(expr, side, module)) {
             (Some(x), Flow::Continue) => x,
@@ -531,7 +531,7 @@ impl Runtime {
         }
     }
 
-    pub fn run(&mut self, module: &Module) -> Result<(), String> {
+    pub fn run(&mut self, module: &Arc<Module>) -> Result<(), String> {
         use std::cell::Cell;
 
         let name: Arc<String> = Arc::new("main".into());
@@ -560,7 +560,7 @@ impl Runtime {
     fn block(
         &mut self,
         block: &ast::Block,
-        module: &Module
+        module: &Arc<Module>
     ) -> Result<(Option<Variable>, Flow), String> {
         let mut expect = None;
         let st = self.stack.len();
@@ -584,7 +584,7 @@ impl Runtime {
         Ok((expect, Flow::Continue))
     }
 
-    pub fn go(&mut self, go: &ast::Go, module: &Module) -> Result<(Option<Variable>, Flow), String> {
+    pub fn go(&mut self, go: &ast::Go, module: &Arc<Module>) -> Result<(Option<Variable>, Flow), String> {
         use std::thread::{self, JoinHandle};
         use std::cell::Cell;
         use Thread;
@@ -649,10 +649,10 @@ impl Runtime {
             result_type: self.result_type.clone(),
             closure_type: self.closure_type.clone(),
         };
-        let new_module: Module = module.clone();
+        let new_module: Module = (**module).clone();
         let handle: JoinHandle<Result<Variable, String>> = thread::spawn(move || {
             let mut new_rt = new_rt;
-            let new_module = new_module;
+            let new_module = Arc::new(new_module);
             let fake_call = fake_call;
             Ok(match new_rt.call(&fake_call, &new_module) {
                 Err(err) => return Err(err),
@@ -668,7 +668,7 @@ impl Runtime {
     pub fn call_closure(
         &mut self,
         call: &ast::CallClosure,
-        module: &Module
+        module: &Arc<Module>
     ) -> Result<(Option<Variable>, Flow), String> {
         // Find item.
         let item = match try!(self.item(&call.item, Side::Right, module)) {
@@ -811,7 +811,7 @@ impl Runtime {
     pub fn call(
         &mut self,
         call: &ast::Call,
-        module: &Module
+        module: &Arc<Module>
     ) -> Result<(Option<Variable>, Flow), String> {
         match call.f_index.get() {
             FnIndex::Intrinsic(index) => {
@@ -977,7 +977,12 @@ impl Runtime {
         }
     }
 
-    pub fn call_str(&mut self, function: &str, args: &[Variable], module: &Module) -> Result<(), String> {
+    pub fn call_str(
+        &mut self,
+        function: &str,
+        args: &[Variable],
+        module: &Arc<Module>
+    ) -> Result<(), String> {
         use std::cell::Cell;
 
         let name: Arc<String> = Arc::new(function.into());
@@ -999,7 +1004,7 @@ impl Runtime {
         }
     }
 
-    fn swizzle(&mut self, sw: &ast::Swizzle, module: &Module) -> Result<Flow, String> {
+    fn swizzle(&mut self, sw: &ast::Swizzle, module: &Arc<Module>) -> Result<Flow, String> {
         let v = match try!(self.expression(&sw.expr, Side::Right, module)) {
             (Some(x), Flow::Continue) => x,
             (_, Flow::Return) => { return Ok(Flow::Return); }
@@ -1026,7 +1031,7 @@ impl Runtime {
     fn link(
         &mut self,
         link: &ast::Link,
-        module: &Module
+        module: &Arc<Module>
     ) -> Result<(Option<Variable>, Flow), String> {
         use Link;
 
@@ -1058,7 +1063,7 @@ impl Runtime {
     fn object(
         &mut self,
         obj: &ast::Object,
-        module: &Module
+        module: &Arc<Module>
     ) -> Result<(Option<Variable>, Flow), String> {
         let mut object: HashMap<_, _> = HashMap::new();
         for &(ref key, ref expr) in &obj.key_values {
@@ -1082,7 +1087,7 @@ impl Runtime {
     fn array(
         &mut self,
         arr: &ast::Array,
-        module: &Module
+        module: &Arc<Module>
     ) -> Result<(Option<Variable>, Flow), String> {
         let mut array: Vec<Variable> = Vec::new();
         for item in &arr.items {
@@ -1100,7 +1105,7 @@ impl Runtime {
     fn array_fill(
         &mut self,
         array_fill: &ast::ArrayFill,
-        module: &Module
+        module: &Arc<Module>
     ) -> Result<(Option<Variable>, Flow), String> {
         let fill = match try!(self.expression(&array_fill.fill, Side::Right, module)) {
             (x, Flow::Return) => return Ok((x, Flow::Return)),
@@ -1132,7 +1137,7 @@ impl Runtime {
         op: ast::AssignOp,
         left: &ast::Expression,
         right: &ast::Expression,
-        module: &Module
+        module: &Arc<Module>
     ) -> Result<(Option<Variable>, Flow), String> {
         use ast::AssignOp::*;
         use ast::Expression;
@@ -1621,7 +1626,7 @@ impl Runtime {
         &mut self,
         item: &ast::Item,
         side: Side,
-        module: &Module
+        module: &Arc<Module>
     ) -> Result<(Option<Variable>, Flow), String> {
         use Error;
 
@@ -1929,7 +1934,7 @@ impl Runtime {
     fn compare(
         &mut self,
         compare: &ast::Compare,
-        module: &Module
+        module: &Arc<Module>
     ) -> Result<(Option<Variable>, Flow), String> {
         fn sub_compare(
             rt: &Runtime,
@@ -2064,7 +2069,7 @@ impl Runtime {
     fn if_expr(
         &mut self,
         if_expr: &ast::If,
-        module: &Module
+        module: &Arc<Module>
     ) -> Result<(Option<Variable>, Flow), String> {
         let cond = match try!(self.expression(&if_expr.cond, Side::Right, module)) {
             (Some(x), Flow::Continue) => x,
@@ -2112,7 +2117,7 @@ impl Runtime {
     fn for_expr(
         &mut self,
         for_expr: &ast::For,
-        module: &Module
+        module: &Arc<Module>
     ) -> Result<(Option<Variable>, Flow), String> {
         let prev_st = self.stack.len();
         let prev_lc = self.local_stack.len();
@@ -2202,7 +2207,7 @@ impl Runtime {
     fn for_n_expr(
         &mut self,
         for_n_expr: &ast::ForN,
-        module: &Module
+        module: &Arc<Module>
     ) -> Result<(Option<Variable>, Flow), String> {
         let prev_st = self.stack.len();
         let prev_lc = self.local_stack.len();
@@ -2306,7 +2311,7 @@ impl Runtime {
     fn sum_n_expr(
         &mut self,
         for_n_expr: &ast::ForN,
-        module: &Module
+        module: &Arc<Module>
     ) -> Result<(Option<Variable>, Flow), String> {
         let prev_st = self.stack.len();
         let prev_lc = self.local_stack.len();
@@ -2421,7 +2426,7 @@ impl Runtime {
     fn sum_vec4_n_expr(
         &mut self,
         for_n_expr: &ast::ForN,
-        module: &Module
+        module: &Arc<Module>
     ) -> Result<(Option<Variable>, Flow), String> {
         let prev_st = self.stack.len();
         let prev_lc = self.local_stack.len();
@@ -2540,7 +2545,7 @@ impl Runtime {
     fn prod_n_expr(
         &mut self,
         for_n_expr: &ast::ForN,
-        module: &Module
+        module: &Arc<Module>
     ) -> Result<(Option<Variable>, Flow), String> {
         let prev_st = self.stack.len();
         let prev_lc = self.local_stack.len();
@@ -2655,7 +2660,7 @@ impl Runtime {
     fn min_n_expr(
         &mut self,
         for_n_expr: &ast::ForN,
-        module: &Module
+        module: &Arc<Module>
     ) -> Result<(Option<Variable>, Flow), String> {
         let prev_st = self.stack.len();
         let prev_lc = self.local_stack.len();
@@ -2785,7 +2790,7 @@ impl Runtime {
     fn max_n_expr(
         &mut self,
         for_n_expr: &ast::ForN,
-        module: &Module
+        module: &Arc<Module>
     ) -> Result<(Option<Variable>, Flow), String> {
         let prev_st = self.stack.len();
         let prev_lc = self.local_stack.len();
@@ -2916,7 +2921,7 @@ impl Runtime {
     fn any_n_expr(
         &mut self,
         for_n_expr: &ast::ForN,
-        module: &Module
+        module: &Arc<Module>
     ) -> Result<(Option<Variable>, Flow), String> {
         let prev_st = self.stack.len();
         let prev_lc = self.local_stack.len();
@@ -3047,7 +3052,7 @@ impl Runtime {
     fn all_n_expr(
         &mut self,
         for_n_expr: &ast::ForN,
-        module: &Module
+        module: &Arc<Module>
     ) -> Result<(Option<Variable>, Flow), String> {
         let prev_st = self.stack.len();
         let prev_lc = self.local_stack.len();
@@ -3178,7 +3183,7 @@ impl Runtime {
     fn sift_n_expr(
         &mut self,
         for_n_expr: &ast::ForN,
-        module: &Module
+        module: &Arc<Module>
     ) -> Result<(Option<Variable>, Flow), String> {
         let prev_st = self.stack.len();
         let prev_lc = self.local_stack.len();
@@ -3288,7 +3293,7 @@ impl Runtime {
         &mut self,
         vec4: &ast::Vec4,
         side: Side,
-        module: &Module
+        module: &Arc<Module>
     ) -> Result<(Option<Variable>, Flow), String> {
         let st = self.stack.len();
         for expr in &vec4.args {
@@ -3333,7 +3338,7 @@ impl Runtime {
         &mut self,
         norm: &ast::Norm,
         side: Side,
-        module: &Module
+        module: &Arc<Module>
     ) -> Result<(Option<Variable>, Flow), String> {
         let val = match try!(self.expression(&norm.expr, side, module)) {
             (Some(x), Flow::Continue) => x,
@@ -3355,7 +3360,7 @@ impl Runtime {
         &mut self,
         unop: &ast::UnOpExpression,
         side: Side,
-        module: &Module
+        module: &Arc<Module>
     ) -> Result<(Option<Variable>, Flow), String> {
         let val = match try!(self.expression(&unop.expr, side, module)) {
             (Some(x), Flow::Continue) => x,
@@ -3390,7 +3395,7 @@ impl Runtime {
         &mut self,
         binop: &ast::BinOpExpression,
         side: Side,
-        module: &Module
+        module: &Arc<Module>
     ) -> Result<(Option<Variable>, Flow), String> {
         use ast::BinOp::*;
 

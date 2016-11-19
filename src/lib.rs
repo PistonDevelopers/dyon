@@ -303,7 +303,7 @@ pub fn run(source: &str) -> Result<(), String> {
     let mut module = Module::new_intrinsics(Arc::new(Prelude::new_intrinsics().functions));
     try!(load(source, &mut module));
     let mut runtime = runtime::Runtime::new();
-    try!(runtime.run(&module));
+    try!(runtime.run(&Arc::new(module)));
     Ok(())
 }
 
@@ -312,7 +312,7 @@ pub fn run_str(source: &str, d: Arc<String>) -> Result<(), String> {
     let mut module = Module::new_intrinsics(Arc::new(Prelude::new_intrinsics().functions));
     try!(load_str(source, d, &mut module));
     let mut runtime = runtime::Runtime::new();
-    try!(runtime.run(&module));
+    try!(runtime.run(&Arc::new(module)));
     Ok(())
 }
 
