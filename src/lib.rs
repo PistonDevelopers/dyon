@@ -104,6 +104,18 @@ impl fmt::Debug for Thread {
 #[derive(Debug, Clone)]
 pub struct UnsafeRef(*mut Variable);
 
+#[derive(Clone)]
+pub struct ClosureEnvironment {
+    pub module: Arc<Module>,
+    pub relative: usize,
+}
+
+impl fmt::Debug for ClosureEnvironment {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "ClosureEnvironment")
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum Variable {
     Ref(usize),
@@ -121,7 +133,7 @@ pub enum Variable {
     Result(Result<Box<Variable>, Box<Error>>),
     Thread(Thread),
     // Stores closure AST, relative function index.
-    Closure(Arc<ast::Closure>, usize),
+    Closure(Arc<ast::Closure>, Box<ClosureEnvironment>),
 }
 
 /// This is requires because `UnsafeRef(*mut Variable)` can not be sent across threads.

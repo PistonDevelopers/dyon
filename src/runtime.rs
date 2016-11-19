@@ -386,6 +386,7 @@ impl Runtime {
     fn closure(&mut self, closure: &ast::Closure, module: &Arc<Module>)
     -> Result<(Option<Variable>, Flow), String> {
         use grab::{self, Grabbed};
+        use ClosureEnvironment;
 
         // Create closure.
         let relative = self.call_stack.last().map(|c| c.index).unwrap_or(0);
@@ -406,7 +407,10 @@ impl Runtime {
             file: closure.file.clone(),
             source: closure.source.clone(),
             expr: new_expr,
-        }), relative)), Flow::Continue))
+        }), Box::new(ClosureEnvironment {
+            module: module.clone(),
+            relative: relative
+        }))), Flow::Continue))
     }
 
     fn try_msg(v: &Variable) -> Option<Result<Box<Variable>, Box<::Error>>> {
@@ -681,7 +685,7 @@ impl Runtime {
         };
 
         let (f, new_index) = match self.resolve(&item) {
-            &Variable::Closure(ref f, new_index) => (f.clone(), new_index),
+            &Variable::Closure(ref f, ref env) => (f.clone(), env.relative),
             x => return Err(module.error(call.source_range,
                     &self.expected(x, "closure"), self))
         };
@@ -1532,7 +1536,7 @@ impl Runtime {
                         }
                     }
                 }
-                Variable::Closure(ref b, relative) => {
+                Variable::Closure(ref b, ref env) => {
                     unsafe {
                         match *r.0 {
                             Variable::Closure(ref mut n, _) => {
@@ -1542,7 +1546,7 @@ impl Runtime {
                                     let n_addr = n as *const _ as usize;
                                     let b_addr = b as *const _ as usize;
                                     if n_addr != b_addr {
-                                        *r.0 = Variable::Closure(b.clone(), relative)
+                                        *r.0 = Variable::Closure(b.clone(), env.clone())
                                     }
                                 } else {
                                     unimplemented!()
@@ -1550,7 +1554,7 @@ impl Runtime {
                             }
                             Variable::Return => {
                                 if let Set = op {
-                                    *r.0 = Variable::Closure(b.clone(), relative)
+                                    *r.0 = Variable::Closure(b.clone(), env.clone())
                                 } else {
                                     return Err(module.error(
                                         left.source_range(),
