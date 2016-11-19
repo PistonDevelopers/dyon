@@ -111,7 +111,7 @@ const KEYS: usize = 86;
 const TABLE: &'static [(usize, fn(
         &mut Runtime,
         &ast::Call,
-        &Module,
+        &Arc<Module>,
         usize,
         usize,
         usize
@@ -416,7 +416,7 @@ pub fn call_standard(
     rt: &mut Runtime,
     index: usize,
     call: &ast::Call,
-    module: &Module
+    module: &Arc<Module>
 ) -> Result<(Option<Variable>, Flow), String> {
     let st = rt.stack.len();
     let lc = rt.local_stack.len();
@@ -440,7 +440,7 @@ pub fn call_standard(
 fn x(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     _st: usize,
     _lc: usize,
     _cu: usize,
@@ -456,7 +456,7 @@ fn x(
 fn y(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     _st: usize,
     _lc: usize,
     _cu: usize,
@@ -472,7 +472,7 @@ fn y(
 fn z(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     _st: usize,
     _lc: usize,
     _cu: usize,
@@ -488,7 +488,7 @@ fn z(
 fn w(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     _st: usize,
     _lc: usize,
     _cu: usize,
@@ -504,7 +504,7 @@ fn w(
 fn s(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     st: usize,
     lc: usize,
     cu: usize,
@@ -538,7 +538,7 @@ fn s(
 fn clone(
     rt: &mut Runtime,
     _call: &ast::Call,
-    _module: &Module,
+    _module: &Arc<Module>,
     _st: usize,
     _lc: usize,
     _cu: usize,
@@ -550,7 +550,7 @@ fn clone(
 fn why(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     st: usize,
     lc: usize,
     cu: usize,
@@ -583,7 +583,7 @@ fn why(
 fn _where(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     _st: usize,
     _lc: usize,
     _cu: usize,
@@ -615,7 +615,7 @@ fn _where(
 fn explain_why(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     _st: usize,
     _lc: usize,
     _cu: usize,
@@ -642,7 +642,7 @@ fn explain_why(
 fn explain_where(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     st: usize,
     lc: usize,
     cu: usize,
@@ -671,7 +671,7 @@ fn explain_where(
 fn println(
     rt: &mut Runtime,
     call: &ast::Call,
-    _module: &Module,
+    _module: &Arc<Module>,
     st: usize,
     lc: usize,
     cu: usize,
@@ -689,7 +689,7 @@ fn println(
 fn print(
     rt: &mut Runtime,
     call: &ast::Call,
-    _module: &Module,
+    _module: &Arc<Module>,
     st: usize,
     lc: usize,
     cu: usize,
@@ -706,7 +706,7 @@ fn print(
 fn sqrt(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     _st: usize,
     _lc: usize,
     _cu: usize,
@@ -717,7 +717,7 @@ fn sqrt(
 fn sin(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     _st: usize,
     _lc: usize,
     _cu: usize,
@@ -728,7 +728,7 @@ fn sin(
 fn asin(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     _st: usize,
     _lc: usize,
     _cu: usize,
@@ -739,7 +739,7 @@ fn asin(
 fn cos(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     _st: usize,
     _lc: usize,
     _cu: usize,
@@ -750,7 +750,7 @@ fn cos(
 fn acos(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     _st: usize,
     _lc: usize,
     _cu: usize,
@@ -761,7 +761,7 @@ fn acos(
 fn tan(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     _st: usize,
     _lc: usize,
     _cu: usize,
@@ -772,7 +772,7 @@ fn tan(
 fn atan(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     _st: usize,
     _lc: usize,
     _cu: usize,
@@ -783,7 +783,7 @@ fn atan(
 fn atan2(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     _st: usize,
     _lc: usize,
     _cu: usize,
@@ -806,7 +806,7 @@ fn atan2(
 fn exp(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     _st: usize,
     _lc: usize,
     _cu: usize,
@@ -817,7 +817,7 @@ fn exp(
 fn ln(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     _st: usize,
     _lc: usize,
     _cu: usize,
@@ -828,7 +828,7 @@ fn ln(
 fn log2(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     _st: usize,
     _lc: usize,
     _cu: usize,
@@ -839,7 +839,7 @@ fn log2(
 fn log10(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     _st: usize,
     _lc: usize,
     _cu: usize,
@@ -850,7 +850,7 @@ fn log10(
 fn round(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     _st: usize,
     _lc: usize,
     _cu: usize,
@@ -861,7 +861,7 @@ fn round(
 fn abs(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     _st: usize,
     _lc: usize,
     _cu: usize,
@@ -872,7 +872,7 @@ fn abs(
 fn floor(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     _st: usize,
     _lc: usize,
     _cu: usize,
@@ -883,7 +883,7 @@ fn floor(
 fn ceil(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     _st: usize,
     _lc: usize,
     _cu: usize,
@@ -894,7 +894,7 @@ fn ceil(
 fn sleep(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     _st: usize,
     _lc: usize,
     _cu: usize,
@@ -917,7 +917,7 @@ fn sleep(
 fn head(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     st: usize,
     lc: usize,
     cu: usize,
@@ -936,7 +936,7 @@ fn head(
 fn tip(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     st: usize,
     lc: usize,
     cu: usize,
@@ -955,7 +955,7 @@ fn tip(
 fn tail(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     st: usize,
     lc: usize,
     cu: usize,
@@ -974,7 +974,7 @@ fn tail(
 fn neck(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     st: usize,
     lc: usize,
     cu: usize,
@@ -993,7 +993,7 @@ fn neck(
 fn is_empty(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     _st: usize,
     _lc: usize,
     _cu: usize,
@@ -1009,7 +1009,7 @@ fn is_empty(
 fn random(
     rt: &mut Runtime,
     _call: &ast::Call,
-    _module: &Module,
+    _module: &Arc<Module>,
     _st: usize,
     _lc: usize,
     _cu: usize,
@@ -1020,7 +1020,7 @@ fn random(
 fn len(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     st: usize,
     lc: usize,
     cu: usize,
@@ -1046,7 +1046,7 @@ fn len(
 fn push_ref(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     st: usize,
     lc: usize,
     cu: usize,
@@ -1079,7 +1079,7 @@ fn push_ref(
 fn push(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     st: usize,
     lc: usize,
     cu: usize,
@@ -1113,7 +1113,7 @@ fn push(
 fn pop(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     st: usize,
     lc: usize,
     cu: usize,
@@ -1151,7 +1151,7 @@ fn pop(
 fn reverse(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     st: usize,
     lc: usize,
     cu: usize,
@@ -1182,7 +1182,7 @@ fn reverse(
 fn clear(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     st: usize,
     lc: usize,
     cu: usize,
@@ -1213,7 +1213,7 @@ fn clear(
 fn swap(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     st: usize,
     lc: usize,
     cu: usize,
@@ -1256,7 +1256,7 @@ fn swap(
 fn read_line(
     rt: &mut Runtime,
     call: &ast::Call,
-    _module: &Module,
+    _module: &Arc<Module>,
     st: usize,
     lc: usize,
     cu: usize,
@@ -1284,7 +1284,7 @@ fn read_line(
 fn read_number(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     st: usize,
     lc: usize,
     cu: usize,
@@ -1331,7 +1331,7 @@ fn read_number(
 fn trim(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     st: usize,
     lc: usize,
     cu: usize,
@@ -1351,7 +1351,7 @@ fn trim(
 fn trim_left(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     st: usize,
     lc: usize,
     cu: usize,
@@ -1371,7 +1371,7 @@ fn trim_left(
 fn trim_right(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     _st: usize,
     _lc: usize,
     _cu: usize,
@@ -1394,7 +1394,7 @@ fn trim_right(
 fn _str(
     rt: &mut Runtime,
     call: &ast::Call,
-    _module: &Module,
+    _module: &Arc<Module>,
     st: usize,
     lc: usize,
     cu: usize,
@@ -1413,7 +1413,7 @@ fn _str(
 fn json_string(
     rt: &mut Runtime,
     _call: &ast::Call,
-    _module: &Module,
+    _module: &Arc<Module>,
     _st: usize,
     _lc: usize,
     _cu: usize,
@@ -1429,7 +1429,7 @@ fn json_string(
 fn str__color(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     _st: usize,
     _lc: usize,
     _cu: usize,
@@ -1467,7 +1467,7 @@ fn str__color(
 fn srgb_to_linear__color(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     _st: usize,
     _lc: usize,
     _cu: usize,
@@ -1493,7 +1493,7 @@ fn srgb_to_linear__color(
 fn linear_to_srgb__color(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     _st: usize,
     _lc: usize,
     _cu: usize,
@@ -1519,7 +1519,7 @@ fn linear_to_srgb__color(
 fn _typeof(
     rt: &mut Runtime,
     _call: &ast::Call,
-    _module: &Module,
+    _module: &Arc<Module>,
     _st: usize,
     _lc: usize,
     _cu: usize,
@@ -1547,7 +1547,7 @@ fn _typeof(
 fn debug(
     rt: &mut Runtime,
     _call: &ast::Call,
-    _module: &Module,
+    _module: &Arc<Module>,
     _st: usize,
     _lc: usize,
     _cu: usize,
@@ -1561,7 +1561,7 @@ fn debug(
 fn backtrace(
     rt: &mut Runtime,
     _call: &ast::Call,
-    _module: &Module,
+    _module: &Arc<Module>,
     _st: usize,
     _lc: usize,
     _cu: usize,
@@ -1573,7 +1573,7 @@ fn backtrace(
 fn load(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     st: usize,
     lc: usize,
     cu: usize,
@@ -1598,7 +1598,7 @@ fn load(
                 })))
             } else {
                 Variable::Result(Ok(Box::new(
-                    Variable::RustObject(Arc::new(Mutex::new(m))))))
+                    Variable::RustObject(Arc::new(Mutex::new(Arc::new(m)))))))
             }
         }
         x => return Err(module.error(call.args[0].source_range(),
@@ -1611,7 +1611,7 @@ fn load(
 fn load__source_imports(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     st: usize,
     lc: usize,
     cu: usize,
@@ -1630,7 +1630,7 @@ fn load__source_imports(
             for it in &**array {
                 match rt.resolve(it) {
                     &Variable::RustObject(ref obj) => {
-                        match obj.lock().unwrap().downcast_ref::<Module>() {
+                        match obj.lock().unwrap().downcast_ref::<Arc<Module>>() {
                             Some(m) => {
                                 // Add external functions from imports.
                                 for f in &m.ext_prelude {
@@ -1673,7 +1673,7 @@ fn load__source_imports(
             } else {
                 Variable::Result(Ok(Box::new(
                     Variable::RustObject(Arc::new(
-                        Mutex::new(new_module))))))
+                        Mutex::new(Arc::new(new_module)))))))
             }
         }
         x => return Err(module.error(call.args[0].source_range(),
@@ -1686,7 +1686,7 @@ fn load__source_imports(
 fn _call(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     st: usize,
     lc: usize,
     cu: usize,
@@ -1714,7 +1714,7 @@ fn _call(
     };
 
     match obj.lock().unwrap()
-        .downcast_ref::<Module>() {
+        .downcast_ref::<Arc<Module>>() {
         Some(m) => {
             use std::cell::Cell;
 
@@ -1766,7 +1766,7 @@ fn _call(
 fn call_ret(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     st: usize,
     lc: usize,
     cu: usize,
@@ -1794,7 +1794,7 @@ fn call_ret(
     };
 
     let v = match obj.lock().unwrap()
-        .downcast_ref::<Module>() {
+        .downcast_ref::<Arc<Module>>() {
         Some(m) => {
             use std::cell::Cell;
 
@@ -1845,7 +1845,7 @@ fn call_ret(
 fn functions(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     st: usize,
     lc: usize,
     cu: usize,
@@ -1860,7 +1860,7 @@ fn functions(
 fn functions__module(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     st: usize,
     lc: usize,
     cu: usize,
@@ -1875,7 +1875,7 @@ fn functions__module(
     };
 
     let functions = match m.lock().unwrap()
-        .downcast_ref::<Module>() {
+        .downcast_ref::<Arc<Module>>() {
         Some(m) => functions::list_functions(m),
         None => return Err(module.error(call.args[0].source_range(),
             &format!("{}\nExpected `Module`", rt.stack_trace()), rt))
@@ -1889,7 +1889,7 @@ fn functions__module(
 fn none(
     _rt: &mut Runtime,
     _call: &ast::Call,
-    _module: &Module,
+    _module: &Arc<Module>,
     _st: usize,
     _lc: usize,
     _cu: usize,
@@ -1900,7 +1900,7 @@ fn none(
 fn some(
     rt: &mut Runtime,
     _call: &ast::Call,
-    _module: &Module,
+    _module: &Arc<Module>,
     _st: usize,
     _lc: usize,
     _cu: usize,
@@ -1914,7 +1914,7 @@ fn some(
 fn ok(
     rt: &mut Runtime,
     _call: &ast::Call,
-    _module: &Module,
+    _module: &Arc<Module>,
     _st: usize,
     _lc: usize,
     _cu: usize,
@@ -1928,7 +1928,7 @@ fn ok(
 fn err(
     rt: &mut Runtime,
     _call: &ast::Call,
-    _module: &Module,
+    _module: &Arc<Module>,
     _st: usize,
     _lc: usize,
     _cu: usize,
@@ -1944,7 +1944,7 @@ fn err(
 fn is_err(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     _st: usize,
     _lc: usize,
     _cu: usize,
@@ -1963,7 +1963,7 @@ fn is_err(
 fn is_ok(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     _st: usize,
     _lc: usize,
     _cu: usize,
@@ -1982,7 +1982,7 @@ fn is_ok(
 fn min(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     st: usize,
     lc: usize,
     cu: usize,
@@ -2011,7 +2011,7 @@ fn min(
 fn max(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     st: usize,
     lc: usize,
     cu: usize,
@@ -2040,7 +2040,7 @@ fn max(
 fn unwrap(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     st: usize,
     lc: usize,
     cu: usize,
@@ -2087,7 +2087,7 @@ fn unwrap(
 fn unwrap_or(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     st: usize,
     lc: usize,
     cu: usize,
@@ -2114,7 +2114,7 @@ fn unwrap_or(
 fn unwrap_err(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     _st: usize,
     _lc: usize,
     _cu: usize,
@@ -2132,7 +2132,7 @@ fn unwrap_err(
 fn dir__angle(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     _st: usize,
     _lc: usize,
     _cu: usize,
@@ -2150,7 +2150,7 @@ fn dir__angle(
 fn load__meta_file(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     st: usize,
     lc: usize,
     cu: usize,
@@ -2182,7 +2182,7 @@ fn load__meta_file(
 fn load__meta_url(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     st: usize,
     lc: usize,
     cu: usize,
@@ -2214,7 +2214,7 @@ fn load__meta_url(
 fn download__url_file(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     st: usize,
     lc: usize,
     cu: usize,
@@ -2247,7 +2247,7 @@ fn download__url_file(
 fn save__string_file(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     st: usize,
     lc: usize,
     cu: usize,
@@ -2291,7 +2291,7 @@ fn save__string_file(
 fn load_string__file(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     st: usize,
     lc: usize,
     cu: usize,
@@ -2334,7 +2334,7 @@ fn load_string__file(
 fn join__thread(
     rt: &mut Runtime,
     call: &ast::Call,
-    _module: &Module,
+    _module: &Arc<Module>,
     st: usize,
     lc: usize,
     cu: usize,
@@ -2377,7 +2377,7 @@ fn join__thread(
 fn load_data__file(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     st: usize,
     lc: usize,
     cu: usize
@@ -2405,7 +2405,7 @@ fn load_data__file(
 fn save__data_file(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     st: usize,
     lc: usize,
     cu: usize,
@@ -2450,7 +2450,7 @@ fn save__data_file(
 fn json_from_meta_data(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     st: usize,
     lc: usize,
     cu: usize,
@@ -2477,7 +2477,7 @@ fn json_from_meta_data(
 fn has(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     st: usize,
     lc: usize,
     cu: usize
@@ -2502,7 +2502,7 @@ fn has(
 fn keys(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     st: usize,
     lc: usize,
     cu: usize
@@ -2523,7 +2523,7 @@ fn keys(
 fn chars(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     st: usize,
     lc: usize,
     cu: usize
@@ -2549,7 +2549,7 @@ fn chars(
 fn now(
     _rt: &mut Runtime,
     _call: &ast::Call,
-    _module: &Module,
+    _module: &Arc<Module>,
     _st: usize,
     _lc: usize,
     _cu: usize
@@ -2571,7 +2571,7 @@ fn now(
 fn is_nan(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Module,
+    module: &Arc<Module>,
     st: usize,
     lc: usize,
     cu: usize,

@@ -23,7 +23,7 @@ pub fn grab_expr(
     rt: &mut Runtime,
     expr: &ast::Expression,
     side: Side,
-    module: &Module,
+    module: &Arc<Module>,
 ) -> Result<(Grabbed, Flow), String> {
     use ast::Expression as E;
 
@@ -427,7 +427,7 @@ fn grab_block(
     rt: &mut Runtime,
     block: &ast::Block,
     side: Side,
-    module: &Module,
+    module: &Arc<Module>,
 ) -> Result<(Grabbed, Flow), String> {
     Ok((Grabbed::Block(ast::Block {
         expressions: {
@@ -449,7 +449,7 @@ fn grab_item(
     rt: &mut Runtime,
     item: &ast::Item,
     side: Side,
-    module: &Module,
+    module: &Arc<Module>,
 ) -> Result<(Grabbed, Flow), String> {
     Ok((Grabbed::Item(ast::Item {
         name: item.name.clone(),
@@ -483,7 +483,7 @@ fn grab_for_n(
     rt: &mut Runtime,
     for_n: &ast::ForN,
     side: Side,
-    module: &Module,
+    module: &Arc<Module>,
 ) -> Result<(Grabbed, Flow), String> {
     Ok((Grabbed::ForN(ast::ForN {
         name: for_n.name.clone(),

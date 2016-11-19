@@ -1,6 +1,7 @@
 #[macro_use]
 extern crate dyon;
 
+use std::sync::Arc;
 use dyon::{RustObject, Vec4};
 
 fn main() {
@@ -8,7 +9,7 @@ fn main() {
 
     let mut dyon_runtime = Runtime::new();
     let dyon_module = load_module().unwrap();
-    if error(dyon_runtime.run(&dyon_module)) {
+    if error(dyon_runtime.run(&Arc::new(dyon_module))) {
         return
     }
 }
