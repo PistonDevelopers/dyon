@@ -284,6 +284,9 @@ fn json_from_meta_data(meta_data: [[any]]) -> str { ... }
 /// Returns `true` if object has key.
 fn has(obj: {}, key: str) -> bool { ... }
 
+/// Returns all keys of an object.
+fn keys(obj: {}) -> [str] { ... }
+
 /// Returns characters of a string.
 fn chars(text: str) -> [str] { ... }
 

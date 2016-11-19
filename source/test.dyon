@@ -1,10 +1,4 @@
-
 fn main() {
-    m := unwrap(load("source/functor.dyon"))
-
-    fs := functions(module: m)
-    for i {
-        if fs[i].type != "loaded" {continue}
-        println(fs[i].name)
-    }
+    a := {x: 2, y: 3}
+    println(keys(a))
 }

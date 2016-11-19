@@ -106,6 +106,7 @@ const TIP: usize = 82;
 const NECK: usize = 83;
 const LOAD_DATA__FILE: usize = 84;
 const FUNCTIONS__MODULE: usize = 85;
+const KEYS: usize = 86;
 
 const TABLE: &'static [(usize, fn(
         &mut Runtime,
@@ -202,6 +203,7 @@ const TABLE: &'static [(usize, fn(
     (NECK, neck),
     (LOAD_DATA__FILE, load_data__file),
     (FUNCTIONS__MODULE, functions__module),
+    (KEYS, keys),
 ];
 
 pub fn standard(f: &mut Prelude) {
@@ -407,6 +409,7 @@ pub fn standard(f: &mut Prelude) {
     sarg(f, "neck", NECK, Type::Link, Type::Link);
     sarg(f, "load_data__file", LOAD_DATA__FILE, Type::Text, Type::Result(Box::new(Type::Any)));
     sarg(f, "functions__module", FUNCTIONS__MODULE, Type::Any, Type::Any);
+    sarg(f, "keys", KEYS, Type::Object, Type::Array(Box::new(Type::Text)));
 }
 
 pub fn call_standard(
@@ -2490,10 +2493,31 @@ fn has(
     let res = match rt.resolve(&obj) {
         &Variable::Object(ref obj) => obj.contains_key(&key),
         x => return Err(module.error(call.args[0].source_range(),
-                        &rt.expected(x, "array"), rt))
+                        &rt.expected(x, "object"), rt))
     };
     rt.pop_fn(call.name.clone());
     Ok(Some(Variable::bool(res)))
+}
+
+fn keys(
+    rt: &mut Runtime,
+    call: &ast::Call,
+    module: &Module,
+    st: usize,
+    lc: usize,
+    cu: usize
+) -> Result<Option<Variable>, String> {
+    rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
+    let obj = rt.stack.pop().expect(TINVOTS);
+    let res = Variable::Array(Arc::new(match rt.resolve(&obj) {
+        &Variable::Object(ref obj) => {
+            obj.keys().map(|k| Variable::Text(k.clone())).collect()
+        }
+        x => return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(x, "object"), rt))
+    }));
+    rt.pop_fn(call.name.clone());
+    Ok(Some(res))
 }
 
 fn chars(
