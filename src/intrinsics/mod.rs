@@ -1630,7 +1630,7 @@ fn load__source_imports(
             for it in &**array {
                 match rt.resolve(it) {
                     &Variable::RustObject(ref obj) => {
-                        match obj.lock().unwrap().downcast_ref::<Module>() {
+                        match obj.lock().unwrap().downcast_ref::<Arc<Module>>() {
                             Some(m) => {
                                 // Add external functions from imports.
                                 for f in &m.ext_prelude {
@@ -1875,7 +1875,7 @@ fn functions__module(
     };
 
     let functions = match m.lock().unwrap()
-        .downcast_ref::<Module>() {
+        .downcast_ref::<Arc<Module>>() {
         Some(m) => functions::list_functions(m),
         None => return Err(module.error(call.args[0].source_range(),
             &format!("{}\nExpected `Module`", rt.stack_trace()), rt))

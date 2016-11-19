@@ -684,8 +684,8 @@ impl Runtime {
                             self.stack_trace()), self))
         };
 
-        let (f, new_index) = match self.resolve(&item) {
-            &Variable::Closure(ref f, ref env) => (f.clone(), env.relative),
+        let (f, env) = match self.resolve(&item) {
+            &Variable::Closure(ref f, ref env) => (f.clone(), env.clone()),
             x => return Err(module.error(call.source_range,
                     &self.expected(x, "closure"), self))
         };
@@ -739,7 +739,7 @@ impl Runtime {
             }
         }
 
-        self.push_fn(call.item.name.clone(), new_index, Some(f.file.clone()), st, lc, cu);
+        self.push_fn(call.item.name.clone(), env.relative, Some(f.file.clone()), st, lc, cu);
         if f.returns() {
             self.local_stack.push((self.ret.clone(), st - 1));
         }
@@ -747,7 +747,7 @@ impl Runtime {
             // Do not resolve locals to keep fixed length from end of stack.
             self.local_stack.push((arg.name.clone(), st + i));
         }
-        let (x, flow) = try!(self.expression(&f.expr, Side::Right, module));
+        let (x, flow) = try!(self.expression(&f.expr, Side::Right, &env.module));
         match flow {
             Flow::Break(None) =>
                 return Err(module.error(call.source_range,
