@@ -1827,7 +1827,7 @@ impl Call {
                     stack.push(Some(Arc::new("return".into())));
                 }
             }
-            FnIndex::External(_) => {
+            FnIndex::ExternalVoid(_) | FnIndex::ExternalReturn(_) => {
                 // Don't push return since last value in block
                 // is used as return value.
             }
