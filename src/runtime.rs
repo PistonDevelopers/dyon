@@ -817,12 +817,13 @@ impl Runtime {
         call: &ast::Call,
         module: &Arc<Module>
     ) -> Result<(Option<Variable>, Flow), String> {
+        use FnExternalRef;
+
         match call.f_index.get() {
             FnIndex::Intrinsic(index) => {
                 intrinsics::call_standard(self, index, call, module)
             }
-            FnIndex::External(f_index) => {
-                let f = &module.ext_prelude[f_index];
+            FnIndex::ExternalVoid(FnExternalRef(f)) => {
                 for arg in &call.args {
                     match try!(self.expression(arg, Side::Right, module)) {
                         (Some(x), Flow::Continue) => self.stack.push(x),
@@ -833,13 +834,24 @@ impl Runtime {
                                         self.stack_trace()), self))
                     };
                 }
-                try!((f.f)(self).map_err(|err|
+                try!((f)(self).map_err(|err|
                     module.error(call.source_range, &err, self)));
-                if f.p.returns() {
-                    return Ok((Some(self.stack.pop().expect(TINVOTS)), Flow::Continue));
-                } else {
-                    return Ok((None, Flow::Continue));
+                return Ok((None, Flow::Continue));
+            }
+            FnIndex::ExternalReturn(FnExternalRef(f)) => {
+                for arg in &call.args {
+                    match try!(self.expression(arg, Side::Right, module)) {
+                        (Some(x), Flow::Continue) => self.stack.push(x),
+                        (x, Flow::Return) => { return Ok((x, Flow::Return)); }
+                        _ => return Err(module.error(arg.source_range(),
+                                        &format!("{}\nExpected something. \
+                                        Expression did not return a value.",
+                                        self.stack_trace()), self))
+                    };
                 }
+                try!((f)(self).map_err(|err|
+                    module.error(call.source_range, &err, self)));
+                return Ok((Some(self.stack.pop().expect(TINVOTS)), Flow::Continue));
             }
             FnIndex::Loaded(f_index) => {
                 let relative = self.call_stack.last().map(|c| c.index).unwrap_or(0);

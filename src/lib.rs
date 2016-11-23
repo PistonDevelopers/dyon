@@ -215,7 +215,24 @@ pub enum FnIndex {
     Intrinsic(usize),
     /// Relative to function you call from.
     Loaded(isize),
-    External(usize),
+    ExternalVoid(FnExternalRef),
+    ExternalReturn(FnExternalRef),
+}
+
+/// Used to store direct reference to external function.
+#[derive(Copy)]
+pub struct FnExternalRef(pub fn(&mut Runtime) -> Result<(), String>);
+
+impl Clone for FnExternalRef {
+    fn clone(&self) -> FnExternalRef {
+        *self
+    }
+}
+
+impl fmt::Debug for FnExternalRef {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "FnExternalRef")
+    }
 }
 
 pub struct FnExternal {
@@ -265,9 +282,13 @@ impl Module {
                 return FnIndex::Loaded(i as isize - relative as isize);
             }
         }
-        for (i, f) in self.ext_prelude.iter().enumerate().rev() {
+        for f in self.ext_prelude.iter().rev() {
             if &f.name == name {
-                return FnIndex::External(i);
+                return if f.p.returns() {
+                    FnIndex::ExternalReturn(FnExternalRef(f.f))
+                } else {
+                    FnIndex::ExternalVoid(FnExternalRef(f.f))
+                };
             }
         }
         match self.intrinsics.get(name) {

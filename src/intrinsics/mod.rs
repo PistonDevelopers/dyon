@@ -1734,7 +1734,8 @@ fn _call(
                         module.error(call.args[2].source_range(),
                         &format!("{}\n{}", err, rt.stack_trace()), rt)));
                 }
-                FnIndex::Intrinsic(_) | FnIndex::None | FnIndex::External(_) =>
+                FnIndex::Intrinsic(_) | FnIndex::None |
+                FnIndex::ExternalVoid(_) | FnIndex::ExternalReturn(_) =>
                     return Err(module.error(
                             call.args[1].source_range(),
                             &format!(
@@ -1814,7 +1815,8 @@ fn call_ret(
                         module.error(call.args[2].source_range(),
                         &format!("{}\n{}", err, rt.stack_trace()), rt)));
                 }
-                FnIndex::Intrinsic(_) | FnIndex::None | FnIndex::External(_) =>
+                FnIndex::Intrinsic(_) | FnIndex::None |
+                FnIndex::ExternalVoid(_) | FnIndex::ExternalReturn(_) =>
                     return Err(module.error(
                         call.args[1].source_range(),
                         &format!(
