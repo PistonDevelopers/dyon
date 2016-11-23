@@ -231,7 +231,7 @@ impl Clone for FnExternalRef {
 
 impl fmt::Debug for FnExternalRef {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "FnRef")
+        write!(f, "FnExternalRef")
     }
 }
 
