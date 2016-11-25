@@ -1,4 +1,5 @@
 fn main() {
-    a := {x: 2, y: 3}
-    println(keys(a))
+    println(foo((1, 2)))
 }
+
+foo(a) = |a|
