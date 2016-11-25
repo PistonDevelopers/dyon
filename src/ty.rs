@@ -3,6 +3,7 @@ use std::sync::Arc;
 use piston_meta::bootstrap::Convert;
 use range::Range;
 use Dfn;
+use ast::BinOp;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Type {
@@ -284,7 +285,7 @@ impl Type {
         }
     }
 
-    pub fn mul(&self, other: &Type) -> Option<Type> {
+    pub fn mul(&self, other: &Type, binop: BinOp) -> Option<Type> {
         use self::Type::*;
 
         match (self, other) {
@@ -304,7 +305,13 @@ impl Type {
             (&F64, &Secret(ref b)) if **b == Type::F64 => Some(F64),
             (&Vec4, &F64) => Some(Vec4),
             (&F64, &Vec4) => Some(Vec4),
-            (&Vec4, &Vec4) => Some(Vec4),
+            (&Vec4, &Vec4) => {
+                if let BinOp::Dot = binop {
+                    Some(F64)
+                } else {
+                    Some(Vec4)
+                }
+            }
             (&Any, x) if x != &Type::Void => Some(Any),
             (x, &Any) if x != &Type::Void => Some(Any),
             _ => None

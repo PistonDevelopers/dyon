@@ -326,18 +326,29 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                     this_ty = it_ty;
                 }
                 Kind::Mul => {
+                    if nodes[i].binops.len() + 1 != nodes[i].children.len() {
+                        return Err(nodes[i].source.wrap(
+                            format!("Type mismatch (#450):\n\
+                            Missing binary operator for node when converting meta data")
+                        ))
+                    }
+
                     // Require type to be inferred from all children.
+                    let mut bin_ind = 0;
                     let mut it_ty: Option<Type> = None;
                     for &ch in &nodes[i].children {
                         if nodes[ch].item_ids() { continue 'node; }
                         if let Some(ref ty) = nodes[ch].ty {
                             it_ty = if let Some(ref it) = it_ty {
-                                match it.mul(ty) {
+                                match it.mul(ty, nodes[i].binops[bin_ind]) {
                                     None => return Err(nodes[ch].source.wrap(
                                         format!("Type mismatch (#500):\n\
                                             Binary operator can not be used with `{}` and `{}`",
                                             it.description(), ty.description()))),
-                                    x => x
+                                    x => {
+                                        bin_ind += 1;
+                                        x
+                                    }
                                 }
                             } else {
                                 Some(ty.clone())
