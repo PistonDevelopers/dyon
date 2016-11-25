@@ -302,15 +302,39 @@ pub fn write_block<W: io::Write>(
     Ok(())
 }
 
+fn binop_needs_parent(expr: &ast::Expression) -> bool {
+    use ast::Expression as E;
+
+    match *expr {
+        E::Compare(_) => true,
+        _ => false
+    }
+}
+
 pub fn write_binop<W: io::Write>(
     w: &mut W,
     rt: &Runtime,
     binop: &ast::BinOpExpression,
     tabs: u32,
 ) -> Result<(), io::Error> {
+    let left_needs_parens = binop_needs_parent(&binop.left);
+    let right_needs_parens = binop_needs_parent(&binop.right);
+
+    if left_needs_parens {
+        try!(write!(w, "("));
+    }
     try!(write_expr(w, rt, &binop.left, tabs));
+    if left_needs_parens {
+        try!(write!(w, ")"));
+    }
     try!(write!(w, " {} ", binop.op.symbol()));
+    if right_needs_parens {
+        try!(write!(w, "("));
+    }
     try!(write_expr(w, rt, &binop.right, tabs));
+    if right_needs_parens {
+        try!(write!(w, ")"));
+    }
     Ok(())
 }
 
@@ -579,15 +603,39 @@ pub fn write_for<W: io::Write>(
     Ok(())
 }
 
+fn compare_needs_parent(expr: &ast::Expression) -> bool {
+    use ast::Expression as E;
+
+    match *expr {
+        E::BinOp(_) => true,
+        _ => false
+    }
+}
+
 pub fn write_compare<W: io::Write>(
     w: &mut W,
     rt: &Runtime,
     comp: &ast::Compare,
     tabs: u32,
 ) -> Result<(), io::Error> {
+    let left_needs_parens = compare_needs_parent(&comp.left);
+    let right_needs_parens = compare_needs_parent(&comp.right);
+
+    if left_needs_parens {
+        try!(write!(w, "("));
+    }
     try!(write_expr(w, rt, &comp.left, tabs));
+    if left_needs_parens {
+        try!(write!(w, ")"));
+    }
     try!(write!(w, " {} ", comp.op.symbol()));
+    if right_needs_parens {
+        try!(write!(w, "("));
+    }
     try!(write_expr(w, rt, &comp.right, tabs));
+    if right_needs_parens {
+        try!(write!(w, ")"));
+    }
     Ok(())
 }
 
