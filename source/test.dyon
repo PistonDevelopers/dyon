@@ -1,3 +1,7 @@
 fn main() {
-    println(sum_vec4 i 4, j 3 {(j, i)})
+    a := \(a, b) = ((a+1)<2) && ((b+1)<2)
+    println(a)
+
+    b := \(pos: vec4) = if ((x(pos) % 20) < 10) ^ ((y(pos) % 20) < 10) { (1, 0, 0, 1) } else { (0.2, 0, 0, 1) }
+    println(b)
 }
