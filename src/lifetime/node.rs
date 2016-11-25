@@ -5,7 +5,7 @@ use super::piston_meta::bootstrap::Convert;
 use super::lt::{arg_lifetime, Lifetime};
 use super::kind::Kind;
 use super::ArgNames;
-use ast::AssignOp;
+use ast::{AssignOp, BinOp};
 use Lt;
 use Type;
 
@@ -39,6 +39,8 @@ pub struct Node {
     pub declaration: Option<usize>,
     /// Operation.
     pub op: Option<AssignOp>,
+    /// Binary operators.
+    pub binops: Vec<BinOp>,
     /// Number of ids.
     /// Used to determine declaration of locals.
     pub ids: u32,
@@ -331,6 +333,7 @@ pub fn convert_meta_data(
                     lifetime: None,
                     declaration: None,
                     op: None,
+                    binops: vec![],
                     ids: 0,
                     lts: vec![]
                 });
@@ -450,6 +453,30 @@ pub fn convert_meta_data(
                         // This should always be an expression.
                         let i = *parents.last().unwrap();
                         nodes[i].kind = Kind::ReturnVoid;
+                    }
+                    "*." => {
+                        let i = *parents.last().unwrap();
+                        nodes[i].binops.push(BinOp::Dot);
+                    }
+                    "x" => {
+                        let i = *parents.last().unwrap();
+                        nodes[i].binops.push(BinOp::Cross);
+                    }
+                    "*" => {
+                        let i = *parents.last().unwrap();
+                        nodes[i].binops.push(BinOp::Mul);
+                    }
+                    "/" => {
+                        let i = *parents.last().unwrap();
+                        nodes[i].binops.push(BinOp::Div);
+                    }
+                    "%" => {
+                        let i = *parents.last().unwrap();
+                        nodes[i].binops.push(BinOp::Rem);
+                    }
+                    "&&" => {
+                        let i = *parents.last().unwrap();
+                        nodes[i].binops.push(BinOp::AndAlso);
                     }
                     _ => {}
                 }
