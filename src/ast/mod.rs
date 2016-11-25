@@ -2830,6 +2830,7 @@ impl ForN {
                 expressions: vec![match node {
                     "for_n" => Expression::ForN(Box::new(new_for_n)),
                     "sum" => Expression::Sum(Box::new(new_for_n)),
+                    "sum_vec4" => Expression::SumVec4(Box::new(new_for_n)),
                     "prod" => Expression::Prod(Box::new(new_for_n)),
                     "any" => Expression::Any(Box::new(new_for_n)),
                     "all" => Expression::All(Box::new(new_for_n)),
