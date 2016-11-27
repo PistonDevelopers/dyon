@@ -487,8 +487,19 @@ fn grab_for_n(
 ) -> Result<(Grabbed, Flow), String> {
     Ok((Grabbed::ForN(ast::ForN {
         name: for_n.name.clone(),
-        start: for_n.start.clone(),
-        end: for_n.end.clone(),
+        start: match for_n.start {
+            None => None,
+            Some(ref start) => {
+                match grab_expr(level, rt, start, side, module) {
+                    Ok((Grabbed::Expression(x), Flow::Continue)) => Some(x),
+                    x => return x,
+                }
+            }
+        },
+        end: match grab_expr(level, rt, &for_n.end, side, module) {
+            Ok((Grabbed::Expression(x), Flow::Continue)) => x,
+            x => return x,
+        },
         block: match grab_block(level, rt, &for_n.block, side, module) {
             Ok((Grabbed::Block(x), Flow::Continue)) => x,
             x => return x,
