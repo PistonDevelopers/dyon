@@ -807,9 +807,6 @@ impl Runtime {
                 return Ok((b, Flow::Continue))
             }
         }
-
-        return Err(module.error(call.source_range,
-            &format!("{}\nUnknown closure `{}`", self.stack_trace(), call.item.name), self))
     }
 
     pub fn call(
