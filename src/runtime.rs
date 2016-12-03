@@ -733,7 +733,7 @@ impl Runtime {
                     self.stack.push(Variable::Ref(ind));
                 } else {
                     return Err(module.error(call.source_range, &format!(
-                        "{}\nCould not find urrent variable `{}`",
+                        "{}\nCould not find current variable `{}`",
                             self.stack_trace(), current.name), self));
                 }
             }
