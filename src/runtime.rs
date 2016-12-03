@@ -2035,8 +2035,26 @@ impl Runtime {
                 }
                 (&Variable::Object(ref b), &Variable::Object(ref a)) => {
                     Ok(Variable::bool(match compare.op {
-                        Equal => a == b,
-                        NotEqual => a != b,
+                        Equal => {
+                            a.len() == b.len() &&
+                            a.iter().all(|a| {
+                                if let Some(b_val) = b.get(a.0) {
+                                    if let Ok(Variable::Bool(true, _)) =
+                                        sub_compare(rt, compare, module, &a.1, b_val) {true}
+                                    else {false}
+                                } else {false}
+                            })
+                        }
+                        NotEqual => {
+                            a.len() != b.len() ||
+                            a.iter().any(|a| {
+                                if let Some(b_val) = b.get(a.0) {
+                                    if let Ok(Variable::Bool(false, _)) =
+                                        sub_compare(rt, compare, module, &a.1, b_val) {false}
+                                    else {true}
+                                } else {true}
+                            })
+                        }
                         x => return Err(module.error(compare.source_range,
                             &format!("{}\n`{}` can not be used with objects",
                                 rt.stack_trace(),
@@ -2045,8 +2063,20 @@ impl Runtime {
                 }
                 (&Variable::Array(ref b), &Variable::Array(ref a)) => {
                     Ok(Variable::bool(match compare.op {
-                        Equal => a == b,
-                        NotEqual => a != b,
+                        Equal => {
+                            a.len() == b.len() &&
+                            a.iter().zip(b.iter()).all(|(a, b)| {
+                                if let Ok(Variable::Bool(true, _)) =
+                                    sub_compare(rt, compare, module, a, b) {true} else {false}
+                            })
+                        }
+                        NotEqual => {
+                            a.len() != b.len() ||
+                            a.iter().zip(b.iter()).any(|(a, b)| {
+                                if let Ok(Variable::Bool(false, _)) =
+                                    sub_compare(rt, compare, module, a, b) {false} else {true}
+                            })
+                        }
                         x => return Err(module.error(compare.source_range,
                             &format!("{}\n`{}` can not be used with arrays",
                                 rt.stack_trace(),
