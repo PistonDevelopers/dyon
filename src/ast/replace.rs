@@ -23,6 +23,7 @@ use super::{
     Swizzle,
     UnOpExpression,
     Vec4,
+    TryExpr,
 };
 
 /// Replaces an item with a number.
@@ -264,6 +265,10 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
             E::CallClosure(Box::new(number_call_closure(call_expr, name, val)))
         }
         E::Grab(_) => expr.clone(),
+        E::TryExpr(ref try_expr) => E::TryExpr(Box::new(TryExpr {
+            expr: number(&try_expr.expr, name, val),
+            source_range: try_expr.source_range
+        }))
     }
 }
 

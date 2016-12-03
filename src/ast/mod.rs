@@ -348,6 +348,58 @@ impl Grab {
 }
 
 #[derive(Debug, Clone)]
+pub struct TryExpr {
+    pub expr: Expression,
+    pub source_range: Range,
+}
+
+impl TryExpr {
+    pub fn from_meta_data(
+        file: &Arc<String>,
+        source: &Arc<String>,
+        mut convert: Convert,
+        ignored: &mut Vec<Range>
+    ) -> Result<(Range, TryExpr), ()> {
+        let start = convert.clone();
+        let node = "try_expr";
+        let start_range = try!(convert.start_node(node));
+        convert.update(start_range);
+
+        let mut expr: Option<Expression> = None;
+        loop {
+            if let Ok(range) = convert.end_node(node) {
+                convert.update(range);
+                break;
+            } else if let Ok((range, val)) = Expression::from_meta_data(
+                    file, source, "expr", convert, ignored) {
+                convert.update(range);
+                expr = Some(val);
+            } else {
+                let range = convert.ignore();
+                convert.update(range);
+                ignored.push(range);
+            }
+        }
+
+        let expr = try!(expr.ok_or(()));
+        Ok((convert.subtract(start), TryExpr {
+            expr: expr,
+            source_range: convert.source(start).unwrap(),
+        }))
+    }
+
+    pub fn resolve_locals(
+        &self,
+        relative: usize,
+        stack: &mut Vec<Option<Arc<String>>>,
+        closure_stack: &mut Vec<usize>,
+        module: &Module
+    ) {
+        self.expr.resolve_locals(relative, stack, closure_stack, module)
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct Arg {
     pub name: Arc<String>,
     pub lifetime: Option<Arc<String>>,
@@ -550,6 +602,7 @@ pub enum Expression {
     Closure(Arc<Closure>),
     CallClosure(Box<CallClosure>),
     Grab(Box<Grab>),
+    TryExpr(Box<TryExpr>),
 }
 
 // Required because the `Sync` impl of `Variable` is unsafe.
@@ -769,6 +822,10 @@ impl Expression {
                     file, source, convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::Grab(Box::new(val)));
+            } else if let Ok((range, val)) = TryExpr::from_meta_data(
+                    file, source, convert, ignored) {
+                convert.update(range);
+                result = Some(Expression::TryExpr(Box::new(val)));
             } else {
                 let range = convert.ignore();
                 convert.update(range);
@@ -822,6 +879,7 @@ impl Expression {
             Closure(ref closure) => closure.source_range,
             CallClosure(ref call) => call.source_range,
             Grab(ref grab) => grab.source_range,
+            TryExpr(ref try_expr) => try_expr.source_range,
         }
     }
 
@@ -890,6 +948,7 @@ impl Expression {
             Closure(ref closure) => closure.resolve_locals(relative, stack, closure_stack, module),
             CallClosure(ref call) => call.resolve_locals(relative, stack, closure_stack, module),
             Grab(ref grab) => grab.resolve_locals(relative, stack, closure_stack, module),
+            TryExpr(ref try_expr) => try_expr.resolve_locals(relative, stack, closure_stack, module),
         }
     }
 }
