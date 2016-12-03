@@ -1,0 +1,11 @@
+foo() = {
+    arr := []
+    clone(arr[0])
+}
+
+fn main() {
+    a := try foo()
+    if is_err(a) {
+        println(unwrap_err(a))
+    }
+}

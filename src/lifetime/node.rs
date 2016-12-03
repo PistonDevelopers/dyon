@@ -97,7 +97,7 @@ impl Node {
             Pow | Sum | Prod | SumVec4 | Min | Max | Any | All |
             Vec4 | Vec4UnLoop | Swizzle |
             Assign | For | ForN | Link |
-            Closure | CallClosure | Grab | Norm => false,
+            Closure | CallClosure | Grab | TryExpr | Norm => false,
             Add | Mul | Compare => self.children.len() == 1,
             _ => true
         }
@@ -192,6 +192,7 @@ impl Node {
                 (_, Kind::Closure) => {}
                 (_, Kind::CallClosure) => {}
                 (_, Kind::Grab) => {}
+                (_, Kind::TryExpr) => {}
                 (_, Kind::Arg) => { continue }
                 (_, Kind::Current) => { continue }
                 (Kind::CallClosure, Kind::Item) => { continue }

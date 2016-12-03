@@ -380,6 +380,40 @@ impl Runtime {
             Grab(ref expr) => Err(module.error(expr.source_range,
                     &format!("{}\n`grab` expressions must be inside a closure",
                         self.stack_trace()), self)),
+            TryExpr(ref try_expr) => self.try_expr(try_expr, module),
+        }
+    }
+
+    fn try_expr(&mut self, try_expr: &ast::TryExpr, module: &Arc<Module>)
+    -> Result<(Option<Variable>, Flow), String> {
+        use Error;
+
+        let cs = self.call_stack.len();
+        let st = self.stack.len();
+        let lc = self.local_stack.len();
+        let cu = self.current_stack.len();
+        match self.expression(&try_expr.expr, Side::Right, module) {
+            Ok((Some(x), Flow::Continue)) => Ok((
+                Some(Variable::Result(Ok(Box::new(x)))),
+                Flow::Continue
+            )),
+            Ok((None, Flow::Continue)) => Err(module.error(try_expr.source_range,
+                &format!("{}\nExpected something", self.stack_trace()), self)),
+            Ok((x, flow)) => Ok((x, flow)),
+            Err(err) => {
+                self.call_stack.truncate(cs);
+                self.stack.truncate(st);
+                self.local_stack.truncate(lc);
+                self.current_stack.truncate(cu);
+                Ok((
+                    Some(Variable::Result(Err(Box::new(Error {
+                        message: Variable::Text(Arc::new(err)),
+                        trace: vec![],
+                    }
+                    )))),
+                    Flow::Continue
+                ))
+            }
         }
     }
 

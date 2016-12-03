@@ -267,6 +267,7 @@ pub fn write_expr<W: io::Write>(
         &E::Swizzle(ref swizzle) => try!(write_swizzle(w, rt, swizzle, tabs)),
         &E::Closure(ref closure) => try!(write_closure(w, rt, closure, tabs)),
         &E::Grab(ref grab) => try!(write_grab(w, rt, grab, tabs)),
+        &E::TryExpr(ref try_expr) => try!(write_try_expr(w, rt, try_expr, tabs)),
         &E::CallClosure(ref call) => try!(write_call_closure(w, rt, call, tabs)),
         // x => panic!("Unimplemented `{:#?}`", x),
     }
@@ -696,6 +697,18 @@ pub fn write_grab<W: io::Write>(
         try!(write!(w, "(grab "));
     }
     try!(write_expr(w, rt, &grab.expr, tabs));
+    try!(write!(w, ")"));
+    Ok(())
+}
+
+pub fn write_try_expr<W: io::Write>(
+    w: &mut W,
+    rt: &Runtime,
+    try_expr: &ast::TryExpr,
+    tabs: u32,
+) -> Result<(), io::Error> {
+    try!(write!(w, "(try "));
+    try!(write_expr(w, rt, &try_expr.expr, tabs));
     try!(write!(w, ")"));
     Ok(())
 }

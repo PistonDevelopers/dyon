@@ -80,6 +80,7 @@ pub enum Kind {
     ClArg,
     ClRet,
     Grab,
+    TryExpr,
 }
 
 impl Kind {
@@ -166,6 +167,7 @@ impl Kind {
             "cl_arg" => Kind::ClArg,
             "cl_ret" => Kind::ClRet,
             "grab" => Kind::Grab,
+            "try_expr" => Kind::TryExpr,
             _ => return None
         })
     }

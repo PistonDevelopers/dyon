@@ -177,8 +177,8 @@ fn infer_expr(
             if res.is_some() { return res; }
         }
         Variable(_, _) => {}
-        Try(ref try_expr) => {
-            let res = infer_expr(try_expr, name, decls);
+        Try(ref expr) => {
+            let res = infer_expr(expr, name, decls);
             if res.is_some() { return res; }
         }
         Swizzle(ref swizzle_expr) => {
@@ -191,6 +191,10 @@ fn infer_expr(
             if res.is_some() { return res; }
         }
         Grab(_) => {}
+        TryExpr(ref tr) => {
+            let res = infer_expr(&tr.expr, name, decls);
+            if res.is_some() { return res; }
+        }
     };
     None
 }

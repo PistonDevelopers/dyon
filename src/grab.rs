@@ -419,6 +419,15 @@ pub fn grab_expr(
                 source_range: swizzle.source_range.clone(),
             }))), Flow::Continue))
         }
+        &E::TryExpr(ref try_expr) => {
+            Ok((Grabbed::Expression(E::TryExpr(Box::new(ast::TryExpr {
+                expr: match grab_expr(level, rt, &try_expr.expr, side, module) {
+                    Ok((Grabbed::Expression(x), Flow::Continue)) => x,
+                    x => return x,
+                },
+                source_range: try_expr.source_range.clone(),
+            }))), Flow::Continue))
+        }
     }
 }
 
