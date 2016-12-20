@@ -28,6 +28,7 @@ impl Dfn {
         let mut lts: Vec<Lt> = vec![];
         let mut tys: Vec<Type> = vec![];
         'next_arg: for arg in &f.args {
+            tys.push(arg.ty.clone());
             if let Some(ref lt) = arg.lifetime {
                 if **lt == "return" {
                     lts.push(Lt::Return);
@@ -43,7 +44,6 @@ impl Dfn {
             } else {
                 lts.push(Lt::Default);
             }
-            tys.push(arg.ty.clone());
         }
         Dfn {
             lts: lts,
