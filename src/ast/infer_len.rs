@@ -222,7 +222,9 @@ fn infer_item(
                     if res.is_some() { return res; }
                 }
             } else {
-                // Can not lift more advanced expressions.
+                // Try infer from expression inside id.
+                let res = infer_expr(expr, name, decls);
+                if res.is_some() { return res; }
                 break
             }
         }
