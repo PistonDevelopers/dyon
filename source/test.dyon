@@ -1,6 +1,3 @@
 fn main() {
-    a := [0, 1, 2]
-    b := [0, 1, 2]
-    c := sift i {b[a[i] + 0]}
-    println(b)
+    x := link i 100_000_000 {i", "}
 }

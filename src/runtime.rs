@@ -367,6 +367,7 @@ impl Runtime {
             Sift(ref for_n_expr) => self.sift_n_expr(for_n_expr, module),
             Any(ref for_n_expr) => self.any_n_expr(for_n_expr, module),
             All(ref for_n_expr) => self.all_n_expr(for_n_expr, module),
+            LinkFor(ref for_n_expr) => self.link_for_n_expr(for_n_expr, module),
             If(ref if_expr) => self.if_expr(if_expr, module),
             Compare(ref compare) => self.compare(compare, module),
             Variable(_, ref var) => Ok((Some(var.clone()), Flow::Continue)),
@@ -1089,10 +1090,8 @@ impl Runtime {
             for item in &link.items {
                 let v = match try!(self.expression(item, Side::Right, module)) {
                     (Some(x), Flow::Continue) => x,
-                    (_, Flow::Return) => { return Ok((None, Flow::Return)); }
-                    _ => return Err(module.error(item.source_range(),
-                        &format!("{}\nExpected something",
-                            self.stack_trace()), self))
+                    (None, Flow::Continue) => continue,
+                    (res, flow) => { return Ok((res, flow)); }
                 };
                 match new_link.push(self.resolve(&v)) {
                     Err(err) => {
@@ -3256,6 +3255,126 @@ impl Runtime {
         self.stack.truncate(prev_st);
         self.local_stack.truncate(prev_lc);
         Ok((Some(Variable::Bool(all, sec)), flow))
+    }
+    fn link_for_n_expr(
+        &mut self,
+        for_n_expr: &ast::ForN,
+        module: &Arc<Module>
+    ) -> Result<(Option<Variable>, Flow), String> {
+        use Link;
+
+        let prev_st = self.stack.len();
+        let prev_lc = self.local_stack.len();
+        let mut res: Link = Link::new();
+
+        let start = if let Some(ref start) = for_n_expr.start {
+            // Evaluate start such that it's on the stack.
+            let start = match try!(self.expression(start, Side::Right, module)) {
+                (Some(x), Flow::Continue) => x,
+                (x, Flow::Return) => { return Ok((x, Flow::Return)); }
+                _ => return Err(module.error(for_n_expr.end.source_range(),
+                    &format!("{}\nExpected number from for start",
+                        self.stack_trace()), self))
+            };
+            let start = match self.resolve(&start) {
+                &Variable::F64(val, _) => val,
+                x => return Err(module.error(for_n_expr.end.source_range(),
+                                &self.expected(x, "number"), self))
+            };
+            start
+        } else { 0.0 };
+
+        // Evaluate end such that it's on the stack.
+        let end = match try!(self.expression(&for_n_expr.end, Side::Right, module)) {
+            (Some(x), Flow::Continue) => x,
+            (x, Flow::Return) => { return Ok((x, Flow::Return)); }
+            _ => return Err(module.error(for_n_expr.end.source_range(),
+                &format!("{}\nExpected number from for end",
+                    self.stack_trace()), self))
+        };
+        let end = match self.resolve(&end) {
+            &Variable::F64(val, _) => val,
+            x => return Err(module.error(for_n_expr.end.source_range(),
+                            &self.expected(x, "number"), self))
+        };
+
+        // Initialize counter.
+        self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
+        self.stack.push(Variable::f64(start));
+
+        let st = self.stack.len();
+        let lc = self.local_stack.len();
+        let mut flow = Flow::Continue;
+        loop {
+            match &self.stack[st - 1] {
+                &Variable::F64(val, _) => {
+                    if val < end {}
+                    else { break }
+                }
+                x => return Err(module.error(for_n_expr.source_range,
+                                &self.expected(x, "number"), self))
+            };
+            match try!(self.block(&for_n_expr.block, module)) {
+                (Some(ref x), Flow::Continue) => {
+                    match res.push(self.resolve(x)) {
+                        Err(err) => {
+                            return Err(module.error(for_n_expr.source_range,
+                                &format!("{}\n{}", self.stack_trace(),
+                                err), self))
+                        }
+                        Ok(()) => {}
+                    }
+                }
+                (x, Flow::Return) => { return Ok((x, Flow::Return)); }
+                (None, Flow::Continue) => {
+                    return Err(module.error(for_n_expr.block.source_range,
+                                "Expected variable", self))
+                }
+                (_, Flow::Break(x)) => {
+                    match x {
+                        Some(label) => {
+                            let same =
+                            if let Some(ref for_label) = for_n_expr.label {
+                                &label == for_label
+                            } else { false };
+                            if !same {
+                                flow = Flow::Break(Some(label))
+                            }
+                        }
+                        None => {}
+                    }
+                    break;
+                }
+                (_, Flow::ContinueLoop(x)) => {
+                    match x {
+                        Some(label) => {
+                            let same =
+                            if let Some(ref for_label) = for_n_expr.label {
+                                &label == for_label
+                            } else { false };
+                            if !same {
+                                flow = Flow::ContinueLoop(Some(label));
+                                break;
+                            }
+                        }
+                        None => {}
+                    }
+                }
+            }
+            let error = if let Variable::F64(ref mut val, _) = self.stack[st - 1] {
+                *val += 1.0;
+                false
+            } else { true };
+            if error {
+                return Err(module.error(for_n_expr.source_range,
+                           &self.expected(&self.stack[st - 1], "number"), self))
+            }
+            self.stack.truncate(st);
+            self.local_stack.truncate(lc);
+        };
+        self.stack.truncate(prev_st);
+        self.local_stack.truncate(prev_lc);
+        Ok((Some(Variable::Link(Box::new(res))), flow))
     }
     fn sift_n_expr(
         &mut self,

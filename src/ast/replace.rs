@@ -208,6 +208,9 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
         E::All(ref for_n_expr) => {
             E::ForN(Box::new(number_for_n(for_n_expr, name, val)))
         }
+        E::LinkFor(ref for_n_expr) => {
+            E::ForN(Box::new(number_for_n(for_n_expr, name, val)))
+        }
         E::If(ref if_expr) => {
             let mut new_else_if_conds: Vec<Expression> = vec![];
             for else_if_cond in &if_expr.else_if_conds {

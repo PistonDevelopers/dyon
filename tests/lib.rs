@@ -80,6 +80,7 @@ fn test_syntax() {
     test_src("source/syntax/pop.dyon");
     test_src("source/syntax/accessor.dyon");
     test_src("source/syntax/sum.dyon");
+    test_src("source/syntax/link_for.dyon");
     test_src("source/syntax/min_max.dyon");
     test_src("source/syntax/vec4.dyon");
     test_src("source/syntax/vec4_2.dyon");

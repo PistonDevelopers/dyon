@@ -279,6 +279,12 @@ pub fn grab_expr(
             }
             x => return x,
         },
+        &E::LinkFor(ref for_n) => match grab_for_n(level, rt, for_n, side, module) {
+            Ok((Grabbed::ForN(x), Flow::Continue)) => {
+                Ok((Grabbed::Expression(E::LinkFor(Box::new(x))), Flow::Continue))
+            }
+            x => return x,
+        },
         &E::SumVec4(ref for_n) => match grab_for_n(level, rt, for_n, side, module) {
             Ok((Grabbed::ForN(x), Flow::Continue)) => {
                 Ok((Grabbed::Expression(E::SumVec4(Box::new(x))), Flow::Continue))
