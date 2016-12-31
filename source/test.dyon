@@ -1,7 +1,73 @@
+
 fn main() {
-    list := sift i 10 {i+1}
-    last := len(list)-1
-    x := link i {list[i] if i == last {break} ", "}
-    // prints `1, 2, 3, 4, 5, 6, 7, 8, 9, `
+    n := 3
+    list := sift i n, j n, k n {floor(random()*9)+1}
+    last := n-1
+    x := link {"["link i, j, k {
+        if (i != 0) && (j == 0) && (k == 0) {" "}
+        list[i][j][k]
+        if (i == last) &&
+           (j == last) &&
+           (k == last) {break}
+        else if (j == last) &&
+                (k == last) {";\n"}
+        else if (k == last) {", "}
+        else {" "}
+    }"]"}
+    // prints something like:
+    // ```
+    // [1 6 7, 1 7 7, 6 1 3;
+    //  8 1 7, 5 7 9, 7 1 9;
+    //  8 6 1, 7 9 8, 8 7 9]
+    // ```
     println(x)
 }
+
+
+/*
+fn main() {
+    n := 2
+    list := sift i n, j n, k n {i*j-k}
+    last := n-1
+    x := link i, j, k {
+        list[i][j][k]
+        if (i == last) &&
+           (j == last) &&
+           (k == last) {break}
+        ", "
+    }
+    // prints `0, -1, 0, -1, 0, -1, 1, 0`
+    println(x)
+}
+*/
+
+/*
+fn main() {
+    list := [[1, 2], [3, 4]]
+    last := 1
+    x := link i, j {
+        list[i][j] if (i == last) && (j == last) {break} ", "
+    }
+    // prints `1, 2, 3, 4`
+    println(x)
+}
+*/
+
+/*
+fn main() {
+    list := [1, 2, 3, 4]
+    last := len(list)-1
+    x := link i {list[i] if i != last {", "}}
+    println(x)
+}
+*/
+
+/*
+fn main() {
+    list := [[1, 2, 3], [4, 5, 6]]
+    println('outer: link i, j, k 3 {
+        if j == 2 {continue 'outer}
+        list[i][j]","
+    })
+}
+*/

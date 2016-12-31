@@ -3263,128 +3263,182 @@ impl Runtime {
     ) -> Result<(Option<Variable>, Flow), String> {
         use Link;
 
-        let prev_st = self.stack.len();
-        let prev_lc = self.local_stack.len();
-        let mut res: Link = Link::new();
+        fn sub_link_for_n_expr(
+            res: &mut Link,
+            rt: &mut Runtime,
+            for_n_expr: &ast::ForN,
+            module: &Arc<Module>
+        ) -> Result<(Option<Variable>, Flow), String> {
+            let prev_st = rt.stack.len();
+            let prev_lc = rt.local_stack.len();
 
-        let start = if let Some(ref start) = for_n_expr.start {
-            // Evaluate start such that it's on the stack.
-            let start = match try!(self.expression(start, Side::Right, module)) {
+            let start = if let Some(ref start) = for_n_expr.start {
+                // Evaluate start such that it's on the stack.
+                let start = match try!(rt.expression(start, Side::Right, module)) {
+                    (Some(x), Flow::Continue) => x,
+                    (x, Flow::Return) => { return Ok((x, Flow::Return)); }
+                    _ => return Err(module.error(for_n_expr.end.source_range(),
+                        &format!("{}\nExpected number from for start",
+                            rt.stack_trace()), rt))
+                };
+                let start = match rt.resolve(&start) {
+                    &Variable::F64(val, _) => val,
+                    x => return Err(module.error(for_n_expr.end.source_range(),
+                                    &rt.expected(x, "number"), rt))
+                };
+                start
+            } else { 0.0 };
+
+            // Evaluate end such that it's on the stack.
+            let end = match try!(rt.expression(&for_n_expr.end, Side::Right, module)) {
                 (Some(x), Flow::Continue) => x,
                 (x, Flow::Return) => { return Ok((x, Flow::Return)); }
                 _ => return Err(module.error(for_n_expr.end.source_range(),
-                    &format!("{}\nExpected number from for start",
-                        self.stack_trace()), self))
+                    &format!("{}\nExpected number from for end",
+                        rt.stack_trace()), rt))
             };
-            let start = match self.resolve(&start) {
+            let end = match rt.resolve(&end) {
                 &Variable::F64(val, _) => val,
                 x => return Err(module.error(for_n_expr.end.source_range(),
-                                &self.expected(x, "number"), self))
+                                &rt.expected(x, "number"), rt))
             };
-            start
-        } else { 0.0 };
 
-        // Evaluate end such that it's on the stack.
-        let end = match try!(self.expression(&for_n_expr.end, Side::Right, module)) {
-            (Some(x), Flow::Continue) => x,
-            (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-            _ => return Err(module.error(for_n_expr.end.source_range(),
-                &format!("{}\nExpected number from for end",
-                    self.stack_trace()), self))
-        };
-        let end = match self.resolve(&end) {
-            &Variable::F64(val, _) => val,
-            x => return Err(module.error(for_n_expr.end.source_range(),
-                            &self.expected(x, "number"), self))
-        };
+            // Initialize counter.
+            rt.local_stack.push((for_n_expr.name.clone(), rt.stack.len()));
+            rt.stack.push(Variable::f64(start));
 
-        // Initialize counter.
-        self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
-        self.stack.push(Variable::f64(start));
+            let st = rt.stack.len();
+            let lc = rt.local_stack.len();
+            let mut flow = Flow::Continue;
 
-        let st = self.stack.len();
-        let lc = self.local_stack.len();
-        let mut flow = Flow::Continue;
-        let items = if let ast::Expression::Link(ref link) = for_n_expr.block.expressions[0] {
-            &link.items
-        } else {
-            return Err(module.error(for_n_expr.source_range,
-                "Link loop body is not link", self))
-        };
-        'outer: loop {
-            match &self.stack[st - 1] {
-                &Variable::F64(val, _) => {
-                    if val < end {}
-                    else { break }
-                }
-                x => return Err(module.error(for_n_expr.source_range,
-                                &self.expected(x, "number"), self))
-            };
-            'inner: for item in items {
-                match try!(self.expression(item, Side::Right, module)) {
-                    (Some(ref x), Flow::Continue) => {
-                        match res.push(self.resolve(x)) {
-                            Err(err) => {
-                                return Err(module.error(for_n_expr.source_range,
-                                    &format!("{}\n{}", self.stack_trace(),
-                                    err), self))
-                            }
-                            Ok(()) => {}
-                        }
+            'outer: loop {
+                match &rt.stack[st - 1] {
+                    &Variable::F64(val, _) => {
+                        if val < end {}
+                        else { break }
                     }
-                    (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-                    (None, Flow::Continue) => {}
-                    (_, Flow::Break(x)) => {
-                        match x {
-                            Some(label) => {
-                                let same =
-                                if let Some(ref for_label) = for_n_expr.label {
-                                    &label == for_label
-                                } else { false };
-                                if !same {
-                                    flow = Flow::Break(Some(label))
+                    x => return Err(module.error(for_n_expr.source_range,
+                                    &rt.expected(x, "number"), rt))
+                };
+
+                match for_n_expr.block.expressions[0] {
+                    ast::Expression::Link(ref link) => {
+                        // Evaluate link items directly.
+                        'inner: for item in &link.items {
+                            match try!(rt.expression(item, Side::Right, module)) {
+                                (Some(ref x), Flow::Continue) => {
+                                    match res.push(rt.resolve(x)) {
+                                        Err(err) => {
+                                            return Err(module.error(for_n_expr.source_range,
+                                                &format!("{}\n{}", rt.stack_trace(),
+                                                err), rt))
+                                        }
+                                        Ok(()) => {}
+                                    }
                                 }
-                            }
-                            None => {}
-                        }
-                        break 'outer;
-                    }
-                    (_, Flow::ContinueLoop(x)) => {
-                        match x {
-                            Some(label) => {
-                                let same =
-                                if let Some(ref for_label) = for_n_expr.label {
-                                    &label == for_label
-                                } else { false };
-                                if !same {
-                                    flow = Flow::ContinueLoop(Some(label));
+                                (x, Flow::Return) => { return Ok((x, Flow::Return)); }
+                                (None, Flow::Continue) => {}
+                                (_, Flow::Break(x)) => {
+                                    match x {
+                                        Some(label) => {
+                                            let same =
+                                            if let Some(ref for_label) = for_n_expr.label {
+                                                &label == for_label
+                                            } else { false };
+                                            if !same {
+                                                flow = Flow::Break(Some(label))
+                                            }
+                                        }
+                                        None => {}
+                                    }
                                     break 'outer;
-                                } else {
-                                    break 'inner;
                                 }
-                            }
-                            None => {
-                                break 'inner;
+                                (_, Flow::ContinueLoop(x)) => {
+                                    match x {
+                                        Some(label) => {
+                                            let same =
+                                            if let Some(ref for_label) = for_n_expr.label {
+                                                &label == for_label
+                                            } else { false };
+                                            if !same {
+                                                flow = Flow::ContinueLoop(Some(label));
+                                                break 'outer;
+                                            } else {
+                                                break 'inner;
+                                            }
+                                        }
+                                        None => {
+                                            break 'inner;
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
+                    ast::Expression::LinkFor(ref for_n) => {
+                        // Pass on control to next link loop.
+                        match sub_link_for_n_expr(res, rt, for_n, module) {
+                            Ok((None, Flow::Continue)) => {}
+                            Ok((_, Flow::Break(x))) => {
+                                match x {
+                                    Some(label) => {
+                                        let same =
+                                        if let Some(ref for_label) = for_n_expr.label {
+                                            &label == for_label
+                                        } else { false };
+                                        if !same {
+                                            flow = Flow::Break(Some(label))
+                                        }
+                                    }
+                                    None => {}
+                                }
+                                break 'outer;
+                            }
+                            Ok((_, Flow::ContinueLoop(x))) => {
+                                match x {
+                                    Some(label) => {
+                                        let same =
+                                        if let Some(ref for_label) = for_n_expr.label {
+                                            &label == for_label
+                                        } else { false };
+                                        if !same {
+                                            flow = Flow::ContinueLoop(Some(label));
+                                            break 'outer;
+                                        }
+                                    }
+                                    None => {}
+                                }
+                            }
+                            x => return x
+                        }
+                    }
+                    _ => {
+                        panic!("Link body is not link");
+                    }
                 }
-            }
 
-            let error = if let Variable::F64(ref mut val, _) = self.stack[st - 1] {
-                *val += 1.0;
-                false
-            } else { true };
-            if error {
-                return Err(module.error(for_n_expr.source_range,
-                           &self.expected(&self.stack[st - 1], "number"), self))
-            }
-            self.stack.truncate(st);
-            self.local_stack.truncate(lc);
-        };
-        self.stack.truncate(prev_st);
-        self.local_stack.truncate(prev_lc);
-        Ok((Some(Variable::Link(Box::new(res))), flow))
+                let error = if let Variable::F64(ref mut val, _) = rt.stack[st - 1] {
+                    *val += 1.0;
+                    false
+                } else { true };
+                if error {
+                    return Err(module.error(for_n_expr.source_range,
+                               &rt.expected(&rt.stack[st - 1], "number"), rt))
+                }
+                rt.stack.truncate(st);
+                rt.local_stack.truncate(lc);
+            };
+            rt.stack.truncate(prev_st);
+            rt.local_stack.truncate(prev_lc);
+            Ok((None, flow))
+        }
+
+        let mut res: Link = Link::new();
+        match sub_link_for_n_expr(&mut res, self, for_n_expr, module) {
+            Ok((None, Flow::Continue)) =>
+                Ok((Some(Variable::Link(Box::new(res))), Flow::Continue)),
+            x => x
+        }
     }
     fn sift_n_expr(
         &mut self,

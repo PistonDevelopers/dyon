@@ -90,7 +90,7 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\\"
 27 link = ["link" ?w "{" ?w link_body "}"]
 28 link_body = .s?.(?w expr:"link_item")
 // Generate link block for body.
-29 link_for = ["link" .w! .s!.(, [.._seps!:"name" ?w
+29 link_for = [label "link" .w! .s!.(, [.._seps!:"name" ?w
     ?{
         ["[" ?w expr:"start" , expr:"end" ?w ")"]
         [!"{" expr:"end"]
