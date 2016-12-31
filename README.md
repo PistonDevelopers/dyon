@@ -36,6 +36,7 @@ Dyon script files ends with ".dyon".
 - [Packed loop](https://github.com/PistonDevelopers/dyon/issues/116) `for i, j { println(list[i][j]) }`
 - [`∑`/`sum`, `∏`/`prod`, `min`, `max`, `sift`, `∃`/`any`, `∀`/`all` loops](https://github.com/PistonDevelopers/dyon/issues/119)
 - [Secrets derived from loops](https://github.com/PistonDevelopers/dyon/issues/266) `why(any i { list[i] > 3 })`
+- [Link loop](https://github.com/PistonDevelopers/dyon/issues/418)
 - Infinite loop `loop { ... }`
 - Unlabeled break `loop { break }`
 - Unlabled continue `loop { continue }`
@@ -94,6 +95,7 @@ The idea was to make a simple, but convenient scripting language that integrated
 - Secrets to automatically derive meaning from mathematical loops
 - Closures that can be printed out, use current objects and grab from closure environment
 - Type safety for secrets, easy load/save of Dyon data
+- Link loop for easier and faster code generation and templates
 
 Main goals:
 
