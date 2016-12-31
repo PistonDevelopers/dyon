@@ -1,0 +1,12 @@
+fn main() {
+    println(gen_struct("Foo", [
+        {name: "bar", type: "f64"},
+        {name: "baz", type: "str"},
+    ]))
+}
+
+gen_struct(name, fields: [{}]) = link {
+    "pub struct "name" {\n"link i {
+    "    pub "fields[i].name": "fields[i].type",\n"
+    }"}\n\n"
+}

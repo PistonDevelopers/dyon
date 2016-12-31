@@ -594,6 +594,11 @@ mod tests {
     }
 
     #[bench]
+    fn bench_push_link_for(b: &mut Bencher) {
+        b.iter(|| run_bench("source/bench/push_link_for.dyon"));
+    }
+
+    #[bench]
     fn bench_push_link_go(b: &mut Bencher) {
         b.iter(|| run_bench("source/bench/push_link_go.dyon"));
     }

@@ -592,6 +592,7 @@ pub enum Expression {
     Sift(Box<ForN>),
     Any(Box<ForN>),
     All(Box<ForN>),
+    LinkFor(Box<ForN>),
     If(Box<If>),
     Compare(Box<Compare>),
     UnOp(Box<UnOpExpression>),
@@ -787,6 +788,10 @@ impl Expression {
                     file, source, "all", convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::All(Box::new(val)));
+            } else if let Ok((range, val)) = ForN::from_meta_data(
+                    file, source, "link_for", convert, ignored) {
+                convert.update(range);
+                result = Some(Expression::LinkFor(Box::new(val)));
             } else if let Ok((range, val)) = Loop::from_meta_data(
                     file, source, convert, ignored) {
                 convert.update(range);
@@ -869,6 +874,7 @@ impl Expression {
             Sift(ref for_n_expr) => for_n_expr.source_range,
             Any(ref for_n_expr) => for_n_expr.source_range,
             All(ref for_n_expr) => for_n_expr.source_range,
+            LinkFor(ref for_n_expr) => for_n_expr.source_range,
             If(ref if_expr) => if_expr.source_range,
             Compare(ref comp) => comp.source_range,
             Norm(ref norm) => norm.source_range,
@@ -936,6 +942,8 @@ impl Expression {
             Any(ref for_n_expr) =>
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module),
             All(ref for_n_expr) =>
+                for_n_expr.resolve_locals(relative, stack, closure_stack, module),
+            LinkFor(ref for_n_expr) =>
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module),
             If(ref if_expr) => if_expr.resolve_locals(relative, stack, closure_stack, module),
             Compare(ref comp) => comp.resolve_locals(relative, stack, closure_stack, module),
@@ -2896,6 +2904,7 @@ impl ForN {
                     "min" => Expression::Min(Box::new(new_for_n)),
                     "max" => Expression::Max(Box::new(new_for_n)),
                     "sift" => Expression::Sift(Box::new(new_for_n)),
+                    "link_for" => Expression::LinkFor(Box::new(new_for_n)),
                     _ => return Err(())
                 }]
             });

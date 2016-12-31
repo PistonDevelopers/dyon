@@ -73,6 +73,7 @@ pub enum Kind {
     Sw2,
     Sw3,
     Link,
+    LinkFor,
     LinkItem,
     Closure,
     CallClosure,
@@ -159,6 +160,7 @@ impl Kind {
             "sw2" => Kind::Sw2,
             "sw3" => Kind::Sw3,
             "link" => Kind::Link,
+            "link_for" => Kind::LinkFor,
             "link_item" => Kind::LinkItem,
             "closure" => Kind::Closure,
             "call_closure" => Kind::CallClosure,
@@ -178,7 +180,7 @@ impl Kind {
 
         match *self {
             ForN | Sum | Prod | SumVec4 | Min | Max | Sift
-            | Any | All => true,
+            | Any | All | LinkFor => true,
             _ => false
         }
     }

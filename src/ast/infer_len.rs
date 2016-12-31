@@ -145,6 +145,9 @@ fn infer_expr(
         All(ref for_n_expr) => {
             return infer_for_n(for_n_expr, name, decls)
         }
+        LinkFor(ref for_n_expr) => {
+            return infer_for_n(for_n_expr, name, decls)
+        }
         If(ref if_expr) => {
             let res = infer_expr(&if_expr.cond, name, decls);
             if res.is_some() { return res; }

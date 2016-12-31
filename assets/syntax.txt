@@ -87,28 +87,37 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\\"
 26 item_extra = .r!([{
            [?w "[" ?w {.t?:"id" .$_:"id" expr:"id"} ?w "]"]
            [?w "." ?w .._seps!:"id"]} ?[?w "?":"try_id"]])
-27 link = ["link" ?w "{" ?w .s?.(?w expr:"link_item") "}"]
-28 for = [label "for" .w!
+27 link = ["link" ?w "{" ?w link_body "}"]
+28 link_body = .s?.(?w expr:"link_item")
+// Generate link block for body.
+29 link_for = [label "link" .w! .s!.(, [.._seps!:"name" ?w
+    ?{
+        ["[" ?w expr:"start" , expr:"end" ?w ")"]
+        [!"{" expr:"end"]
+    }]) ?w "{" ?w link_body_block:"block" "}"]
+30 link_body_block = link_body_expr:"expr"
+31 link_body_expr = link_body:"link"
+32 for = [label "for" .w!
     expr:"init" ?w ";" ?w
     expr:"cond" ?w ";" ?w
     expr:"step" ?w block:"block"]
-29 for_n = [label "for" short_body]
-30 loop = [label "loop" .w!  block:"block"]
-31 break = ["break" ?w ?["'" .._seps!:"label"]]
-32 continue = ["continue" ?w ?["'" .._seps!:"label"]]
-33 if = ["if" .w! expr:"cond" ?w block:"true_block"
+33 for_n = [label "for" short_body]
+34 loop = [label "loop" .w!  block:"block"]
+35 break = ["break" ?w ?["'" .._seps!:"label"]]
+36 continue = ["continue" ?w ?["'" .._seps!:"label"]]
+37 if = ["if" .w! expr:"cond" ?w block:"true_block"
          .r?([?w "else" w "if" ?w expr:"else_if_cond" ?w block:"else_if_block"])
          ?[?w "else" ?w block:"else_block"]]
-34 call = [.._seps!:"name" wn "(" ?w .s?.(, arg_expr:"call_arg") ?w ")"]
-35 named_call = [.._seps!:"word" wn "(" ?w
+38 call = [.._seps!:"name" wn "(" ?w .s?.(, arg_expr:"call_arg") ?w ")"]
+39 named_call = [.._seps!:"word" wn "(" ?w
     .s?.(, [.._seps!:"word" ?w ":" ?w arg_expr:"call_arg" ?w]) ")"]
-36 go = ["go " ?w {call:"call" named_call:"named_call"}]
-37 assign = [lexpr:"left" ?w assign_op ?w expr:"right"]
-38 assign_op = {":=":":=" "=":"=" "+=":"+=" "-=":"-=" "*=":"*=" "/=":"/=" "%=":"%="}
-39 compare = [lexpr:"left" ?w compare_op ?w expr:"right"]
-40 compare_op = {"==":"==" "!=":"!=" "¬=":"!=" "<=":"<=" "<":"<" ">=":">=" ">":">"}
-41 grab = ["grab" ?[w "'" .$:"grab_level"] w expr:"expr"]
-42 try_expr = ["try" w expr:"expr"]
+40 go = ["go " ?w {call:"call" named_call:"named_call"}]
+41 assign = [lexpr:"left" ?w assign_op ?w expr:"right"]
+42 assign_op = {":=":":=" "=":"=" "+=":"+=" "-=":"-=" "*=":"*=" "/=":"/=" "%=":"%="}
+43 compare = [lexpr:"left" ?w compare_op ?w expr:"right"]
+44 compare_op = {"==":"==" "!=":"!=" "¬=":"!=" "<=":"<=" "<":"<" ">=":">=" ">":">"}
+45 grab = ["grab" ?[w "'" .$:"grab_level"] w expr:"expr"]
+46 try_expr = ["try" w expr:"expr"]
 
 50 label = ?["'" .._seps!:"label" ?w ":" ?w]
 51 short_body = [.w! .s!.(, [.._seps!:"name" ?w
@@ -129,7 +138,7 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\\"
 56 wn = .r?({" " "\t" "\r"})
 
 60 short_loops = {sum:"sum" prod:"prod" sum_vec4:"sum_vec4" min:"min" max:"max" sift:"sift"
-    any:"any" all:"all" vec4_un_loop:"vec4_un_loop"}
+    any:"any" all:"all" vec4_un_loop:"vec4_un_loop" link_for:"link_for"}
 61 sum = [label {"sum" "∑"} short_body]
 62 prod = [label {"prod" "∏"} short_body]
 63 min = [label "min" short_body]
