@@ -3305,6 +3305,12 @@ impl Runtime {
         let st = self.stack.len();
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
+        let items = if let ast::Expression::Link(ref link) = for_n_expr.block.expressions[0] {
+            &link.items
+        } else {
+            return Err(module.error(for_n_expr.source_range,
+                "Link loop body is not link", self))
+        };
         loop {
             match &self.stack[st - 1] {
                 &Variable::F64(val, _) => {
@@ -3314,53 +3320,56 @@ impl Runtime {
                 x => return Err(module.error(for_n_expr.source_range,
                                 &self.expected(x, "number"), self))
             };
-            match try!(self.block(&for_n_expr.block, module)) {
-                (Some(ref x), Flow::Continue) => {
-                    match res.push(self.resolve(x)) {
-                        Err(err) => {
-                            return Err(module.error(for_n_expr.source_range,
-                                &format!("{}\n{}", self.stack_trace(),
-                                err), self))
-                        }
-                        Ok(()) => {}
-                    }
-                }
-                (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-                (None, Flow::Continue) => {
-                    return Err(module.error(for_n_expr.block.source_range,
-                                "Expected variable", self))
-                }
-                (_, Flow::Break(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_n_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::Break(Some(label))
+            for item in items {
+                match try!(self.expression(item, Side::Right, module)) {
+                    (Some(ref x), Flow::Continue) => {
+                        match res.push(self.resolve(x)) {
+                            Err(err) => {
+                                return Err(module.error(for_n_expr.source_range,
+                                    &format!("{}\n{}", self.stack_trace(),
+                                    err), self))
                             }
+                            Ok(()) => {}
                         }
-                        None => {}
                     }
-                    break;
-                }
-                (_, Flow::ContinueLoop(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_n_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::ContinueLoop(Some(label));
-                                break;
+                    (x, Flow::Return) => { return Ok((x, Flow::Return)); }
+                    (None, Flow::Continue) => {
+                        return Err(module.error(for_n_expr.block.source_range,
+                                    "Expected variable", self))
+                    }
+                    (_, Flow::Break(x)) => {
+                        match x {
+                            Some(label) => {
+                                let same =
+                                if let Some(ref for_label) = for_n_expr.label {
+                                    &label == for_label
+                                } else { false };
+                                if !same {
+                                    flow = Flow::Break(Some(label))
+                                }
                             }
+                            None => {}
                         }
-                        None => {}
+                        break;
+                    }
+                    (_, Flow::ContinueLoop(x)) => {
+                        match x {
+                            Some(label) => {
+                                let same =
+                                if let Some(ref for_label) = for_n_expr.label {
+                                    &label == for_label
+                                } else { false };
+                                if !same {
+                                    flow = Flow::ContinueLoop(Some(label));
+                                    break;
+                                }
+                            }
+                            None => {}
+                        }
                     }
                 }
             }
+
             let error = if let Variable::F64(ref mut val, _) = self.stack[st - 1] {
                 *val += 1.0;
                 false
