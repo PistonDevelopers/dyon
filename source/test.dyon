@@ -1,3 +1,7 @@
 fn main() {
-    x := link i 100_000_000 {i", "}
+    list := sift i 10 {i+1}
+    last := len(list)-1
+    x := link i {list[i] if i == last {break} ", "}
+    // prints `1, 2, 3, 4, 5, 6, 7, 8, 9, `
+    println(x)
 }

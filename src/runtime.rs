@@ -3311,7 +3311,7 @@ impl Runtime {
             return Err(module.error(for_n_expr.source_range,
                 "Link loop body is not link", self))
         };
-        loop {
+        'outer: loop {
             match &self.stack[st - 1] {
                 &Variable::F64(val, _) => {
                     if val < end {}
@@ -3320,7 +3320,7 @@ impl Runtime {
                 x => return Err(module.error(for_n_expr.source_range,
                                 &self.expected(x, "number"), self))
             };
-            for item in items {
+            'inner: for item in items {
                 match try!(self.expression(item, Side::Right, module)) {
                     (Some(ref x), Flow::Continue) => {
                         match res.push(self.resolve(x)) {
@@ -3333,10 +3333,7 @@ impl Runtime {
                         }
                     }
                     (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-                    (None, Flow::Continue) => {
-                        return Err(module.error(for_n_expr.block.source_range,
-                                    "Expected variable", self))
-                    }
+                    (None, Flow::Continue) => {}
                     (_, Flow::Break(x)) => {
                         match x {
                             Some(label) => {
@@ -3350,7 +3347,7 @@ impl Runtime {
                             }
                             None => {}
                         }
-                        break;
+                        break 'outer;
                     }
                     (_, Flow::ContinueLoop(x)) => {
                         match x {
@@ -3361,10 +3358,14 @@ impl Runtime {
                                 } else { false };
                                 if !same {
                                     flow = Flow::ContinueLoop(Some(label));
-                                    break;
+                                    break 'outer;
+                                } else {
+                                    break 'inner;
                                 }
                             }
-                            None => {}
+                            None => {
+                                break 'inner;
+                            }
                         }
                     }
                 }
