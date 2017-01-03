@@ -1857,7 +1857,7 @@ impl Runtime {
                         try_id_ind += 1;
                     },
                     Err(ref err) => {
-                        let ind = stack.len() - locals;
+                        let ind = start_stack_len - locals;
                         if let Variable::Return = stack[ind] {}
                         else {
                             let f = call_stack.last().unwrap();
@@ -1916,7 +1916,7 @@ impl Runtime {
                             try_id_ind += 1;
                         },
                         Err(ref err) => {
-                            let ind = stack.len() - locals;
+                            let ind = start_stack_len - locals;
                             if let Variable::Return = stack[ind] {}
                             else {
                                 let f = call_stack.last().unwrap();
