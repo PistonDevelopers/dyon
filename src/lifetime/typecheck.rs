@@ -217,7 +217,7 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                             Kind::Sum | Kind::Min | Kind::Max |
                             Kind::Any | Kind::All | Kind::Sift |
                             Kind::Vec4UnLoop |
-                            Kind::ForN => {
+                            Kind::ForN | Kind::LinkFor => {
                                 if nodes[i].try {
                                     return Err(nodes[i].source.wrap(
                                         "Type mismatch (#300):\n\

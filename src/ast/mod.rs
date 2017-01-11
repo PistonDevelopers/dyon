@@ -1011,8 +1011,8 @@ impl Link {
         let st = stack.len();
         for expr in &self.items {
             expr.resolve_locals(relative, stack, closure_stack, module);
-            stack.truncate(st);
         }
+        stack.truncate(st);
     }
 }
 
