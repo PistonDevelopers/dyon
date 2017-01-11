@@ -1,15 +1,27 @@
 fn main() {
-    syntax_string := str(link {
-        "1 pos = [.$:"js("x")" .w! .$:"js("y")"]\n"
-        "0 doc = [pos:"js("pos")" "until_any("", "body")"]\n"
-    })
-    text := "1 2 hi"
+    code := str(unroll_count_to_ten())
+    println(code)
 
-    syntax := unwrap(syntax(in: "syntax.txt", string: syntax_string))
-    d := unwrap(meta(syntax: syntax, in: "test.txt", string: text))
-    println(json_from_meta_data(d))
+    m := unwrap(module(in: "hello.dyon", string: code, imports: []))
+    call(m, "main", [])
 }
 
-until_any(chars, name) = link {"..."js(chars)"!:"js(name)}
-
 js(t) = json_string(t)
+
+hello_world() = link {
+    "fn main() {\n"
+    "    println("json_string("hello_world")")\n"
+    "}\n"
+}
+
+count_to_ten() = link {
+    "fn main() {\n"
+    "    for i 10 {println(i+1)}"
+    "}\n"
+}
+
+unroll_count_to_ten() = link {
+    "fn main() {\n"link i 10 {
+    "    println("i+1")\n"
+    }"}\n"
+}

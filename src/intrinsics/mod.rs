@@ -110,6 +110,7 @@ const KEYS: usize = 86;
 const ERRSTR__STRING_START_LEN_MSG: usize = 87;
 const SYNTAX__IN_STRING: usize = 88;
 const META__SYNTAX_IN_STRING: usize = 89;
+const MODULE__IN_STRING_IMPORTS: usize = 90;
 
 const TABLE: &'static [(usize, fn(
         &mut Runtime,
@@ -210,6 +211,7 @@ const TABLE: &'static [(usize, fn(
     (ERRSTR__STRING_START_LEN_MSG, errstr__string_start_len_msg),
     (SYNTAX__IN_STRING, syntax__in_string),
     (META__SYNTAX_IN_STRING, meta__syntax_in_string),
+    (MODULE__IN_STRING_IMPORTS, module__in_string_imports),
 ];
 
 pub fn standard(f: &mut Prelude) {
@@ -434,6 +436,11 @@ pub fn standard(f: &mut Prelude) {
             tys: vec![Type::Any, Type::Text, Type::Text],
             ret: Type::Result(Box::new(Type::Array(Box::new(Type::array()))))
         });
+    f.intrinsic(Arc::new("module__in_string_imports".into()), MODULE__IN_STRING_IMPORTS, Dfn {
+        lts: vec![Lt::Default; 3],
+        tys: vec![Type::Text, Type::Text, Type::array()],
+        ret: Type::result()
+    });
 }
 
 pub fn call_standard(
@@ -1703,6 +1710,86 @@ fn load__source_imports(
         x => return Err(module.error(call.args[0].source_range(),
                 &rt.expected(x, "[Module]"), rt))
     };
+    rt.pop_fn(call.name.clone());
+    Ok(Some(v))
+}
+
+fn module__in_string_imports(
+    rt: &mut Runtime,
+    call: &ast::Call,
+    module: &Arc<Module>,
+    st: usize,
+    lc: usize,
+    cu: usize,
+) -> Result<Option<Variable>, String> {
+    use load_str;
+
+    rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
+    let modules = rt.stack.pop().expect(TINVOTS);
+    let source = rt.stack.pop().expect(TINVOTS);
+    let source = match rt.resolve(&source) {
+        &Variable::Text(ref t) => t.clone(),
+        x => return Err(module.error(call.args[1].source_range(),
+                &rt.expected(x, "str"), rt))
+    };
+    let name = rt.stack.pop().expect(TINVOTS);
+    let name = match rt.resolve(&name) {
+        &Variable::Text(ref t) => t.clone(),
+        x => return Err(module.error(call.args[0].source_range(),
+                &rt.expected(x, "str"), rt))
+    };
+    let mut new_module = Module::new_intrinsics(module.intrinsics.clone());
+    for f in &module.ext_prelude {
+        new_module.add(f.name.clone(), f.f, f.p.clone());
+    }
+    match rt.resolve(&modules) {
+        &Variable::Array(ref array) => {
+            for it in &**array {
+                match rt.resolve(it) {
+                    &Variable::RustObject(ref obj) => {
+                        match obj.lock().unwrap().downcast_ref::<Arc<Module>>() {
+                            Some(m) => {
+                                // Add external functions from imports.
+                                for f in &m.ext_prelude {
+                                    let has_external = new_module.ext_prelude.iter()
+                                        .any(|a| a.name == f.name);
+                                    if !has_external {
+                                        new_module.add(f.name.clone(), f.f, f.p.clone());
+                                    }
+                                }
+                                // Register loaded functions from imports.
+                                for f in &m.functions {
+                                    new_module.register(f.clone())
+                                }
+                            }
+                            None => return Err(module.error(
+                                call.args[2].source_range(),
+                                &format!("{}\nExpected `Module`",
+                                    rt.stack_trace()), rt))
+                        }
+                    }
+                    x => return Err(module.error(
+                        call.args[2].source_range(),
+                        &rt.expected(x, "Module"), rt))
+                }
+            }
+        }
+        x => return Err(module.error(call.args[2].source_range(),
+                &rt.expected(x, "[Module]"), rt))
+    }
+    let v = if let Err(err) = load_str(&name, source, &mut new_module) {
+            Variable::Result(Err(Box::new(Error {
+                message: Variable::Text(Arc::new(
+                    format!("{}\n{}\n{}", rt.stack_trace(), err,
+                        module.error(call.args[0].source_range(),
+                        "When attempting to load module:", rt)))),
+                trace: vec![]
+            })))
+        } else {
+            Variable::Result(Ok(Box::new(
+                Variable::RustObject(Arc::new(
+                    Mutex::new(Arc::new(new_module)))))))
+        };
     rt.pop_fn(call.name.clone());
     Ok(Some(v))
 }
