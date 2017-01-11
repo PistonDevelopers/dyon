@@ -108,6 +108,8 @@ const LOAD_DATA__FILE: usize = 84;
 const FUNCTIONS__MODULE: usize = 85;
 const KEYS: usize = 86;
 const ERRSTR__STRING_START_LEN_MSG: usize = 87;
+const SYNTAX__IN_STRING: usize = 88;
+const META__SYNTAX_IN_STRING: usize = 89;
 
 const TABLE: &'static [(usize, fn(
         &mut Runtime,
@@ -206,6 +208,8 @@ const TABLE: &'static [(usize, fn(
     (FUNCTIONS__MODULE, functions__module),
     (KEYS, keys),
     (ERRSTR__STRING_START_LEN_MSG, errstr__string_start_len_msg),
+    (SYNTAX__IN_STRING, syntax__in_string),
+    (META__SYNTAX_IN_STRING, meta__syntax_in_string),
 ];
 
 pub fn standard(f: &mut Prelude) {
@@ -365,7 +369,7 @@ pub fn standard(f: &mut Prelude) {
     f.intrinsic(Arc::new("load__meta_url".into()), LOAD__META_URL, Dfn {
         lts: vec![Lt::Default; 2],
         tys: vec![Type::Text; 2],
-        ret: Type::Result(Box::new(Type::array()))
+        ret: Type::Result(Box::new(Type::Array(Box::new(Type::array()))))
     });
     f.intrinsic(Arc::new("download__url_file".into()), DOWNLOAD__URL_FILE, Dfn {
         lts: vec![Lt::Default; 2],
@@ -417,6 +421,18 @@ pub fn standard(f: &mut Prelude) {
             lts: vec![Lt::Default; 4],
             tys: vec![Type::Text, Type::F64, Type::F64, Type::Text],
             ret: Type::Text
+        });
+    f.intrinsic(Arc::new("syntax__in_string".into()),
+        SYNTAX__IN_STRING, Dfn {
+            lts: vec![Lt::Default; 2],
+            tys: vec![Type::Text; 2],
+            ret: Type::Result(Box::new(Type::Any))
+        });
+    f.intrinsic(Arc::new("meta__syntax_in_string".into()),
+        META__SYNTAX_IN_STRING, Dfn {
+            lts: vec![Lt::Default; 3],
+            tys: vec![Type::Any, Type::Text, Type::Text],
+            ret: Type::Result(Box::new(Type::Array(Box::new(Type::array()))))
         });
 }
 
@@ -2211,6 +2227,86 @@ fn load__meta_url(
                         &rt.expected(x, "str"), rt))
     };
     let res = meta::load_meta_url(&**meta, &**url);
+    rt.pop_fn(call.name.clone());
+    Ok(Some(Variable::Result(match res {
+        Ok(res) => Ok(Box::new(Variable::Array(Arc::new(res)))),
+        Err(err) => Err(Box::new(Error {
+            message: Variable::Text(Arc::new(err)),
+            trace: vec![]
+        }))
+    })))
+}
+
+fn syntax__in_string(
+    rt: &mut Runtime,
+    call: &ast::Call,
+    module: &Arc<Module>,
+    st: usize,
+    lc: usize,
+    cu: usize,
+) -> Result<Option<Variable>, String> {
+    use piston_meta::syntax_errstr;
+
+    rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
+    let text = rt.stack.pop().expect(TINVOTS);
+    let text = match rt.resolve(&text) {
+        &Variable::Text(ref t) => t.clone(),
+        x => return Err(module.error(call.args[1].source_range(),
+                        &rt.expected(x, "str"), rt))
+    };
+    let name = rt.stack.pop().expect(TINVOTS);
+    let name = match rt.resolve(&name) {
+        &Variable::Text(ref t) => t.clone(),
+        x => return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(x, "str"), rt))
+    };
+    let res = syntax_errstr(&text).map_err(|err|
+        format!("When parsing meta syntax in `{}`:\n{}", name, err));
+    rt.pop_fn(call.name.clone());
+    Ok(Some(Variable::Result(match res {
+        Ok(res) => Ok(Box::new(Variable::RustObject(Arc::new(Mutex::new(Arc::new(res)))))),
+        Err(err) => Err(Box::new(Error {
+            message: Variable::Text(Arc::new(err)),
+            trace: vec![]
+        }))
+    })))
+}
+
+fn meta__syntax_in_string(
+    rt: &mut Runtime,
+    call: &ast::Call,
+    module: &Arc<Module>,
+    st: usize,
+    lc: usize,
+    cu: usize,
+) -> Result<Option<Variable>, String> {
+    use piston_meta::Syntax;
+
+    rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
+    let text = rt.stack.pop().expect(TINVOTS);
+    let text = match rt.resolve(&text) {
+        &Variable::Text(ref t) => t.clone(),
+        x => return Err(module.error(call.args[1].source_range(),
+                        &rt.expected(x, "str"), rt))
+    };
+    let name = rt.stack.pop().expect(TINVOTS);
+    let name = match rt.resolve(&name) {
+        &Variable::Text(ref t) => t.clone(),
+        x => return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(x, "str"), rt))
+    };
+    let syntax_var = rt.stack.pop().expect(TINVOTS);
+    let syntax = match rt.resolve(&syntax_var) {
+        &Variable::RustObject(ref obj) => obj.clone(),
+        x => return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(x, "Syntax"), rt))
+    };
+    let res = meta::load_syntax_data(match syntax.lock().unwrap()
+        .downcast_ref::<Arc<Syntax>>() {
+        Some(s) => s,
+        None => return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(&syntax_var, "Syntax"), rt))
+    }, &name, &text);
     rt.pop_fn(call.name.clone());
     Ok(Some(Variable::Result(match res {
         Ok(res) => Ok(Box::new(Variable::Array(Arc::new(res)))),
