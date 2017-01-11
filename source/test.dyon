@@ -1,30 +1,15 @@
 fn main() {
-    list := [[err(2)]]
-    println(foo(list))
-}
+    file := "source/test.dyon"
+    source := unwrap(load_string(file: file))
 
-fn foo(list) -> res {
+    d := unwrap(load(meta: "assets/syntax.txt", file: file))
+
     for i {
-        x := list[0][i]?
+        if d[i][2] != "start" {continue}
+        name := d[i][3]
+        if name != "fn" {continue}
+        start := d[i][0]
+        len := d[i][1]
+        println(errstr(string: source, start: start, len: len, msg: ""))
     }
-    return ok(2)
 }
-
-/*
-fn main() {
-    list := [err(2)]
-    println(foo2(list))
-    println(foo(list))
-}
-
-fn foo(list) -> res {
-    for i {
-        x := list[i]?
-    }
-    return ok(2)
-}
-
-fn foo2(list) -> res {
-    return ok(list[0]?)
-}
-*/

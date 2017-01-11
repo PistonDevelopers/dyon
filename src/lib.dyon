@@ -281,6 +281,11 @@ fn save__data_file(data: any, file: str) -> res[str] { ... }
 /// Generates JSON data from meta data.
 fn json_from_meta_data(meta_data: [[any]]) -> str { ... }
 
+/// Generates string for error message.
+/// Uses same format as [Piston-Meta](https://github.com/PistonDevelopers/meta).
+/// The range is in characters by `start` and `len`.
+fn errstr__string_start_len_msg(text: str, start: f64, len: f64, msg: str) -> str { ... }
+
 /// Returns `true` if object has key.
 fn has(obj: {}, key: str) -> bool { ... }
 
