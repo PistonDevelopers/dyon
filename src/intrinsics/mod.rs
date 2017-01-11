@@ -107,6 +107,7 @@ const NECK: usize = 83;
 const LOAD_DATA__FILE: usize = 84;
 const FUNCTIONS__MODULE: usize = 85;
 const KEYS: usize = 86;
+const ERRSTR__STRING_START_LEN_MSG: usize = 87;
 
 const TABLE: &'static [(usize, fn(
         &mut Runtime,
@@ -204,6 +205,7 @@ const TABLE: &'static [(usize, fn(
     (LOAD_DATA__FILE, load_data__file),
     (FUNCTIONS__MODULE, functions__module),
     (KEYS, keys),
+    (ERRSTR__STRING_START_LEN_MSG, errstr__string_start_len_msg),
 ];
 
 pub fn standard(f: &mut Prelude) {
@@ -410,6 +412,12 @@ pub fn standard(f: &mut Prelude) {
     sarg(f, "load_data__file", LOAD_DATA__FILE, Type::Text, Type::Result(Box::new(Type::Any)));
     sarg(f, "functions__module", FUNCTIONS__MODULE, Type::Any, Type::Any);
     sarg(f, "keys", KEYS, Type::Object, Type::Array(Box::new(Type::Text)));
+    f.intrinsic(Arc::new("errstr__string_start_len_msg".into()),
+        ERRSTR__STRING_START_LEN_MSG, Dfn {
+            lts: vec![Lt::Default; 4],
+            tys: vec![Type::Text, Type::F64, Type::F64, Type::Text],
+            ret: Type::Text
+        });
 }
 
 pub fn call_standard(
@@ -2474,6 +2482,51 @@ fn json_from_meta_data(
     };
     rt.pop_fn(call.name.clone());
     Ok(Some(Variable::Text(Arc::new(json))))
+}
+
+fn errstr__string_start_len_msg(
+    rt: &mut Runtime,
+    call: &ast::Call,
+    module: &Arc<Module>,
+    st: usize,
+    lc: usize,
+    cu: usize,
+) -> Result<Option<Variable>, String> {
+    use piston_meta::ParseErrorHandler;
+    use range::Range;
+
+    rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
+    let msg = rt.stack.pop().expect(TINVOTS);
+    let msg = match rt.resolve(&msg) {
+        &Variable::Text(ref t) => t.clone(),
+        x => return Err(module.error(call.args[3].source_range(),
+                        &rt.expected(x, "str"), rt))
+    };
+    let len = rt.stack.pop().expect(TINVOTS);
+    let len = match rt.resolve(&len) {
+        &Variable::F64(v, _) => v as usize,
+        x => return Err(module.error(call.args[2].source_range(),
+                        &rt.expected(x, "f64"), rt))
+    };
+    let start = rt.stack.pop().expect(TINVOTS);
+    let start = match rt.resolve(&start) {
+        &Variable::F64(v, _) => v as usize,
+        x => return Err(module.error(call.args[1].source_range(),
+                        &rt.expected(x, "f64"), rt))
+    };
+    let source = rt.stack.pop().expect(TINVOTS);
+    let source = match rt.resolve(&source) {
+        &Variable::Text(ref t) => t.clone(),
+        x => return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(x, "str"), rt))
+    };
+
+    let mut buf: Vec<u8> = vec![];
+    ParseErrorHandler::new(&source)
+        .write_msg(&mut buf, Range::new(start, len), &msg)
+        .unwrap();
+    rt.pop_fn(call.name.clone());
+    Ok(Some(Variable::Text(Arc::new(String::from_utf8(buf).unwrap()))))
 }
 
 fn has(
