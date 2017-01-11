@@ -2388,7 +2388,7 @@ fn meta__syntax_in_string(
         x => return Err(module.error(call.args[0].source_range(),
                         &rt.expected(x, "Syntax"), rt))
     };
-    let res = meta::load_syntax_data(match syntax.lock().unwrap()
+    let res = meta::parse_syntax_data(match syntax.lock().unwrap()
         .downcast_ref::<Arc<Syntax>>() {
         Some(s) => s,
         None => return Err(module.error(call.args[0].source_range(),
