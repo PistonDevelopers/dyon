@@ -1,15 +1,15 @@
 fn main() {
-    file := "source/test.dyon"
-    source := unwrap(load_string(file: file))
+    syntax_string := str(link {
+        "1 pos = [.$:"js("x")" .w! .$:"js("y")"]\n"
+        "0 doc = [pos:"js("pos")" "until_any("", "body")"]\n"
+    })
+    text := "1 2 hi"
 
-    d := unwrap(load(meta: "assets/syntax.txt", file: file))
-
-    for i {
-        if d[i][2] != "start" {continue}
-        name := d[i][3]
-        if name != "fn" {continue}
-        start := d[i][0]
-        len := d[i][1]
-        println(errstr(string: source, start: start, len: len, msg: ""))
-    }
+    syntax := unwrap(syntax(in: "syntax.txt", string: syntax_string))
+    d := unwrap(meta(syntax: syntax, in: "test.txt", string: text))
+    println(json_from_meta_data(d))
 }
+
+until_any(chars, name) = link {"..."js(chars)"!:"js(name)}
+
+js(t) = json_string(t)
