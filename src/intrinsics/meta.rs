@@ -2,12 +2,17 @@ use std::sync::Arc;
 use std::io::{self, Read};
 use std::fs::File;
 use std::error::Error;
-use piston_meta::*;
+use piston_meta::{
+    parse_errstr,
+    syntax_errstr,
+    MetaData,
+    Syntax,
+};
 use super::io::io_error;
 
 use Variable;
 
-pub fn load_syntax_data(rules: &Syntax, file: &str, d: &str) -> Result<Vec<Variable>, String> {
+pub fn parse_syntax_data(rules: &Syntax, file: &str, d: &str) -> Result<Vec<Variable>, String> {
     let mut tokens = vec![];
     try!(parse_errstr(&rules, &d, &mut tokens).map_err(|err|
         format!("When parsing data in `{}`:\n{}", file, err)));
@@ -54,7 +59,7 @@ pub fn load_syntax_data(rules: &Syntax, file: &str, d: &str) -> Result<Vec<Varia
 fn load_metarules_data(meta: &str, s: &str, file: &str, d: &str) -> Result<Vec<Variable>, String> {
     let rules = try!(syntax_errstr(&s).map_err(|err|
         format!("When parsing meta syntax in `{}`:\n{}", meta, err)));
-    load_syntax_data(&rules, file, d)
+    parse_syntax_data(&rules, file, d)
 }
 
 /// Loads a file using a meta file as syntax.
