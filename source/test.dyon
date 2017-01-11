@@ -1,5 +1,9 @@
 fn main() {
-    println(foo())
+    list := [1, 2, 3]
+    println(link i {
+        id := (i+1)
+        id
+        id2 := (i+2)
+        list[i] > 1
+    })
 }
-
-foo() = link i 3 {"hi "i"\n"}
