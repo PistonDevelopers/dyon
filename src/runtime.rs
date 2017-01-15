@@ -1086,6 +1086,9 @@ impl Runtime {
         Ok((Some(if link.items.len() == 0 {
             Variable::Link(Box::new(Link::new()))
         } else {
+            let st = self.stack.len();
+            let lc = self.local_stack.len();
+            let cu = self.current_stack.len();
             let mut new_link = Link::new();
             for item in &link.items {
                 let v = match try!(self.expression(item, Side::Right, module)) {
@@ -1102,6 +1105,9 @@ impl Runtime {
                     Ok(()) => {}
                 }
             }
+            self.stack.truncate(st);
+            self.local_stack.truncate(lc);
+            self.current_stack.truncate(cu);
             Variable::Link(Box::new(new_link))
         }), Flow::Continue))
     }
