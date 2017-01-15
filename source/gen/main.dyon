@@ -1,0 +1,126 @@
+/*
+Generates Rust code from Dyon code.
+
+Status:
+
+- [Done] Generate meta data directly to Rust code.
+- [Todo] Translate a simple Dyon function to Rust.
+
+*/
+
+fn main() {
+    file := "source/test.dyon"
+    output := "examples/test_compile.rs"
+    _ := unwrap(gen(
+        file: file,
+        output: output
+    ))
+    println(link {"`"file"` generated to `"output"`"})
+}
+
+/// Generates Rust code from Dyon file.
+gen__file_output(file: str, output: str) = {
+    source := load_string(file: file)?
+    meta_data := load(meta: "assets/syntax.txt", file: file)?
+    strings := find_strings(meta_data)
+    ~ strings_table := strings_table(strings)
+    code := str(gen_code(file, source, meta_data))
+    save(string: code, file: output)
+}
+
+/// Finds strings in meta data.
+find_strings(meta_data: [[]]) = {
+    strings := sift i {meta_data[i][3]}
+    for i {
+        if meta_data[i][2] == "str" {
+            push(mut strings, meta_data[i][4])
+        }
+    }
+    clone(strings)
+}
+
+/// Creates a table of strings with id > 0 if it occurs more than once.
+strings_table(strings: [str]) = {
+    n := 1
+    strings_table := {}
+    for i {
+        if has(strings_table, strings[i]) {
+            if strings_table[strings[i]] == 0 {
+                strings_table[strings[i]] = n
+                n += 1
+            }
+        } else {
+            strings_table[strings[i]] := 0
+        }
+    }
+    clone(strings_table)
+}
+
+/// Generates code.
+fn gen_code(file: str, source: str, meta_data: [[]]) ~ strings_table -> link {
+    return link {
+        "extern crate piston_meta;\n"
+        "extern crate range;\n"
+        "extern crate dyon;\n"
+        "\n"
+        "use std::sync::Arc;\n"
+        "use self::piston_meta::MetaData;\n"
+        "use self::range::Range;\n"
+        "use self::dyon::{error, load_meta, Module, Runtime};\n"
+        "\n"
+        "fn main() {\n"
+        "    let mut module = Module::new();\n"
+        "    let source: Arc<String> = Arc::new(String::from("json_string(source)"));\n"
+        keys := keys(strings_table)
+        order_keys := [""; sum i {if strings_table[keys[i]] == 0 {0} else {1}}]
+        for i {
+            id := strings_table[keys[i]]
+            if id == 0 {continue}
+            order_keys[id-1] = keys[i]
+        }
+        "    let s: Vec<Arc<String>> = vec![\n"link i {
+            "        Arc::new(String::from("json_string(order_keys[i])")),\n"
+        }"    ];\n"
+        "    let meta_data: Vec<Range<MetaData>> = vec![\n"
+        link i {
+            rec := meta_data[i]
+            "    Range {offset: "rec[0]", length: "rec[1]", data: MetaData::"
+            if rec[2] == "start" {
+                link {"StartNode("string(rec[3])")"}
+            } else if rec[2] == "end" {
+                link {"EndNode("string(rec[3])")"}
+            } else if rec[2] == "f64" {
+                link {"F64("string(rec[3])", "num(rec[4])")"}
+            } else if rec[2] == "bool" {
+                link {"Bool("string(rec[3])", "rec[4]")"}
+            } else if rec[2] == "str" {
+                link {"String("string(rec[3])", "string(rec[4])")"}
+            }
+            "},\n"
+        }
+        "    ];\n"
+        "    if error(load_meta("json_string(file)", source, &meta_data, &mut module)) {return;}\n"
+        "    let mut runtime = Runtime::new();\n"
+        "    if error(runtime.run(&Arc::new(module))) {\n"
+        "        return;\n"
+        "    }\n"
+        "}\n"
+    }
+}
+
+string(name: str) ~ strings_table: {} = {
+    id := strings_table[name]
+    if id == 0 {
+        link {"Arc::new(String::from("json_string(name)"))"}
+    } else {
+        link {"s["(id-1)"].clone()"}
+    }
+}
+
+/// Writes number in a format that Rust accepts as f64.
+num(val: f64) = {
+    text := str(val)
+    chars := chars(text)
+    if !any i {chars[i] == "."} {text + ".0"}
+    else {clone(text)}
+}

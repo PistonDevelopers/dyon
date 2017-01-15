@@ -14,6 +14,7 @@ use std::thread::JoinHandle;
 use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 use range::Range;
+use piston_meta::MetaData;
 
 pub mod ast;
 pub mod runtime;
@@ -368,7 +369,7 @@ pub fn load(source: &str, module: &mut Module) -> Result<(), String> {
 /// - module - The module to load the source
 pub fn load_str(source: &str, d: Arc<String>, module: &mut Module) -> Result<(), String> {
     use std::thread;
-    use piston_meta::{parse_errstr, syntax_errstr, json, Syntax};
+    use piston_meta::{parse_errstr, syntax_errstr, Syntax};
 
     lazy_static! {
         static ref SYNTAX_RULES: Result<Syntax, String> = {
@@ -384,14 +385,14 @@ pub fn load_str(source: &str, d: Arc<String>, module: &mut Module) -> Result<(),
     try!(parse_errstr(syntax_rules, &d, &mut data).map_err(
         |err| format!("In `{}:`\n{}", source, err)
     ));
+
     let check_data = data.clone();
     let prelude = Arc::new(Prelude::from_module(module));
-    let prelude2 = prelude.clone();
 
     // Do lifetime checking in parallel directly on meta data.
     let handle = thread::spawn(move || {
         let check_data = check_data;
-        lifetime::check(&check_data, &prelude2)
+        lifetime::check(&check_data, &prelude)
     });
 
     // Convert to AST.
@@ -423,6 +424,33 @@ pub fn load_str(source: &str, d: Arc<String>, module: &mut Module) -> Result<(),
         }
     }
 
+    check_ignored_meta_data(&conv_res, source, &d, &data, &ignored)
+}
+
+/// Loads a source from meta data.
+/// Assumes the source passes the lifetime checker.
+pub fn load_meta(
+    source: &str,
+    d: Arc<String>,
+    data: &[Range<MetaData>],
+    module: &mut Module
+) -> Result<(), String> {
+    // Convert to AST.
+    let mut ignored = vec![];
+    let conv_res = ast::convert(Arc::new(source.into()), d.clone(), &data, &mut ignored, module);
+
+    check_ignored_meta_data(&conv_res, source, &d, data, &ignored)
+}
+
+fn check_ignored_meta_data(
+    conv_res: &Result<(), ()>,
+    source: &str,
+    d: &Arc<String>,
+    data: &[Range<MetaData>],
+    ignored: &[Range],
+) -> Result<(), String> {
+    use piston_meta::json;
+
     if ignored.len() > 0 || conv_res.is_err() {
         use std::io::Write;
         use piston_meta::ParseErrorHandler;
@@ -441,7 +469,7 @@ pub fn load_str(source: &str, d: Arc<String>, module: &mut Module) -> Result<(),
                            "Could not understand this")
                 .unwrap();
         }
-        if let Err(()) = conv_res {
+        if let &Err(()) = conv_res {
             writeln!(&mut buf, "Conversion error").unwrap();
         }
         return Err(String::from_utf8(buf).unwrap());

@@ -1,9 +1,4 @@
 fn main() {
-    list := [1, 2, 3]
-    println(link i {
-        id := (i+1)
-        id
-        id2 := (i+2)
-        list[i] > 1
-    })
+    x := sum i 1_000_000 {i}
+    println(x)
 }
