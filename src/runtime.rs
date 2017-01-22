@@ -537,27 +537,25 @@ impl Runtime {
                         self.stack_trace()), self));
             }
         };
-        let locals = self.local_stack.len() - self.call_stack.last().unwrap().local_len;
         match v {
             Ok(ok) => {
                 Ok((Some(*ok), Flow::Continue))
             }
             Err(mut err) => {
-                let ind = self.stack.len() - locals;
-                if locals == 0 {
+                let call = self.call_stack.last().unwrap();
+                if call.stack_len == 0 {
                     return Err(module.error(expr.source_range(),
                         &format!("{}\nRequires `->` on function `{}`",
                         self.stack_trace(),
-                        &self.call_stack.last().unwrap().fn_name), self));
+                        &call.fn_name), self));
                 }
-                if let Variable::Return = self.stack[ind] {}
+                if let Variable::Return = self.stack[call.stack_len - 1] {}
                 else {
                     return Err(module.error(expr.source_range(),
                         &format!("{}\nRequires `->` on function `{}`",
                         self.stack_trace(),
-                        &self.call_stack.last().unwrap().fn_name), self));
+                        &call.fn_name), self));
                 }
-                let call = self.call_stack.last().unwrap();
                 let file = match call.file {
                     None => "".into(),
                     Some(ref f) => format!(" ({})", f)
@@ -1687,24 +1685,27 @@ impl Runtime {
             stack: &mut Vec<Variable>,
             call_stack: &Vec<Call>,
             v: Result<Box<Variable>, Box<Error>>,
-            locals: usize,
             source_range: Range,
             module: &Module
         ) -> Result<(Option<Variable>, Flow), String> {
             match v {
                 Ok(ok) => Ok((Some(*ok), Flow::Continue)),
                 Err(mut err) => {
-                    let ind = stack.len() - locals;
-                    if let Variable::Return = stack[ind] {}
-                    else {
-                        let f = call_stack.last().unwrap();
+                    let call = call_stack.last().unwrap();
+                    if call.stack_len == 0 {
                         return Err(module.error_fnindex(source_range,
                             &format!("{}\nRequires `->` on function `{}`",
                             stack_trace(call_stack),
-                            &f.fn_name),
-                            f.index));
+                            &call.fn_name), call.index));
                     }
-                    let call = call_stack.last().unwrap();
+                    if let Variable::Return = stack[call.stack_len - 1] {}
+                    else {
+                        return Err(module.error_fnindex(source_range,
+                            &format!("{}\nRequires `->` on function `{}`",
+                            stack_trace(call_stack),
+                            &call.fn_name),
+                            call.index));
+                    }
                     let file = match call.file {
                         None => "".into(),
                         Some(ref f) => format!(" ({})", f)
@@ -1712,7 +1713,7 @@ impl Runtime {
                     err.trace.push(module.error_fnindex(
                         source_range,
                         &format!("In function `{}`{}", call.fn_name, file),
-                        call_stack.last().unwrap().index));
+                        call.index));
                     Ok((Some(Variable::Result(Err(err))), Flow::Return))
                 }
             }
@@ -1798,7 +1799,7 @@ impl Runtime {
                                 self.stack_trace()), self));
                     }
                 };
-                return try(&mut self.stack, &self.call_stack, v, locals,
+                return try(&mut self.stack, &self.call_stack, v,
                            item.source_range, module);
             } else {
                 return Ok((Some(Variable::Ref(stack_id)), Flow::Continue));
@@ -1820,11 +1821,9 @@ impl Runtime {
         }
         let &mut Runtime {
             ref mut stack,
-            ref mut local_stack,
             ref mut call_stack,
             ..
         } = self;
-        let locals = local_stack.len() - call_stack.last().unwrap().local_len;
         let mut expr_j = 0;
         let insert = match side {
             Side::Right => false,
@@ -1863,19 +1862,25 @@ impl Runtime {
                         try_id_ind += 1;
                     },
                     Err(ref err) => {
-                        let ind = start_stack_len - locals;
-                        if let Variable::Return = stack[ind] {}
-                        else {
-                            let f = call_stack.last().unwrap();
+                        let call = call_stack.last().unwrap();
+                        if call.stack_len == 0 {
                             return Err(module.error_fnindex(
                                 item.ids[0].source_range(),
                                 &format!("{}\nRequires `->` on function `{}`",
                                 stack_trace(call_stack),
-                                &f.fn_name),
-                                f.index));
+                                &call.fn_name),
+                                call.index));
+                        }
+                        if let Variable::Return = stack[call.stack_len - 1] {}
+                        else {
+                            return Err(module.error_fnindex(
+                                item.ids[0].source_range(),
+                                &format!("{}\nRequires `->` on function `{}`",
+                                stack_trace(call_stack),
+                                &call.fn_name),
+                                call.index));
                         }
                         let mut err = err.clone();
-                        let call = call_stack.last().unwrap();
                         let file = match call.file.as_ref() {
                             None => "".into(),
                             Some(f) => format!(" ({})", f)
@@ -1884,7 +1889,7 @@ impl Runtime {
                             item.ids[0].source_range(),
                             &format!("In function `{}`{}",
                                 &call.fn_name, file),
-                                call_stack.last().unwrap().index));
+                                call.index));
                         return Ok((Some(Variable::Result(Err(err))), Flow::Return));
                     }
                 }
@@ -1922,19 +1927,25 @@ impl Runtime {
                             try_id_ind += 1;
                         },
                         Err(ref err) => {
-                            let ind = start_stack_len - locals;
-                            if let Variable::Return = stack[ind] {}
-                            else {
-                                let f = call_stack.last().unwrap();
+                            let call = call_stack.last().unwrap();
+                            if call.stack_len == 0 {
                                 return Err(module.error_fnindex(
                                     prop.source_range(),
                                     &format!("{}\nRequires `->` on function `{}`",
                                         stack_trace(call_stack),
-                                        &f.fn_name),
-                                        f.index));
+                                        &call.fn_name),
+                                        call.index));
+                            }
+                            if let Variable::Return = stack[call.stack_len - 1] {}
+                            else {
+                                return Err(module.error_fnindex(
+                                    prop.source_range(),
+                                    &format!("{}\nRequires `->` on function `{}`",
+                                        stack_trace(call_stack),
+                                        &call.fn_name),
+                                        call.index));
                             }
                             let mut err = err.clone();
-                            let call = call_stack.last().unwrap();
                             let file = match call.file.as_ref() {
                                 None => "".into(),
                                 Some(f) => format!(" ({})", f)
@@ -1943,7 +1954,7 @@ impl Runtime {
                                 prop.source_range(),
                                 &format!("In function `{}`{}",
                                     &call.fn_name, file),
-                                    call_stack.last().unwrap().index));
+                                    call.index));
                             return Ok((Some(Variable::Result(Err(err))), Flow::Return));
                         }
                     }
