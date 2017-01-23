@@ -112,18 +112,8 @@ impl Function {
             None => try!(block.ok_or(())),
             Some(expr) => {
                 let source_range = expr.source_range();
-                let item = Expression::Item(Item {
-                        name: Arc::new("return".into()),
-                        current: false,
-                        stack_id: Cell::new(None),
-                        static_stack_id: Cell::new(None),
-                        try: false,
-                        ids: vec![],
-                        try_ids: vec![],
-                        source_range: source_range,
-                    });
                 Block {
-                    expressions: vec![Expression::Return(Box::new(item), Box::new(expr))],
+                    expressions: vec![Expression::Return(Box::new(expr))],
                     source_range: source_range
                 }
             }
@@ -567,7 +557,7 @@ pub enum Expression {
     Object(Box<Object>),
     Array(Box<Array>),
     ArrayFill(Box<ArrayFill>),
-    Return(Box<Expression>, Box<Expression>),
+    Return(Box<Expression>),
     ReturnVoid(Range),
     Break(Break),
     Continue(Continue),
@@ -648,17 +638,7 @@ impl Expression {
             } else if let Ok((range, val)) = Expression::from_meta_data(
                     file, source, "return", convert, ignored) {
                 convert.update(range);
-                let item = Expression::Item(Item {
-                        name: Arc::new("return".into()),
-                        current: false,
-                        stack_id: Cell::new(None),
-                        static_stack_id: Cell::new(None),
-                        try: false,
-                        ids: vec![],
-                        try_ids: vec![],
-                        source_range: val.source_range(),
-                    });
-                result = Some(Expression::Return(Box::new(item), Box::new(val)));
+                result = Some(Expression::Return(Box::new(val)));
             } else if let Ok((range, _)) = convert.meta_bool("return_void") {
                 convert.update(range);
                 result = Some(Expression::ReturnVoid(
@@ -850,7 +830,7 @@ impl Expression {
             Object(ref obj) => obj.source_range,
             Array(ref arr) => arr.source_range,
             ArrayFill(ref arr_fill) => arr_fill.source_range,
-            Return(_, ref expr) => expr.source_range(),
+            Return(ref expr) => expr.source_range(),
             ReturnVoid(range) => range,
             Break(ref br) => br.source_range,
             Continue(ref c) => c.source_range,
@@ -904,11 +884,9 @@ impl Expression {
             Array(ref arr) => arr.resolve_locals(relative, stack, closure_stack, module),
             ArrayFill(ref arr_fill) =>
                 arr_fill.resolve_locals(relative, stack, closure_stack, module),
-            Return(ref item, ref expr) => {
+            Return(ref expr) => {
                 let st = stack.len();
                 expr.resolve_locals(relative, stack, closure_stack, module);
-                stack.truncate(st);
-                item.resolve_locals(relative, stack, closure_stack, module);
                 stack.truncate(st);
             }
             ReturnVoid(_) => {}

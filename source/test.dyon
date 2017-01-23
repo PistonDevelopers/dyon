@@ -1,4 +1,12 @@
 fn main() {
-    x := sum i 1_000_000 {i}
-    println(x)
+    println(apply())
+    println(foo())
 }
+
+fn apply() -> {
+    _ := sc({return 2})
+}
+
+foo() = 2
+
+sc(s) = {}

@@ -338,10 +338,15 @@ impl Runtime {
             Array(ref arr) => self.array(arr, module),
             ArrayFill(ref array_fill) => self.array_fill(array_fill, module),
             Block(ref block) => self.block(block, module),
-            Return(ref item, ref ret) => {
-                // Assign return value and then break the flow.
-                let (x, _flow) = try!(self.assign(ast::AssignOp::Set, &item, ret, module));
-                Ok((x, Flow::Return))
+            Return(ref ret) => {
+                let x = match try!(self.expression(ret, Side::Right, module)) {
+                    (Some(x), Flow::Continue) => x,
+                    (x, Flow::Return) => { return Ok((x, Flow::Return)); }
+                    _ => return Err(module.error(expr.source_range(),
+                                    &format!("{}\nExpected something",
+                                        self.stack_trace()), self))
+                };
+                Ok((Some(x), Flow::Return))
             }
             ReturnVoid(_) => Ok((None, Flow::Return)),
             Break(ref b) => Ok((None, Flow::Break(b.label.clone()))),

@@ -122,8 +122,8 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
                 source_range: array_fill_expr.source_range,
             }))
         }
-        E::Return(ref ret, ref ret_expr) => {
-            E::Return(ret.clone(), Box::new(number(ret_expr, name, val)))
+        E::Return(ref ret_expr) => {
+            E::Return(Box::new(number(ret_expr, name, val)))
         }
         E::ReturnVoid(_) => expr.clone(),
         E::Break(_) => expr.clone(),
