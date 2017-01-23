@@ -44,8 +44,8 @@ pub fn grab_expr(
                 Ok((Grabbed::Expression(expr.clone()), Flow::Continue))
             }
         }
-        &E::Return(ref item_expr, ref expr) => {
-            Ok((Grabbed::Expression(E::Return(item_expr.clone(),
+        &E::Return(ref expr) => {
+            Ok((Grabbed::Expression(E::Return(
                 Box::new(match grab_expr(level, rt, expr, side, module) {
                     Ok((Grabbed::Expression(x), Flow::Continue)) => x,
                     x => return x,

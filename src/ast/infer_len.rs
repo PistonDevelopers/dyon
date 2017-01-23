@@ -80,7 +80,7 @@ fn infer_expr(
             let n = infer_expr(&arr_fill.n, name, decls);
             if n.is_some() { return n; }
         }
-        Return(_, ref ret_expr) => {
+        Return(ref ret_expr) => {
             let res = infer_expr(ret_expr, name, decls);
             if res.is_some() { return res; }
         }

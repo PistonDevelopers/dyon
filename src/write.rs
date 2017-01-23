@@ -192,9 +192,8 @@ pub fn write_expr<W: io::Write>(
         &E::Array(ref arr) => try!(write_arr(w, rt, arr, tabs)),
         &E::ArrayFill(ref arr_fill) => try!(write_arr_fill(w, rt, arr_fill, tabs)),
         &E::Call(ref call) => try!(write_call(w, rt, call, tabs)),
-        &E::Return(ref ret, ref expr) => {
-            try!(write_expr(w, rt, ret, tabs));
-            try!(write!(w, " "));
+        &E::Return(ref expr) => {
+            try!(write!(w, "return "));
             try!(write_expr(w, rt, expr, tabs));
         }
         &E::ReturnVoid(_) => try!(write!(w, "return")),
