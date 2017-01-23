@@ -1869,7 +1869,7 @@ impl Call {
             FnIndex::Loaded(f_index) => {
                 let index = (f_index + relative as isize) as usize;
                 if module.functions[index].returns() {
-                    stack.push(Some(Arc::new("return".into())));
+                    stack.push(None);
                 }
             }
             FnIndex::ExternalVoid(_) | FnIndex::ExternalReturn(_) => {

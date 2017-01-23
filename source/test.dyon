@@ -1,12 +1,13 @@
 fn main() {
     println(apply())
-    println(foo())
 }
 
 fn apply() -> {
-    _ := sc({return 2})
+    a := {}
+    _ := sc({
+        return = 2
+        3
+    })
 }
-
-foo() = 2
 
 sc(s) = {}
