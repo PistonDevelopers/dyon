@@ -175,6 +175,7 @@ impl Node {
                 (_, Kind::SumVec4) => {}
                 (_, Kind::Sum) => {}
                 (_, Kind::Prod) => {}
+                (_, Kind::ProdVec4) => {}
                 (_, Kind::Min) => {}
                 (_, Kind::Max) => {}
                 (_, Kind::Any) => {}

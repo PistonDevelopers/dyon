@@ -577,6 +577,7 @@ pub enum Expression {
     Sum(Box<ForN>),
     SumVec4(Box<ForN>),
     Prod(Box<ForN>),
+    ProdVec4(Box<ForN>),
     Min(Box<ForN>),
     Max(Box<ForN>),
     Sift(Box<ForN>),
@@ -749,6 +750,10 @@ impl Expression {
                 convert.update(range);
                 result = Some(Expression::Prod(Box::new(val)));
             } else if let Ok((range, val)) = ForN::from_meta_data(
+                    file, source, "prod_vec4", convert, ignored) {
+                convert.update(range);
+                result = Some(Expression::ProdVec4(Box::new(val)));
+            } else if let Ok((range, val)) = ForN::from_meta_data(
                     file, source, "min", convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::Min(Box::new(val)));
@@ -849,6 +854,7 @@ impl Expression {
             Sum(ref for_n_expr) => for_n_expr.source_range,
             SumVec4(ref for_n_expr) => for_n_expr.source_range,
             Prod(ref for_n_expr) => for_n_expr.source_range,
+            ProdVec4(ref for_n_expr) => for_n_expr.source_range,
             Min(ref for_n_expr) => for_n_expr.source_range,
             Max(ref for_n_expr) => for_n_expr.source_range,
             Sift(ref for_n_expr) => for_n_expr.source_range,
@@ -910,6 +916,8 @@ impl Expression {
             SumVec4(ref for_n_expr) =>
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module),
             Prod(ref for_n_expr) =>
+                for_n_expr.resolve_locals(relative, stack, closure_stack, module),
+            ProdVec4(ref for_n_expr) =>
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module),
             Min(ref for_n_expr) =>
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module),
@@ -2877,6 +2885,7 @@ impl ForN {
                     "sum" => Expression::Sum(Box::new(new_for_n)),
                     "sum_vec4" => Expression::SumVec4(Box::new(new_for_n)),
                     "prod" => Expression::Prod(Box::new(new_for_n)),
+                    "prod_vec4" => Expression::ProdVec4(Box::new(new_for_n)),
                     "any" => Expression::Any(Box::new(new_for_n)),
                     "all" => Expression::All(Box::new(new_for_n)),
                     "min" => Expression::Min(Box::new(new_for_n)),

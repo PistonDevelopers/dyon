@@ -291,6 +291,12 @@ pub fn grab_expr(
             }
             x => return x,
         },
+        &E::ProdVec4(ref for_n) => match grab_for_n(level, rt, for_n, side, module) {
+            Ok((Grabbed::ForN(x), Flow::Continue)) => {
+                Ok((Grabbed::Expression(E::ProdVec4(Box::new(x))), Flow::Continue))
+            }
+            x => return x,
+        },
         &E::Sift(ref for_n) => match grab_for_n(level, rt, for_n, side, module) {
             Ok((Grabbed::ForN(x), Flow::Continue)) => {
                 Ok((Grabbed::Expression(E::Sift(Box::new(x))), Flow::Continue))

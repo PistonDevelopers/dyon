@@ -185,31 +185,34 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
             E::ForN(Box::new(number_for_n(for_n_expr, name, val)))
         }
         E::Sum(ref for_n_expr) => {
-            E::ForN(Box::new(number_for_n(for_n_expr, name, val)))
+            E::Sum(Box::new(number_for_n(for_n_expr, name, val)))
         }
         E::SumVec4(ref for_n_expr) => {
-            E::ForN(Box::new(number_for_n(for_n_expr, name, val)))
+            E::SumVec4(Box::new(number_for_n(for_n_expr, name, val)))
         }
         E::Prod(ref for_n_expr) => {
-            E::ForN(Box::new(number_for_n(for_n_expr, name, val)))
+            E::Prod(Box::new(number_for_n(for_n_expr, name, val)))
+        }
+        E::ProdVec4(ref for_n_expr) => {
+            E::ProdVec4(Box::new(number_for_n(for_n_expr, name, val)))
         }
         E::Min(ref for_n_expr) => {
-            E::ForN(Box::new(number_for_n(for_n_expr, name, val)))
+            E::Min(Box::new(number_for_n(for_n_expr, name, val)))
         }
         E::Max(ref for_n_expr) => {
-            E::ForN(Box::new(number_for_n(for_n_expr, name, val)))
+            E::Max(Box::new(number_for_n(for_n_expr, name, val)))
         }
         E::Sift(ref for_n_expr) => {
-            E::ForN(Box::new(number_for_n(for_n_expr, name, val)))
+            E::Sift(Box::new(number_for_n(for_n_expr, name, val)))
         }
         E::Any(ref for_n_expr) => {
-            E::ForN(Box::new(number_for_n(for_n_expr, name, val)))
+            E::Any(Box::new(number_for_n(for_n_expr, name, val)))
         }
         E::All(ref for_n_expr) => {
-            E::ForN(Box::new(number_for_n(for_n_expr, name, val)))
+            E::All(Box::new(number_for_n(for_n_expr, name, val)))
         }
         E::LinkFor(ref for_n_expr) => {
-            E::ForN(Box::new(number_for_n(for_n_expr, name, val)))
+            E::LinkFor(Box::new(number_for_n(for_n_expr, name, val)))
         }
         E::If(ref if_expr) => {
             let mut new_else_if_conds: Vec<Expression> = vec![];
