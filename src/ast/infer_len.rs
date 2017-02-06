@@ -130,6 +130,9 @@ fn infer_expr(
         Prod(ref for_n_expr) => {
             return infer_for_n(for_n_expr, name, decls)
         }
+        ProdVec4(ref for_n_expr) => {
+            return infer_for_n(for_n_expr, name, decls)
+        }
         Min(ref for_n_expr) => {
             return infer_for_n(for_n_expr, name, decls)
         }

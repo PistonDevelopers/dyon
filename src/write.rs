@@ -236,6 +236,10 @@ pub fn write_expr<W: io::Write>(
             try!(write!(w, "prod "));
             try!(write_for_n(w, rt, for_n, tabs));
         }
+        &E::ProdVec4(ref for_n) => {
+            try!(write!(w, "prod_vec4 "));
+            try!(write_for_n(w, rt, for_n, tabs));
+        }
         &E::Min(ref for_n) => {
             try!(write!(w, "min "));
             try!(write_for_n(w, rt, for_n, tabs));
