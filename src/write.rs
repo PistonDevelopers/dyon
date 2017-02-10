@@ -80,7 +80,12 @@ pub fn write_variable<W>(
             try!(write!(w, "{{"));
             let n = obj.len();
             for (i, (k, v)) in obj.iter().enumerate() {
-                try!(write!(w, "{}: ", k));
+                if k.chars().all(|c| c.is_alphanumeric()) {
+                    try!(write!(w, "{}: ", k));
+                } else {
+                    try!(json::write_string(w, &k));
+                    try!(write!(w, ": "));
+                }
                 try!(write_variable(w, rt, v, EscapeString::Json, tabs));
                 if i + 1 < n {
                     try!(write!(w, ", "));
@@ -431,7 +436,12 @@ pub fn write_obj<W: io::Write>(
 ) -> Result<(), io::Error> {
     try!(write!(w, "{{"));
     for (i, key_value) in obj.key_values.iter().enumerate() {
-        try!(write!(w, "{}: ", key_value.0));
+        if key_value.0.chars().all(|c| c.is_alphanumeric()) {
+            try!(write!(w, "{}: ", key_value.0));
+        } else {
+            try!(json::write_string(w, &key_value.0));
+            try!(write!(w, ": "));
+        }
         try!(write_expr(w, rt, &key_value.1, tabs + 1));
         if i + 1 < obj.key_values.len() {
             try!(write!(w, ", "));

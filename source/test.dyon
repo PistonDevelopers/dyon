@@ -1,3 +1,6 @@
 fn main() {
-    println(∏vec4 i 2 {(1, 2, 3)})
+    fail := unwrap(load("source/data/fail.dyon"))
+    success := unwrap(load("source/data/success.dyon"))
+    call(fail, "main", [])
+    call(success, "main", [])
 }

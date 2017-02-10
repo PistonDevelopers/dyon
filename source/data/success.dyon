@@ -7,6 +7,7 @@ fn main() {
         "data/link.dyon",
         "data/number.dyon",
         "data/obj.dyon",
+        "data/obj_str.dyon",
         "data/text.dyon",
         "data/vec4_2.dyon",
         "data/vec4_3.dyon",
