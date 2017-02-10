@@ -1,7 +1,6 @@
 fn main() {
     files := [
         "data/err_obj.dyon",
-        "data/err_obj_2.dyon",
         "data/err_obj_3.dyon",
         "data/err_obj_4.dyon",
         "data/err_arr.dyon",
@@ -16,5 +15,10 @@ fn main() {
 }
 
 fn show_err(file: str) {
-    println(unwrap_err(load_data(file: file)))
+    data := load_data(file: file)
+    if is_ok(data) {
+        println(data)
+        _ := unwrap(err(file))
+    }
+    println(unwrap_err(data))
 }

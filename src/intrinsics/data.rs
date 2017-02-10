@@ -136,20 +136,38 @@ fn object(
             return Err(error(read.start(), "Expected `,`", data));
         }
 
-        let (range, _) = read.until_any_or_whitespace(SEPS);
         let key: Arc<String>;
-        if range.length == 0 {
-            return Err(error(range, "Expected key", data));
+        if let Some(range) = read.string() {
+            match read.parse_string(range.length) {
+                Ok(s) => {
+                    // Use reference to existing string to reduce memory.
+                    key = if let Some(s) = strings.get(&s) {
+                        s.clone()
+                    } else {
+                        Arc::new(s)
+                    };
+                    *read = read.consume(range.length);
+                }
+                Err(err_range) => {
+                    let (range, err) = err_range.decouple();
+                    return Err(error(range, &format!("{}", err), data))
+                }
+            }
         } else {
-            let k = read.raw_string(range.length);
-            // Use reference to existing string to reduce memory.
-            key = if let Some(s) = strings.get(&k) {
-                s.clone()
+            let (range, _) = read.until_any_or_whitespace(SEPS);
+            if range.length == 0 {
+                return Err(error(range, "Expected key", data));
             } else {
-                Arc::new(k)
+                let k = read.raw_string(range.length);
+                // Use reference to existing string to reduce memory.
+                key = if let Some(s) = strings.get(&k) {
+                    s.clone()
+                } else {
+                    Arc::new(k)
+                };
+                *read = read.consume(range.length);
             };
-            *read = read.consume(range.length);
-        };
+        }
 
         opt_w(read);
 

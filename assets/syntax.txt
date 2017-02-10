@@ -72,7 +72,7 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\\"
 13 object = ["{" ?w .s?.(, key_value:"key_value") ?w "}"]
 14 array = ["[" ?w .s?.(, expr:"array_item") ?w "]"]
 15 array_fill = ["[" ?w expr:"fill" ?w ";" ?w expr:"n" ?w "]"]
-16 key_value = [.._seps!:"key" ?w ":" ?w expr:"val"]
+16 key_value = [{.t?:"key" .._seps!:"key"} ?w ":" ?w expr:"val"]
 17 num = .$_:"num"
 18 vec4 = ["(" ?w arg_expr:"x" , ?arg_expr:"y"
            ?[, arg_expr:"z" ?[, arg_expr:"w"]] ?, ?w ")"]
