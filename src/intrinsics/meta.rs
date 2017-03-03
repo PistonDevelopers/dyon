@@ -78,19 +78,19 @@ pub fn load_meta_file(meta: &str, file: &str) -> Result<Vec<Variable>, String> {
 /// Loads a text file from url.
 #[cfg(feature = "http")]
 pub fn load_text_file_from_url(url: &str) -> Result<String, String> {
-    use hyper::client::Client;
-    use hyper::{Url};
-    use hyper::status::StatusCode;
+    use reqwest::{Client, Url, StatusCode};
     use std::io::Read;
 
     let url_address = try!(Url::parse(url)
         .map_err(|e| format!("Error parsing url:\n`{}`\n", e)));
-    let client = Client::new();
+    let client = try!(Client::new()
+        .map_err(|e| format!("Error creating http client `{}`:\n{}\n",
+                             url, e.to_string())));
     let request = client.get(url_address);
     let mut response = try!(request.send()
         .map_err(|e| format!("Error fetching file over http `{}`:\n{}\n",
                              url, e.to_string())));
-    if response.status == StatusCode::Ok {
+    if *response.status() == StatusCode::Ok {
         let mut data = String::new();
         try!(response.read_to_string(&mut data)
             .map_err(|e| format!("Error fetching file over http `{}`:\n{}\n",
@@ -98,7 +98,7 @@ pub fn load_text_file_from_url(url: &str) -> Result<String, String> {
         Ok(data)
     } else {
         Err(format!("Error fetching file over http `{}:\n{}\n",
-                    url, response.status))
+                    url, response.status()))
     }
 }
 
@@ -125,21 +125,21 @@ pub fn load_meta_url(_meta: &str, _url: &str) -> Result<Vec<Variable>, String> {
 // Downloads a file from url.
 #[cfg(feature = "http")]
 pub fn download_url_to_file(url: &str, file: &str) -> Result<String, String> {
-    use hyper::client::Client;
-    use hyper::{Url};
-    use hyper::status::StatusCode;
+    use reqwest::{Client, Url, StatusCode};
     use std::io::copy;
     use std::fs::File;
     use std::error::Error;
 
     let url_address = try!(Url::parse(url)
         .map_err(|e| format!("Error parsing url:\n`{}`\n", e)));
-    let client = Client::new();
+    let client = try!(Client::new()
+        .map_err(|e| format!("Error creating http client `{}`:\n{}\n",
+                             url, e.to_string())));
     let request = client.get(url_address);
     let mut response = try!(request.send()
         .map_err(|e| format!("Error fetching file over http `{}`:\n{}\n",
                              url, e.to_string())));
-    if response.status == StatusCode::Ok {
+    if *response.status() == StatusCode::Ok {
         let mut f = try!(File::create(file).map_err(|err| {
             format!("Could not create file `{}`:\n{}", file, err.description())
         }));
@@ -149,7 +149,7 @@ pub fn download_url_to_file(url: &str, file: &str) -> Result<String, String> {
         Ok(file.into())
     } else {
         Err(format!("Error fetching file over http `{}:\n{}\n",
-                    url, response.status))
+                    url, response.status()))
     }
 }
 

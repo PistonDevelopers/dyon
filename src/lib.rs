@@ -5,7 +5,7 @@ extern crate range;
 extern crate read_color;
 extern crate read_token;
 #[cfg(feature = "http")]
-extern crate hyper;
+extern crate reqwest;
 #[macro_use]
 extern crate lazy_static;
 
