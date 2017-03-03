@@ -4,6 +4,7 @@ extern crate rand;
 extern crate range;
 extern crate read_color;
 extern crate read_token;
+#[cfg(feature = "http")]
 extern crate hyper;
 #[macro_use]
 extern crate lazy_static;

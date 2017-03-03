@@ -281,6 +281,10 @@ fn save__string_file(string: str, file: str) -> res[str] { ... }
 /// Returns `ok(text)` if the loading succeeded.
 fn load_string__file(file: str) -> res[str] { ... }
 
+/// Loads a string from url.
+/// Returns `ok(text)` if the loading succeeded.
+fn load_string__url(url: str) -> res[str] { ... }
+
 /// Waits for thread to finish and returns the result.
 fn join__thread(t: thr[any]) -> res[any] { ... }
 

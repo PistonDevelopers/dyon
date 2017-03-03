@@ -1,7 +1,6 @@
 use std::sync::Arc;
 use std::io::{self, Read};
 use std::fs::File;
-use std::error::Error;
 use piston_meta::{
     parse_errstr,
     syntax_errstr,
@@ -11,6 +10,9 @@ use piston_meta::{
 use super::io::io_error;
 
 use Variable;
+
+#[cfg(not(feature = "http"))]
+const HTTP_SUPPORT_DISABLED: &'static str = "Http support is disabled";
 
 pub fn parse_syntax_data(rules: &Syntax, file: &str, d: &str) -> Result<Vec<Variable>, String> {
     let mut tokens = vec![];
@@ -74,7 +76,8 @@ pub fn load_meta_file(meta: &str, file: &str) -> Result<Vec<Variable>, String> {
 }
 
 /// Loads a text file from url.
-fn load_text_file_from_url(url: &str) -> Result<String, String> {
+#[cfg(feature = "http")]
+pub fn load_text_file_from_url(url: &str) -> Result<String, String> {
     use hyper::client::Client;
     use hyper::{Url};
     use hyper::status::StatusCode;
@@ -99,7 +102,13 @@ fn load_text_file_from_url(url: &str) -> Result<String, String> {
     }
 }
 
+#[cfg(not(feature = "http"))]
+pub fn load_text_file_from_url(_url: &str) -> Result<String, String> {
+    Err(HTTP_SUPPORT_DISABLED.into())
+}
+
 /// Loads an url using a meta file as syntax.
+#[cfg(feature = "http")]
 pub fn load_meta_url(meta: &str, url: &str) -> Result<Vec<Variable>, String> {
     let mut syntax_file = try!(File::open(meta).map_err(|err| io_error("open", meta, &err)));
     let mut s = String::new();
@@ -108,13 +117,20 @@ pub fn load_meta_url(meta: &str, url: &str) -> Result<Vec<Variable>, String> {
     load_metarules_data(meta, &s, url, &d)
 }
 
+#[cfg(not(feature = "http"))]
+pub fn load_meta_url(_meta: &str, _url: &str) -> Result<Vec<Variable>, String> {
+    Err(HTTP_SUPPORT_DISABLED.into())
+}
+
 // Downloads a file from url.
+#[cfg(feature = "http")]
 pub fn download_url_to_file(url: &str, file: &str) -> Result<String, String> {
     use hyper::client::Client;
     use hyper::{Url};
     use hyper::status::StatusCode;
     use std::io::copy;
     use std::fs::File;
+    use std::error::Error;
 
     let url_address = try!(Url::parse(url)
         .map_err(|e| format!("Error parsing url:\n`{}`\n", e)));
@@ -135,6 +151,11 @@ pub fn download_url_to_file(url: &str, file: &str) -> Result<String, String> {
         Err(format!("Error fetching file over http `{}:\n{}\n",
                     url, response.status))
     }
+}
+
+#[cfg(not(feature = "http"))]
+pub fn download_url_to_file(_url: &str, _file: &str) -> Result<String, String> {
+    Err(HTTP_SUPPORT_DISABLED.into())
 }
 
 pub fn json_from_meta_data(data: &Vec<Variable>) -> Result<String, io::Error> {
