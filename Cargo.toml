@@ -1,6 +1,6 @@
 [package]
 name = "dyon"
-version = "0.21.1"
+version = "0.22.0"
 authors = ["Sven Nilsen <bvssvni@gmail.com>"]
 keywords = ["script", "scripting", "game", "language", "piston"]
 description = "A rusty dynamically typed scripting language"
@@ -21,7 +21,9 @@ lazy_static = "0.2.1"
 [dependencies.hyper]
 version = "0.9.7"
 default-features = false
+optional = true
 
 [features]
-default = ["debug_resolve"]
+default = ["debug_resolve", "http"]
 debug_resolve = []
+http = ["hyper"]

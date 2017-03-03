@@ -111,6 +111,7 @@ const ERRSTR__STRING_START_LEN_MSG: usize = 87;
 const SYNTAX__IN_STRING: usize = 88;
 const META__SYNTAX_IN_STRING: usize = 89;
 const MODULE__IN_STRING_IMPORTS: usize = 90;
+const LOAD_STRING__URL: usize = 91;
 
 const TABLE: &'static [(usize, fn(
         &mut Runtime,
@@ -212,6 +213,7 @@ const TABLE: &'static [(usize, fn(
     (SYNTAX__IN_STRING, syntax__in_string),
     (META__SYNTAX_IN_STRING, meta__syntax_in_string),
     (MODULE__IN_STRING_IMPORTS, module__in_string_imports),
+    (LOAD_STRING__URL, load_string__url),
 ];
 
 pub fn standard(f: &mut Prelude) {
@@ -441,6 +443,7 @@ pub fn standard(f: &mut Prelude) {
         tys: vec![Type::Text, Type::Text, Type::array()],
         ret: Type::result()
     });
+    sarg(f, "load_string__url", LOAD_STRING__URL, Type::Text, Type::Result(Box::new(Type::Text)));
 }
 
 pub fn call_standard(
@@ -2521,6 +2524,36 @@ fn load_string__file(
             message: Variable::Text(Arc::new(err.description().into())),
             trace: vec![]
         }))
+    })))
+}
+
+fn load_string__url(
+    rt: &mut Runtime,
+    call: &ast::Call,
+    module: &Arc<Module>,
+    st: usize,
+    lc: usize,
+    cu: usize,
+) -> Result<Option<Variable>, String> {
+    rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
+    let url = rt.stack.pop().expect(TINVOTS);
+    let url = match rt.resolve(&url) {
+        &Variable::Text(ref url) => url.clone(),
+        x => return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(x, "str"), rt))
+    };
+
+    rt.pop_fn(call.name.clone());
+    Ok(Some(Variable::Result(match meta::load_text_file_from_url(&**url) {
+        Ok(s) => {
+            Ok(Box::new(Variable::Text(Arc::new(s))))
+        }
+        Err(err) => {
+            Err(Box::new(Error {
+                message: Variable::Text(Arc::new(err)),
+                trace: vec![]
+            }))
+        }
     })))
 }
 
