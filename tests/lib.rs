@@ -113,6 +113,7 @@ fn test_syntax() {
     test_src("source/syntax/closure_6.dyon");
     test_src("source/syntax/or.dyon");
     test_src("source/syntax/try_expr.dyon");
+    test_src("source/syntax/start_true.dyon");
 }
 
 #[test]

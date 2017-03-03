@@ -78,7 +78,7 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\\"
            ?[, arg_expr:"z" ?[, arg_expr:"w"]] ?, ?w ")"]
 19 color = ["#" .._seps!:"color"]
 20 text = .t?:"text"
-21 bool = {"true":"bool" "false":!"bool"}
+21 bool = [{"true":"bool" "false":!"bool"} !.._seps!]
 22 unop_not = [{"!":"!" "¬":"!"} ?w lexpr:"expr"]
 23 unop_neg = ["-":"-" ?w mul_expr:"expr"]
 24 norm = ["|" ?w expr:"expr" ?w "|"]

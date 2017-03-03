@@ -1,0 +1,5 @@
+fn main() {
+    a := 3
+    true_a := 4
+    println(a + true_a)
+}
