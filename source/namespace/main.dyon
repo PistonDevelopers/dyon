@@ -1,7 +1,9 @@
 ns program
 
-use math::{add} as m
+use math::algebra::{add} as m
+use graphics::{line} as m
 
 fn main() {
     println(m::add(1, 2))
+    println(m::line((0, 0), (1, 1)))
 }

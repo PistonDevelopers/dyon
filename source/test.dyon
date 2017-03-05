@@ -1,8 +1,9 @@
 fn main() {
     math := unwrap(load("source/namespace/math.dyon"))
+    graphics := unwrap(load("source/namespace/graphics.dyon"))
     main := unwrap(load(
         source: "source/namespace/main.dyon",
-        imports: [math]
+        imports: [math, graphics]
     ))
     call(main, "main", [])
 }

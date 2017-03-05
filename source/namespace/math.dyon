@@ -1,5 +1,9 @@
-ns math
+ns math::algebra
 
 fn add(a: f64, b: f64) -> f64 {
     return a + b
+}
+
+fn sub(a: f64, b: f64) -> f64 {
+    return a - b
 }

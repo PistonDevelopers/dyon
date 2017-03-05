@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::cell::Cell;
 use range::Range;
@@ -21,17 +22,23 @@ pub fn convert(
 ) -> Result<(), ()> {
     let mut convert = Convert::new(data);
 
-    if let Ok((range, _)) = Namespace::from_meta_data(convert, ignored) {
+    let namespace = if let Ok((range, val)) = Namespace::from_meta_data(convert, ignored) {
         convert.update(range);
-    }
+        val.names
+    } else {
+        Arc::new(vec![])
+    };
 
-    if let Ok((range, _)) = Uses::from_meta_data(convert, ignored) {
+    let use_lookup = if let Ok((range, val)) = Uses::from_meta_data(convert, ignored) {
         convert.update(range);
-    }
+        UseLookup::from_uses(&val, module)
+    } else {
+        UseLookup::new()
+    };
 
     loop {
         if let Ok((range, function)) =
-        Function::from_meta_data(&file, &source, "fn", convert, ignored) {
+        Function::from_meta_data(&namespace, &file, &source, "fn", convert, ignored) {
             convert.update(range);
             module.register(function);
         } else if convert.remaining_data_len() > 0 {
@@ -41,14 +48,63 @@ pub fn convert(
         }
     }
     for (i, f) in module.functions.iter().enumerate() {
-        f.resolve_locals(i, module);
+        f.resolve_locals(i, module, &use_lookup);
     }
     Ok(())
 }
 
+/// Used to resolve calls to imported functions.
+pub struct UseLookup {
+    pub aliases: HashMap<Arc<String>, HashMap<Arc<String>, usize>>,
+}
+
+impl UseLookup {
+    pub fn new() -> UseLookup {
+        UseLookup {
+            aliases: HashMap::new(),
+        }
+    }
+
+    pub fn from_uses(uses: &Uses, module: &Module) -> UseLookup {
+        let mut aliases = HashMap::new();
+        // First, add all glob imports.
+        for use_import in &uses.use_imports {
+            if use_import.fns.len() > 0 {continue;}
+            if !aliases.contains_key(&use_import.alias) {
+                aliases.insert(use_import.alias.clone(), HashMap::new());
+            }
+            let mut fns = aliases.get_mut(&use_import.alias).unwrap();
+            for (i, f) in module.functions.iter().enumerate().rev() {
+                if &*f.namespace == &use_import.names {
+                    fns.insert(f.name.clone(), i);
+                }
+            }
+        }
+        // Second, add specific functions, which shadows glob imports.
+        for use_import in &uses.use_imports {
+            if use_import.fns.len() == 0 {continue;}
+            if !aliases.contains_key(&use_import.alias) {
+                aliases.insert(use_import.alias.clone(), HashMap::new());
+            }
+            let mut fns = aliases.get_mut(&use_import.alias).unwrap();
+            for use_fn in &use_import.fns {
+                for (i, f) in module.functions.iter().enumerate().rev() {
+                    if &*f.namespace == &use_import.names && &f.name == &use_fn.0 {
+                        fns.insert(use_fn.1.as_ref().unwrap_or(&use_fn.0).clone(), i);
+                        break;
+                    }
+                }
+            }
+        }
+        UseLookup {
+            aliases: aliases,
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Namespace {
-    pub names: Vec<Arc<String>>,
+    pub names: Arc<Vec<Arc<String>>>,
 }
 
 impl Namespace {
@@ -77,13 +133,15 @@ impl Namespace {
         }
 
         Ok((convert.subtract(start), Namespace {
-            names: names
+            names: Arc::new(names)
         }))
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct Uses;
+pub struct Uses {
+    pub use_imports: Vec<UseImport>,
+}
 
 impl Uses {
     pub fn from_meta_data(
@@ -95,12 +153,14 @@ impl Uses {
         let start_range = try!(convert.start_node(node));
         convert.update(start_range);
 
+        let mut use_imports = vec![];
         loop {
             if let Ok(range) = convert.end_node(node) {
                 convert.update(range);
                 break;
-            } else if let Ok((range, _)) = UseImport::from_meta_data(convert, ignored) {
+            } else if let Ok((range, val)) = UseImport::from_meta_data(convert, ignored) {
                 convert.update(range);
+                use_imports.push(val);
             } else {
                 let range = convert.ignore();
                 convert.update(range);
@@ -108,12 +168,18 @@ impl Uses {
             }
         }
 
-        Ok((convert.subtract(start), Uses))
+        Ok((convert.subtract(start), Uses {
+            use_imports: use_imports
+        }))
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct UseImport;
+pub struct UseImport {
+    pub names: Vec<Arc<String>>,
+    pub fns: Vec<(Arc<String>, Option<Arc<String>>)>,
+    pub alias: Arc<String>,
+}
 
 impl UseImport {
     pub fn from_meta_data(
@@ -125,18 +191,29 @@ impl UseImport {
         let start_range = try!(convert.start_node(node));
         convert.update(start_range);
 
+        let mut names: Vec<Arc<String>> = vec![];
+        let mut alias: Option<Arc<String>> = None;
+        let mut fns = vec![];
         loop {
             if let Ok(range) = convert.end_node(node) {
                 convert.update(range);
                 break;
-            } else if let Ok((range, _)) = convert.meta_string("name") {
+            } else if let Ok((range, val)) = convert.meta_string("name") {
                 convert.update(range);
-            } else if let Ok((range, _)) = convert.meta_string("use_fn") {
+                names.push(val);
+            } else if let Ok((range, val)) = convert.meta_string("use_fn") {
                 convert.update(range);
-            } else if let Ok((range, _)) = convert.meta_string("use_fn_alias") {
+
+                let fn_alias = if let Ok((range, val)) = convert.meta_string("use_fn_alias") {
+                    convert.update(range);
+                    Some(val)
+                } else {
+                    None
+                };
+                fns.push((val, fn_alias));
+            } else if let Ok((range, val)) = convert.meta_string("alias") {
                 convert.update(range);
-            } else if let Ok((range, _)) = convert.meta_string("alias") {
-                convert.update(range);
+                alias = Some(val);
             } else {
                 let range = convert.ignore();
                 convert.update(range);
@@ -144,12 +221,18 @@ impl UseImport {
             }
         }
 
-        Ok((convert.subtract(start), UseImport))
+        let alias = alias.ok_or(())?;
+        Ok((convert.subtract(start), UseImport {
+            names: names,
+            fns: fns,
+            alias: alias,
+        }))
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct Function {
+    pub namespace: Arc<Vec<Arc<String>>>,
     pub name: Arc<String>,
     pub file: Arc<String>,
     pub source: Arc<String>,
@@ -163,6 +246,7 @@ pub struct Function {
 
 impl Function {
     pub fn from_meta_data(
+        namespace: &Arc<Vec<Arc<String>>>,
         file: &Arc<String>,
         source: &Arc<String>,
         node: &str,
@@ -243,6 +327,7 @@ impl Function {
         }
         let ret = try!(ret.ok_or(()));
         Ok((convert.subtract(start), Function {
+            namespace: namespace.clone(),
             resolved: Cell::new(false),
             name: name,
             file: file.clone(),
@@ -257,7 +342,7 @@ impl Function {
 
     pub fn returns(&self) -> bool { self.ret != Type::Void }
 
-    pub fn resolve_locals(&self, relative: usize, module: &Module) {
+    pub fn resolve_locals(&self, relative: usize, module: &Module, use_lookup: &UseLookup) {
         if self.resolved.get() { return; }
         let mut stack: Vec<Option<Arc<String>>> = vec![];
         let mut closure_stack: Vec<usize> = vec![];
@@ -270,7 +355,7 @@ impl Function {
         for current in &self.currents {
             stack.push(Some(current.name.clone()));
         }
-        self.block.resolve_locals(relative, &mut stack, &mut closure_stack, module);
+        self.block.resolve_locals(relative, &mut stack, &mut closure_stack, module, use_lookup);
         self.resolved.set(true);
     }
 }
@@ -353,7 +438,8 @@ impl Closure {
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
-        module: &Module
+        module: &Module,
+        use_lookup: &UseLookup,
     ) {
         // Start new closure.
         // Need a closure stack because `grab` expressions are relative
@@ -369,7 +455,7 @@ impl Closure {
         for current in &self.currents {
             stack.push(Some(current.name.clone()));
         }
-        self.expr.resolve_locals(relative, stack, closure_stack, module);
+        self.expr.resolve_locals(relative, stack, closure_stack, module, use_lookup);
         closure_stack.truncate(cs);
     }
 }
@@ -427,7 +513,8 @@ impl Grab {
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
-        module: &Module
+        module: &Module,
+        use_lookup: &UseLookup,
     ) {
         // Get closure environment.
         let d = if closure_stack.len() < self.level as usize {
@@ -443,7 +530,7 @@ impl Grab {
         };
         // Use environment outside closure.
         let mut tmp_stack: Vec<_> = stack[0..last].into();
-        self.expr.resolve_locals(relative, &mut tmp_stack, closure_stack, module)
+        self.expr.resolve_locals(relative, &mut tmp_stack, closure_stack, module, use_lookup)
     }
 }
 
@@ -493,9 +580,10 @@ impl TryExpr {
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
-        module: &Module
+        module: &Module,
+        use_lookup: &UseLookup,
     ) {
-        self.expr.resolve_locals(relative, stack, closure_stack, module)
+        self.expr.resolve_locals(relative, stack, closure_stack, module, use_lookup)
     }
 }
 
@@ -651,11 +739,12 @@ impl Block {
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
-        module: &Module
+        module: &Module,
+        use_lookup: &UseLookup,
     ) {
         let st = stack.len();
         for expr in &self.expressions {
-            expr.resolve_locals(relative, stack, closure_stack, module);
+            expr.resolve_locals(relative, stack, closure_stack, module, use_lookup);
         }
         stack.truncate(st);
     }
@@ -990,69 +1079,90 @@ impl Expression {
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
-        module: &Module
+        module: &Module,
+        use_lookup: &UseLookup,
     ) {
         use self::Expression::*;
 
         match *self {
-            Link(ref link) => link.resolve_locals(relative, stack, closure_stack, module),
-            Object(ref obj) => obj.resolve_locals(relative, stack, closure_stack, module),
-            Array(ref arr) => arr.resolve_locals(relative, stack, closure_stack, module),
+            Link(ref link) =>
+                link.resolve_locals(relative, stack, closure_stack, module, use_lookup),
+            Object(ref obj) =>
+                obj.resolve_locals(relative, stack, closure_stack, module, use_lookup),
+            Array(ref arr) =>
+                arr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             ArrayFill(ref arr_fill) =>
-                arr_fill.resolve_locals(relative, stack, closure_stack, module),
+                arr_fill.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             Return(ref expr) => {
                 let st = stack.len();
-                expr.resolve_locals(relative, stack, closure_stack, module);
+                expr.resolve_locals(relative, stack, closure_stack, module, use_lookup);
                 stack.truncate(st);
             }
             ReturnVoid(_) => {}
             Break(_) => {}
             Continue(_) => {}
-            Block(ref bl) => bl.resolve_locals(relative, stack, closure_stack, module),
-            Go(ref go) => go.resolve_locals(relative, stack, closure_stack, module),
-            Call(ref call) => call.resolve_locals(relative, stack, closure_stack, module),
-            Item(ref it) => it.resolve_locals(relative, stack, closure_stack, module),
-            BinOp(ref binop) => binop.resolve_locals(relative, stack, closure_stack, module),
-            Assign(ref assign) => assign.resolve_locals(relative, stack, closure_stack, module),
+            Block(ref bl) =>
+                bl.resolve_locals(relative, stack, closure_stack, module, use_lookup),
+            Go(ref go) =>
+                go.resolve_locals(relative, stack, closure_stack, module, use_lookup),
+            Call(ref call) =>
+                call.resolve_locals(relative, stack, closure_stack, module, use_lookup),
+            Item(ref it) =>
+                it.resolve_locals(relative, stack, closure_stack, module, use_lookup),
+            BinOp(ref binop) =>
+                binop.resolve_locals(relative, stack, closure_stack, module, use_lookup),
+            Assign(ref assign) =>
+                assign.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             Text(_) => {}
             Number(_) => {}
-            Vec4(ref vec4) => vec4.resolve_locals(relative, stack, closure_stack, module),
+            Vec4(ref vec4) =>
+                vec4.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             Bool(_) => {}
-            For(ref for_expr) => for_expr.resolve_locals(relative, stack, closure_stack, module),
+            For(ref for_expr) =>
+                for_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             ForN(ref for_n_expr) =>
-                for_n_expr.resolve_locals(relative, stack, closure_stack, module),
+                for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             Sum(ref for_n_expr) =>
-                for_n_expr.resolve_locals(relative, stack, closure_stack, module),
+                for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             SumVec4(ref for_n_expr) =>
-                for_n_expr.resolve_locals(relative, stack, closure_stack, module),
+                for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             Prod(ref for_n_expr) =>
-                for_n_expr.resolve_locals(relative, stack, closure_stack, module),
+                for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             ProdVec4(ref for_n_expr) =>
-                for_n_expr.resolve_locals(relative, stack, closure_stack, module),
+                for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             Min(ref for_n_expr) =>
-                for_n_expr.resolve_locals(relative, stack, closure_stack, module),
+                for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             Max(ref for_n_expr) =>
-                for_n_expr.resolve_locals(relative, stack, closure_stack, module),
+                for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             Sift(ref for_n_expr) =>
-                for_n_expr.resolve_locals(relative, stack, closure_stack, module),
+                for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             Any(ref for_n_expr) =>
-                for_n_expr.resolve_locals(relative, stack, closure_stack, module),
+                for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             All(ref for_n_expr) =>
-                for_n_expr.resolve_locals(relative, stack, closure_stack, module),
+                for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             LinkFor(ref for_n_expr) =>
-                for_n_expr.resolve_locals(relative, stack, closure_stack, module),
-            If(ref if_expr) => if_expr.resolve_locals(relative, stack, closure_stack, module),
-            Compare(ref comp) => comp.resolve_locals(relative, stack, closure_stack, module),
-            Norm(ref norm) => norm.resolve_locals(relative, stack, closure_stack, module),
-            UnOp(ref unop) => unop.resolve_locals(relative, stack, closure_stack, module),
+                for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
+            If(ref if_expr) =>
+                if_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
+            Compare(ref comp) =>
+                comp.resolve_locals(relative, stack, closure_stack, module, use_lookup),
+            Norm(ref norm) =>
+                norm.resolve_locals(relative, stack, closure_stack, module, use_lookup),
+            UnOp(ref unop) =>
+                unop.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             Variable(_, _) => {}
-            Try(ref expr) => expr.resolve_locals(relative, stack, closure_stack, module),
+            Try(ref expr) =>
+                expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             Swizzle(ref swizzle) =>
-                swizzle.expr.resolve_locals(relative, stack, closure_stack, module),
-            Closure(ref closure) => closure.resolve_locals(relative, stack, closure_stack, module),
-            CallClosure(ref call) => call.resolve_locals(relative, stack, closure_stack, module),
-            Grab(ref grab) => grab.resolve_locals(relative, stack, closure_stack, module),
-            TryExpr(ref try_expr) => try_expr.resolve_locals(relative, stack, closure_stack, module),
+                swizzle.expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
+            Closure(ref closure) =>
+                closure.resolve_locals(relative, stack, closure_stack, module, use_lookup),
+            CallClosure(ref call) =>
+                call.resolve_locals(relative, stack, closure_stack, module, use_lookup),
+            Grab(ref grab) =>
+                grab.resolve_locals(relative, stack, closure_stack, module, use_lookup),
+            TryExpr(ref try_expr) =>
+                try_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
         }
     }
 }
@@ -1102,11 +1212,12 @@ impl Link {
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
-        module: &Module
+        module: &Module,
+        use_lookup: &UseLookup,
     ) {
         let st = stack.len();
         for expr in &self.items {
-            expr.resolve_locals(relative, stack, closure_stack, module);
+            expr.resolve_locals(relative, stack, closure_stack, module, use_lookup);
         }
         stack.truncate(st);
     }
@@ -1193,11 +1304,12 @@ impl Object {
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
-        module: &Module
+        module: &Module,
+        use_lookup: &UseLookup,
     ) {
         let st = stack.len();
         for &(_, ref expr) in &self.key_values {
-            expr.resolve_locals(relative, stack, closure_stack, module);
+            expr.resolve_locals(relative, stack, closure_stack, module, use_lookup);
             stack.truncate(st);
         }
     }
@@ -1248,11 +1360,12 @@ impl Array {
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
-        module: &Module
+        module: &Module,
+        use_lookup: &UseLookup,
     ) {
         let st = stack.len();
         for item in &self.items {
-            item.resolve_locals(relative, stack, closure_stack, module);
+            item.resolve_locals(relative, stack, closure_stack, module, use_lookup);
             stack.truncate(st);
         }
     }
@@ -1312,12 +1425,13 @@ impl ArrayFill {
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
-        module: &Module
+        module: &Module,
+        use_lookup: &UseLookup,
     ) {
         let st = stack.len();
-        self.fill.resolve_locals(relative, stack, closure_stack, module);
+        self.fill.resolve_locals(relative, stack, closure_stack, module, use_lookup);
         stack.truncate(st);
-        self.n.resolve_locals(relative, stack, closure_stack, module);
+        self.n.resolve_locals(relative, stack, closure_stack, module, use_lookup);
         stack.truncate(st);
     }
 }
@@ -1608,14 +1722,15 @@ impl Id {
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
-        module: &Module
+        module: &Module,
+        use_lookup: &UseLookup,
     ) -> bool {
         match *self {
             Id::String(_, _) => false,
             Id::F64(_, _) => false,
             Id::Expression(ref expr) => {
                 let st = stack.len();
-                expr.resolve_locals(relative, stack, closure_stack, module);
+                expr.resolve_locals(relative, stack, closure_stack, module, use_lookup);
                 stack.truncate(st);
                 true
             }
@@ -1746,7 +1861,8 @@ impl Item {
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
-        module: &Module
+        module: &Module,
+        use_lookup: &UseLookup,
     ) {
         // println!("TEST item resolve {} {:?}", self.name, stack);
         let st = stack.len();
@@ -1760,7 +1876,7 @@ impl Item {
             }
         }
         for id in &self.ids {
-            if id.resolve_locals(relative, stack, closure_stack, module) {
+            if id.resolve_locals(relative, stack, closure_stack, module, use_lookup) {
                 stack.push(None);
             }
         }
@@ -1818,12 +1934,13 @@ impl Go {
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
-        module: &Module
+        module: &Module,
+        use_lookup: &UseLookup,
     ) {
         let st = stack.len();
         for arg in &self.call.args {
             let st = stack.len();
-            arg.resolve_locals(relative, stack, closure_stack, module);
+            arg.resolve_locals(relative, stack, closure_stack, module, use_lookup);
             stack.truncate(st);
         }
         stack.truncate(st);
@@ -1989,10 +2106,19 @@ impl Call {
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
-        module: &Module
+        module: &Module,
+        use_lookup: &UseLookup,
     ) {
         let st = stack.len();
-        let f_index = module.find_function(&self.name, relative);
+        let f_index = if let Some(ref alias) = self.alias {
+            if let Some(&i) = use_lookup.aliases.get(alias).and_then(|map| map.get(&self.name)) {
+                FnIndex::Loaded(i as isize - relative as isize)
+            } else {
+                FnIndex::None
+            }
+        } else {
+            module.find_function(&self.name, relative)
+        };
         self.f_index.set(f_index);
         match f_index {
             FnIndex::Loaded(f_index) => {
@@ -2010,7 +2136,7 @@ impl Call {
         }
         for arg in &self.args {
             let arg_st = stack.len();
-            arg.resolve_locals(relative, stack, closure_stack, module);
+            arg.resolve_locals(relative, stack, closure_stack, module, use_lookup);
             stack.truncate(arg_st);
             match *arg {
                 Expression::Swizzle(ref swizzle) => {
@@ -2177,15 +2303,16 @@ impl CallClosure {
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
-        module: &Module
+        module: &Module,
+        use_lookup: &UseLookup,
     ) {
         let st = stack.len();
-        self.item.resolve_locals(relative, stack, closure_stack, module);
+        self.item.resolve_locals(relative, stack, closure_stack, module, use_lookup);
         // All closures must return a value.
         stack.push(Some(Arc::new("return".into())));
         for arg in &self.args {
             let arg_st = stack.len();
-            arg.resolve_locals(relative, stack, closure_stack, module);
+            arg.resolve_locals(relative, stack, closure_stack, module, use_lookup);
             stack.truncate(arg_st);
             match *arg {
                 Expression::Swizzle(ref swizzle) => {
@@ -2262,10 +2389,11 @@ impl Norm {
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
-        module: &Module
+        module: &Module,
+        use_lookup: &UseLookup,
     ) {
         let st = stack.len();
-        self.expr.resolve_locals(relative, stack, closure_stack, module);
+        self.expr.resolve_locals(relative, stack, closure_stack, module, use_lookup);
         stack.truncate(st);
     }
 }
@@ -2284,12 +2412,13 @@ impl BinOpExpression {
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
-        module: &Module
+        module: &Module,
+        use_lookup: &UseLookup,
     ) {
         let st = stack.len();
-        self.left.resolve_locals(relative, stack, closure_stack, module);
+        self.left.resolve_locals(relative, stack, closure_stack, module, use_lookup);
         stack.truncate(st);
-        self.right.resolve_locals(relative, stack, closure_stack, module);
+        self.right.resolve_locals(relative, stack, closure_stack, module, use_lookup);
         stack.truncate(st);
     }
 }
@@ -2350,10 +2479,11 @@ impl UnOpExpression {
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
-        module: &Module
+        module: &Module,
+        use_lookup: &UseLookup,
     ) {
         let st = stack.len();
-        self.expr.resolve_locals(relative, stack, closure_stack, module);
+        self.expr.resolve_locals(relative, stack, closure_stack, module, use_lookup);
         stack.truncate(st);
     }
 }
@@ -2440,11 +2570,12 @@ impl Assign {
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
-        module: &Module
+        module: &Module,
+        use_lookup: &UseLookup,
     ) {
         // Declared locals in right expressions are popped from the stack.
         let st = stack.len();
-        self.right.resolve_locals(relative, stack, closure_stack, module);
+        self.right.resolve_locals(relative, stack, closure_stack, module, use_lookup);
         stack.truncate(st);
 
         // Declare new local when there is an item with no extra.
@@ -2455,7 +2586,7 @@ impl Assign {
             }
         }
 
-        self.left.resolve_locals(relative, stack, closure_stack, module);
+        self.left.resolve_locals(relative, stack, closure_stack, module, use_lookup);
         stack.truncate(st);
     }
 }
@@ -2573,12 +2704,13 @@ impl Vec4 {
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
-        module: &Module
+        module: &Module,
+        use_lookup: &UseLookup,
     ) {
         let st = stack.len();
         for arg in &self.args {
             let arg_st = stack.len();
-            arg.resolve_locals(relative, stack, closure_stack, module);
+            arg.resolve_locals(relative, stack, closure_stack, module, use_lookup);
             stack.truncate(arg_st);
             match *arg {
                 Expression::Swizzle(ref swizzle) => {
@@ -2894,16 +3026,17 @@ impl For {
         &self, relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
-        module: &Module
+        module: &Module,
+        use_lookup: &UseLookup,
     ) {
         let st = stack.len();
-        self.init.resolve_locals(relative, stack, closure_stack, module);
+        self.init.resolve_locals(relative, stack, closure_stack, module, use_lookup);
         let after_init = stack.len();
-        self.cond.resolve_locals(relative, stack, closure_stack, module);
+        self.cond.resolve_locals(relative, stack, closure_stack, module, use_lookup);
         stack.truncate(after_init);
-        self.step.resolve_locals(relative, stack, closure_stack, module);
+        self.step.resolve_locals(relative, stack, closure_stack, module, use_lookup);
         stack.truncate(after_init);
-        self.block.resolve_locals(relative, stack, closure_stack, module);
+        self.block.resolve_locals(relative, stack, closure_stack, module, use_lookup);
         stack.truncate(st);
     }
 }
@@ -3041,17 +3174,18 @@ impl ForN {
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
-        module: &Module
+        module: &Module,
+        use_lookup: &UseLookup,
     ) {
         let st = stack.len();
         if let Some(ref start) = self.start {
-            start.resolve_locals(relative, stack, closure_stack, module);
+            start.resolve_locals(relative, stack, closure_stack, module, use_lookup);
             stack.truncate(st);
         }
-        self.end.resolve_locals(relative, stack, closure_stack, module);
+        self.end.resolve_locals(relative, stack, closure_stack, module, use_lookup);
         stack.truncate(st);
         stack.push(Some(self.name.clone()));
-        self.block.resolve_locals(relative, stack, closure_stack, module);
+        self.block.resolve_locals(relative, stack, closure_stack, module, use_lookup);
         stack.truncate(st);
     }
 }
@@ -3276,25 +3410,26 @@ impl If {
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
-        module: &Module
+        module: &Module,
+        use_lookup: &UseLookup,
     ) {
         let st = stack.len();
-        self.cond.resolve_locals(relative, stack, closure_stack, module);
+        self.cond.resolve_locals(relative, stack, closure_stack, module, use_lookup);
         stack.truncate(st);
-        self.true_block.resolve_locals(relative, stack, closure_stack, module);
+        self.true_block.resolve_locals(relative, stack, closure_stack, module, use_lookup);
         stack.truncate(st);
         // Does not matter that conditions are resolved before blocks,
         // since the stack gets truncated anyway.
         for else_if_cond in &self.else_if_conds {
-            else_if_cond.resolve_locals(relative, stack, closure_stack, module);
+            else_if_cond.resolve_locals(relative, stack, closure_stack, module, use_lookup);
             stack.truncate(st);
         }
         for else_if_block in &self.else_if_blocks {
-            else_if_block.resolve_locals(relative, stack, closure_stack, module);
+            else_if_block.resolve_locals(relative, stack, closure_stack, module, use_lookup);
             stack.truncate(st);
         }
         if let Some(ref else_block) = self.else_block {
-            else_block.resolve_locals(relative, stack, closure_stack, module);
+            else_block.resolve_locals(relative, stack, closure_stack, module, use_lookup);
             stack.truncate(st);
         }
     }
@@ -3376,12 +3511,13 @@ impl Compare {
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
-        module: &Module
+        module: &Module,
+        use_lookup: &UseLookup,
     ) {
         let st = stack.len();
-        self.left.resolve_locals(relative, stack, closure_stack, module);
+        self.left.resolve_locals(relative, stack, closure_stack, module, use_lookup);
         stack.truncate(st);
-        self.right.resolve_locals(relative, stack, closure_stack, module);
+        self.right.resolve_locals(relative, stack, closure_stack, module, use_lookup);
         stack.truncate(st);
     }
 }
