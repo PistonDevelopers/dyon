@@ -7,6 +7,7 @@ use piston_meta::MetaData;
 
 use FnIndex;
 use Module;
+use Prelude;
 use Type;
 use Variable;
 
@@ -31,7 +32,7 @@ pub fn convert(
 
     let use_lookup = if let Ok((range, val)) = Uses::from_meta_data(convert, ignored) {
         convert.update(range);
-        UseLookup::from_uses(&val, module)
+        UseLookup::from_uses_module(&val, module)
     } else {
         UseLookup::new()
     };
@@ -65,7 +66,7 @@ impl UseLookup {
         }
     }
 
-    pub fn from_uses(uses: &Uses, module: &Module) -> UseLookup {
+    pub fn from_uses_module(uses: &Uses, module: &Module) -> UseLookup {
         let mut aliases = HashMap::new();
         // First, add all glob imports.
         for use_import in &uses.use_imports {
@@ -90,6 +91,42 @@ impl UseLookup {
             for use_fn in &use_import.fns {
                 for (i, f) in module.functions.iter().enumerate().rev() {
                     if &*f.namespace == &use_import.names && &f.name == &use_fn.0 {
+                        fns.insert(use_fn.1.as_ref().unwrap_or(&use_fn.0).clone(), i);
+                        break;
+                    }
+                }
+            }
+        }
+        UseLookup {
+            aliases: aliases,
+        }
+    }
+
+    pub fn from_uses_prelude(uses: &Uses, prelude: &Prelude) -> UseLookup {
+        let mut aliases = HashMap::new();
+        // First, add all glob imports.
+        for use_import in &uses.use_imports {
+            if use_import.fns.len() > 0 {continue;}
+            if !aliases.contains_key(&use_import.alias) {
+                aliases.insert(use_import.alias.clone(), HashMap::new());
+            }
+            let mut fns = aliases.get_mut(&use_import.alias).unwrap();
+            for (i, f) in prelude.namespaces.iter().enumerate().rev() {
+                if &*f.0 == &use_import.names {
+                    fns.insert(f.1.clone(), i);
+                }
+            }
+        }
+        // Second, add specific functions, which shadows glob imports.
+        for use_import in &uses.use_imports {
+            if use_import.fns.len() == 0 {continue;}
+            if !aliases.contains_key(&use_import.alias) {
+                aliases.insert(use_import.alias.clone(), HashMap::new());
+            }
+            let mut fns = aliases.get_mut(&use_import.alias).unwrap();
+            for use_fn in &use_import.fns {
+                for (i, f) in prelude.namespaces.iter().enumerate().rev() {
+                    if &*f.0 == &use_import.names && &f.1 == &use_fn.0 {
                         fns.insert(use_fn.1.as_ref().unwrap_or(&use_fn.0).clone(), i);
                         break;
                     }

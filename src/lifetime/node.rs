@@ -13,6 +13,8 @@ use Type;
 pub struct Node {
     /// The kind of node.
     pub kind: Kind,
+    /// The namespace alias.
+    pub alias: Option<Arc<String>>,
     /// The names associated with a node.
     pub names: Vec<Arc<String>>,
     /// The type.
@@ -323,6 +325,7 @@ pub fn convert_meta_data(
                 parents.push(nodes.len());
                 nodes.push(Node {
                     kind: kind,
+                    alias: None,
                     names: vec![],
                     ty: ty,
                     mutable: false,
@@ -357,6 +360,10 @@ pub fn convert_meta_data(
             }
             MetaData::String(ref n, ref val) => {
                 match &***n {
+                    "alias" => {
+                        let i = *parents.last().unwrap();
+                        nodes[i].alias = Some(val.clone());
+                    }
                     "name" => {
                         let i = *parents.last().unwrap();
                         nodes[i].names.push(val.clone());

@@ -10,7 +10,7 @@ use self::node::{convert_meta_data, Node};
 use self::lt::{arg_lifetime, compare_lifetimes, Lifetime};
 
 use prelude::{Lt, Prelude};
-use ast::AssignOp;
+use ast::{AssignOp, UseLookup};
 
 use Type;
 
@@ -351,6 +351,20 @@ pub fn check(
         }
     }
 
+    let mut use_lookup: UseLookup = UseLookup::new();
+    for node in nodes.iter() {
+        if node.kind == Kind::Uses {
+            use piston_meta::bootstrap::Convert;
+            use ast::Uses;
+
+            let convert = Convert::new(&data[node.start..node.end]);
+            if let Ok((_, val)) = Uses::from_meta_data(convert, &mut vec![]) {
+                use_lookup = UseLookup::from_uses_prelude(&val, prelude);
+            }
+            break;
+        }
+    }
+
     // Link call nodes to functions.
     for &c in &calls {
         let n = {
@@ -373,6 +387,15 @@ pub fn check(
 
         let node = &mut nodes[c];
         let name = node.name().expect("Expected name").clone();
+        if let Some(ref alias) = node.alias {
+            if let Some(&i) = use_lookup.aliases.get(alias).and_then(|map| map.get(&name)) {
+                prelude.list[i].lts.clone();
+                continue;
+            } else {
+                return Err(node.source.wrap(
+                    format!("Could not find function `{}`", name)));
+            }
+        }
         let i = match function_lookup.get(&name) {
             Some(&i) => i,
             None => {
@@ -717,7 +740,7 @@ pub fn check(
         }
     }
 
-    try!(typecheck::run(&mut nodes, prelude));
+    try!(typecheck::run(&mut nodes, prelude, &use_lookup));
 
     // Copy refined return types to use in AST.
     let mut refined_rets: HashMap<Arc<String>, Type> = HashMap::new();

@@ -3,6 +3,7 @@ use super::node::Node;
 use super::kind::Kind;
 use Prelude;
 use Type;
+use ast::UseLookup;
 
 /// Runs type checking.
 ///
@@ -44,7 +45,7 @@ use Type;
 /// The type propagation step uses this assumption without checking the whole `if` expression.
 /// After type propagation, all blocks in the `if` expression should have some type information,
 /// but no further propagation is necessary, so it only need to check for consistency.
-pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>> {
+pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> Result<(), Range<String>> {
     // Type propagation.
     let mut changed;
     loop {
@@ -142,6 +143,20 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                                     }
                                     (&None, _) | (_, &None) => {}
                                 }
+                            } else if let Some(ref alias) = nodes[parent].alias {
+                                if let Some(&f) = use_lookup.aliases.get(alias)
+                                .and_then(|map| map.get(nodes[parent].name().unwrap())) {
+                                    let f = &prelude.list[f];
+                                    if let Some(ref ty) = expr_type {
+                                        if !f.tys[j].goes_with(ty) {
+                                            return Err(nodes[i].source.wrap(
+                                                format!("Type mismatch (#150):\n\
+                                                    Expected `{}`, found `{}`",
+                                                    f.tys[j].description(), ty.description())
+                                            ))
+                                        }
+                                    }
+                                }
                             } else if let Some(&f) = prelude.functions.get(
                                     nodes[parent].name().unwrap()) {
                                 let f = &prelude.list[f];
@@ -163,6 +178,11 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude) -> Result<(), Range<String>
                     if let Some(decl) = nodes[i].declaration {
                         if let Some(ref ty) = nodes[decl].ty {
                             this_ty = Some(ty.clone());
+                        }
+                    } else if let Some(ref alias) = nodes[i].alias {
+                        if let Some(&f) = use_lookup.aliases.get(alias)
+                        .and_then(|map| map.get(nodes[i].name().unwrap())) {
+                            this_ty = Some(prelude.list[f].ret.clone());
                         }
                     } else if let Some(&f) = prelude.functions.get(nodes[i].name().unwrap()) {
                         this_ty = Some(prelude.list[f].ret.clone());
