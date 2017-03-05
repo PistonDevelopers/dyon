@@ -1,0 +1,7 @@
+ns program
+
+use math::{add} as m
+
+fn main() {
+    println(m::add(1, 2))
+}

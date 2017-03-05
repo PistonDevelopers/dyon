@@ -19,6 +19,7 @@ pub fn infer(block: &Block, name: &str) -> Option<Expression> {
     let res = list.map(|item| {
         let source_range = item.source_range;
         Expression::Call(Call {
+            alias: None,
             name: Arc::new("len".into()),
             f_index: Cell::new(FnIndex::None),
             args: vec![

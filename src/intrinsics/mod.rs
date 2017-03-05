@@ -1858,6 +1858,7 @@ fn _call(
                                 fn_name), rt))
             }
             let call = ast::Call {
+                alias: None,
                 name: fn_name.clone(),
                 f_index: Cell::new(f_index),
                 args: args.iter().map(|arg|
@@ -1939,6 +1940,7 @@ fn call_ret(
                             fn_name), rt))
             }
             let call = ast::Call {
+                alias: None,
                 name: fn_name.clone(),
                 f_index: Cell::new(f_index),
                 args: args.iter().map(|arg|

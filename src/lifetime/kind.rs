@@ -1,6 +1,9 @@
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Kind {
+    Ns,
+    Uses,
+    Use,
     Fn,
     Arg,
     Current,
@@ -88,6 +91,9 @@ pub enum Kind {
 impl Kind {
     pub fn new(name: &str) -> Option<Kind> {
         Some(match name {
+            "ns" => Kind::Ns,
+            "uses" => Kind::Uses,
+            "use" => Kind::Use,
             "fn" => Kind::Fn,
             "arg" => Kind::Arg,
             "current" => Kind::Current,

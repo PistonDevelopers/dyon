@@ -1,6 +1,8 @@
 fn main() {
-    fail := unwrap(load("source/data/fail.dyon"))
-    success := unwrap(load("source/data/success.dyon"))
-    call(fail, "main", [])
-    call(success, "main", [])
+    math := unwrap(load("source/namespace/math.dyon"))
+    main := unwrap(load(
+        source: "source/namespace/main.dyon",
+        imports: [math]
+    ))
+    call(main, "main", [])
 }

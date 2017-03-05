@@ -182,6 +182,7 @@ pub fn grab_expr(
             let call = &go.call;
             Ok((Grabbed::Expression(E::Go(Box::new(ast::Go {
                 call: ast::Call {
+                    alias: call.alias.clone(),
                     name: call.name.clone(),
                     args: {
                         let mut new_args = vec![];
@@ -202,6 +203,7 @@ pub fn grab_expr(
         }
         &E::Call(ref call) => {
             Ok((Grabbed::Expression(E::Call(ast::Call {
+                alias: call.alias.clone(),
                 name: call.name.clone(),
                 args: {
                     let mut new_args = vec![];

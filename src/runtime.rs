@@ -579,6 +579,7 @@ impl Runtime {
 
         let name: Arc<String> = Arc::new("main".into());
         let call = ast::Call {
+            alias: None,
             name: name.clone(),
             f_index: Cell::new(module.find_function(&name, 0)),
             args: vec![],
@@ -636,6 +637,7 @@ impl Runtime {
         let mut stack = vec![];
         let relative = self.call_stack.last().map(|c| c.index).unwrap();
         let mut fake_call = ast::Call {
+            alias: go.call.alias.clone(),
             name: go.call.name.clone(),
             f_index: Cell::new(module.find_function(&go.call.name, relative)),
             args: Vec::with_capacity(n),
@@ -1041,6 +1043,7 @@ impl Runtime {
         match module.find_function(&name, 0) {
             FnIndex::Loaded(f_index) => {
                 let call = ast::Call {
+                    alias: None,
                     name: name.clone(),
                     f_index: Cell::new(FnIndex::Loaded(f_index)),
                     args: args.iter()

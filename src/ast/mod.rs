@@ -21,6 +21,14 @@ pub fn convert(
 ) -> Result<(), ()> {
     let mut convert = Convert::new(data);
 
+    if let Ok((range, _)) = Namespace::from_meta_data(convert, ignored) {
+        convert.update(range);
+    }
+
+    if let Ok((range, _)) = Uses::from_meta_data(convert, ignored) {
+        convert.update(range);
+    }
+
     loop {
         if let Ok((range, function)) =
         Function::from_meta_data(&file, &source, "fn", convert, ignored) {
@@ -36,6 +44,108 @@ pub fn convert(
         f.resolve_locals(i, module);
     }
     Ok(())
+}
+
+#[derive(Debug, Clone)]
+pub struct Namespace {
+    pub names: Vec<Arc<String>>,
+}
+
+impl Namespace {
+    pub fn from_meta_data(
+        mut convert: Convert,
+        ignored: &mut Vec<Range>
+    ) -> Result<(Range, Namespace), ()> {
+        let start = convert.clone();
+        let node = "ns";
+        let start_range = try!(convert.start_node(node));
+        convert.update(start_range);
+
+        let mut names: Vec<Arc<String>> = vec![];
+        loop {
+            if let Ok(range) = convert.end_node(node) {
+                convert.update(range);
+                break;
+            } else if let Ok((range, val)) = convert.meta_string("name") {
+                convert.update(range);
+                names.push(val);
+            } else {
+                let range = convert.ignore();
+                convert.update(range);
+                ignored.push(range);
+            }
+        }
+
+        Ok((convert.subtract(start), Namespace {
+            names: names
+        }))
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Uses;
+
+impl Uses {
+    pub fn from_meta_data(
+        mut convert: Convert,
+        ignored: &mut Vec<Range>
+    ) -> Result<(Range, Uses), ()> {
+        let start = convert.clone();
+        let node = "uses";
+        let start_range = try!(convert.start_node(node));
+        convert.update(start_range);
+
+        loop {
+            if let Ok(range) = convert.end_node(node) {
+                convert.update(range);
+                break;
+            } else if let Ok((range, _)) = UseImport::from_meta_data(convert, ignored) {
+                convert.update(range);
+            } else {
+                let range = convert.ignore();
+                convert.update(range);
+                ignored.push(range);
+            }
+        }
+
+        Ok((convert.subtract(start), Uses))
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct UseImport;
+
+impl UseImport {
+    pub fn from_meta_data(
+        mut convert: Convert,
+        ignored: &mut Vec<Range>
+    ) -> Result<(Range, UseImport), ()> {
+        let start = convert.clone();
+        let node = "use";
+        let start_range = try!(convert.start_node(node));
+        convert.update(start_range);
+
+        loop {
+            if let Ok(range) = convert.end_node(node) {
+                convert.update(range);
+                break;
+            } else if let Ok((range, _)) = convert.meta_string("name") {
+                convert.update(range);
+            } else if let Ok((range, _)) = convert.meta_string("use_fn") {
+                convert.update(range);
+            } else if let Ok((range, _)) = convert.meta_string("use_fn_alias") {
+                convert.update(range);
+            } else if let Ok((range, _)) = convert.meta_string("alias") {
+                convert.update(range);
+            } else {
+                let range = convert.ignore();
+                convert.update(range);
+                ignored.push(range);
+            }
+        }
+
+        Ok((convert.subtract(start), UseImport))
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -1722,6 +1832,7 @@ impl Go {
 
 #[derive(Debug, Clone)]
 pub struct Call {
+    pub alias: Option<Arc<String>>,
     pub name: Arc<String>,
     pub args: Vec<Expression>,
     pub f_index: Cell<FnIndex>,
@@ -1742,6 +1853,7 @@ impl Call {
         let start_range = try!(convert.start_node(node));
         convert.update(start_range);
 
+        let mut alias: Option<Arc<String>> = None;
         let mut name: Option<Arc<String>> = None;
         let mut args = vec![];
         let mut mutable: Vec<bool> = vec![];
@@ -1749,6 +1861,9 @@ impl Call {
             if let Ok(range) = convert.end_node(node) {
                 convert.update(range);
                 break;
+            } else if let Ok((range, val)) = convert.meta_string("alias") {
+                convert.update(range);
+                alias = Some(val);
             } else if let Ok((range, val)) = convert.meta_string("name") {
                 convert.update(range);
                 name = Some(val);
@@ -1788,6 +1903,7 @@ impl Call {
         }
 
         Ok((convert.subtract(start), Call {
+            alias: alias,
             name: name,
             args: args,
             f_index: Cell::new(FnIndex::None),
@@ -1807,6 +1923,7 @@ impl Call {
         let start_range = try!(convert.start_node(node));
         convert.update(start_range);
 
+        let mut alias: Option<Arc<String>> = None;
         let mut name = String::new();
         let mut args = vec![];
         let mut mutable: Vec<bool> = vec![];
@@ -1814,6 +1931,9 @@ impl Call {
             if let Ok(range) = convert.end_node(node) {
                 convert.update(range);
                 break;
+            } else if let Ok((range, val)) = convert.meta_string("alias") {
+                convert.update(range);
+                alias = Some(val);
             } else if let Ok((range, val)) = convert.meta_string("word") {
                 convert.update(range);
                 if name.len() != 0 {
@@ -1855,6 +1975,7 @@ impl Call {
         }
 
         Ok((convert.subtract(start), Call {
+            alias: alias,
             name: Arc::new(name),
             args: args,
             f_index: Cell::new(FnIndex::None),
