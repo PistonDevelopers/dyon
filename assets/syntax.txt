@@ -6,27 +6,34 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\\"
 201 comment = {multi_line_comment ["//" ..."\n"?]}
 202 w = .r!({.w! comment})
 
-0 fn = {
+0 ns = ["ns" .w! .s!("::" .._seps!:"name")]
+1 uses = .l({[.w? use:"use"] comment})
+2 use = ["use" .w! .s!(["::" !"{"] .._seps!:"name")
+    ?["::" .w? "{" .w? .s?.(,
+        [.._seps!:"use_fn" ?[.w! "as" .w! .._seps!:"use_fn_alias"]]
+    ) .w? "}"]
+    .w! "as" .w! .._seps!:"alias"]
+3 fn = {
     ["fn" .w! .."("!:"name" ?w "(" ?w args ?w ")" ?w ?currents ?w {
             ["->":"returns" ?w ?type:"ret_type"]
             !"->":!"returns"
         } ?w block:"block"]
     [.."("!:"name" ?w "(" ?w args ?w ")" ?w ?currents ?w "=" ?w expr:"expr"]
 }
-1 args = .s?.(, arg:"arg")
-2 arg = [?"mut":"mut" ?w .._seps!:"name" ?[?w ":" ?w
+4 args = .s?.(, arg:"arg")
+5 arg = [?"mut":"mut" ?w .._seps!:"name" ?[?w ":" ?w
          ?["'" ?w .._seps!:"lifetime"] ?w ?type:"type"]]
-3 imm_arg = [!"mut " .._seps!:"name" ?[?w ":" ?w !"'" ?type:"type"]]
-4 closure = ["\\(" ?w .s?.(, imm_arg:"arg") ?w ")" ?w ?currents
+6 imm_arg = [!"mut " .._seps!:"name" ?[?w ":" ?w !"'" ?type:"type"]]
+7 closure = ["\\(" ?w .s?.(, imm_arg:"arg") ?w ")" ?w ?currents
              ?w "=" ?w expr:"expr"]
-5 call_closure = ["\\" item:"item" ?w "(" .s?.(, arg_expr:"call_arg") ?w ")"]
-6 named_call_closure = ["\\" item:"item" ?w "(" ?w
+8 call_closure = ["\\" item:"item" ?w "(" .s?.(, arg_expr:"call_arg") ?w ")"]
+9 named_call_closure = ["\\" item:"item" ?w "(" ?w
     .s?.(, [.._seps!:"word" ?w ":" ?w arg_expr:"call_arg" ?w]) ")"]
-7 currents = ["~" ?w .s!.(, current:"current")]
-8 current = [?"mut":"mut" ?w .._seps!:"name" ?[?w ":" ?w type:"type"]]
+10 currents = ["~" ?w .s!.(, current:"current")]
+11 current = [?"mut":"mut" ?w .._seps!:"name" ?[?w ":" ?w type:"type"]]
 // Support both multi-line expressions and single line.
-9 block = ["{" ?w {.l([?w expr:"expr" ?w]) [?w expr:"expr"]} ?w "}"]
-10 expr = [{
+12 block = ["{" ?w {.l([?w expr:"expr" ?w]) [?w expr:"expr"]} ?w "}"]
+13 expr = [{
     closure:"closure"
     object:"object"
     arr
@@ -46,7 +53,7 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\\"
     items
 } try]
 // Interprets "return" as variable, does not expect loops or assignment.
-11 arg_expr = {
+14 arg_expr = {
     ["mut":"mut" ?w item:"item"]
     swizzle:"swizzle"
     [{
@@ -61,7 +68,7 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\\"
         items
     } try]
 }
-12 lexpr = [{
+15 lexpr = [{
     closure:"closure"
     object:"object"
     arr
@@ -69,55 +76,56 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\\"
     block:"block"
     items
 } try]
-13 object = ["{" ?w .s?.(, key_value:"key_value") ?w "}"]
-14 array = ["[" ?w .s?.(, expr:"array_item") ?w "]"]
-15 array_fill = ["[" ?w expr:"fill" ?w ";" ?w expr:"n" ?w "]"]
-16 key_value = [{.t?:"key" .._seps!:"key"} ?w ":" ?w expr:"val"]
-17 num = .$_:"num"
-18 vec4 = ["(" ?w arg_expr:"x" , ?arg_expr:"y"
+16 object = ["{" ?w .s?.(, key_value:"key_value") ?w "}"]
+17 array = ["[" ?w .s?.(, expr:"array_item") ?w "]"]
+18 array_fill = ["[" ?w expr:"fill" ?w ";" ?w expr:"n" ?w "]"]
+19 key_value = [{.t?:"key" .._seps!:"key"} ?w ":" ?w expr:"val"]
+20 num = .$_:"num"
+21 vec4 = ["(" ?w arg_expr:"x" , ?arg_expr:"y"
            ?[, arg_expr:"z" ?[, arg_expr:"w"]] ?, ?w ")"]
-19 color = ["#" .._seps!:"color"]
-20 text = .t?:"text"
-21 bool = [{"true":"bool" "false":!"bool"} !.._seps!]
-22 unop_not = [{"!":"!" "¬":"!"} ?w lexpr:"expr"]
-23 unop_neg = ["-":"-" ?w mul_expr:"expr"]
-24 norm = ["|" ?w expr:"expr" ?w "|"]
-25 item = [?"~":"current" ?w .._seps!:"name" ?[?w "?":"try_item"]
+22 color = ["#" .._seps!:"color"]
+23 text = .t?:"text"
+24 bool = [{"true":"bool" "false":!"bool"} !.._seps!]
+25 unop_not = [{"!":"!" "¬":"!"} ?w lexpr:"expr"]
+26 unop_neg = ["-":"-" ?w mul_expr:"expr"]
+27 norm = ["|" ?w expr:"expr" ?w "|"]
+28 item = [?"~":"current" ?w .._seps!:"name" ?[?w "?":"try_item"]
     ?item_extra:"item_extra"]
-26 item_extra = .r!([{
+29 item_extra = .r!([{
            [?w "[" ?w {.t?:"id" .$_:"id" expr:"id"} ?w "]"]
            [?w "." ?w .._seps!:"id"]} ?[?w "?":"try_id"]])
-27 link = ["link" ?w "{" ?w link_body "}"]
-28 link_body = .s?.(?w expr:"link_item")
+30 link = ["link" ?w "{" ?w link_body "}"]
+31 link_body = .s?.(?w expr:"link_item")
 // Generate link block for body.
-29 link_for = [label "link" .w! .s!.(, [.._seps!:"name" ?w
+32 link_for = [label "link" .w! .s!.(, [.._seps!:"name" ?w
     ?{
         ["[" ?w expr:"start" , expr:"end" ?w ")"]
         [!"{" expr:"end"]
     }]) ?w "{" ?w link_body_block:"block" "}"]
-30 link_body_block = link_body_expr:"expr"
-31 link_body_expr = link_body:"link"
-32 for = [label "for" .w!
+33 link_body_block = link_body_expr:"expr"
+34 link_body_expr = link_body:"link"
+35 for = [label "for" .w!
     expr:"init" ?w ";" ?w
     expr:"cond" ?w ";" ?w
     expr:"step" ?w block:"block"]
-33 for_n = [label "for" short_body]
-34 loop = [label "loop" .w!  block:"block"]
-35 break = ["break" ?w ?["'" .._seps!:"label"]]
-36 continue = ["continue" ?w ?["'" .._seps!:"label"]]
-37 if = ["if" .w! expr:"cond" ?w block:"true_block"
+36 for_n = [label "for" short_body]
+37 loop = [label "loop" .w!  block:"block"]
+38 break = ["break" ?w ?["'" .._seps!:"label"]]
+39 continue = ["continue" ?w ?["'" .._seps!:"label"]]
+40 if = ["if" .w! expr:"cond" ?w block:"true_block"
          .r?([?w "else" w "if" ?w expr:"else_if_cond" ?w block:"else_if_block"])
          ?[?w "else" ?w block:"else_block"]]
-38 call = [.._seps!:"name" wn "(" ?w .s?.(, arg_expr:"call_arg") ?w ")"]
-39 named_call = [.._seps!:"word" wn "(" ?w
+41 call = [?[.._seps!:"alias" "::"] .._seps!:"name" wn "(" ?w
+    .s?.(, arg_expr:"call_arg") ?w ")"]
+42 named_call = [?[.._seps!:"alias" "::"] .._seps!:"word" wn "(" ?w
     .s?.(, [.._seps!:"word" ?w ":" ?w arg_expr:"call_arg" ?w]) ")"]
-40 go = ["go " ?w {call:"call" named_call:"named_call"}]
-41 assign = [lexpr:"left" ?w assign_op ?w expr:"right"]
-42 assign_op = {":=":":=" "=":"=" "+=":"+=" "-=":"-=" "*=":"*=" "/=":"/=" "%=":"%="}
-43 compare = [lexpr:"left" ?w compare_op ?w expr:"right"]
-44 compare_op = {"==":"==" "!=":"!=" "¬=":"!=" "<=":"<=" "<":"<" ">=":">=" ">":">"}
-45 grab = ["grab" ?[w "'" .$:"grab_level"] w expr:"expr"]
-46 try_expr = ["try" w expr:"expr"]
+43 go = ["go " ?w {call:"call" named_call:"named_call"}]
+44 assign = [lexpr:"left" ?w assign_op ?w expr:"right"]
+45 assign_op = {":=":":=" "=":"=" "+=":"+=" "-=":"-=" "*=":"*=" "/=":"/=" "%=":"%="}
+46 compare = [lexpr:"left" ?w compare_op ?w expr:"right"]
+47 compare_op = {"==":"==" "!=":"!=" "¬=":"!=" "<=":"<=" "<":"<" ">=":">=" ">":">"}
+48 grab = ["grab" ?[w "'" .$:"grab_level"] w expr:"expr"]
+49 try_expr = ["try" w expr:"expr"]
 
 50 label = ?["'" .._seps!:"label" ?w ":" ?w]
 51 short_body = [.w! .s!.(, [.._seps!:"name" ?w
@@ -193,4 +201,4 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\\"
 107 mul_expr = {mul:"mul"}
 108 add = .s!({+ -} mul_expr:"expr")
 
-1000 document = .l({[.w? fn:"fn"] comment})
+1000 document = [?ns:"ns" ?w ?uses:"uses" ?w .l({[.w? fn:"fn"] comment})]

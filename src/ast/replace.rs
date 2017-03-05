@@ -284,6 +284,7 @@ fn number_call(call_expr: &Call, name: &Arc<String>, val: f64) -> Call {
         new_args.push(number(arg, name, val));
     }
     Call {
+        alias: call_expr.alias.clone(),
         name: call_expr.name.clone(),
         args: new_args,
         f_index: call_expr.f_index.clone(),

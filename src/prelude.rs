@@ -58,26 +58,30 @@ impl Dfn {
 pub struct Prelude {
     pub functions: HashMap<Arc<String>, usize>,
     pub list: Vec<Dfn>,
+    pub namespaces: Vec<(Arc<Vec<Arc<String>>>, Arc<String>)>,
 }
 
 impl Prelude {
-    pub fn insert(&mut self, name: Arc<String>, f: Dfn) {
+    pub fn insert(&mut self, namespace: Arc<Vec<Arc<String>>>, name: Arc<String>, f: Dfn) {
         let n = self.list.len();
-        self.functions.insert(name, n);
+        self.functions.insert(name.clone(), n);
         self.list.push(f);
+        self.namespaces.push((namespace, name));
     }
 
     pub fn intrinsic(&mut self, name: Arc<String>, index: usize, f: Dfn) {
         let n = self.list.len();
         assert!(n == index, "{}", name);
-        self.functions.insert(name, n);
+        self.functions.insert(name.clone(), n);
         self.list.push(f);
+        self.namespaces.push((Arc::new(vec![]), name));
     }
 
     pub fn new() -> Prelude {
         Prelude {
             functions: HashMap::new(),
-            list: vec![]
+            list: vec![],
+            namespaces: vec![],
         }
     }
 
@@ -91,10 +95,10 @@ impl Prelude {
         let mut prelude = Prelude::new();
         intrinsics::standard(&mut prelude);
         for f in &*module.ext_prelude {
-            prelude.insert(f.name.clone(), f.p.clone());
+            prelude.insert(Arc::new(vec![]), f.name.clone(), f.p.clone());
         }
         for f in &module.functions {
-            prelude.insert(f.name.clone(), Dfn::new(f));
+            prelude.insert(f.namespace.clone(), f.name.clone(), Dfn::new(f));
         }
         prelude
     }

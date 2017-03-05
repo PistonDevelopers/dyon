@@ -1,0 +1,13 @@
+ns graphics
+
+fn line(a: vec4, b: vec4) -> {} {
+    return {
+        from: clone(a),
+        to: clone(b),
+    }
+}
+
+fn add(a: f64, b: f64) -> f64 {
+    println("boo")
+    return a + b
+}
