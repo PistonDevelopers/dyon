@@ -539,11 +539,10 @@ fn s(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    st: usize,
-    lc: usize,
-    cu: usize,
+    _st: usize,
+    _lc: usize,
+    _cu: usize,
 ) -> Result<Option<Variable>, String> {
-    rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
     let ind = rt.stack.pop().expect(TINVOTS);
     let ind = match rt.resolve(&ind) {
         &Variable::F64(val, _) => val,
@@ -565,7 +564,6 @@ fn s(
         x => return Err(module.error(call.args[0].source_range(),
                         &rt.expected(x, "vec4"), rt))
     };
-    rt.pop_fn(call.name.clone());
     Ok(Some(Variable::f64(s)))
 }
 
@@ -585,11 +583,10 @@ fn why(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    st: usize,
-    lc: usize,
-    cu: usize,
+    _st: usize,
+    _lc: usize,
+    _cu: usize,
 ) -> Result<Option<Variable>, String> {
-    rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
     let v = rt.stack.pop().expect(TINVOTS);
     let v = Variable::Array(Arc::new(match rt.resolve(&v) {
         &Variable::Bool(true, Some(ref sec)) => {
@@ -610,7 +607,6 @@ fn why(
         x => return Err(module.error(call.args[0].source_range(),
             &rt.expected(x, "bool"), rt))
     }));
-    rt.pop_fn(call.name.clone());
     Ok(Some(v))
 }
 
@@ -677,11 +673,10 @@ fn explain_where(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    st: usize,
-    lc: usize,
-    cu: usize,
+    _st: usize,
+    _lc: usize,
+    _cu: usize,
 ) -> Result<Option<Variable>, String> {
-    rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
     let wh = rt.stack.pop().expect(TINVOTS);
     let val = rt.stack.pop().expect(TINVOTS);
     let (val, wh) = match rt.resolve(&val) {
@@ -698,42 +693,37 @@ fn explain_where(
         x => return Err(module.error(call.args[0].source_range(),
             &rt.expected(x, "bool"), rt))
     };
-    rt.pop_fn(call.name.clone());
     Ok(Some(Variable::F64(val, Some(wh))))
 }
 
 fn println(
     rt: &mut Runtime,
-    call: &ast::Call,
+    _call: &ast::Call,
     _module: &Arc<Module>,
-    st: usize,
-    lc: usize,
-    cu: usize,
+    _st: usize,
+    _lc: usize,
+    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     use write::{print_variable, EscapeString};
 
-    rt.push_fn(call.name.clone(), 0, None, st, lc, cu);
     let x = rt.stack.pop().expect(TINVOTS);
     print_variable(rt, &x, EscapeString::None);
     println!("");
-    rt.pop_fn(call.name.clone());
     Ok(None)
 }
 
 fn print(
     rt: &mut Runtime,
-    call: &ast::Call,
+    _call: &ast::Call,
     _module: &Arc<Module>,
-    st: usize,
-    lc: usize,
-    cu: usize,
+    _st: usize,
+    _lc: usize,
+    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     use write::{print_variable, EscapeString};
 
-    rt.push_fn(call.name.clone(), 0, None, st, lc, cu);
     let x = rt.stack.pop().expect(TINVOTS);
     print_variable(rt, &x, EscapeString::None);
-    rt.pop_fn(call.name.clone());
     Ok(None)
 }
 
@@ -952,18 +942,16 @@ fn head(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    st: usize,
-    lc: usize,
-    cu: usize,
+    _st: usize,
+    _lc: usize,
+    _cu: usize,
 ) -> Result<Option<Variable>, String> {
-    rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
     let v = rt.stack.pop().expect(TINVOTS);
     let v = Variable::Option(match rt.resolve(&v) {
         &Variable::Link(ref link) => link.head(),
         x => return Err(module.error(call.args[0].source_range(),
                         &rt.expected(x, "link"), rt))
     });
-    rt.pop_fn(call.name.clone());
     Ok(Some(v))
 }
 
@@ -971,18 +959,16 @@ fn tip(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    st: usize,
-    lc: usize,
-    cu: usize,
+    _st: usize,
+    _lc: usize,
+    _cu: usize,
 ) -> Result<Option<Variable>, String> {
-    rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
     let v = rt.stack.pop().expect(TINVOTS);
     let v = Variable::Option(match rt.resolve(&v) {
         &Variable::Link(ref link) => link.tip(),
         x => return Err(module.error(call.args[0].source_range(),
                         &rt.expected(x, "link"), rt))
     });
-    rt.pop_fn(call.name.clone());
     Ok(Some(v))
 }
 
@@ -990,18 +976,16 @@ fn tail(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    st: usize,
-    lc: usize,
-    cu: usize,
+    _st: usize,
+    _lc: usize,
+    _cu: usize,
 ) -> Result<Option<Variable>, String> {
-    rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
     let v = rt.stack.pop().expect(TINVOTS);
     let v = Variable::Link(Box::new(match rt.resolve(&v) {
         &Variable::Link(ref link) => link.tail(),
         x => return Err(module.error(call.args[0].source_range(),
                         &rt.expected(x, "link"), rt))
     }));
-    rt.pop_fn(call.name.clone());
     Ok(Some(v))
 }
 
@@ -1009,18 +993,16 @@ fn neck(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    st: usize,
-    lc: usize,
-    cu: usize,
+    _st: usize,
+    _lc: usize,
+    _cu: usize,
 ) -> Result<Option<Variable>, String> {
-    rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
     let v = rt.stack.pop().expect(TINVOTS);
     let v = Variable::Link(Box::new(match rt.resolve(&v) {
         &Variable::Link(ref link) => link.neck(),
         x => return Err(module.error(call.args[0].source_range(),
                         &rt.expected(x, "link"), rt))
     }));
-    rt.pop_fn(call.name.clone());
     Ok(Some(v))
 }
 
@@ -1055,11 +1037,10 @@ fn len(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    st: usize,
-    lc: usize,
-    cu: usize,
+    _st: usize,
+    _lc: usize,
+    _cu: usize,
 ) -> Result<Option<Variable>, String> {
-    rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
     let v = match rt.stack.pop() {
         Some(v) => v,
         None => panic!(TINVOTS)
@@ -1073,7 +1054,6 @@ fn len(
         };
         Variable::f64(arr.len() as f64)
     };
-    rt.pop_fn(call.name.clone());
     Ok(Some(v))
 }
 
@@ -1081,11 +1061,10 @@ fn push_ref(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    st: usize,
-    lc: usize,
-    cu: usize,
+    _st: usize,
+    _lc: usize,
+    _cu: usize,
 ) -> Result<Option<Variable>, String> {
-    rt.push_fn(call.name.clone(), 0, None, st, lc, cu);
     let item = rt.stack.pop().expect(TINVOTS);
     let v = rt.stack.pop().expect(TINVOTS);
 
@@ -1106,7 +1085,6 @@ fn push_ref(
             &format!("{}\nExpected reference to array",
                 rt.stack_trace()), rt));
     }
-    rt.pop_fn(call.name.clone());
     Ok(None)
 }
 
@@ -1114,11 +1092,10 @@ fn push(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    st: usize,
-    lc: usize,
-    cu: usize,
+    _st: usize,
+    _lc: usize,
+    _cu: usize,
 ) -> Result<Option<Variable>, String> {
-    rt.push_fn(call.name.clone(), 0, None, st, lc, cu);
     let item = rt.stack.pop().expect(TINVOTS);
     let item = rt.resolve(&item).deep_clone(&rt.stack);
     let v = rt.stack.pop().expect(TINVOTS);
@@ -1140,7 +1117,6 @@ fn push(
             &format!("{}\nExpected reference to array",
                 rt.stack_trace()), rt));
     }
-    rt.pop_fn(call.name.clone());
     Ok(None)
 }
 
@@ -1148,11 +1124,10 @@ fn pop(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    st: usize,
-    lc: usize,
-    cu: usize,
+    _st: usize,
+    _lc: usize,
+    _cu: usize,
 ) -> Result<Option<Variable>, String> {
-    rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
     let arr = rt.stack.pop().expect(TINVOTS);
     let mut v: Option<Variable> = None;
     if let Variable::Ref(ind) = arr {
@@ -1178,7 +1153,6 @@ fn pop(
                 rt.stack_trace()), rt)),
         Some(val) => val
     };
-    rt.pop_fn(call.name.clone());
     Ok(Some(v))
 }
 
@@ -1186,11 +1160,10 @@ fn reverse(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    st: usize,
-    lc: usize,
-    cu: usize,
+    _st: usize,
+    _lc: usize,
+    _cu: usize,
 ) -> Result<Option<Variable>, String> {
-    rt.push_fn(call.name.clone(), 0, None, st, lc, cu);
     let v = rt.stack.pop().expect(TINVOTS);
     if let Variable::Ref(ind) = v {
         let ok = if let Variable::Array(ref mut arr) = rt.stack[ind] {
@@ -1209,7 +1182,6 @@ fn reverse(
             &format!("{}\nExpected reference to array",
                 rt.stack_trace()), rt));
     }
-    rt.pop_fn(call.name.clone());
     Ok(None)
 }
 
@@ -1217,11 +1189,10 @@ fn clear(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    st: usize,
-    lc: usize,
-    cu: usize,
+    _st: usize,
+    _lc: usize,
+    _cu: usize,
 ) -> Result<Option<Variable>, String> {
-    rt.push_fn(call.name.clone(), 0, None, st, lc, cu);
     let v = rt.stack.pop().expect(TINVOTS);
     if let Variable::Ref(ind) = v {
         let ok = if let Variable::Array(ref mut arr) = rt.stack[ind] {
@@ -1240,7 +1211,6 @@ fn clear(
             &format!("{}\nExpected reference to array",
                 rt.stack_trace()), rt));
     }
-    rt.pop_fn(call.name.clone());
     Ok(None)
 }
 
@@ -1248,11 +1218,10 @@ fn swap(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    st: usize,
-    lc: usize,
-    cu: usize,
+    _st: usize,
+    _lc: usize,
+    _cu: usize,
 ) -> Result<Option<Variable>, String> {
-    rt.push_fn(call.name.clone(), 0, None, st, lc, cu);
     let j = rt.stack.pop().expect(TINVOTS);
     let i = rt.stack.pop().expect(TINVOTS);
     let j = match rt.resolve(&j) {
@@ -1283,21 +1252,19 @@ fn swap(
             &format!("{}\nExpected reference to array",
                 rt.stack_trace()), rt));
     }
-    rt.pop_fn(call.name.clone());
     Ok(None)
 }
 
 fn read_line(
-    rt: &mut Runtime,
-    call: &ast::Call,
+    _rt: &mut Runtime,
+    _call: &ast::Call,
     _module: &Arc<Module>,
-    st: usize,
-    lc: usize,
-    cu: usize,
+    _st: usize,
+    _lc: usize,
+    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     use std::io::{self, Write};
 
-    rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
     let mut input = String::new();
     io::stdout().flush().unwrap();
     let error = match io::stdin().read_line(&mut input) {
@@ -1311,7 +1278,6 @@ fn read_line(
     } else {
         Variable::Text(Arc::new(input))
     };
-    rt.pop_fn(call.name.clone());
     Ok(Some(v))
 }
 
@@ -1319,13 +1285,12 @@ fn read_number(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    st: usize,
-    lc: usize,
-    cu: usize,
+    _st: usize,
+    _lc: usize,
+    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     use std::io::{self, Write};
 
-    rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
     let err = rt.stack.pop().expect(TINVOTS);
     let err = match rt.resolve(&err) {
         &Variable::Text(ref t) => t.clone(),
@@ -1358,7 +1323,6 @@ fn read_number(
             }
         }
     }
-    rt.pop_fn(call.name.clone());
     Ok(rv)
 }
 
@@ -1366,11 +1330,10 @@ fn trim(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    st: usize,
-    lc: usize,
-    cu: usize,
+    _st: usize,
+    _lc: usize,
+    _cu: usize,
 ) -> Result<Option<Variable>, String> {
-    rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
     let v = rt.stack.pop().expect(TINVOTS);
     let v = match rt.resolve(&v) {
         &Variable::Text(ref t) => t.clone(),
@@ -1378,7 +1341,6 @@ fn trim(
                 &rt.expected(x, "text"), rt))
     };
     let v = Variable::Text(Arc::new(v.trim().into()));
-    rt.pop_fn(call.name.clone());
     Ok(Some(v))
 }
 
@@ -1386,11 +1348,10 @@ fn trim_left(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    st: usize,
-    lc: usize,
-    cu: usize,
+    _st: usize,
+    _lc: usize,
+    _cu: usize,
 ) -> Result<Option<Variable>, String> {
-    rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
     let v = rt.stack.pop().expect(TINVOTS);
     let v = match rt.resolve(&v) {
         &Variable::Text(ref t) => t.clone(),
@@ -1398,7 +1359,6 @@ fn trim_left(
                 &rt.expected(x, "text"), rt))
     };
     let v = Variable::Text(Arc::new(v.trim_left().into()));
-    rt.pop_fn(call.name.clone());
     Ok(Some(v))
 }
 
@@ -1427,20 +1387,18 @@ fn trim_right(
 
 fn _str(
     rt: &mut Runtime,
-    call: &ast::Call,
+    _call: &ast::Call,
     _module: &Arc<Module>,
-    st: usize,
-    lc: usize,
-    cu: usize,
+    _st: usize,
+    _lc: usize,
+    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     use write::{write_variable, EscapeString};
 
-    rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
     let v = rt.stack.pop().expect(TINVOTS);
     let mut buf: Vec<u8> = vec![];
     write_variable(&mut buf, rt, rt.resolve(&v), EscapeString::None, 0).unwrap();
     let v = Variable::Text(Arc::new(String::from_utf8(buf).unwrap()));
-    rt.pop_fn(call.name.clone());
     Ok(Some(v))
 }
 
@@ -1608,13 +1566,12 @@ fn load(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    st: usize,
-    lc: usize,
-    cu: usize,
+    _st: usize,
+    _lc: usize,
+    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     use load;
 
-    rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
     let v = rt.stack.pop().expect(TINVOTS);
     let v = match rt.resolve(&v) {
         &Variable::Text(ref text) => {
@@ -1638,7 +1595,6 @@ fn load(
         x => return Err(module.error(call.args[0].source_range(),
                 &rt.expected(x, "string"), rt))
     };
-    rt.pop_fn(call.name.clone());
     Ok(Some(v))
 }
 
@@ -1646,13 +1602,12 @@ fn load__source_imports(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    st: usize,
-    lc: usize,
-    cu: usize,
+    _st: usize,
+    _lc: usize,
+    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     use load;
 
-    rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
     let modules = rt.stack.pop().expect(TINVOTS);
     let source = rt.stack.pop().expect(TINVOTS);
     let mut new_module = Module::new_intrinsics(module.intrinsics.clone());
@@ -1713,7 +1668,6 @@ fn load__source_imports(
         x => return Err(module.error(call.args[0].source_range(),
                 &rt.expected(x, "[Module]"), rt))
     };
-    rt.pop_fn(call.name.clone());
     Ok(Some(v))
 }
 
@@ -1721,13 +1675,12 @@ fn module__in_string_imports(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    st: usize,
-    lc: usize,
-    cu: usize,
+    _st: usize,
+    _lc: usize,
+    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     use load_str;
 
-    rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
     let modules = rt.stack.pop().expect(TINVOTS);
     let source = rt.stack.pop().expect(TINVOTS);
     let source = match rt.resolve(&source) {
@@ -1793,7 +1746,6 @@ fn module__in_string_imports(
                 Variable::RustObject(Arc::new(
                     Mutex::new(Arc::new(new_module)))))))
         };
-    rt.pop_fn(call.name.clone());
     Ok(Some(v))
 }
 
@@ -1801,13 +1753,12 @@ fn _call(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    st: usize,
-    lc: usize,
-    cu: usize,
+    _st: usize,
+    _lc: usize,
+    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     // Use the source from calling function.
     let source = module.functions[rt.call_stack.last().unwrap().index].source.clone();
-    rt.push_fn(call.name.clone(), 0, None, st, lc, cu);
     let args = rt.stack.pop().expect(TINVOTS);
     let fn_name = rt.stack.pop().expect(TINVOTS);
     let call_module = rt.stack.pop().expect(TINVOTS);
@@ -1875,7 +1826,6 @@ fn _call(
                         rt.stack_trace()), rt))
     }
 
-    rt.pop_fn(call.name.clone());
     Ok(None)
 }
 
@@ -1883,13 +1833,12 @@ fn call_ret(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    st: usize,
-    lc: usize,
-    cu: usize,
+    _st: usize,
+    _lc: usize,
+    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     // Use the source from calling function.
     let source = module.functions[rt.call_stack.last().unwrap().index].source.clone();
-    rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
     let args = rt.stack.pop().expect(TINVOTS);
     let fn_name = rt.stack.pop().expect(TINVOTS);
     let call_module = rt.stack.pop().expect(TINVOTS);
@@ -1956,22 +1905,19 @@ fn call_ret(
             &format!("{}\nExpected `Module`", rt.stack_trace()), rt))
     };
 
-    rt.pop_fn(call.name.clone());
     Ok(v)
 }
 
 fn functions(
-    rt: &mut Runtime,
-    call: &ast::Call,
+    _rt: &mut Runtime,
+    _call: &ast::Call,
     module: &Arc<Module>,
-    st: usize,
-    lc: usize,
-    cu: usize,
+    _st: usize,
+    _lc: usize,
+    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     // List available functions in scope.
-    rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
     let v = Variable::Array(Arc::new(functions::list_functions(module)));
-    rt.pop_fn(call.name.clone());
     Ok(Some(v))
 }
 
@@ -1979,12 +1925,11 @@ fn functions__module(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    st: usize,
-    lc: usize,
-    cu: usize,
+    _st: usize,
+    _lc: usize,
+    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     // List available functions in scope.
-    rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
     let m = rt.stack.pop().expect(TINVOTS);
     let m = match rt.resolve(&m) {
         &Variable::RustObject(ref obj) => obj.clone(),
@@ -2000,7 +1945,6 @@ fn functions__module(
     };
 
     let v = Variable::Array(Arc::new(functions));
-    rt.pop_fn(call.name.clone());
     Ok(Some(v))
 }
 
@@ -2101,11 +2045,10 @@ fn min(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    st: usize,
-    lc: usize,
-    cu: usize,
+    _st: usize,
+    _lc: usize,
+    _cu: usize,
 ) -> Result<Option<Variable>, String> {
-    rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
     let v = rt.stack.pop().expect(TINVOTS);
     let v = match rt.resolve(&v) {
         &Variable::Array(ref arr) => {
@@ -2122,7 +2065,6 @@ fn min(
                 &rt.expected(x, "array"), rt));
         }
     };
-    rt.pop_fn(call.name.clone());
     Ok(Some(Variable::f64(v)))
 }
 
@@ -2130,11 +2072,10 @@ fn max(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    st: usize,
-    lc: usize,
-    cu: usize,
+    _st: usize,
+    _lc: usize,
+    _cu: usize,
 ) -> Result<Option<Variable>, String> {
-    rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
     let v = rt.stack.pop().expect(TINVOTS);
     let v = match rt.resolve(&v) {
         &Variable::Array(ref arr) => {
@@ -2151,7 +2092,6 @@ fn max(
                 &rt.expected(x, "array"), rt));
         }
     };
-    rt.pop_fn(call.name.clone());
     Ok(Some(Variable::f64(v)))
 }
 
@@ -2159,15 +2099,14 @@ fn unwrap(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    st: usize,
-    lc: usize,
-    cu: usize,
+    _st: usize,
+    _lc: usize,
+    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     use write::{write_variable, EscapeString};
 
     // Return value does not depend on lifetime of argument since
     // `ok(x)` and `some(x)` perform a deep clone.
-    rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
     let v = rt.stack.pop().expect(TINVOTS);
     let v = match rt.resolve(&v) {
         &Variable::Option(Some(ref v)) => (**v).clone(),
@@ -2198,7 +2137,6 @@ fn unwrap(
                                     &rt.expected(x, "some(_) or ok(_)"), rt));
         }
     };
-    rt.pop_fn(call.name.clone());
     Ok(Some(v))
 }
 
@@ -2206,13 +2144,12 @@ fn unwrap_or(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    st: usize,
-    lc: usize,
-    cu: usize,
+    _st: usize,
+    _lc: usize,
+    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     // Return value does not depend on lifetime of argument since
     // `ok(x)` and `some(x)` perform a deep clone.
-    rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
     let def = rt.stack.pop().expect(TINVOTS);
     let v = rt.stack.pop().expect(TINVOTS);
     let v = match rt.resolve(&v) {
@@ -2225,7 +2162,6 @@ fn unwrap_or(
                                     &rt.expected(x, "some(_) or ok(_)"), rt));
         }
     };
-    rt.pop_fn(call.name.clone());
     Ok(Some(v))
 }
 
@@ -2269,11 +2205,10 @@ fn load__meta_file(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    st: usize,
-    lc: usize,
-    cu: usize,
+    _st: usize,
+    _lc: usize,
+    _cu: usize,
 ) -> Result<Option<Variable>, String> {
-    rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
     let file = rt.stack.pop().expect(TINVOTS);
     let meta = rt.stack.pop().expect(TINVOTS);
     let file = match rt.resolve(&file) {
@@ -2287,7 +2222,6 @@ fn load__meta_file(
                         &rt.expected(x, "str"), rt))
     };
     let res = meta::load_meta_file(&**meta, &**file);
-    rt.pop_fn(call.name.clone());
     Ok(Some(Variable::Result(match res {
         Ok(res) => Ok(Box::new(Variable::Array(Arc::new(res)))),
         Err(err) => Err(Box::new(Error {
@@ -2301,11 +2235,10 @@ fn load__meta_url(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    st: usize,
-    lc: usize,
-    cu: usize,
+    _st: usize,
+    _lc: usize,
+    _cu: usize,
 ) -> Result<Option<Variable>, String> {
-    rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
     let url = rt.stack.pop().expect(TINVOTS);
     let meta = rt.stack.pop().expect(TINVOTS);
     let url = match rt.resolve(&url) {
@@ -2319,7 +2252,6 @@ fn load__meta_url(
                         &rt.expected(x, "str"), rt))
     };
     let res = meta::load_meta_url(&**meta, &**url);
-    rt.pop_fn(call.name.clone());
     Ok(Some(Variable::Result(match res {
         Ok(res) => Ok(Box::new(Variable::Array(Arc::new(res)))),
         Err(err) => Err(Box::new(Error {
@@ -2333,13 +2265,12 @@ fn syntax__in_string(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    st: usize,
-    lc: usize,
-    cu: usize,
+    _st: usize,
+    _lc: usize,
+    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     use piston_meta::syntax_errstr;
 
-    rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
     let text = rt.stack.pop().expect(TINVOTS);
     let text = match rt.resolve(&text) {
         &Variable::Text(ref t) => t.clone(),
@@ -2354,7 +2285,6 @@ fn syntax__in_string(
     };
     let res = syntax_errstr(&text).map_err(|err|
         format!("When parsing meta syntax in `{}`:\n{}", name, err));
-    rt.pop_fn(call.name.clone());
     Ok(Some(Variable::Result(match res {
         Ok(res) => Ok(Box::new(Variable::RustObject(Arc::new(Mutex::new(Arc::new(res)))))),
         Err(err) => Err(Box::new(Error {
@@ -2368,23 +2298,22 @@ fn meta__syntax_in_string(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    st: usize,
-    lc: usize,
-    cu: usize,
+    _st: usize,
+    _lc: usize,
+    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     use piston_meta::Syntax;
 
-    rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
     let text = rt.stack.pop().expect(TINVOTS);
     let text = match rt.resolve(&text) {
         &Variable::Text(ref t) => t.clone(),
-        x => return Err(module.error(call.args[1].source_range(),
+        x => return Err(module.error(call.args[2].source_range(),
                         &rt.expected(x, "str"), rt))
     };
     let name = rt.stack.pop().expect(TINVOTS);
     let name = match rt.resolve(&name) {
         &Variable::Text(ref t) => t.clone(),
-        x => return Err(module.error(call.args[0].source_range(),
+        x => return Err(module.error(call.args[1].source_range(),
                         &rt.expected(x, "str"), rt))
     };
     let syntax_var = rt.stack.pop().expect(TINVOTS);
@@ -2399,7 +2328,6 @@ fn meta__syntax_in_string(
         None => return Err(module.error(call.args[0].source_range(),
                         &rt.expected(&syntax_var, "Syntax"), rt))
     }, &name, &text);
-    rt.pop_fn(call.name.clone());
     Ok(Some(Variable::Result(match res {
         Ok(res) => Ok(Box::new(Variable::Array(Arc::new(res)))),
         Err(err) => Err(Box::new(Error {
@@ -2413,11 +2341,10 @@ fn download__url_file(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    st: usize,
-    lc: usize,
-    cu: usize,
+    _st: usize,
+    _lc: usize,
+    _cu: usize,
 ) -> Result<Option<Variable>, String> {
-    rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
     let file = rt.stack.pop().expect(TINVOTS);
     let url = rt.stack.pop().expect(TINVOTS);
     let file = match rt.resolve(&file) {
@@ -2432,7 +2359,6 @@ fn download__url_file(
     };
 
     let res = meta::download_url_to_file(&**url, &**file);
-    rt.pop_fn(call.name.clone());
     Ok(Some(Variable::Result(match res {
         Ok(res) => Ok(Box::new(Variable::Text(Arc::new(res)))),
         Err(err) => Err(Box::new(Error {
@@ -2446,15 +2372,14 @@ fn save__string_file(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    st: usize,
-    lc: usize,
-    cu: usize,
+    _st: usize,
+    _lc: usize,
+    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     use std::fs::File;
     use std::io::Write;
     use std::error::Error as StdError;
 
-    rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
     let file = rt.stack.pop().expect(TINVOTS);
     let text = rt.stack.pop().expect(TINVOTS);
     let file = match rt.resolve(&file) {
@@ -2468,7 +2393,6 @@ fn save__string_file(
                         &rt.expected(x, "str"), rt))
     };
 
-    rt.pop_fn(call.name.clone());
     Ok(Some(Variable::Result(match File::create(&**file) {
         Ok(mut f) => {
             match f.write_all(text.as_bytes()) {
@@ -2490,15 +2414,14 @@ fn load_string__file(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    st: usize,
-    lc: usize,
-    cu: usize,
+    _st: usize,
+    _lc: usize,
+    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     use std::fs::File;
     use std::io::Read;
     use std::error::Error as StdError;
 
-    rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
     let file = rt.stack.pop().expect(TINVOTS);
     let file = match rt.resolve(&file) {
         &Variable::Text(ref file) => file.clone(),
@@ -2506,7 +2429,6 @@ fn load_string__file(
                         &rt.expected(x, "str"), rt))
     };
 
-    rt.pop_fn(call.name.clone());
     Ok(Some(Variable::Result(match File::open(&**file) {
         Ok(mut f) => {
             let mut s = String::new();
@@ -2533,11 +2455,10 @@ fn load_string__url(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    st: usize,
-    lc: usize,
-    cu: usize,
+    _st: usize,
+    _lc: usize,
+    _cu: usize,
 ) -> Result<Option<Variable>, String> {
-    rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
     let url = rt.stack.pop().expect(TINVOTS);
     let url = match rt.resolve(&url) {
         &Variable::Text(ref url) => url.clone(),
@@ -2545,7 +2466,6 @@ fn load_string__url(
                         &rt.expected(x, "str"), rt))
     };
 
-    rt.pop_fn(call.name.clone());
     Ok(Some(Variable::Result(match meta::load_text_file_from_url(&**url) {
         Ok(s) => {
             Ok(Box::new(Variable::Text(Arc::new(s))))
@@ -2561,15 +2481,14 @@ fn load_string__url(
 
 fn join__thread(
     rt: &mut Runtime,
-    call: &ast::Call,
+    _call: &ast::Call,
     _module: &Arc<Module>,
-    st: usize,
-    lc: usize,
-    cu: usize,
+    _st: usize,
+    _lc: usize,
+    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     use Thread;
 
-    rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
     let thread = rt.stack.pop().expect(TINVOTS);
     let handle_res = Thread::invalidate_handle(rt, thread);
     let v = Variable::Result({
@@ -2598,7 +2517,6 @@ fn join__thread(
             }
         }
     });
-    rt.pop_fn(call.name.clone());
     Ok(Some(v))
 }
 
@@ -2606,11 +2524,10 @@ fn load_data__file(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    st: usize,
-    lc: usize,
-    cu: usize
+    _st: usize,
+    _lc: usize,
+    _cu: usize
 ) -> Result<Option<Variable>, String> {
-    rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
     let file = rt.stack.pop().expect(TINVOTS);
     let file = match rt.resolve(&file) {
         &Variable::Text(ref t) => t.clone(),
@@ -2626,7 +2543,6 @@ fn load_data__file(
             trace: vec![]
         }))
     };
-    rt.pop_fn(call.name.clone());
     Ok(Some(Variable::Result(res)))
 }
 
@@ -2634,16 +2550,15 @@ fn save__data_file(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    st: usize,
-    lc: usize,
-    cu: usize,
+    _st: usize,
+    _lc: usize,
+    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     use std::error::Error;
     use std::fs::File;
     use std::io::BufWriter;
     use write::{write_variable, EscapeString};
 
-    rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
     let file = rt.stack.pop().expect(TINVOTS);
     let file = match rt.resolve(&file) {
         &Variable::Text(ref t) => t.clone(),
@@ -2671,7 +2586,6 @@ fn save__data_file(
             }))
         }
     };
-    rt.pop_fn(call.name.clone());
     Ok(Some(Variable::Result(res)))
 }
 
@@ -2679,13 +2593,12 @@ fn json_from_meta_data(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    st: usize,
-    lc: usize,
-    cu: usize,
+    _st: usize,
+    _lc: usize,
+    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     use std::error::Error;
 
-    rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
     let meta_data = rt.stack.pop().expect(TINVOTS);
     let json = match rt.resolve(&meta_data) {
         &Variable::Array(ref arr) => {
@@ -2698,7 +2611,6 @@ fn json_from_meta_data(
         x => return Err(module.error(call.args[0].source_range(),
                         &rt.expected(x, "array"), rt))
     };
-    rt.pop_fn(call.name.clone());
     Ok(Some(Variable::Text(Arc::new(json))))
 }
 
@@ -2706,14 +2618,13 @@ fn errstr__string_start_len_msg(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    st: usize,
-    lc: usize,
-    cu: usize,
+    _st: usize,
+    _lc: usize,
+    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     use piston_meta::ParseErrorHandler;
     use range::Range;
 
-    rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
     let msg = rt.stack.pop().expect(TINVOTS);
     let msg = match rt.resolve(&msg) {
         &Variable::Text(ref t) => t.clone(),
@@ -2743,7 +2654,6 @@ fn errstr__string_start_len_msg(
     ParseErrorHandler::new(&source)
         .write_msg(&mut buf, Range::new(start, len), &msg)
         .unwrap();
-    rt.pop_fn(call.name.clone());
     Ok(Some(Variable::Text(Arc::new(String::from_utf8(buf).unwrap()))))
 }
 
@@ -2751,11 +2661,10 @@ fn has(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    st: usize,
-    lc: usize,
-    cu: usize
+    _st: usize,
+    _lc: usize,
+    _cu: usize
 ) -> Result<Option<Variable>, String> {
-    rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
     let key = rt.stack.pop().expect(TINVOTS);
     let key = match rt.resolve(&key) {
         &Variable::Text(ref t) => t.clone(),
@@ -2768,7 +2677,6 @@ fn has(
         x => return Err(module.error(call.args[0].source_range(),
                         &rt.expected(x, "object"), rt))
     };
-    rt.pop_fn(call.name.clone());
     Ok(Some(Variable::bool(res)))
 }
 
@@ -2776,11 +2684,10 @@ fn keys(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    st: usize,
-    lc: usize,
-    cu: usize
+    _st: usize,
+    _lc: usize,
+    _cu: usize
 ) -> Result<Option<Variable>, String> {
-    rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
     let obj = rt.stack.pop().expect(TINVOTS);
     let res = Variable::Array(Arc::new(match rt.resolve(&obj) {
         &Variable::Object(ref obj) => {
@@ -2789,7 +2696,6 @@ fn keys(
         x => return Err(module.error(call.args[0].source_range(),
                         &rt.expected(x, "object"), rt))
     }));
-    rt.pop_fn(call.name.clone());
     Ok(Some(res))
 }
 
@@ -2797,11 +2703,10 @@ fn chars(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    st: usize,
-    lc: usize,
-    cu: usize
+    _st: usize,
+    _lc: usize,
+    _cu: usize
 ) -> Result<Option<Variable>, String> {
-    rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
     let t = rt.stack.pop().expect(TINVOTS);
     let t = match rt.resolve(&t) {
         &Variable::Text(ref t) => t.clone(),
@@ -2815,7 +2720,6 @@ fn chars(
             Variable::Text(Arc::new(s))
         })
         .collect::<Vec<_>>();
-    rt.pop_fn(call.name.clone());
     Ok(Some(Variable::Array(Arc::new(res))))
 }
 
@@ -2845,17 +2749,15 @@ fn is_nan(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    st: usize,
-    lc: usize,
-    cu: usize,
+    _st: usize,
+    _lc: usize,
+    _cu: usize,
 ) -> Result<Option<Variable>, String> {
-    rt.push_fn(call.name.clone(), 0, None, st + 1, lc, cu);
     let v = rt.stack.pop().expect(TINVOTS);
     let v = match rt.resolve(&v) {
         &Variable::F64(ref v, _) => v.clone(),
         x => return Err(module.error(call.args[0].source_range(),
                         &rt.expected(x, "number"), rt))
     };
-    rt.pop_fn(call.name.clone());
     Ok(Some(Variable::bool(v.is_nan())))
 }
