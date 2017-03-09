@@ -126,9 +126,7 @@ impl Node {
             // Intrinsic functions copies argument constraints to the call.
             if self.kind == Kind::Call && self.lts.len() > 0 {
                 let mut returns_static = true;
-                'args: for (_, lt) in self.children.iter().map(|&i| &nodes[i])
-                        .filter(|&n| n.kind == Kind::CallArg)
-                        .zip(self.lts.iter()) {
+                'args: for lt in self.lts.iter() {
                     let mut lt = *lt;
                     loop {
                         match lt {
@@ -139,8 +137,8 @@ impl Node {
                                 returns_static = false;
                                 break 'args;
                             }
-                            x => {
-                                lt = x;
+                            Lt::Arg(x) => {
+                                lt = self.lts[x];
                                 continue;
                             }
                         }
