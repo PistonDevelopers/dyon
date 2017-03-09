@@ -114,6 +114,7 @@ fn test_syntax() {
     test_src("source/syntax/or.dyon");
     test_src("source/syntax/try_expr.dyon");
     test_src("source/syntax/start_true.dyon");
+    test_fail_src("source/syntax/push_ref.dyon");
 }
 
 #[test]
