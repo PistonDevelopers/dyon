@@ -117,9 +117,6 @@ const TABLE: &'static [(usize, fn(
         &mut Runtime,
         &ast::Call,
         &Arc<Module>,
-        usize,
-        usize,
-        usize
     ) -> Result<Option<Variable>, String>)]
 = &[
     (X, x),
@@ -452,9 +449,6 @@ pub fn call_standard(
     call: &ast::Call,
     module: &Arc<Module>
 ) -> Result<(Option<Variable>, Flow), String> {
-    let st = rt.stack.len();
-    let lc = rt.local_stack.len();
-    let cu = rt.current_stack.len();
     for arg in &call.args {
         match try!(rt.expression(arg, Side::Right, module)) {
             (x, Flow::Return) => { return Ok((x, Flow::Return)); }
@@ -467,7 +461,7 @@ pub fn call_standard(
     }
     let (ind, f) = TABLE[index];
     debug_assert!(ind == index);
-    let expect = try!((f)(rt, call, module, st, lc, cu));
+    let expect = try!((f)(rt, call, module));
     Ok((expect, Flow::Continue))
 }
 
@@ -475,9 +469,6 @@ fn x(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     let v = rt.stack.pop().expect(TINVOTS);
     Ok(Some(match rt.resolve(&v) {
@@ -491,9 +482,6 @@ fn y(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     let v = rt.stack.pop().expect(TINVOTS);
     Ok(Some(match rt.resolve(&v) {
@@ -507,9 +495,6 @@ fn z(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     let v = rt.stack.pop().expect(TINVOTS);
     Ok(Some(match rt.resolve(&v) {
@@ -523,9 +508,6 @@ fn w(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     let v = rt.stack.pop().expect(TINVOTS);
     Ok(Some(match rt.resolve(&v) {
@@ -539,9 +521,6 @@ fn s(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     let ind = rt.stack.pop().expect(TINVOTS);
     let ind = match rt.resolve(&ind) {
@@ -571,9 +550,6 @@ fn clone(
     rt: &mut Runtime,
     _call: &ast::Call,
     _module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     let v = rt.stack.pop().expect(TINVOTS);
     Ok(Some(rt.resolve(&v).deep_clone(&rt.stack)))
@@ -583,9 +559,6 @@ fn why(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     let v = rt.stack.pop().expect(TINVOTS);
     let v = Variable::Array(Arc::new(match rt.resolve(&v) {
@@ -614,9 +587,6 @@ fn _where(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     let v = rt.stack.pop().expect(TINVOTS);
     let v = Variable::Array(Arc::new(match rt.resolve(&v) {
@@ -646,9 +616,6 @@ fn explain_why(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     let why = rt.stack.pop().expect(TINVOTS);
     let val = rt.stack.pop().expect(TINVOTS);
@@ -673,9 +640,6 @@ fn explain_where(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     let wh = rt.stack.pop().expect(TINVOTS);
     let val = rt.stack.pop().expect(TINVOTS);
@@ -700,9 +664,6 @@ fn println(
     rt: &mut Runtime,
     _call: &ast::Call,
     _module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     use write::{print_variable, EscapeString};
 
@@ -716,9 +677,6 @@ fn print(
     rt: &mut Runtime,
     _call: &ast::Call,
     _module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     use write::{print_variable, EscapeString};
 
@@ -731,9 +689,6 @@ fn sqrt(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     rt.unary_f64(call, module, |a| a.sqrt())
 }
@@ -742,9 +697,6 @@ fn sin(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     rt.unary_f64(call, module, |a| a.sin())
 }
@@ -753,9 +705,6 @@ fn asin(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     rt.unary_f64(call, module, |a| a.asin())
 }
@@ -764,9 +713,6 @@ fn cos(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     rt.unary_f64(call, module, |a| a.cos())
 }
@@ -775,9 +721,6 @@ fn acos(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     rt.unary_f64(call, module, |a| a.acos())
 }
@@ -786,9 +729,6 @@ fn tan(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     rt.unary_f64(call, module, |a| a.tan())
 }
@@ -797,9 +737,6 @@ fn atan(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     rt.unary_f64(call, module, |a| a.atan())
 }
@@ -808,9 +745,6 @@ fn atan2(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     let x = rt.stack.pop().expect(TINVOTS);
     let x = match rt.resolve(&x) {
@@ -831,9 +765,6 @@ fn exp(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     rt.unary_f64(call, module, |a| a.exp())
 }
@@ -842,9 +773,6 @@ fn ln(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     rt.unary_f64(call, module, |a| a.ln())
 }
@@ -853,9 +781,6 @@ fn log2(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     rt.unary_f64(call, module, |a| a.log2())
 }
@@ -864,9 +789,6 @@ fn log10(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     rt.unary_f64(call, module, |a| a.log10())
 }
@@ -875,9 +797,6 @@ fn round(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     rt.unary_f64(call, module, |a| a.round())
 }
@@ -886,9 +805,6 @@ fn abs(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     rt.unary_f64(call, module, |a| a.abs())
 }
@@ -897,9 +813,6 @@ fn floor(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     rt.unary_f64(call, module, |a| a.floor())
 }
@@ -908,9 +821,6 @@ fn ceil(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     rt.unary_f64(call, module, |a| a.ceil())
 }
@@ -919,9 +829,6 @@ fn sleep(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     use std::thread::sleep;
     use std::time::Duration;
@@ -942,9 +849,6 @@ fn head(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     let v = rt.stack.pop().expect(TINVOTS);
     let v = Variable::Option(match rt.resolve(&v) {
@@ -959,9 +863,6 @@ fn tip(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     let v = rt.stack.pop().expect(TINVOTS);
     let v = Variable::Option(match rt.resolve(&v) {
@@ -976,9 +877,6 @@ fn tail(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     let v = rt.stack.pop().expect(TINVOTS);
     let v = Variable::Link(Box::new(match rt.resolve(&v) {
@@ -993,9 +891,6 @@ fn neck(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     let v = rt.stack.pop().expect(TINVOTS);
     let v = Variable::Link(Box::new(match rt.resolve(&v) {
@@ -1010,9 +905,6 @@ fn is_empty(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     let v = rt.stack.pop().expect(TINVOTS);
     Ok(Some(Variable::bool(match rt.resolve(&v) {
@@ -1026,9 +918,6 @@ fn random(
     rt: &mut Runtime,
     _call: &ast::Call,
     _module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     Ok(Some(Variable::f64(rt.rng.gen())))
 }
@@ -1037,9 +926,6 @@ fn len(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     let v = match rt.stack.pop() {
         Some(v) => v,
@@ -1061,9 +947,6 @@ fn push_ref(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     let item = rt.stack.pop().expect(TINVOTS);
     let v = rt.stack.pop().expect(TINVOTS);
@@ -1092,9 +975,6 @@ fn push(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     let item = rt.stack.pop().expect(TINVOTS);
     let item = rt.resolve(&item).deep_clone(&rt.stack);
@@ -1124,9 +1004,6 @@ fn pop(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     let arr = rt.stack.pop().expect(TINVOTS);
     let mut v: Option<Variable> = None;
@@ -1160,9 +1037,6 @@ fn reverse(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     let v = rt.stack.pop().expect(TINVOTS);
     if let Variable::Ref(ind) = v {
@@ -1189,9 +1063,6 @@ fn clear(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     let v = rt.stack.pop().expect(TINVOTS);
     if let Variable::Ref(ind) = v {
@@ -1218,9 +1089,6 @@ fn swap(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     let j = rt.stack.pop().expect(TINVOTS);
     let i = rt.stack.pop().expect(TINVOTS);
@@ -1259,9 +1127,6 @@ fn read_line(
     _rt: &mut Runtime,
     _call: &ast::Call,
     _module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     use std::io::{self, Write};
 
@@ -1285,9 +1150,6 @@ fn read_number(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     use std::io::{self, Write};
 
@@ -1330,9 +1192,6 @@ fn trim(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     let v = rt.stack.pop().expect(TINVOTS);
     let v = match rt.resolve(&v) {
@@ -1348,9 +1207,6 @@ fn trim_left(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     let v = rt.stack.pop().expect(TINVOTS);
     let v = match rt.resolve(&v) {
@@ -1366,9 +1222,6 @@ fn trim_right(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     let v = rt.stack.pop().expect(TINVOTS);
     let mut v = match rt.resolve(&v) {
@@ -1389,9 +1242,6 @@ fn _str(
     rt: &mut Runtime,
     _call: &ast::Call,
     _module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     use write::{write_variable, EscapeString};
 
@@ -1406,9 +1256,6 @@ fn json_string(
     rt: &mut Runtime,
     _call: &ast::Call,
     _module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     use write::{write_variable, EscapeString};
 
@@ -1422,9 +1269,6 @@ fn str__color(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     let v = rt.stack.pop().expect(TINVOTS);
     let v = match rt.resolve(&v) {
@@ -1460,9 +1304,6 @@ fn srgb_to_linear__color(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     let v = rt.stack.pop().expect(TINVOTS);
     let v = match rt.resolve(&v) {
@@ -1486,9 +1327,6 @@ fn linear_to_srgb__color(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     let v = rt.stack.pop().expect(TINVOTS);
     let v = match rt.resolve(&v) {
@@ -1512,9 +1350,6 @@ fn _typeof(
     rt: &mut Runtime,
     _call: &ast::Call,
     _module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     let v = rt.stack.pop().expect(TINVOTS);
     Ok(Some(match rt.resolve(&v) {
@@ -1540,9 +1375,6 @@ fn debug(
     rt: &mut Runtime,
     _call: &ast::Call,
     _module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     println!("Stack {:#?}", rt.stack);
     println!("Locals {:#?}", rt.local_stack);
@@ -1554,9 +1386,6 @@ fn backtrace(
     rt: &mut Runtime,
     _call: &ast::Call,
     _module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     println!("{:#?}", rt.call_stack);
     Ok(None)
@@ -1566,9 +1395,6 @@ fn load(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     use load;
 
@@ -1602,9 +1428,6 @@ fn load__source_imports(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     use load;
 
@@ -1675,9 +1498,6 @@ fn module__in_string_imports(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     use load_str;
 
@@ -1753,9 +1573,6 @@ fn _call(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     // Use the source from calling function.
     let source = module.functions[rt.call_stack.last().unwrap().index].source.clone();
@@ -1833,9 +1650,6 @@ fn call_ret(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     // Use the source from calling function.
     let source = module.functions[rt.call_stack.last().unwrap().index].source.clone();
@@ -1912,9 +1726,6 @@ fn functions(
     _rt: &mut Runtime,
     _call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     // List available functions in scope.
     let v = Variable::Array(Arc::new(functions::list_functions(module)));
@@ -1925,9 +1736,6 @@ fn functions__module(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     // List available functions in scope.
     let m = rt.stack.pop().expect(TINVOTS);
@@ -1952,9 +1760,6 @@ fn none(
     _rt: &mut Runtime,
     _call: &ast::Call,
     _module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     Ok(Some(Variable::Option(None)))
 }
@@ -1963,9 +1768,6 @@ fn some(
     rt: &mut Runtime,
     _call: &ast::Call,
     _module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     let v = rt.stack.pop().expect(TINVOTS);
     Ok(Some(Variable::Option(Some(Box::new(
@@ -1977,9 +1779,6 @@ fn ok(
     rt: &mut Runtime,
     _call: &ast::Call,
     _module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     let v = rt.stack.pop().expect(TINVOTS);
     Ok(Some(Variable::Result(Ok(Box::new(
@@ -1991,9 +1790,6 @@ fn err(
     rt: &mut Runtime,
     _call: &ast::Call,
     _module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     let v = rt.stack.pop().expect(TINVOTS);
     Ok(Some(Variable::Result(Err(Box::new(
@@ -2007,9 +1803,6 @@ fn is_err(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     let v = rt.stack.pop().expect(TINVOTS);
     Ok(Some(match rt.resolve(&v) {
@@ -2026,9 +1819,6 @@ fn is_ok(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     let v = rt.stack.pop().expect(TINVOTS);
     Ok(Some(match rt.resolve(&v) {
@@ -2045,9 +1835,6 @@ fn min(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     let v = rt.stack.pop().expect(TINVOTS);
     let v = match rt.resolve(&v) {
@@ -2072,9 +1859,6 @@ fn max(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     let v = rt.stack.pop().expect(TINVOTS);
     let v = match rt.resolve(&v) {
@@ -2099,9 +1883,6 @@ fn unwrap(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     use write::{write_variable, EscapeString};
 
@@ -2144,9 +1925,6 @@ fn unwrap_or(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     // Return value does not depend on lifetime of argument since
     // `ok(x)` and `some(x)` perform a deep clone.
@@ -2169,9 +1947,6 @@ fn unwrap_err(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     let v = rt.stack.pop().expect(TINVOTS);
     Ok(Some(match rt.resolve(&v) {
@@ -2187,9 +1962,6 @@ fn dir__angle(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     let v = rt.stack.pop().expect(TINVOTS);
     Ok(Some(match rt.resolve(&v) {
@@ -2205,9 +1977,6 @@ fn load__meta_file(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     let file = rt.stack.pop().expect(TINVOTS);
     let meta = rt.stack.pop().expect(TINVOTS);
@@ -2235,9 +2004,6 @@ fn load__meta_url(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     let url = rt.stack.pop().expect(TINVOTS);
     let meta = rt.stack.pop().expect(TINVOTS);
@@ -2265,9 +2031,6 @@ fn syntax__in_string(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     use piston_meta::syntax_errstr;
 
@@ -2298,9 +2061,6 @@ fn meta__syntax_in_string(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     use piston_meta::Syntax;
 
@@ -2341,9 +2101,6 @@ fn download__url_file(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     let file = rt.stack.pop().expect(TINVOTS);
     let url = rt.stack.pop().expect(TINVOTS);
@@ -2372,9 +2129,6 @@ fn save__string_file(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     use std::fs::File;
     use std::io::Write;
@@ -2414,9 +2168,6 @@ fn load_string__file(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     use std::fs::File;
     use std::io::Read;
@@ -2455,9 +2206,6 @@ fn load_string__url(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     let url = rt.stack.pop().expect(TINVOTS);
     let url = match rt.resolve(&url) {
@@ -2483,9 +2231,6 @@ fn join__thread(
     rt: &mut Runtime,
     _call: &ast::Call,
     _module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     use Thread;
 
@@ -2524,9 +2269,6 @@ fn load_data__file(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize
 ) -> Result<Option<Variable>, String> {
     let file = rt.stack.pop().expect(TINVOTS);
     let file = match rt.resolve(&file) {
@@ -2550,9 +2292,6 @@ fn save__data_file(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     use std::error::Error;
     use std::fs::File;
@@ -2593,9 +2332,6 @@ fn json_from_meta_data(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     use std::error::Error;
 
@@ -2618,9 +2354,6 @@ fn errstr__string_start_len_msg(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     use piston_meta::ParseErrorHandler;
     use range::Range;
@@ -2661,9 +2394,6 @@ fn has(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize
 ) -> Result<Option<Variable>, String> {
     let key = rt.stack.pop().expect(TINVOTS);
     let key = match rt.resolve(&key) {
@@ -2684,9 +2414,6 @@ fn keys(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize
 ) -> Result<Option<Variable>, String> {
     let obj = rt.stack.pop().expect(TINVOTS);
     let res = Variable::Array(Arc::new(match rt.resolve(&obj) {
@@ -2703,9 +2430,6 @@ fn chars(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize
 ) -> Result<Option<Variable>, String> {
     let t = rt.stack.pop().expect(TINVOTS);
     let t = match rt.resolve(&t) {
@@ -2727,9 +2451,6 @@ fn now(
     _rt: &mut Runtime,
     _call: &ast::Call,
     _module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize
 ) -> Result<Option<Variable>, String> {
     use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -2749,9 +2470,6 @@ fn is_nan(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>,
-    _st: usize,
-    _lc: usize,
-    _cu: usize,
 ) -> Result<Option<Variable>, String> {
     let v = rt.stack.pop().expect(TINVOTS);
     let v = match rt.resolve(&v) {
