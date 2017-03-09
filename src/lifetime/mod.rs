@@ -389,7 +389,7 @@ pub fn check(
         let name = node.name().expect("Expected name").clone();
         if let Some(ref alias) = node.alias {
             if let Some(&i) = use_lookup.aliases.get(alias).and_then(|map| map.get(&name)) {
-                prelude.list[i].lts.clone();
+                node.lts = prelude.list[i].lts.clone();
                 continue;
             } else {
                 return Err(node.source.wrap(
