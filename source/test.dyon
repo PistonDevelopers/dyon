@@ -1,4 +1,12 @@
 fn main() {
-    loader := unwrap(load("source/namespace/loader.dyon"))
-    call(loader, "main", [])
+    _ := unwrap(join(thread: go foo()))
+}
+
+fn foo() -> bool {
+    bar()
+    return true
+}
+
+fn bar() {
+    println("hi")
 }
