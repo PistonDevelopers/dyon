@@ -352,7 +352,10 @@ impl Runtime {
             Break(ref b) => Ok((None, Flow::Break(b.label.clone()))),
             Continue(ref b) => Ok((None, Flow::ContinueLoop(b.label.clone()))),
             Go(ref go) => self.go(go, module),
-            Call(ref call) => self.call(call, module),
+            Call(ref call) => {
+                let loader = false;
+                self.call_internal(call, loader, module)
+            }
             Item(ref item) => self.item(item, side, module),
             Norm(ref norm) => self.norm(norm, side, module),
             UnOp(ref unop) => self.unop(unop, side, module),
@@ -593,7 +596,8 @@ impl Runtime {
                     return Err(module.error(f.args[0].source_range,
                                "`main` should not have arguments", self))
                 }
-                try!(self.call(&call, &module));
+                let loader = false;
+                try!(self.call_internal(&call, loader, &module));
                 Ok(())
             }
             _ => return Err(module.error(call.source_range,
@@ -699,7 +703,8 @@ impl Runtime {
             let mut new_rt = new_rt;
             let new_module = Arc::new(new_module);
             let fake_call = fake_call;
-            Ok(match new_rt.call(&fake_call, &new_module) {
+            let loader = false;
+            Ok(match new_rt.call_internal(&fake_call, loader, &new_module) {
                 Err(err) => return Err(err),
                 Ok((None, _)) => {
                     new_rt.stack.pop().expect(TINVOTS)
@@ -850,9 +855,24 @@ impl Runtime {
         }
     }
 
+    /// Called from the outside, e.g. a loader script by `call` or `call_ret` intrinsic.
     pub fn call(
         &mut self,
         call: &ast::Call,
+        module: &Arc<Module>
+    ) -> Result<(Option<Variable>, Flow), String> {
+        self.call_internal(call, true, module)
+    }
+
+    /// Used internally because loaded functions are resolved
+    /// relative to the caller, which stores its index on the
+    /// call stack.
+    ///
+    /// The `loader` flag is set to `true` when called from the outside.
+    fn call_internal(
+        &mut self,
+        call: &ast::Call,
+        loader: bool,
         module: &Arc<Module>
     ) -> Result<(Option<Variable>, Flow), String> {
         use FnExternalRef;
@@ -892,7 +912,9 @@ impl Runtime {
                 return Ok((Some(self.stack.pop().expect(TINVOTS)), Flow::Continue));
             }
             FnIndex::Loaded(f_index) => {
-                let relative = self.call_stack.last().map(|c| c.index).unwrap_or(0);
+                let relative = if loader {0} else {
+                    self.call_stack.last().map(|c| c.index).unwrap_or(0)
+                };
                 let new_index = (f_index + relative as isize) as usize;
                 let f = &module.functions[new_index];
                 if call.arg_len() != f.args.len() {
@@ -1031,6 +1053,7 @@ impl Runtime {
         }
     }
 
+    /// Calls function by name.
     pub fn call_str(
         &mut self,
         function: &str,
