@@ -1,12 +1,4 @@
 fn main() {
-    _ := unwrap(join(thread: go foo()))
-}
-
-fn foo() -> bool {
-    bar()
-    return true
-}
-
-fn bar() {
-    println("hi")
+    v := parse_number("5000")
+    println(unwrap(v))
 }

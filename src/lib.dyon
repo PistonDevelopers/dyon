@@ -55,6 +55,9 @@ fn random() -> f64 { ... }
 /// and then asks again.
 fn read_number(message: str) -> f64 { ... }
 
+/// Parses number from string.
+fn parse_number(text: str) -> opt[f64] { ... }
+
 /// Reads a line from standard input.
 fn read_line() -> str { ... }
 
