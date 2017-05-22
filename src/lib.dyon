@@ -288,7 +288,11 @@ fn load_string__url(url: str) -> res[str] { ... }
 /// Waits for thread to finish and returns the result.
 fn join__thread(t: thr[any]) -> res[any] { ... }
 
-/// Saves data to file, replacing any existing file.
+/// Loads Dyon data from file.
+/// Returns `ok(data)` if loading succeeded.
+fn load_data__file(file: str) -> res[any] { ... }
+
+/// Saves Dyon data to file, replacing any existing file.
 /// Returns `ok(file)` if saving succeeded.
 /// Designed to be easy to use with threads.
 fn save__data_file(data: any, file: str) -> res[str] { ... }
