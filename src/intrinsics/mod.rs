@@ -112,6 +112,7 @@ const SYNTAX__IN_STRING: usize = 88;
 const META__SYNTAX_IN_STRING: usize = 89;
 const MODULE__IN_STRING_IMPORTS: usize = 90;
 const LOAD_STRING__URL: usize = 91;
+const PARSE_NUMBER: usize = 92;
 
 const TABLE: &'static [(usize, fn(
         &mut Runtime,
@@ -211,6 +212,7 @@ const TABLE: &'static [(usize, fn(
     (META__SYNTAX_IN_STRING, meta__syntax_in_string),
     (MODULE__IN_STRING_IMPORTS, module__in_string_imports),
     (LOAD_STRING__URL, load_string__url),
+    (PARSE_NUMBER, parse_number),
 ];
 
 pub fn standard(f: &mut Prelude) {
@@ -441,6 +443,7 @@ pub fn standard(f: &mut Prelude) {
         ret: Type::result()
     });
     sarg(f, "load_string__url", LOAD_STRING__URL, Type::Text, Type::Result(Box::new(Type::Text)));
+    sarg(f, "parse_number", PARSE_NUMBER, Type::Text, Type::Option(Box::new(Type::F64)));
 }
 
 pub fn call_standard(
@@ -1186,6 +1189,23 @@ fn read_number(
         }
     }
     Ok(rv)
+}
+
+fn parse_number(
+    rt: &mut Runtime,
+    call: &ast::Call,
+    module: &Arc<Module>,
+) -> Result<Option<Variable>, String> {
+    let text = rt.stack.pop().expect(TINVOTS);
+    let text= match rt.resolve(&text) {
+        &Variable::Text(ref t) => t.clone(),
+        x => return Err(module.error(call.args[0].source_range(),
+                &rt.expected(x, "text"), rt))
+    };
+    Ok(Some(Variable::Option(match text.trim().parse::<f64>() {
+        Ok(v) => Some(Box::new(Variable::f64(v))),
+        Err(_) => None
+    })))
 }
 
 fn trim(
