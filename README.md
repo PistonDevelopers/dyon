@@ -1,7 +1,8 @@
 # dyon
 A rusty dynamically typed scripting language
 
-[Tutorial](http://www.piston.rs/dyon-tutorial/)
+[Tutorial](http://www.piston.rs/dyon-tutorial/)  
+[Dyon Snippets](https://github.com/PistonDevelopers/dyon_snippets)
 
 Dyon script files ends with ".dyon".
 
