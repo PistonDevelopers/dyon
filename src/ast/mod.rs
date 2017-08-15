@@ -90,9 +90,16 @@ impl UseLookup {
             let mut fns = aliases.get_mut(&use_import.alias).unwrap();
             for use_fn in &use_import.fns {
                 for (i, f) in module.functions.iter().enumerate().rev() {
-                    if &*f.namespace == &use_import.names && &f.name == &use_fn.0 {
+                    if &*f.namespace != &use_import.names {continue;}
+                    if &f.name == &use_fn.0 {
                         fns.insert(use_fn.1.as_ref().unwrap_or(&use_fn.0).clone(), i);
-                        break;
+                    } else if f.name.len() > use_fn.0.len() &&
+                              f.name.starts_with(&**use_fn.0) &&
+                              f.name.as_bytes()[use_fn.0.len()] == '(' as u8 {
+                        // A function with mutable information.
+                        let mut name: Arc<String> = use_fn.1.as_ref().unwrap_or(&use_fn.0).clone();
+                        Arc::make_mut(&mut name).push_str(&f.name.as_str()[use_fn.0.len()..]);
+                        fns.insert(name, i);
                     }
                 }
             }
@@ -126,9 +133,16 @@ impl UseLookup {
             let mut fns = aliases.get_mut(&use_import.alias).unwrap();
             for use_fn in &use_import.fns {
                 for (i, f) in prelude.namespaces.iter().enumerate().rev() {
-                    if &*f.0 == &use_import.names && &f.1 == &use_fn.0 {
+                    if &*f.0 != &use_import.names {continue;}
+                    if &f.1 == &use_fn.0 {
                         fns.insert(use_fn.1.as_ref().unwrap_or(&use_fn.0).clone(), i);
-                        break;
+                    } else if f.1.len() > use_fn.0.len() &&
+                              f.1.starts_with(&**use_fn.0) &&
+                              f.1.as_bytes()[use_fn.0.len()] == '(' as u8 {
+                        // A function with mutable information.
+                        let mut name: Arc<String> = use_fn.1.as_ref().unwrap_or(&use_fn.0).clone();
+                        Arc::make_mut(&mut name).push_str(&f.1.as_str()[use_fn.0.len()..]);
+                        fns.insert(name, i);
                     }
                 }
             }

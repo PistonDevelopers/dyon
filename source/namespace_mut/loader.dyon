@@ -1,0 +1,10 @@
+ns loader
+
+fn main() {
+    foo := unwrap(load("source/namespace_mut/foo.dyon"))
+    main := unwrap(load(
+        source: "source/namespace_mut/main.dyon",
+        imports: [foo]
+    ))
+    call(main, "main", [])
+}

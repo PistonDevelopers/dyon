@@ -1,4 +1,4 @@
 fn main() {
-    v := parse_number("5000")
-    println(unwrap(v))
+    loader := unwrap(load("source/namespace_mut/loader.dyon"))
+    call(loader, "main", [])
 }

@@ -1,0 +1,5 @@
+ns foo
+
+fn bar(mut a: f64) {
+    a = 3
+}
