@@ -393,7 +393,7 @@ pub fn check(
                 continue;
             } else {
                 return Err(node.source.wrap(
-                    format!("Could not find function `{}`", name)));
+                    format!("Could not find function `{}::{}`", alias, name)));
             }
         }
         let i = match function_lookup.get(&name) {

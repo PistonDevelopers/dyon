@@ -1,0 +1,8 @@
+use foo::{bar as baz} as foo
+
+fn main() {
+    a := 2
+    println(a)
+    foo::baz(mut a)
+    println(a)
+}
