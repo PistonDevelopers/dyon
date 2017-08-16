@@ -23,7 +23,7 @@ Dyon script files ends with ".dyon".
 - Functions without return `fn foo() { ... }`
 - Functions with return `fn foo() -> { ... return x }`
 - Functions as mathematical expresisons `f(x) = x / (x - 1)`
-- [Optional namespaces with shared aliases](https://github.com/PistonDevelopers/dyon/issues/434) `ns programm::example::test`
+- [Optional namespaces with shared aliases](https://github.com/PistonDevelopers/dyon/issues/434) `ns program::example::test`
 - [Lifetime checker](https://github.com/PistonDevelopers/dyon/issues/173) (no garbage collector is needed) `fn foo(mut a, b: 'a) { a.x = b }`
 - [Mutability checker](https://github.com/PistonDevelopers/dyon/issues/112) `fn foo(mut a) { bar(mut a) }`
 - [Return lifetime](https://github.com/PistonDevelopers/dyon/issues/173) `fn id(x: 'return) -> { return x }`
