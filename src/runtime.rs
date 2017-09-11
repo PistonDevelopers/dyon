@@ -1242,8 +1242,8 @@ impl Runtime {
                         &format!("{}\nExpected something from the left side",
                             self.stack_trace()), self))
             };
-            let mut r = match a {
-                Variable::UnsafeRef(mut r) => {
+            let r = match a {
+                Variable::UnsafeRef(r) => {
                     // If reference, use a shallow clone to type check,
                     // without affecting the original object.
                     unsafe {
@@ -1681,7 +1681,7 @@ impl Runtime {
                                         self.stack_trace()), self))
                         };
                         match x {
-                            Variable::UnsafeRef(mut r) => {
+                            Variable::UnsafeRef(r) => {
                                 unsafe { *r.0 = v }
                             }
                             _ => panic!("Expected unsafe reference")

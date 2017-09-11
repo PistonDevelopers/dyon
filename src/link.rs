@@ -244,7 +244,7 @@ impl Link {
             &Variable::F64(_, _) |
             &Variable::Text(_) => {
                 if self.slices.len() > 0 {
-                    let mut last = self.slices.last_mut().unwrap();
+                    let last = self.slices.last_mut().unwrap();
                     if (last.end as usize) < BLOCK_SIZE {
                         Arc::make_mut(&mut last.block).push(v, last.end as usize);
                         last.end += 1;
@@ -253,7 +253,7 @@ impl Link {
                 }
 
                 self.slices.push(Slice::new());
-                let mut last = self.slices.last_mut().unwrap();
+                let last = self.slices.last_mut().unwrap();
                 Arc::make_mut(&mut last.block).push(v, 0);
                 last.end = 1;
                 Ok(())

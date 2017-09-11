@@ -74,7 +74,7 @@ impl UseLookup {
             if !aliases.contains_key(&use_import.alias) {
                 aliases.insert(use_import.alias.clone(), HashMap::new());
             }
-            let mut fns = aliases.get_mut(&use_import.alias).unwrap();
+            let fns = aliases.get_mut(&use_import.alias).unwrap();
             for (i, f) in module.functions.iter().enumerate().rev() {
                 if &*f.namespace == &use_import.names {
                     fns.insert(f.name.clone(), i);
@@ -87,7 +87,7 @@ impl UseLookup {
             if !aliases.contains_key(&use_import.alias) {
                 aliases.insert(use_import.alias.clone(), HashMap::new());
             }
-            let mut fns = aliases.get_mut(&use_import.alias).unwrap();
+            let fns = aliases.get_mut(&use_import.alias).unwrap();
             for use_fn in &use_import.fns {
                 for (i, f) in module.functions.iter().enumerate().rev() {
                     if &*f.namespace != &use_import.names {continue;}
@@ -117,7 +117,7 @@ impl UseLookup {
             if !aliases.contains_key(&use_import.alias) {
                 aliases.insert(use_import.alias.clone(), HashMap::new());
             }
-            let mut fns = aliases.get_mut(&use_import.alias).unwrap();
+            let fns = aliases.get_mut(&use_import.alias).unwrap();
             for (i, f) in prelude.namespaces.iter().enumerate().rev() {
                 if &*f.0 == &use_import.names {
                     fns.insert(f.1.clone(), i);
@@ -130,7 +130,7 @@ impl UseLookup {
             if !aliases.contains_key(&use_import.alias) {
                 aliases.insert(use_import.alias.clone(), HashMap::new());
             }
-            let mut fns = aliases.get_mut(&use_import.alias).unwrap();
+            let fns = aliases.get_mut(&use_import.alias).unwrap();
             for use_fn in &use_import.fns {
                 for (i, f) in prelude.namespaces.iter().enumerate().rev() {
                     if &*f.0 != &use_import.names {continue;}
