@@ -1,4 +1,3 @@
 fn main() {
-    loader := unwrap(load("source/namespace_mut/loader.dyon"))
-    call(loader, "main", [])
+    println("hi")
 }

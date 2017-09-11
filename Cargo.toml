@@ -1,6 +1,6 @@
 [package]
 name = "dyon"
-version = "0.24.6"
+version = "0.24.7"
 authors = ["Sven Nilsen <bvssvni@gmail.com>"]
 keywords = ["script", "scripting", "game", "language", "piston"]
 description = "A rusty dynamically typed scripting language"
