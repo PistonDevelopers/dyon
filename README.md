@@ -7,6 +7,18 @@ A rusty dynamically typed scripting language
 
 Dyon script files ends with ".dyon".
 
+To run Dyon script files from command line, type:
+
+```
+cargo install --example dyonrun dyon
+```
+
+Then, to run a script file you type:
+
+```
+dyonrun <file.dyon>
+```
+
 ### Editor-plugins
 
 [Dyon for the Atom Editor](https://github.com/PistonDevelopers/atom-language-dyon)
