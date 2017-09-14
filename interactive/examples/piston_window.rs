@@ -17,12 +17,12 @@ fn main() {
         .unwrap();
     let dyon_module = match load_module() {
         None => return,
-        Some(m) => m
+        Some(m) => Arc::new(m)
     };
     let mut dyon_runtime = Runtime::new();
     let factory = window.factory.clone();
     let font = "assets/FiraSans-Regular.ttf";
-    let mut glyphs = Glyphs::new(font, factory).unwrap();
+    let mut glyphs = Glyphs::new(font, factory, TextureSettings::new()).unwrap();
 
     let mut e: Option<Event> = None;
     let window_guard = CurrentGuard::new(&mut window);
