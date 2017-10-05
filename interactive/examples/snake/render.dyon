@@ -34,7 +34,7 @@ fn circle__color_center_radius(color: vec4, center: vec4, radius: f64)
     ellipse(color: color, corner: center - radius, size: (width, width))
 }
 
-fn text__color_size_pos_string(color: vec4, size: f64, pos: vec4, text: str)
+fn text__font_color_size_pos_string(font: f64, color: vec4, size: f64, pos: vec4, text: str)
 ~ mut draw_list: [[]] {
-    push(mut draw_list, ["text__color_size_pos_string", color, size, pos, text])
+    push(mut draw_list, ["text__font_color_size_pos_string", font, color, size, pos, text])
 }

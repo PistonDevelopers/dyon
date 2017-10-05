@@ -2,11 +2,14 @@ extern crate dyon;
 extern crate piston_window;
 extern crate current;
 extern crate dyon_interactive;
+extern crate gfx_device_gl;
 
+use gfx_device_gl::Factory;
 use std::sync::Arc;
 use piston_window::*;
 use current::CurrentGuard;
 use dyon::{error, load, Lt, Module, Dfn, Runtime, Type};
+use dyon_interactive::FontNames;
 
 fn main() {
     let file = std::env::args_os().nth(1)
@@ -38,17 +41,32 @@ fn main() {
         Some(m) => Arc::new(m)
     };
     let mut dyon_runtime = Runtime::new();
-    let factory = window.factory.clone();
-    let font = "../../assets/FiraSans-Regular.ttf";
-    let mut glyphs = Glyphs::new(font, factory, TextureSettings::new()).unwrap();
+    let mut factory = window.factory.clone();
+    let fira_sans = include_bytes!("../assets/FiraSans-Regular.ttf");
+    let hack = include_bytes!("../assets/Hack-Regular.ttf");
+    // TODO: Clone texture settings when `TextureSettings` derives `Clone`.
+    let font_texture_settings1 = TextureSettings::new().filter(Filter::Nearest);
+    let font_texture_settings2 = TextureSettings::new().filter(Filter::Nearest);
+    let mut glyphs = vec![
+        Glyphs::from_bytes(&fira_sans[..], factory.clone(), font_texture_settings1).unwrap(),
+        Glyphs::from_bytes(&hack[..], factory.clone(), font_texture_settings2).unwrap()
+    ];
+    let mut font_names = FontNames(vec![
+        Arc::new("FiraSans-Regular".to_owned()),
+        Arc::new("Hack-Regular".to_owned()),
+    ]);
 
     let mut e: Option<Event> = None;
     let window_guard = CurrentGuard::new(&mut window);
     let event_guard: CurrentGuard<Option<Event>> = CurrentGuard::new(&mut e);
-    let glyphs_guard: CurrentGuard<Glyphs> = CurrentGuard::new(&mut glyphs);
+    let glyphs_guard: CurrentGuard<Vec<Glyphs>> = CurrentGuard::new(&mut glyphs);
+    let font_names_guard: CurrentGuard<FontNames> = CurrentGuard::new(&mut font_names);
+    let factory_guard: CurrentGuard<Factory> = CurrentGuard::new(&mut factory);
     if error(dyon_runtime.run(&dyon_module)) {
         return;
     }
+    drop(factory_guard);
+    drop(font_names_guard);
     drop(glyphs_guard);
     drop(event_guard);
     drop(window_guard);
@@ -59,7 +77,7 @@ fn load_module(file: &str) -> Option<Module> {
     use dyon_interactive::add_functions;
 
     let mut module = Module::new();
-    add_functions::<PistonWindow, Glyphs>(&mut module);
+    add_functions::<PistonWindow, Factory, Glyphs>(&mut module);
     module.add(Arc::new("draw".into()), draw, Dfn {
         lts: vec![Lt::Default],
         tys: vec![Type::array()],
@@ -88,7 +106,7 @@ mod dyon_functions {
 
         let window = unsafe { &mut *Current::<PistonWindow>::new() };
         let e = unsafe { &*Current::<Option<Event>>::new() };
-        let glyphs = unsafe { &mut *Current::<Glyphs>::new() };
+        let glyphs = unsafe { &mut *Current::<Vec<Glyphs>>::new() };
         if let &Some(ref e) = e {
             window.draw_2d(e, |c, g| {
                 draw_2d(rt, glyphs, c, g)
