@@ -9,19 +9,37 @@ use current::CurrentGuard;
 use dyon::{error, load, Lt, Module, Dfn, Runtime, Type};
 
 fn main() {
+    let file = std::env::args_os().nth(1)
+        .and_then(|s| s.into_string().ok());
+    let file = if let Some(file) = file {
+        use std::env::set_current_dir;
+        use std::path::PathBuf;
+
+        let path: PathBuf = (&file).into();
+        if let Some(parent) = path.parent() {
+            set_current_dir(parent).expect("Could not set current directory");
+            path.file_name().unwrap().to_str().unwrap().to_owned()
+        } else {
+            file
+        }
+    } else {
+        println!("dyongame <file.dyon>");
+        return;
+    };
+
     let mut window: PistonWindow =
-        WindowSettings::new("dyon: piston_window", [512; 2])
+        WindowSettings::new("dyongame", [512; 2])
         .exit_on_esc(true)
         .samples(4)
         .build()
         .unwrap();
-    let dyon_module = match load_module() {
+    let dyon_module = match load_module(&file) {
         None => return,
         Some(m) => Arc::new(m)
     };
     let mut dyon_runtime = Runtime::new();
     let factory = window.factory.clone();
-    let font = "assets/FiraSans-Regular.ttf";
+    let font = "../../assets/FiraSans-Regular.ttf";
     let mut glyphs = Glyphs::new(font, factory, TextureSettings::new()).unwrap();
 
     let mut e: Option<Event> = None;
@@ -36,7 +54,7 @@ fn main() {
     drop(window_guard);
 }
 
-fn load_module() -> Option<Module> {
+fn load_module(file: &str) -> Option<Module> {
     use dyon_functions::*;
     use dyon_interactive::add_functions;
 
@@ -53,7 +71,7 @@ fn load_module() -> Option<Module> {
             tys: vec![],
             ret: Type::Bool
         });
-    if error(load("examples/piston_window/loader.dyon", &mut module)) {
+    if error(load(file, &mut module)) {
         None
     } else {
         Some(module)

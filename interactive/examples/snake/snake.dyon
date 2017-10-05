@@ -1,7 +1,7 @@
 title() = "Snake!"
 
 fn init() {
-    functions := unwrap(load("examples/common/functions.dyon"))
+    functions := unwrap(load("../common/functions.dyon"))
     list := functions()
     println("===================")
     println("External functions:")
