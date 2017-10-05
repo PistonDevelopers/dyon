@@ -41,7 +41,7 @@ fn init_data(settings: Settings) -> Data {
         pressing_right: false,
         focused: true,
     }
-    data.next_snake_body := data.snake_body
+    data.next_snake_body := clone(data.snake_body)
     return clone(data)
 }
 
@@ -77,7 +77,7 @@ fn render() ~ settings: Settings, data: Data {
         line(color: #1510dc, radius: 1, from: pos, to: pos2)
     }
 
-    normal := #38642b
+    normal := #3864b2
     laser := #b02525
 
     walls := [
