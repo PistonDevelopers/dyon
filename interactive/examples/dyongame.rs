@@ -31,8 +31,11 @@ fn main() {
 
         let path: PathBuf = (&file).into();
         if let Some(parent) = path.parent() {
-            set_current_dir(parent).expect("Could not set current directory");
-            path.file_name().unwrap().to_str().unwrap().to_owned()
+            if let Err(_) = set_current_dir(parent) {
+                file
+            } else {
+                path.file_name().unwrap().to_str().unwrap().to_owned()
+            }
         } else {
             file
         }
