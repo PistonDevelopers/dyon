@@ -1,7 +1,7 @@
 title() = "Snake!"
 
 fn init() {
-    functions := unwrap(load("examples/common/functions.dyon"))
+    functions := unwrap(load("../common/functions.dyon"))
     list := functions()
     println("===================")
     println("External functions:")
@@ -91,7 +91,12 @@ fn render() ~ settings: Settings, data: Data {
         line(color: walls[i][0], radius: 5, from: walls[i][1], to: walls[i][2])
     }
 
-    text(color: #004400, size: 60, pos: (250, 80), string: "Hello!")
+    text(font: 0, color: #004400, size: 60, pos: (250, 80), string: "Hello!")
+
+    font_names := font_names()
+    if len(font_names) == 2 {
+        _ := unwrap(load_font("../../assets/Hack-Regular.ttf"))
+    }
 
     draw(draw_list)
 }

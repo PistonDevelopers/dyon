@@ -2,6 +2,7 @@ extern crate piston;
 extern crate dyon;
 extern crate current;
 extern crate graphics;
+extern crate texture;
 
 use std::any::Any;
 use std::sync::Arc;
@@ -11,10 +12,21 @@ use self::piston::input::*;
 use self::piston::window::*;
 use self::graphics::{Context, Graphics};
 use self::graphics::character::CharacterCache;
+use texture::CreateTexture;
 
 pub const NO_EVENT: &'static str = "No event";
 
-pub fn add_functions<W: Any + AdvancedWindow, C: Any + CharacterCache>(module: &mut Module) {
+/// Adds functions to module, using a generic backend.
+///
+/// `W` is window.
+/// `F` is factory (to create textures).
+/// `C` is character cache.
+pub fn add_functions<W, F, C>(module: &mut Module)
+    where W: Any + AdvancedWindow,
+          F: 'static + Clone,
+          C::Texture: CreateTexture<F>,
+          C: Any + CharacterCache,
+{
     module.add(Arc::new("window_size".into()), window_size::<W>, Dfn {
         lts: vec![],
         tys: vec![],
@@ -101,12 +113,26 @@ pub fn add_functions<W: Any + AdvancedWindow, C: Any + CharacterCache>(module: &
             tys: vec![],
             ret: Type::Option(Box::new(Type::F64))
         });
-    module.add(Arc::new("width__size_string".into()),
-        width__size_string::<C>, Dfn {
-            lts: vec![Lt::Default; 2],
-            tys: vec![Type::F64, Type::Text],
+    module.add(Arc::new("width__font_size_string".into()),
+        width__font_size_string::<C>, Dfn {
+            lts: vec![Lt::Default; 3],
+            tys: vec![Type::F64, Type::F64, Type::Text],
             ret: Type::F64
         });
+    module.add(Arc::new("font_names".into()),
+        font_names, Dfn {
+            lts: vec![],
+            tys: vec![],
+            ret: Type::Array(Box::new(Type::Text))
+        }
+    );
+    module.add(Arc::new("load_font".into()),
+        load_font::<F, C::Texture>, Dfn {
+            lts: vec![Lt::Default],
+            tys: vec![Type::Text],
+            ret: Type::Result(Box::new(Type::Text))
+        }
+    );
 }
 
 pub fn window_size<W: Any + Window>(rt: &mut Runtime) -> Result<(), String> {
@@ -242,18 +268,54 @@ pub fn set__title<W: Any + AdvancedWindow>(rt: &mut Runtime) -> Result<(), Strin
 }
 
 #[allow(non_snake_case)]
-pub fn width__size_string<C: Any + CharacterCache>(rt: &mut Runtime) -> Result<(), String> {
-    let glyphs = unsafe { &mut *Current::<C>::new() };
-    let s: Arc<String> = try!(rt.pop());
-    let size: u32 = try!(rt.pop());
-    rt.push(glyphs.width(size, &s));
+pub fn width__font_size_string<C: Any + CharacterCache>(rt: &mut Runtime) -> Result<(), String> {
+    let glyphs = unsafe { &mut *Current::<Vec<C>>::new() };
+    let s: Arc<String> = rt.pop()?;
+    let size: u32 = rt.pop()?;
+    let font: usize = rt.pop()?;
+    rt.push(glyphs.get_mut(font).ok_or_else(|| "Font index outside range".to_owned())?
+        .width(size, &s).map_err(|_| "Could not get glyph".to_owned())?);
+    Ok(())
+}
+
+/// Wraps font names as a current object.
+pub struct FontNames(pub Vec<Arc<String>>);
+
+pub fn font_names(rt: &mut Runtime) -> Result<(), String> {
+    let font_names = unsafe { &*Current::<FontNames>::new() };
+    rt.push(font_names.0.clone());
+    Ok(())
+}
+
+/// Helper method for loading fonts.
+pub fn load_font<F, T>(rt: &mut Runtime) -> Result<(), String>
+    where F: 'static + Clone, T: 'static + CreateTexture<F> + graphics::ImageSize
+{
+    use texture::{Filter, TextureSettings};
+    use graphics::glyph_cache::rusttype::GlyphCache;
+
+    let glyphs = unsafe { &mut *Current::<Vec<GlyphCache<'static, F, T>>>::new() };
+    let font_names = unsafe { &mut *Current::<FontNames>::new() };
+    let factory = unsafe { &*Current::<F>::new() };
+    let file: Arc<String> = rt.pop()?;
+    let texture_settings = TextureSettings::new().filter(Filter::Nearest);
+    match GlyphCache::<'static, F, T>::new(&**file, factory.clone(), texture_settings) {
+        Ok(x) => {
+            glyphs.push(x);
+            font_names.0.push(file.clone());
+            rt.push(Ok::<Arc<String>, Arc<String>>(file));
+        }
+        Err(err) => {
+            rt.push(Err::<Arc<String>, Arc<String>>(Arc::new(format!("{}", err))));
+        }
+    }
     Ok(())
 }
 
 /// Helper method for drawing 2D in Dyon environment.
 pub fn draw_2d<C: CharacterCache<Texture = G::Texture>, G: Graphics>(
     rt: &mut Runtime,
-    glyphs: &mut C,
+    glyphs: &mut Vec<C>,
     c: Context,
     g: &mut G
 ) -> Result<(), String> {
@@ -315,17 +377,19 @@ pub fn draw_2d<C: CharacterCache<Texture = G::Texture>, G: Graphics>(
                         .resolution(resolution as u32)
                         .draw([corner[0], corner[1], size[0], size[1]], &c.draw_state, transform, g);
                     }
-                    "text__color_size_pos_string" => {
-                        let color: [f32; 4] = try!(rt.var_vec4(&it[1]));
-                        let size: u32 = try!(rt.var(&it[2]));
-                        let pos: [f64; 2] = try!(rt.var_vec4(&it[3]));
-                        let text: Arc<String> = try!(rt.var(&it[4]));
+                    "text__font_color_size_pos_string" => {
+                        let font: usize = rt.var(&it[1])?;
+                        let color: [f32; 4] = rt.var_vec4(&it[2])?;
+                        let size: u32 = rt.var(&it[3])?;
+                        let pos: [f64; 2] = rt.var_vec4(&it[4])?;
+                        let text: Arc<String> = rt.var(&it[5])?;
                         text::Text::new_color(color, size).draw(
                             &text,
-                            glyphs,
+                            glyphs.get_mut(font)
+                                .ok_or_else(|| "Font index outside range".to_owned())?,
                             &c.draw_state,
                             transform.trans(pos[0], pos[1]), g
-                        );
+                        ).map_err(|_| "Could not get glyph".to_owned())?;
                     }
                     _ => {}
                 }

@@ -16,11 +16,14 @@ version = "0.25.0"
 path = ".."
 
 [dependencies]
-piston = "~0.33.0"
-current = "~0.1.1"
-piston2d-graphics = "~0.21.1"
+piston = "0.34.0"
+current = "0.1.2"
+piston-texture = "0.5.0"
+
+[dependencies.piston2d-graphics]
+version = "0.22.0"
+features = ["glyph_cache_rusttype"]
 
 [dev-dependencies]
-piston_window = "~0.70.0"
-piston2d-glium_graphics = "~0.42.0"
-glium = "~0.17.1"
+piston_window = "0.71.1"
+gfx_device_gl = "0.14.4"

@@ -48,3 +48,14 @@ fn press_mouse_button() -> opt[f64] { ... }
 
 /// Returns the mouse button for release event.
 fn release_mouse_button() -> opt[f64] { ... }
+
+/// Returns the width of rendered text for a given font.
+fn width__font_size_string(font: f64, size: f64, text: str) -> f64 { ... }
+
+/// Returns list of font names.
+fn font_names() -> [str] { ... }
+
+/// Loads font from file.
+///
+/// Returns `ok(<file>)` when successful.
+fn load_font(file: str) -> res[str] { ... }
