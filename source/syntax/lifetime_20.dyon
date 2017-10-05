@@ -1,0 +1,6 @@
+fn main() {
+    i := 0
+    _ := foo(clone(i))
+}
+
+foo(a: 'return f64) = [a]

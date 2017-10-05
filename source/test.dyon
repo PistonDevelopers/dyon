@@ -1,9 +1,11 @@
 fn main() {
-    a := [0]
-    for i 2 {
-        a[0] := {foo: clone(i)}
+    b := [0]
+    a := [0, 0]
+    for i {
+        a[i] := foo(b)
     }
+    a[0][0][0] = 2
     println(a)
 }
 
-foo(a: 'return f64) = [a]
+foo(a: 'return [f64]) = [a]
