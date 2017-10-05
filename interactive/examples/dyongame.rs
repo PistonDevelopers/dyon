@@ -3,6 +3,7 @@ extern crate piston_window;
 extern crate current;
 extern crate dyon_interactive;
 extern crate gfx_device_gl;
+extern crate music;
 
 use gfx_device_gl::Factory;
 use std::sync::Arc;
@@ -10,6 +11,16 @@ use piston_window::*;
 use current::CurrentGuard;
 use dyon::{error, load, Lt, Module, Dfn, Runtime, Type};
 use dyon_interactive::FontNames;
+
+#[derive(Clone, Hash, PartialEq, Eq)]
+enum Music {
+    Name(Arc<String>),
+}
+
+#[derive(Clone, Hash, PartialEq, Eq)]
+enum Sound {
+    Name(Arc<String>),
+}
 
 fn main() {
     let file = std::env::args_os().nth(1)
@@ -62,9 +73,13 @@ fn main() {
     let glyphs_guard: CurrentGuard<Vec<Glyphs>> = CurrentGuard::new(&mut glyphs);
     let font_names_guard: CurrentGuard<FontNames> = CurrentGuard::new(&mut font_names);
     let factory_guard: CurrentGuard<Factory> = CurrentGuard::new(&mut factory);
-    if error(dyon_runtime.run(&dyon_module)) {
-        return;
-    }
+
+    music::start::<Music, Sound, _>(16, || {
+        if error(dyon_runtime.run(&dyon_module)) {
+            return;
+        }
+    });
+
     drop(factory_guard);
     drop(font_names_guard);
     drop(glyphs_guard);
@@ -89,6 +104,48 @@ fn load_module(file: &str) -> Option<Module> {
             tys: vec![],
             ret: Type::Bool
         });
+    module.add(Arc::new("bind_sound__name_file".into()),
+        bind_sound__name_file, Dfn {
+            lts: vec![Lt::Default; 2],
+            tys: vec![Type::Text; 2],
+            ret: Type::Void
+        });
+    module.add(Arc::new("bind_music__name_file".into()),
+        bind_music__name_file, Dfn {
+            lts: vec![Lt::Default; 2],
+            tys: vec![Type::Text; 2],
+            ret: Type::Void
+        });
+    module.add(Arc::new("play_sound__name_repeat_volume".into()),
+        play_sound__name_repeat_volume, Dfn {
+            lts: vec![Lt::Default; 3],
+            tys: vec![Type::Text, Type::F64, Type::F64],
+            ret: Type::Void
+        });
+    module.add(Arc::new("play_sound_forever__name_volume".into()),
+        play_sound_forever__name_volume, Dfn {
+            lts: vec![Lt::Default; 2],
+            tys: vec![Type::Text, Type::F64],
+            ret: Type::Void
+        });
+    module.add(Arc::new("play_music__name_repeat".into()),
+        play_music__name_repeat, Dfn {
+            lts: vec![Lt::Default; 2],
+            tys: vec![Type::Text, Type::F64],
+            ret: Type::Void
+        });
+    module.add(Arc::new("play_music_forever__name".into()),
+        play_music_forever__name, Dfn {
+            lts: vec![Lt::Default; 1],
+            tys: vec![Type::Text],
+            ret: Type::Void
+        });
+    module.add(Arc::new("set_music_volume".into()),
+        set_music_volume, Dfn {
+            lts: vec![Lt::Default],
+            tys: vec![Type::F64],
+            ret: Type::Void
+        });
     if error(load(file, &mut module)) {
         None
     } else {
@@ -100,6 +157,9 @@ mod dyon_functions {
     use dyon::Runtime;
     use dyon_interactive::{draw_2d, NO_EVENT};
     use current::Current;
+    use std::sync::Arc;
+    use music;
+    use {Music, Sound};
 
     pub fn draw(rt: &mut Runtime) -> Result<(), String> {
         use piston_window::*;
@@ -128,6 +188,70 @@ mod dyon_functions {
             *e = None;
             rt.push(false);
         }
+        Ok(())
+    }
+
+    #[allow(non_snake_case)]
+    pub fn bind_sound__name_file(rt: &mut Runtime) -> Result<(), String> {
+        let file: Arc<String> = rt.pop()?;
+        let name: Arc<String> = rt.pop()?;
+        music::bind_sound_file(Sound::Name(name), &**file);
+        Ok(())
+    }
+
+    #[allow(non_snake_case)]
+    pub fn bind_music__name_file(rt: &mut Runtime) -> Result<(), String> {
+        let file: Arc<String> = rt.pop()?;
+        let name: Arc<String> = rt.pop()?;
+        music::bind_music_file(Music::Name(name), &**file);
+        Ok(())
+    }
+
+    #[allow(non_snake_case)]
+    pub fn play_sound__name_repeat_volume(rt: &mut Runtime) -> Result<(), String> {
+        use music::Repeat;
+
+        let volume: f64 = rt.pop()?;
+        let repeat: f64 = rt.pop()?;
+        let name: Arc<String> = rt.pop()?;
+        let repeat = if repeat == -1.0 {Repeat::Forever} else {Repeat::Times(repeat as u16)};
+        music::play_sound(&Sound::Name(name), repeat, volume);
+        Ok(())
+    }
+
+    #[allow(non_snake_case)]
+    pub fn play_sound_forever__name_volume(rt: &mut Runtime) -> Result<(), String> {
+        use music::Repeat;
+
+        let volume: f64 = rt.pop()?;
+        let name: Arc<String> = rt.pop()?;
+        music::play_sound(&Sound::Name(name), Repeat::Forever, volume);
+        Ok(())
+    }
+
+    #[allow(non_snake_case)]
+    pub fn play_music__name_repeat(rt: &mut Runtime) -> Result<(), String> {
+        use music::Repeat;
+
+        let repeat: f64 = rt.pop()?;
+        let name: Arc<String> = rt.pop()?;
+        let repeat = if repeat == -1.0 {Repeat::Forever} else {Repeat::Times(repeat as u16)};
+        music::play_music(&Music::Name(name), repeat);
+        Ok(())
+    }
+
+    #[allow(non_snake_case)]
+    pub fn play_music_forever__name(rt: &mut Runtime) -> Result<(), String> {
+        use music::Repeat;
+
+        let name: Arc<String> = rt.pop()?;
+        music::play_music(&Music::Name(name), Repeat::Forever);
+        Ok(())
+    }
+
+    pub fn set_music_volume(rt: &mut Runtime) -> Result<(), String> {
+        let volume: f64 = rt.pop()?;
+        music::set_volume(volume);
         Ok(())
     }
 }

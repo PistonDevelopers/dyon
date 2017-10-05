@@ -27,3 +27,4 @@ features = ["glyph_cache_rusttype"]
 [dev-dependencies]
 piston_window = "0.71.1"
 gfx_device_gl = "0.14.4"
+piston-music = "0.23.0"
