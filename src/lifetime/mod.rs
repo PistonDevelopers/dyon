@@ -640,7 +640,14 @@ pub fn check(
             // Item is some levels down inside arg/add/expr/mul/val
             loop {
                 let node: &Node = &nodes[n];
-                if node.kind == Kind::Item { break; }
+                match node.kind {
+                    Kind::Item => break,
+                    Kind::Call => {
+                        can_be_item = false;
+                        break;
+                    }
+                    _ => {}
+                }
                 if node.children.len() == 0 {
                     can_be_item = false;
                     break;
