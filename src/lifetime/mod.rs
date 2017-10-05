@@ -15,7 +15,7 @@ use ast::{AssignOp, UseLookup};
 use Type;
 
 mod kind;
-pub mod node;
+mod node;
 mod lt;
 mod typecheck;
 
@@ -129,7 +129,26 @@ pub fn check(
                 (i, j)
             })
         // Filter out assignments to objects or arrays to get locals only.
-        .filter(|&(_, j)| nodes[j].ids == 0)
+        .filter(|&(_, j)| !nodes[j].item_ids())
+        .collect();
+
+    // Collect indices to assignments to object or arrays.
+    let assigned_locals: Vec<(usize, usize)> = nodes.iter().enumerate()
+        .filter(|&(_, n)| {
+            n.op == Some(AssignOp::Assign) &&
+            n.children.len() > 0 &&
+            nodes[n.children[0]].children.len() > 0
+        })
+        .map(|(i, n)| {
+                // Left argument.
+                let j = n.children[0];
+                let node = &nodes[j];
+                // Item in left argument.
+                let j = node.children[0];
+                (i, j)
+            })
+        // Filter to get assignments to objects or arrays only.
+        .filter(|&(_, j)| nodes[j].item_ids())
         .collect();
 
     // Collect indices to mutated locals.
@@ -501,6 +520,17 @@ pub fn check(
         let ref lifetime_right = nodes[right].lifetime(&nodes, &arg_names);
         try!(compare_lifetimes(lifetime_left, lifetime_right, &nodes)
                 .map_err(|err| nodes[right].source.wrap(err)));
+    }
+
+    // Check the lifetime of assigned locals.
+    for &(a, i) in &assigned_locals {
+        if let Some(j) = nodes[i].declaration {
+            let right = nodes[a].children[1];
+            let ref lifetime_left = Some(Lifetime::Local(j));
+            let ref lifetime_right = nodes[right].lifetime(&nodes, &arg_names);
+            try!(compare_lifetimes(lifetime_left, lifetime_right, &nodes)
+                    .map_err(|err| nodes[right].source.wrap(err)));
+        }
     }
 
     // Check the lifetime of returned values.

@@ -43,9 +43,6 @@ pub struct Node {
     pub op: Option<AssignOp>,
     /// Binary operators.
     pub binops: Vec<BinOp>,
-    /// Number of ids.
-    /// Used to determine declaration of locals.
-    pub ids: u32,
     /// The argument lifetime constraints, one for each argument to a function.
     /// Just using an empty vector for nodes that are not functions.
     pub lts: Vec<Lt>,
@@ -57,6 +54,7 @@ impl Node {
         else { Some(&self.names[0]) }
     }
 
+    #[allow(dead_code)]
     pub fn print(&self, nodes: &[Node], indent: u32) {
         for _ in 0..indent { print!(" ") }
         println!("kind: {:?}, name: {:?}, type: {:?}, decl: {:?} {{",
@@ -338,7 +336,6 @@ pub fn convert_meta_data(
                     declaration: None,
                     op: None,
                     binops: vec![],
-                    ids: 0,
                     lts: vec![]
                 });
             }
@@ -384,10 +381,6 @@ pub fn convert_meta_data(
                     "lifetime" => {
                         let i = *parents.last().unwrap();
                         nodes[i].lifetime = Some(val.clone());
-                    }
-                    "id" => {
-                        let i = *parents.last().unwrap();
-                        nodes[i].ids += 1;
                     }
                     "text" => {
                         let i = *parents.last().unwrap();

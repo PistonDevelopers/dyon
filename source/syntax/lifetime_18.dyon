@@ -1,0 +1,7 @@
+fn main() {
+    a := {}
+    for i 2 {
+        a[str(0)] := {foo: i}
+    }
+    println(a)
+}
