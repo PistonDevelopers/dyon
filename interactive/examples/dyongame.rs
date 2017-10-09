@@ -2,10 +2,8 @@ extern crate dyon;
 extern crate piston_window;
 extern crate current;
 extern crate dyon_interactive;
-extern crate gfx_device_gl;
 extern crate music;
 
-use gfx_device_gl::Factory;
 use std::sync::Arc;
 use piston_window::*;
 use current::CurrentGuard;
@@ -58,12 +56,10 @@ fn main() {
     let mut factory = window.factory.clone();
     let fira_sans = include_bytes!("../assets/FiraSans-Regular.ttf");
     let hack = include_bytes!("../assets/Hack-Regular.ttf");
-    // TODO: Clone texture settings when `TextureSettings` derives `Clone`.
-    let font_texture_settings1 = TextureSettings::new().filter(Filter::Nearest);
-    let font_texture_settings2 = TextureSettings::new().filter(Filter::Nearest);
+    let font_texture_settings = TextureSettings::new().filter(Filter::Nearest);
     let mut glyphs = vec![
-        Glyphs::from_bytes(&fira_sans[..], factory.clone(), font_texture_settings1).unwrap(),
-        Glyphs::from_bytes(&hack[..], factory.clone(), font_texture_settings2).unwrap()
+        Glyphs::from_bytes(&fira_sans[..], factory.clone(), font_texture_settings.clone()).unwrap(),
+        Glyphs::from_bytes(&hack[..], factory.clone(), font_texture_settings).unwrap()
     ];
     let mut font_names = FontNames(vec![
         Arc::new("FiraSans-Regular".to_owned()),
@@ -75,7 +71,7 @@ fn main() {
     let event_guard: CurrentGuard<Option<Event>> = CurrentGuard::new(&mut e);
     let glyphs_guard: CurrentGuard<Vec<Glyphs>> = CurrentGuard::new(&mut glyphs);
     let font_names_guard: CurrentGuard<FontNames> = CurrentGuard::new(&mut font_names);
-    let factory_guard: CurrentGuard<Factory> = CurrentGuard::new(&mut factory);
+    let factory_guard: CurrentGuard<GfxFactory> = CurrentGuard::new(&mut factory);
 
     music::start::<Music, Sound, _>(16, || {
         if error(dyon_runtime.run(&dyon_module)) {
@@ -95,7 +91,7 @@ fn load_module(file: &str) -> Option<Module> {
     use dyon_interactive::add_functions;
 
     let mut module = Module::new();
-    add_functions::<PistonWindow, Factory, Glyphs>(&mut module);
+    add_functions::<PistonWindow, GfxFactory, Glyphs>(&mut module);
     module.add(Arc::new("draw".into()), draw, Dfn {
         lts: vec![Lt::Default],
         tys: vec![Type::array()],
