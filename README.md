@@ -54,7 +54,7 @@ dyonrun <file.dyon>
 - [Link loop](https://github.com/PistonDevelopers/dyon/issues/418)
 - Infinite loop `loop { ... }`
 - Unlabeled break `loop { break }`
-- Unlabled continue `loop { continue }`
+- Unlabeled continue `loop { continue }`
 - Labeled break `'a: loop { break 'a }`
 - Labeled continue `'a: loop { continue 'a }`
 - [Use `return` as a variable without exiting `return = 8`](https://github.com/PistonDevelopers/dyon/issues/169)
@@ -82,7 +82,7 @@ dyonrun <file.dyon>
 
 ### Why the name Dyon?
 
-Dyon is a hypothetical particle predicted by several grand unified theories in physics with both eletrical and magnetic charge. See [wikipedia article](https://en.wikipedia.org/wiki/Dyon) for more information.
+Dyon is a hypothetical particle predicted by several grand unified theories in physics with both electrical and magnetic charge. See [wikipedia article](https://en.wikipedia.org/wiki/Dyon) for more information.
 
 The name Dyon fits because, just like the particle, there are things that are yet to be discovered about language design.
 However, this language was not born out of a grand new vision,

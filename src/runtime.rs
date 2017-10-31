@@ -13,7 +13,7 @@ use Variable;
 use UnsafeRef;
 use TINVOTS;
 
-/// Which side an expression is evalutated.
+/// Which side an expression is evaluated.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Side {
     /// Whether to insert key in object when missing.
@@ -1838,7 +1838,7 @@ impl Runtime {
             }
         }
 
-        // Pre-evalutate expressions for identity.
+        // Pre-evaluate expressions for identity.
         let start_stack_len = self.stack.len();
         for id in &item.ids {
             if let &Id::Expression(ref expr) = id {
