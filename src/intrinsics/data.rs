@@ -13,11 +13,17 @@ use Variable;
 type Strings = HashSet<Arc<String>>;
 
 /// Loads data from a file.
+#[cfg(feature = "file")]
 pub fn load_file(file: &str) -> Result<Variable, String> {
     let mut data_file = try!(File::open(file).map_err(|err| io_error("open", file, &err)));
     let mut d = String::new();
     try!(data_file.read_to_string(&mut d).map_err(|err| io_error("read", file, &err)));
     load_data(&d)
+}
+
+#[cfg(not(feature = "file"))]
+pub fn load_file(_: &str) -> Result<Variable, String> {
+    Err(super::FILE_SUPPORT_DISABLED.into())
 }
 
 /// Loads data from text.
