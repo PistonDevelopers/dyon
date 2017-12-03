@@ -20,6 +20,12 @@ mod data;
 mod lifetimechk;
 mod functions;
 
+#[cfg(not(feature = "http"))]
+const HTTP_SUPPORT_DISABLED: &'static str = "Http support is disabled";
+
+#[cfg(not(feature = "file"))]
+const FILE_SUPPORT_DISABLED: &'static str = "File support is disabled";
+
 const X: usize = 0;
 const Y: usize = 1;
 const Z: usize = 2;
@@ -2145,6 +2151,7 @@ fn download__url_file(
     })))
 }
 
+#[cfg(feature = "file")]
 fn save__string_file(
     rt: &mut Runtime,
     call: &ast::Call,
@@ -2184,6 +2191,16 @@ fn save__string_file(
     })))
 }
 
+#[cfg(not(feature = "file"))]
+fn save__string_file(
+    _: &mut Runtime,
+    _: &ast::Call,
+    _: &Arc<Module>,
+) -> Result<Option<Variable>, String> {
+    Err(FILE_SUPPORT_DISABLED.into())
+}
+
+#[cfg(feature = "file")]
 fn load_string__file(
     rt: &mut Runtime,
     call: &ast::Call,
@@ -2220,6 +2237,15 @@ fn load_string__file(
             trace: vec![]
         }))
     })))
+}
+
+#[cfg(not(feature = "file"))]
+fn load_string__file(
+    _: &mut Runtime,
+    _: &ast::Call,
+    _: &Arc<Module>,
+) -> Result<Option<Variable>, String> {
+    Err(FILE_SUPPORT_DISABLED.into())
 }
 
 fn load_string__url(
@@ -2308,6 +2334,7 @@ fn load_data__file(
     Ok(Some(Variable::Result(res)))
 }
 
+#[cfg(feature = "file")]
 fn save__data_file(
     rt: &mut Runtime,
     call: &ast::Call,
@@ -2346,6 +2373,15 @@ fn save__data_file(
         }
     };
     Ok(Some(Variable::Result(res)))
+}
+
+#[cfg(not(feature = "file"))]
+fn save__data_file(
+    _: &mut Runtime,
+    _: &ast::Call,
+    _: &Arc<Module>,
+) -> Result<Option<Variable>, String> {
+    Err(FILE_SUPPORT_DISABLED.into())
 }
 
 fn json_from_meta_data(

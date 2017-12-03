@@ -11,9 +11,6 @@ use super::io::io_error;
 
 use Variable;
 
-#[cfg(not(feature = "http"))]
-const HTTP_SUPPORT_DISABLED: &'static str = "Http support is disabled";
-
 pub fn parse_syntax_data(rules: &Syntax, file: &str, d: &str) -> Result<Vec<Variable>, String> {
     let mut tokens = vec![];
     try!(parse_errstr(&rules, &d, &mut tokens).map_err(|err|
@@ -65,6 +62,7 @@ fn load_metarules_data(meta: &str, s: &str, file: &str, d: &str) -> Result<Vec<V
 }
 
 /// Loads a file using a meta file as syntax.
+#[cfg(feature = "file")]
 pub fn load_meta_file(meta: &str, file: &str) -> Result<Vec<Variable>, String> {
     let mut syntax_file = try!(File::open(meta).map_err(|err| io_error("open", meta, &err)));
     let mut s = String::new();
@@ -73,6 +71,11 @@ pub fn load_meta_file(meta: &str, file: &str) -> Result<Vec<Variable>, String> {
     let mut d = String::new();
     try!(data_file.read_to_string(&mut d).map_err(|err| io_error("read", file, &err)));
     load_metarules_data(meta, &s, file, &d)
+}
+
+#[cfg(not(feature = "file"))]
+pub fn load_meta_file(_: &str, _: &str) -> Result<Vec<Variable>, String> {
+    Err(super::FILE_SUPPORT_DISABLED.into())
 }
 
 /// Loads a text file from url.
@@ -104,7 +107,7 @@ pub fn load_text_file_from_url(url: &str) -> Result<String, String> {
 
 #[cfg(not(feature = "http"))]
 pub fn load_text_file_from_url(_url: &str) -> Result<String, String> {
-    Err(HTTP_SUPPORT_DISABLED.into())
+    Err(super::HTTP_SUPPORT_DISABLED.into())
 }
 
 /// Loads an url using a meta file as syntax.
@@ -119,7 +122,7 @@ pub fn load_meta_url(meta: &str, url: &str) -> Result<Vec<Variable>, String> {
 
 #[cfg(not(feature = "http"))]
 pub fn load_meta_url(_meta: &str, _url: &str) -> Result<Vec<Variable>, String> {
-    Err(HTTP_SUPPORT_DISABLED.into())
+    Err(super::HTTP_SUPPORT_DISABLED.into())
 }
 
 // Downloads a file from url.
@@ -155,7 +158,7 @@ pub fn download_url_to_file(url: &str, file: &str) -> Result<String, String> {
 
 #[cfg(not(feature = "http"))]
 pub fn download_url_to_file(_url: &str, _file: &str) -> Result<String, String> {
-    Err(HTTP_SUPPORT_DISABLED.into())
+    Err(super::HTTP_SUPPORT_DISABLED.into())
 }
 
 pub fn json_from_meta_data(data: &Vec<Variable>) -> Result<String, io::Error> {
