@@ -1,6 +1,6 @@
 [package]
 name = "dyon"
-version = "0.25.0"
+version = "0.26.0"
 authors = ["Sven Nilsen <bvssvni@gmail.com>"]
 keywords = ["script", "scripting", "game", "language", "piston"]
 description = "A rusty dynamically typed scripting language"
@@ -14,9 +14,9 @@ exclude = ["images/*"]
 piston_meta = "0.29.1"
 range = "0.3.1"
 rand = "0.3.13"
-read_color = "0.1.0"
+read_color = "1.0.0"
 read_token = "0.9.0"
-lazy_static = "0.2.1"
+lazy_static = "1.0.0"
 
 [dependencies.reqwest]
 version = "0.4.0"
