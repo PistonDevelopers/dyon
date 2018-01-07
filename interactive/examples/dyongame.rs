@@ -1,3 +1,4 @@
+#[macro_use]
 extern crate dyon;
 extern crate piston_window;
 extern crate current;
@@ -52,6 +53,7 @@ fn main() {
         None => return,
         Some(m) => Arc::new(m)
     };
+
     let mut dyon_runtime = Runtime::new();
     let mut factory = window.factory.clone();
     let fira_sans = include_bytes!("../assets/FiraSans-Regular.ttf");
@@ -92,6 +94,11 @@ fn load_module(file: &str) -> Option<Module> {
 
     let mut module = Module::new();
     add_functions::<PistonWindow, GfxFactory, Glyphs>(&mut module);
+    module.add(Arc::new("render_source".into()), render_source, Dfn {
+        lts: vec![],
+        tys: vec![],
+        ret: Type::Text
+    });
     module.add(Arc::new("draw".into()), draw, Dfn {
         lts: vec![Lt::Default],
         tys: vec![Type::array()],
@@ -145,6 +152,15 @@ fn load_module(file: &str) -> Option<Module> {
             tys: vec![Type::F64],
             ret: Type::Void
         });
+
+    if error(dyon::load_str(
+        "render.dyon",
+        Arc::new(include_str!("../src/render.dyon").into()),
+        &mut module
+    )) {
+        return None;
+    }
+
     if error(load(file, &mut module)) {
         None
     } else {
@@ -159,6 +175,8 @@ mod dyon_functions {
     use std::sync::Arc;
     use music;
     use {Music, Sound};
+
+    dyon_fn!{fn render_source() -> String {include_str!("../src/render.dyon").into()}}
 
     pub fn draw(rt: &mut Runtime) -> Result<(), String> {
         use piston_window::*;
