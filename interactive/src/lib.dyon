@@ -1,3 +1,14 @@
+/// Returns the source code of render module.
+/// The render module is imported from source by default in the top module.
+///
+/// In loader scripts, to import the render module in loaded modules:
+/// ```
+/// render := unwrap(module(in: "render.dyon", string: render_source(), imports: []))
+/// source := "snake.dyon"
+/// m := unwrap(load(source: source, imports: [render]))
+/// ```
+fn render_source() -> str { ... }
+
 /// Returns the window size without border in points.
 fn window_size() -> vec4 { ... }
 

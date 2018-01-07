@@ -322,7 +322,7 @@ pub fn draw_2d<C: CharacterCache<Texture = G::Texture>, G: Graphics>(
     use self::graphics::*;
     use self::graphics::types::Matrix2d;
 
-    let draw_list = rt.stack.pop().expect("There is no value on the stack");
+    let draw_list = rt.stack.pop().expect(TINVOTS);
     let arr = rt.resolve(&draw_list);
     let mut transform = c.transform;
     if let &Variable::Array(ref arr) = arr {

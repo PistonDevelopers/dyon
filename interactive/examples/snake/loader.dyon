@@ -4,7 +4,7 @@ fn main() {
     println("Reset with R.")
     println("You can modify \"source/piston_window/snake.rs\" while running.")
 
-    render := unwrap(load("render.dyon"))
+    render := unwrap(module(in: "render.dyon", string: render_source(), imports: []))
     source := "snake.dyon"
     m := unwrap(load(source: source, imports: [render]))
     call(m, "init", [])
