@@ -119,6 +119,9 @@ const META__SYNTAX_IN_STRING: usize = 89;
 const MODULE__IN_STRING_IMPORTS: usize = 90;
 const LOAD_STRING__URL: usize = 91;
 const PARSE_NUMBER: usize = 92;
+const INSERT: usize = 93;
+const INSERT_REF: usize = 94;
+const REMOVE: usize = 95;
 
 const TABLE: &'static [(usize, fn(
         &mut Runtime,
@@ -219,6 +222,9 @@ const TABLE: &'static [(usize, fn(
     (MODULE__IN_STRING_IMPORTS, module__in_string_imports),
     (LOAD_STRING__URL, load_string__url),
     (PARSE_NUMBER, parse_number),
+    (INSERT, insert),
+    (INSERT_REF, insert_ref),
+    (REMOVE, remove),
 ];
 
 pub fn standard(f: &mut Prelude) {
@@ -450,6 +456,21 @@ pub fn standard(f: &mut Prelude) {
     });
     sarg(f, "load_string__url", LOAD_STRING__URL, Type::Text, Type::Result(Box::new(Type::Text)));
     sarg(f, "parse_number", PARSE_NUMBER, Type::Text, Type::Option(Box::new(Type::F64)));
+    f.intrinsic(Arc::new("insert(mut,_,_)".into()), INSERT, Dfn {
+        lts: vec![Lt::Default; 3],
+        tys: vec![Type::array(), Type::F64, Type::Any],
+        ret: Type::Void
+    });
+    f.intrinsic(Arc::new("insert_ref(mut,_,_)".into()), INSERT_REF, Dfn {
+        lts: vec![Lt::Default, Lt::Default, Lt::Arg(0)],
+        tys: vec![Type::array(), Type::F64, Type::Any],
+        ret: Type::Void
+    });
+    f.intrinsic(Arc::new("remove(mut,_)".into()), REMOVE, Dfn {
+        lts: vec![Lt::Return, Lt::Default],
+        tys: vec![Type::array(), Type::F64],
+        ret: Type::Any
+    });
 }
 
 pub fn call_standard(
@@ -980,6 +1001,49 @@ fn push_ref(
     Ok(None)
 }
 
+fn insert_ref(
+    rt: &mut Runtime,
+    call: &ast::Call,
+    module: &Arc<Module>,
+) -> Result<Option<Variable>, String> {
+    let item = rt.stack.pop().expect(TINVOTS);
+    let index = rt.stack.pop().expect(TINVOTS);
+    let index = match *rt.resolve(&index) {
+        Variable::F64(index, _) => index,
+        _ => return Err(module.error(call.args[1].source_range(),
+                        &format!("{}\nExpected number",
+                            rt.stack_trace()), rt))
+    };
+    let v = rt.stack.pop().expect(TINVOTS);
+
+    if let Variable::Ref(ind) = v {
+        if let Variable::Array(ref arr) = rt.stack[ind] {
+            let index = index as usize;
+            if index > arr.len() {
+                return Err(module.error(call.source_range,
+                            &format!("{}\nIndex out of bounds",
+                            rt.stack_trace()), rt))
+            }
+        }
+        let ok = if let Variable::Array(ref mut arr) = rt.stack[ind] {
+            Arc::make_mut(arr).insert(index as usize, item);
+            true
+        } else {
+            false
+        };
+        if !ok {
+            return Err(module.error(call.args[0].source_range(),
+                &format!("{}\nExpected reference to array",
+                    rt.stack_trace()), rt));
+        }
+    } else {
+        return Err(module.error(call.args[0].source_range(),
+            &format!("{}\nExpected reference to array",
+                rt.stack_trace()), rt));
+    }
+    Ok(None)
+}
+
 fn push(
     rt: &mut Runtime,
     call: &ast::Call,
@@ -992,6 +1056,50 @@ fn push(
     if let Variable::Ref(ind) = v {
         let ok = if let Variable::Array(ref mut arr) = rt.stack[ind] {
             Arc::make_mut(arr).push(item);
+            true
+        } else {
+            false
+        };
+        if !ok {
+            return Err(module.error(call.args[0].source_range(),
+                &format!("{}\nExpected reference to array",
+                    rt.stack_trace()), rt));
+        }
+    } else {
+        return Err(module.error(call.args[0].source_range(),
+            &format!("{}\nExpected reference to array",
+                rt.stack_trace()), rt));
+    }
+    Ok(None)
+}
+
+fn insert(
+    rt: &mut Runtime,
+    call: &ast::Call,
+    module: &Arc<Module>
+) -> Result<Option<Variable>, String> {
+    let item = rt.stack.pop().expect(TINVOTS);
+    let item = rt.resolve(&item).deep_clone(&rt.stack);
+    let index = rt.stack.pop().expect(TINVOTS);
+    let index = match *rt.resolve(&index) {
+        Variable::F64(index, _) => index,
+        _ => return Err(module.error(call.args[1].source_range(),
+                        &format!("{}\nExpected number",
+                            rt.stack_trace()), rt))
+    };
+    let v = rt.stack.pop().expect(TINVOTS);
+
+    if let Variable::Ref(ind) = v {
+        if let Variable::Array(ref arr) = rt.stack[ind] {
+            let index = index as usize;
+            if index > arr.len() {
+                return Err(module.error(call.source_range,
+                            &format!("{}\nIndex out of bounds",
+                            rt.stack_trace()), rt))
+            }
+        }
+        let ok = if let Variable::Array(ref mut arr) = rt.stack[ind] {
+            Arc::make_mut(arr).insert(index as usize, item);
             true
         } else {
             false
@@ -1040,6 +1148,43 @@ fn pop(
         Some(val) => val
     };
     Ok(Some(v))
+}
+
+fn remove(
+    rt: &mut Runtime,
+    call: &ast::Call,
+    module: &Arc<Module>,
+) -> Result<Option<Variable>, String> {
+    let index = rt.stack.pop().expect(TINVOTS);
+    let index = match *rt.resolve(&index) {
+        Variable::F64(index, _) => index,
+        _ => return Err(module.error(call.args[1].source_range(),
+                        &format!("{}\nExpected number",
+                            rt.stack_trace()), rt))
+    };
+    let arr = rt.stack.pop().expect(TINVOTS);
+    if let Variable::Ref(ind) = arr {
+        if let Variable::Array(ref arr) = rt.stack[ind] {
+            let index = index as usize;
+            if index >= arr.len() {
+                return Err(module.error(call.source_range,
+                            &format!("{}\nIndex out of bounds",
+                            rt.stack_trace()), rt))
+            }
+        }
+        if let Variable::Array(ref mut arr) = rt.stack[ind] {
+            return Ok(Some(Arc::make_mut(arr).remove(index as usize)));
+        } else {
+            false
+        };
+        return Err(module.error(call.args[0].source_range(),
+            &format!("{}\nExpected reference to array",
+                rt.stack_trace()), rt));
+    } else {
+        return Err(module.error(call.args[0].source_range(),
+            &format!("{}\nExpected reference to array",
+                rt.stack_trace()), rt));
+    }
 }
 
 fn reverse(
