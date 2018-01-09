@@ -1,11 +1,9 @@
 fn main() {
-    b := [0]
-    a := [0, 0]
-    for i {
-        a[i] := foo(b)
-    }
-    a[0][0][0] = 2
+    b := "hi"
+    a := [0, 2]
+    insert_ref(mut a, 1, b)
     println(a)
+    b = clone(remove(mut a, 1))
+    println(a)
+    println(b)
 }
-
-foo(a: 'return [f64]) = [a]

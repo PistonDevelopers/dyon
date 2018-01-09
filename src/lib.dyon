@@ -70,8 +70,17 @@ fn push_ref(mut array: [any], item: 'array any) { ... }
 /// Appends a deep clone of an item at end of array.
 fn push(mut array: [any], item: any) { ... }
 
+/// Inserts item at index in array.
+fn insert_ref(mut array: [any], index: f64, item: 'array any) { ... }
+
+/// Inserts a deep clone of an item at index in array.
+fn insert(mut array: [any], index: f64, item: 'array any) { ... }
+
 /// Removes last item from array.
 fn pop(mut array: 'return [any]) -> any { ... }
+
+/// Removes item from array at index.
+fn remove(mut array: 'return [any], index: f64) -> any { ... }
 
 /// Reverses the items in array.
 fn reverse(mut array: [any]) { ... }
