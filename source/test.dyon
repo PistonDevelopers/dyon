@@ -1,8 +1,6 @@
 fn main() {
-    watch_run := in run \() = true
-    
     for i 100 {
-        inbox := in log \(msg: str) = msg != "3"
+        inbox := in log
 
         run()
 
@@ -13,14 +11,6 @@ fn main() {
             print(res[0])
         }
     }
-
-    sum := 0
-    loop {
-        if try_next(watch_run) == none() {break}
-        sum += 1
-    }
-    println("")
-    println(sum)
 }
 
 fn log(msg: str) {}

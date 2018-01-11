@@ -1553,7 +1553,7 @@ fn _typeof(
         &Variable::Result(_) => rt.result_type.clone(),
         &Variable::Thread(_) => rt.thread_type.clone(),
         &Variable::Closure(_, _) => rt.closure_type.clone(),
-        &Variable::InOut(_) => rt.inout_type.clone(),
+        &Variable::In(_) => rt.in_type.clone(),
     }))
 }
 
@@ -2705,7 +2705,7 @@ fn next(
 
     let v = rt.stack.pop().expect(TINVOTS);
     Ok(Some(match rt.resolve(&v) {
-        &Variable::InOut(ref mutex) => {
+        &Variable::In(ref mutex) => {
             match mutex.lock() {
                 Ok(x) => match x.recv() {
                     Ok(x) => Variable::Option(Some(Box::new(x))),
@@ -2713,12 +2713,12 @@ fn next(
                 },
                 Err(err) => {
                     return Err(module.error(call.source_range,
-                    &format!("Can not lock InOut mutex:\n{}", err.description()), rt));
+                    &format!("Can not lock In mutex:\n{}", err.description()), rt));
                 }
             }
         }
         x => return Err(module.error(call.args[0].source_range(),
-                        &rt.expected(x, "inout"), rt))
+                        &rt.expected(x, "in"), rt))
     }))
 }
 
@@ -2731,7 +2731,7 @@ fn try_next(
 
     let v = rt.stack.pop().expect(TINVOTS);
     Ok(Some(match rt.resolve(&v) {
-        &Variable::InOut(ref mutex) => {
+        &Variable::In(ref mutex) => {
             match mutex.lock() {
                 Ok(x) => match x.try_recv() {
                     Ok(x) => Variable::Option(Some(Box::new(x))),
@@ -2739,11 +2739,11 @@ fn try_next(
                 },
                 Err(err) => {
                     return Err(module.error(call.source_range,
-                    &format!("Can not lock InOut mutex:\n{}", err.description()), rt));
+                    &format!("Can not lock In mutex:\n{}", err.description()), rt));
                 }
             }
         }
         x => return Err(module.error(call.args[0].source_range(),
-                        &rt.expected(x, "inout"), rt))
+                        &rt.expected(x, "in"), rt))
     }))
 }

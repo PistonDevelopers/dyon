@@ -202,10 +202,7 @@ fn infer_expr(
             let res = infer_expr(&tr.expr, name, decls);
             if res.is_some() { return res; }
         }
-        In(ref in_expr) => {
-            let res = infer_expr(&in_expr.filter, name, decls);
-            if res.is_some() { return res; }
-        }
+        In(_) => {}
     };
     None
 }

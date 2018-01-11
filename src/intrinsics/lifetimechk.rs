@@ -78,6 +78,6 @@ fn min_ref(v: &Variable, min: &mut Option<usize>) {
             }
         }
         &Variable::Closure(_, _) => {}
-        &Variable::InOut(_) => {}
+        &Variable::In(_) => {}
     }
 }

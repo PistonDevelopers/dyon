@@ -1,7 +1,6 @@
 fn main() {
-    T := \(_) = true
     th := [
-        go watch(in foo T, in done T),
+        go watch(in foo, in done),
         go bar()
     ]
 

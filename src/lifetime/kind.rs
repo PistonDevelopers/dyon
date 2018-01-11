@@ -87,7 +87,6 @@ pub enum Kind {
     Grab,
     TryExpr,
     In,
-    Filter,
 }
 
 impl Kind {
@@ -181,7 +180,6 @@ impl Kind {
             "grab" => Kind::Grab,
             "try_expr" => Kind::TryExpr,
             "in" => Kind::In,
-            "filter" => Kind::Filter,
             _ => return None
         })
     }

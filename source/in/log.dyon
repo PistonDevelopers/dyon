@@ -1,6 +1,6 @@
 fn main() {
     for i 100 {
-        inbox := in log \(msg: str) = true
+        inbox := in log
 
         run()
 

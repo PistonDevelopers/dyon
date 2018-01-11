@@ -442,15 +442,8 @@ pub fn grab_expr(
                 source_range: try_expr.source_range.clone(),
             }))), Flow::Continue))
         }
-        &E::In(ref in_expr) => {
-            Ok((Grabbed::Expression(E::In(Box::new(ast::InOut {
-                name: in_expr.name.clone(),
-                filter: match grab_expr(level, rt, &in_expr.filter, side, module) {
-                    Ok((Grabbed::Expression(x), Flow::Continue)) => x,
-                    x => return x,
-                },
-                source_range: in_expr.source_range.clone(),
-            }))), Flow::Continue))
+        &E::In(_) => {
+            Ok((Grabbed::Expression(expr.clone()), Flow::Continue))
         }
     }
 }

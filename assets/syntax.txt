@@ -128,7 +128,7 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\\"
 47 compare_op = {"==":"==" "!=":"!=" "¬=":"!=" "<=":"<=" "<":"<" ">=":">=" ">":">"}
 48 grab = ["grab" ?[w "'" .$:"grab_level"] w expr:"expr"]
 49 try_expr = ["try" w expr:"expr"]
-50 in = ["in" w .._seps!:"name" w arg_expr:"filter"]
+50 in = ["in" w .._seps!:"name"]
 
 60 label = ?["'" .._seps!:"label" ?w ":" ?w]
 61 short_body = [.w! .s!.(, [.._seps!:"name" ?w

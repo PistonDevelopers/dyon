@@ -136,7 +136,7 @@ pub enum Variable {
     Thread(Thread),
     // Stores closure AST, relative function index.
     Closure(Arc<ast::Closure>, Box<ClosureEnvironment>),
-    InOut(Arc<Mutex<::std::sync::mpsc::Receiver<Variable>>>),
+    In(Arc<Mutex<::std::sync::mpsc::Receiver<Variable>>>),
 }
 
 /// This is requires because `UnsafeRef(*mut Variable)` can not be sent across threads.
@@ -191,7 +191,7 @@ impl Variable {
             Result(Err(ref err)) => Result(Err(err.clone())),
             Thread(_) => self.clone(),
             Closure(_, _) => self.clone(),
-            InOut(_) => self.clone(),
+            In(_) => self.clone(),
         }
     }
 }

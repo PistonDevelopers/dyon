@@ -72,7 +72,7 @@ pub struct Runtime {
     pub result_type: Variable,
     pub thread_type: Variable,
     pub closure_type: Variable,
-    pub inout_type: Variable,
+    pub in_type: Variable,
 }
 
 #[inline(always)]
@@ -234,7 +234,7 @@ impl Runtime {
             result_type: Variable::Text(Arc::new("result".into())),
             thread_type: Variable::Text(Arc::new("thread".into())),
             closure_type: Variable::Text(Arc::new("closure".into())),
-            inout_type: Variable::Text(Arc::new("inout".into())),
+            in_type: Variable::Text(Arc::new("in".into())),
         }
     }
 
@@ -400,14 +400,14 @@ impl Runtime {
         }
     }
 
-    fn in_expr(&mut self, in_expr: &ast::InOut, _module: &Arc<Module>)
+    fn in_expr(&mut self, in_expr: &ast::In, _module: &Arc<Module>)
     -> Result<(Option<Variable>, Flow), String> {
         use std::sync::mpsc::channel;
         use std::sync::Mutex;
 
         let (tx, rx) = channel();
         self.senders.entry(in_expr.name.clone()).or_insert(vec![]).push(tx);
-        Ok((Some(::Variable::InOut(Arc::new(Mutex::new(rx)))), Flow::Continue))
+        Ok((Some(::Variable::In(Arc::new(Mutex::new(rx)))), Flow::Continue))
     }
 
     fn try_expr(&mut self, try_expr: &ast::TryExpr, module: &Arc<Module>)
@@ -714,7 +714,7 @@ impl Runtime {
             vec4_type: self.vec4_type.clone(),
             result_type: self.result_type.clone(),
             closure_type: self.closure_type.clone(),
-            inout_type: self.inout_type.clone(),
+            in_type: self.in_type.clone(),
         };
         let new_module: Module = (**module).clone();
         let handle: JoinHandle<Result<Variable, String>> = thread::spawn(move || {
@@ -2065,7 +2065,7 @@ impl Runtime {
             &Variable::Result(_) => self.result_type.clone(),
             &Variable::Thread(_) => self.thread_type.clone(),
             &Variable::Closure(_, _) => self.closure_type.clone(),
-            &Variable::InOut(_) => self.inout_type.clone(),
+            &Variable::In(_) => self.in_type.clone(),
         };
         match v {
             Variable::Text(v) => v,

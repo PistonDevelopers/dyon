@@ -845,7 +845,7 @@ pub enum Expression {
     CallClosure(Box<CallClosure>),
     Grab(Box<Grab>),
     TryExpr(Box<TryExpr>),
-    In(Box<InOut>),
+    In(Box<In>),
 }
 
 // Required because the `Sync` impl of `Variable` is unsafe.
@@ -1067,8 +1067,8 @@ impl Expression {
                     file, source, convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::TryExpr(Box::new(val)));
-            } else if let Ok((range, val)) = InOut::from_meta_data(
-                    file, source, "in", convert, ignored) {
+            } else if let Ok((range, val)) = In::from_meta_data(
+                    "in", convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::In(Box::new(val)));
             } else {
@@ -1220,8 +1220,7 @@ impl Expression {
                 grab.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             TryExpr(ref try_expr) =>
                 try_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            In(ref in_expr) =>
-                in_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
+            In(_) => {}
         }
     }
 }
@@ -3605,26 +3604,22 @@ impl CompareOp {
 }
 
 #[derive(Debug, Clone)]
-pub struct InOut {
+pub struct In {
     pub name: Arc<String>,
-    pub filter: Expression,
     pub source_range: Range,
 }
 
-impl InOut {
+impl In {
     pub fn from_meta_data(
-        file: &Arc<String>,
-        source: &Arc<String>,
         node: &'static str,
         mut convert: Convert,
         ignored: &mut Vec<Range>)
-    -> Result<(Range, InOut), ()> {
+    -> Result<(Range, In), ()> {
         let start = convert.clone();
         let start_range = try!(convert.start_node(node));
         convert.update(start_range);
 
         let mut name: Option<Arc<String>> = None;
-        let mut filter: Option<Expression> = None;
 
         loop {
             if let Ok(range) = convert.end_node(node) {
@@ -3633,10 +3628,6 @@ impl InOut {
             } else if let Ok((range, val)) = convert.meta_string("name") {
                 convert.update(range);
                 name = Some(val);
-            } else if let Ok((range, val)) = Expression::from_meta_data(
-                file, source, "filter", convert, ignored) {
-                convert.update(range);
-                filter = Some(val);
             } else {
                 let range = convert.ignore();
                 convert.update(range);
@@ -3645,24 +3636,9 @@ impl InOut {
         }
 
         let name = try!(name.ok_or(()));
-        let filter = try!(filter.ok_or(()));
-        Ok((convert.subtract(start), InOut {
+        Ok((convert.subtract(start), In {
             name,
-            filter,
             source_range: convert.source(start).unwrap()
         }))
-    }
-
-    pub fn resolve_locals(
-        &self,
-        relative: usize,
-        stack: &mut Vec<Option<Arc<String>>>,
-        closure_stack: &mut Vec<usize>,
-        module: &Module,
-        use_lookup: &UseLookup,
-    ) {
-        let st = stack.len();
-        self.filter.resolve_locals(relative, stack, closure_stack, module, use_lookup);
-        stack.truncate(st);
     }
 }
