@@ -22,9 +22,9 @@ fn foo(x: f64, y: f64) {}
 fn watch(a, done) -> bool {
     loop {
         // Get is-done flag before reading data to avoid race condition.
-        val := try_next(done)
+        val := next(done)
         loop {
-            next := try_next(a)
+            next := next(a)
             if next == none() {break}
             println(unwrap(next))
         }

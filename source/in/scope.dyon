@@ -15,7 +15,7 @@ fn log(x) {}
 
 fn report(a) {
     loop {
-        x := try_next(a)
+        x := next(a)
         if x == none() {break}
         x := unwrap(x)
         print(x[0])

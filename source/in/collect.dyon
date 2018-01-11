@@ -13,7 +13,7 @@ fn log(x) {}
 fn collect(a) -> [any] {
     return = []
     loop {
-        x := try_next(a)
+        x := next(a)
         if x == none() {break}
         x := unwrap(x)
         push(mut return, x[0])

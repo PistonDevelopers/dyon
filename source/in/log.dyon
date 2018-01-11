@@ -5,7 +5,7 @@ fn main() {
         run()
 
         loop {
-            res := try_next(inbox)
+            res := next(inbox)
             if res == none() {break}
             res := unwrap(res)
             print(res[0])

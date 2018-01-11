@@ -8,9 +8,9 @@ fn main() {
     done := in done
     th := go run()
     loop {
-        done_val := try_next(done)
+        done_val := next(done)
         loop {
-            x := try_next(log)
+            x := next(log)
             if x == none() {break}
             print(unwrap(x))
         }

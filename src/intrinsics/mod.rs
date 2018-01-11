@@ -123,7 +123,7 @@ const INSERT: usize = 93;
 const INSERT_REF: usize = 94;
 const REMOVE: usize = 95;
 const NEXT: usize = 96;
-const TRY_NEXT: usize = 97;
+const WAIT_NEXT: usize = 97;
 
 const TABLE: &'static [(usize, fn(
         &mut Runtime,
@@ -228,7 +228,7 @@ const TABLE: &'static [(usize, fn(
     (INSERT_REF, insert_ref),
     (REMOVE, remove),
     (NEXT, next),
-    (TRY_NEXT, try_next),
+    (WAIT_NEXT, wait_next),
 ];
 
 pub fn standard(f: &mut Prelude) {
@@ -480,7 +480,7 @@ pub fn standard(f: &mut Prelude) {
         tys: vec![Type::Any],
         ret: Type::Any
     });
-    f.intrinsic(Arc::new("try_next".into()), TRY_NEXT, Dfn {
+    f.intrinsic(Arc::new("wait_next".into()), WAIT_NEXT, Dfn {
         lts: vec![Lt::Default],
         tys: vec![Type::Any],
         ret: Type::Any
@@ -2696,7 +2696,7 @@ fn is_nan(
     Ok(Some(Variable::bool(v.is_nan())))
 }
 
-fn next(
+fn wait_next(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>
@@ -2722,7 +2722,7 @@ fn next(
     }))
 }
 
-fn try_next(
+fn next(
     rt: &mut Runtime,
     call: &ast::Call,
     module: &Arc<Module>

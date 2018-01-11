@@ -1,34 +1,24 @@
-/*
-This example shows how to process data chunkwise by reading
-at slower intervals.
-*/
-
 fn main() {
-    log := in log
-    done := in done
-    th := go run()
-    loop {
-        done_val := try_next(done)
-        loop {
-            x := try_next(log)
-            if x == none() {break}
-            print(unwrap(x))
-        }
-        println("")
-        if done_val != none() {break}
-        sleep(0.5)
-    }
-    _ := join(thread: th)
+    a := in log
+    log(1)
+    b := in log
+    log(2)
+    c := in log
+    log(3)
+    report(a)   // prints `123`
+    report(b)   // prints `23`
+    report(c)   // prints `3`
 }
 
-fn log(x: f64) {}
-fn done() {}
+// Dummy sink.
+fn log(x) {}
 
-fn run() -> bool {
-    for i 100 {
-        log(i)
-        sleep(0.1)
+fn report(a) {
+    loop {
+        x := next(a)
+        if x == none() {break}
+        x := unwrap(x)
+        print(x[0])
     }
-    done()
-    return true
+    println("")
 }
