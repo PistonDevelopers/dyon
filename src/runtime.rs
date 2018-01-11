@@ -53,6 +53,8 @@ pub struct Runtime {
     pub call_stack: Vec<Call>,
     pub local_stack: Vec<(Arc<String>, usize)>,
     pub current_stack: Vec<(Arc<String>, usize)>,
+    /// Stores a list of senders per function.
+    pub senders: HashMap<Arc<String>, Vec<::std::sync::mpsc::Sender<Variable>>>,
     pub ret: Arc<String>,
     pub rng: rand::StdRng,
     pub text_type: Variable,
@@ -70,6 +72,7 @@ pub struct Runtime {
     pub result_type: Variable,
     pub thread_type: Variable,
     pub closure_type: Variable,
+    pub inout_type: Variable,
 }
 
 #[inline(always)]
@@ -213,6 +216,7 @@ impl Runtime {
             call_stack: vec![],
             local_stack: vec![],
             current_stack: vec![],
+            senders: HashMap::new(),
             ret: Arc::new("return".into()),
             rng: rand::StdRng::new().unwrap(),
             text_type: Variable::Text(Arc::new("string".into())),
@@ -230,6 +234,7 @@ impl Runtime {
             result_type: Variable::Text(Arc::new("result".into())),
             thread_type: Variable::Text(Arc::new("thread".into())),
             closure_type: Variable::Text(Arc::new("closure".into())),
+            inout_type: Variable::Text(Arc::new("inout".into())),
         }
     }
 
@@ -391,7 +396,18 @@ impl Runtime {
                     &format!("{}\n`grab` expressions must be inside a closure",
                         self.stack_trace()), self)),
             TryExpr(ref try_expr) => self.try_expr(try_expr, module),
+            In(ref in_expr) => self.in_expr(in_expr, module),
         }
+    }
+
+    fn in_expr(&mut self, in_expr: &ast::InOut, _module: &Arc<Module>)
+    -> Result<(Option<Variable>, Flow), String> {
+        use std::sync::mpsc::channel;
+        use std::sync::Mutex;
+
+        let (tx, rx) = channel();
+        self.senders.entry(in_expr.name.clone()).or_insert(vec![]).push(tx);
+        Ok((Some(::Variable::InOut(Arc::new(Mutex::new(rx)))), Flow::Continue))
     }
 
     fn try_expr(&mut self, try_expr: &ast::TryExpr, module: &Arc<Module>)
@@ -680,6 +696,7 @@ impl Runtime {
                 local_len: 0,
                 current_len: 0,
             }],
+            senders: self.senders.clone(),
             rng: self.rng.clone(),
             ret: self.ret.clone(),
             ref_type: self.ref_type.clone(),
@@ -697,6 +714,7 @@ impl Runtime {
             vec4_type: self.vec4_type.clone(),
             result_type: self.result_type.clone(),
             closure_type: self.closure_type.clone(),
+            inout_type: self.inout_type.clone(),
         };
         let new_module: Module = (**module).clone();
         let handle: JoinHandle<Result<Variable, String>> = thread::spawn(move || {
@@ -933,6 +951,7 @@ impl Runtime {
                 let st = self.stack.len();
                 let lc = self.local_stack.len();
                 let cu = self.current_stack.len();
+
                 for arg in &call.args {
                     match try!(self.expression(arg, Side::Right, module)) {
                         (Some(x), Flow::Continue) => self.stack.push(x),
@@ -943,6 +962,33 @@ impl Runtime {
                                         Check that expression returns a value.",
                                         self.stack_trace()), self))
                     };
+                }
+
+                // Send arguments to senders.
+                if self.senders.contains_key(&f.name) {
+                    let n = self.stack.len();
+                    let mut msg = Vec::with_capacity(n - st);
+                    for i in st..n {
+                        msg.push(self.stack[i].deep_clone(&self.stack));
+                    }
+                    let msg = Arc::new(msg);
+                    let open = {
+                        // Uses smart swapping of channels to put the closed ones at the end.
+                        let channels = self.senders.get_mut(&f.name).unwrap();
+                        let mut open = channels.len();
+                        for i in (0..channels.len()).rev() {
+                            match channels[i].send(Variable::Array(msg.clone())) {
+                                Ok(_) => {}
+                                Err(_) => {
+                                    open -= 1;
+                                    channels.swap(i, open);
+                                }
+                            }
+                        }
+                        channels.truncate(open);
+                        open
+                    };
+                    if open == 0 {self.senders.remove(&f.name);}
                 }
 
                 // Look for variable in current stack.
@@ -2019,6 +2065,7 @@ impl Runtime {
             &Variable::Result(_) => self.result_type.clone(),
             &Variable::Thread(_) => self.thread_type.clone(),
             &Variable::Closure(_, _) => self.closure_type.clone(),
+            &Variable::InOut(_) => self.inout_type.clone(),
         };
         match v {
             Variable::Text(v) => v,

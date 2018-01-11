@@ -34,6 +34,7 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\\"
 // Support both multi-line expressions and single line.
 12 block = ["{" ?w {.l([?w expr:"expr" ?w]) [?w expr:"expr"]} ?w "}"]
 13 expr = [{
+    in:"in"
     closure:"closure"
     object:"object"
     arr
@@ -57,6 +58,7 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\\"
     ["mut":"mut" ?w item:"item"]
     swizzle:"swizzle"
     [{
+        in:"in"
         closure:"closure"
         object:"object"
         arr
@@ -126,43 +128,44 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\\"
 47 compare_op = {"==":"==" "!=":"!=" "¬=":"!=" "<=":"<=" "<":"<" ">=":">=" ">":">"}
 48 grab = ["grab" ?[w "'" .$:"grab_level"] w expr:"expr"]
 49 try_expr = ["try" w expr:"expr"]
+50 in = ["in" w .._seps!:"name" w arg_expr:"filter"]
 
-50 label = ?["'" .._seps!:"label" ?w ":" ?w]
-51 short_body = [.w! .s!.(, [.._seps!:"name" ?w
+60 label = ?["'" .._seps!:"label" ?w ":" ?w]
+61 short_body = [.w! .s!.(, [.._seps!:"name" ?w
     ?{
         ["[" ?w expr:"start" , expr:"end" ?w ")"]
         [!"{" expr:"end"]
     }]) ?w block:"block"]
-52 try = ?[?w "?":"try"]
-53 , = [?w "," ?w]
-54 arr = {array:"array" array_fill:"array_fill"}
-55 items = {vec4:"vec4" link:"link" grab:"grab" try_expr:"try_expr"
+62 try = ?[?w "?":"try"]
+63 , = [?w "," ?w]
+64 arr = {array:"array" array_fill:"array_fill"}
+65 items = {vec4:"vec4" link:"link" grab:"grab" try_expr:"try_expr"
             ["(" ?w expr ?w ")"] unop_not:"unop" norm:"norm"
             text go:"go"
             call_closure:"call_closure" named_call_closure:"named_call_closure"
             call:"call" named_call:"named_call"
             num bool color item:"item"}
 // Allow whitespace, but no new line.
-56 wn = .r?({" " "\t" "\r"})
+66 wn = .r?({" " "\t" "\r"})
 
-60 short_loops = {sum:"sum" prod:"prod" sum_vec4:"sum_vec4"
+70 short_loops = {sum:"sum" prod:"prod" sum_vec4:"sum_vec4"
     prod_vec4:"prod_vec4" min:"min" max:"max" sift:"sift"
     any:"any" all:"all" vec4_un_loop:"vec4_un_loop" link_for:"link_for"}
-61 sum = [label {"sum" "∑"} short_body]
-62 prod = [label {"prod" "∏"} short_body]
-63 min = [label "min" short_body]
-64 max = [label "max" short_body]
-65 sift = [label "sift" short_body]
-66 any = [label {"any" "∃"} short_body]
-67 all = [label {"all" "∀"} short_body]
-68 sum_vec4 = [label {"sum_vec4" "∑vec4"} short_body]
-69 prod_vec4 = [label {"prod_vec4" "∏vec4"} short_body]
-70 vec4_un_loop = ["vec" {"4":"4" "3":"3" "2":"2"}
+71 sum = [label {"sum" "∑"} short_body]
+72 prod = [label {"prod" "∏"} short_body]
+73 min = [label "min" short_body]
+74 max = [label "max" short_body]
+75 sift = [label "sift" short_body]
+76 any = [label {"any" "∃"} short_body]
+77 all = [label {"all" "∀"} short_body]
+78 sum_vec4 = [label {"sum_vec4" "∑vec4"} short_body]
+79 prod_vec4 = [label {"prod_vec4" "∏vec4"} short_body]
+80 vec4_un_loop = ["vec" {"4":"4" "3":"3" "2":"2"}
                    w .._seps!:"name" w expr:"expr"]
-71 swizzle = [sw:"sw0" sw:"sw1" ?sw:"sw2" ?sw:"sw3" w expr:"expr"]
-72 sw = {"x":"x" "y":"y" "z":"z" "w":"w"}
+81 swizzle = [sw:"sw0" sw:"sw1" ?sw:"sw2" ?sw:"sw3" w expr:"expr"]
+82 sw = {"x":"x" "y":"y" "z":"z" "w":"w"}
 
-80 type = {
+90 type = {
     "any":"any"
     "bool":"bool"
     "f64":"f64"
@@ -182,7 +185,7 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\\"
     closure_type:"closure_type"
     [.._seps!:"ad_hoc" ?[?w type:"ad_hoc_ty"]]
 }
-81 closure_type = ["\\(" ?w .s?.(, type:"cl_arg") ?w ")"
+91 closure_type = ["\\(" ?w .s?.(, type:"cl_arg") ?w ")"
     ?w "->" ?w type:"cl_ret"]
 
 100 + = [?w {"+":"+" "||":"||" "∨":"+" ["or":"+" w]} ?w]

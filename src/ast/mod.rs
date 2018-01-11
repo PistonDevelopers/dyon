@@ -845,6 +845,7 @@ pub enum Expression {
     CallClosure(Box<CallClosure>),
     Grab(Box<Grab>),
     TryExpr(Box<TryExpr>),
+    In(Box<InOut>),
 }
 
 // Required because the `Sync` impl of `Variable` is unsafe.
@@ -1066,6 +1067,10 @@ impl Expression {
                     file, source, convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::TryExpr(Box::new(val)));
+            } else if let Ok((range, val)) = InOut::from_meta_data(
+                    file, source, "in", convert, ignored) {
+                convert.update(range);
+                result = Some(Expression::In(Box::new(val)));
             } else {
                 let range = convert.ignore();
                 convert.update(range);
@@ -1122,6 +1127,7 @@ impl Expression {
             CallClosure(ref call) => call.source_range,
             Grab(ref grab) => grab.source_range,
             TryExpr(ref try_expr) => try_expr.source_range,
+            In(ref in_expr) => in_expr.source_range,
         }
     }
 
@@ -1214,6 +1220,8 @@ impl Expression {
                 grab.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             TryExpr(ref try_expr) =>
                 try_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
+            In(ref in_expr) =>
+                in_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
         }
     }
 }
@@ -3593,5 +3601,68 @@ impl CompareOp {
             CompareOp::Equal => "==",
             CompareOp::NotEqual => "!=",
         }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct InOut {
+    pub name: Arc<String>,
+    pub filter: Expression,
+    pub source_range: Range,
+}
+
+impl InOut {
+    pub fn from_meta_data(
+        file: &Arc<String>,
+        source: &Arc<String>,
+        node: &'static str,
+        mut convert: Convert,
+        ignored: &mut Vec<Range>)
+    -> Result<(Range, InOut), ()> {
+        let start = convert.clone();
+        let start_range = try!(convert.start_node(node));
+        convert.update(start_range);
+
+        let mut name: Option<Arc<String>> = None;
+        let mut filter: Option<Expression> = None;
+
+        loop {
+            if let Ok(range) = convert.end_node(node) {
+                convert.update(range);
+                break;
+            } else if let Ok((range, val)) = convert.meta_string("name") {
+                convert.update(range);
+                name = Some(val);
+            } else if let Ok((range, val)) = Expression::from_meta_data(
+                file, source, "filter", convert, ignored) {
+                convert.update(range);
+                filter = Some(val);
+            } else {
+                let range = convert.ignore();
+                convert.update(range);
+                ignored.push(range);
+            }
+        }
+
+        let name = try!(name.ok_or(()));
+        let filter = try!(filter.ok_or(()));
+        Ok((convert.subtract(start), InOut {
+            name,
+            filter,
+            source_range: convert.source(start).unwrap()
+        }))
+    }
+
+    pub fn resolve_locals(
+        &self,
+        relative: usize,
+        stack: &mut Vec<Option<Arc<String>>>,
+        closure_stack: &mut Vec<usize>,
+        module: &Module,
+        use_lookup: &UseLookup,
+    ) {
+        let st = stack.len();
+        self.filter.resolve_locals(relative, stack, closure_stack, module, use_lookup);
+        stack.truncate(st);
     }
 }

@@ -24,6 +24,7 @@ use super::{
     UnOpExpression,
     Vec4,
     TryExpr,
+    InOut,
 };
 
 /// Replaces an item with a number.
@@ -274,7 +275,12 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
         E::TryExpr(ref try_expr) => E::TryExpr(Box::new(TryExpr {
             expr: number(&try_expr.expr, name, val),
             source_range: try_expr.source_range
-        }))
+        })),
+        E::In(ref in_expr) => E::In(Box::new(InOut {
+            name: in_expr.name.clone(),
+            filter: number(&in_expr.filter, name, val),
+            source_range: in_expr.source_range,
+        })),
     }
 }
 
