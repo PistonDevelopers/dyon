@@ -4,26 +4,34 @@ at slower intervals.
 */
 
 fn main() {
+    // Create a log receiver channel.
     log := in log
+    // Create a channel for signaling when the task is done.
     done := in done
+    // Create a new thread that works on the task.
     th := go run()
     loop {
+        // Read the done signal first to avoid data race.
         done_val := next(done)
+        // Print out received log.
         loop {
             x := next(log)
             if x == none() {break}
             print(unwrap(x))
         }
         println("")
+        // Break the loop when done.
         if done_val != none() {break}
         sleep(0.5)
     }
+    // Wait for the thread to finish.
     _ := join(thread: th)
 }
 
 fn log(x: f64) {}
 fn done() {}
 
+// Runs task.
 fn run() -> bool {
     for i 100 {
         log(i)

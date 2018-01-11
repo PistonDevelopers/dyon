@@ -293,8 +293,10 @@ pub struct Function {
     pub ret: Type,
     pub resolved: Cell<bool>,
     pub source_range: Range,
-    pub senders: Arc<::std::sync::Mutex<Vec<::std::sync::mpsc::Sender<Variable>>>>,
-    pub has_in: Cell<bool>,
+    pub senders: Arc<(
+        ::std::sync::atomic::AtomicBool,
+        ::std::sync::Mutex<Vec<::std::sync::mpsc::Sender<Variable>>>
+    )>,
 }
 
 impl Function {
@@ -307,6 +309,7 @@ impl Function {
         ignored: &mut Vec<Range>
     ) -> Result<(Range, Function), ()> {
         use std::sync::Mutex;
+        use std::sync::atomic::AtomicBool;
 
         let start = convert.clone();
         let start_range = try!(convert.start_node(node));
@@ -392,8 +395,7 @@ impl Function {
             block: block,
             ret: ret,
             source_range: convert.source(start).unwrap(),
-            senders: Arc::new(Mutex::new(vec![])),
-            has_in: Cell::new(false),
+            senders: Arc::new((AtomicBool::new(false), Mutex::new(vec![]))),
         }))
     }
 

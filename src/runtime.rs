@@ -401,6 +401,7 @@ impl Runtime {
     -> Result<(Option<Variable>, Flow), String> {
         use std::sync::mpsc::channel;
         use std::sync::Mutex;
+        use std::sync::atomic::Ordering;
 
         match in_expr.f_index.get() {
             FnIndex::Loaded(f_index) => {
@@ -408,8 +409,11 @@ impl Runtime {
                 let new_index = (f_index + relative as isize) as usize;
                 let f = &module.functions[new_index];
                 let (tx, rx) = channel();
-                f.senders.lock().unwrap().push(tx);
-                f.has_in.set(true);
+                // Guard the change of flag to avoid data race.
+                let mut guard = f.senders.1.lock().unwrap();
+                guard.push(tx);
+                f.senders.0.store(true, Ordering::Relaxed);
+                drop(guard);
                 Ok((Some(::Variable::In(Arc::new(Mutex::new(rx)))), Flow::Continue))
             }
             _ => Err(module.error(in_expr.source_range,
@@ -723,7 +727,7 @@ impl Runtime {
             closure_type: self.closure_type.clone(),
             in_type: self.in_type.clone(),
         };
-        let new_module: Module = (**module).clone();
+        let new_module = (**module).clone();
         let handle: JoinHandle<Result<Variable, String>> = thread::spawn(move || {
             let mut new_rt = new_rt;
             let new_module = Arc::new(new_module);
@@ -937,6 +941,8 @@ impl Runtime {
                 return Ok((Some(self.stack.pop().expect(TINVOTS)), Flow::Continue));
             }
             FnIndex::Loaded(f_index) => {
+                use std::sync::atomic::Ordering;
+
                 let relative = if loader {0} else {
                     self.call_stack.last().map(|c| c.index).unwrap_or(0)
                 };
@@ -991,9 +997,9 @@ impl Runtime {
                         }
                     }
                 }
-                
+
                 // Send arguments to senders.
-                if f.has_in.get() {
+                if f.senders.0.load(Ordering::Relaxed) {
                     let n = self.stack.len();
                     let mut msg = Vec::with_capacity(n - st);
                     for i in st..n {
@@ -1001,7 +1007,7 @@ impl Runtime {
                     }
                     let msg = Arc::new(msg);
                     // Uses smart swapping of channels to put the closed ones at the end.
-                    let ref mut channels = f.senders.lock().unwrap();
+                    let ref mut channels = f.senders.1.lock().unwrap();
                     let mut open = channels.len();
                     for i in (0..channels.len()).rev() {
                         match channels[i].send(Variable::Array(msg.clone())) {
@@ -1014,8 +1020,10 @@ impl Runtime {
                     }
                     channels.truncate(open);
                     if channels.len() == 0 {
-                        f.has_in.set(false);
+                        // Change of flag is guarded by the mutex.
+                        f.senders.0.store(false, Ordering::Relaxed);
                     }
+                    drop(channels);
                 }
 
                 self.push_fn(call.name.clone(), new_index, Some(f.file.clone()), st, lc, cu);
