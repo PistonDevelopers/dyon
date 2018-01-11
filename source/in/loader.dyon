@@ -1,0 +1,29 @@
+/*
+This example demonstrates logging of current objects,
+and that loaded functions with same names do not collide.
+*/
+
+fn main() {
+    ~ list := []
+    a := in foo
+    foo("a")
+    foo("b")
+    foo("c")
+    m := unwrap(load("source/in/run.dyon"))
+    call(m, "run", [])
+    println(collect(a))
+}
+
+fn foo(x) ~ mut list {
+    push(mut list, x)
+}
+
+fn collect(a: in) -> {
+    return = []
+    loop {
+        x := try_next(a)
+        if x == none() {break}
+        x := unwrap(x)
+        push(mut return, x)
+    }
+}

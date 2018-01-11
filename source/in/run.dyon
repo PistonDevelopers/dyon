@@ -1,0 +1,23 @@
+fn foo(x: f64) {}
+
+fn run() -> bool {
+    a := in foo
+
+    for i 10 {
+        foo(i)
+        sleep(1)
+    }
+
+    println(collect(a))
+    return true
+}
+
+fn collect(a: in) -> {
+    return = []
+    loop {
+        x := try_next(a)
+        if x == none() {break}
+        x := unwrap(x)
+        push(mut return, x)
+    }
+}

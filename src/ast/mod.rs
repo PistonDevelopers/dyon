@@ -293,6 +293,8 @@ pub struct Function {
     pub ret: Type,
     pub resolved: Cell<bool>,
     pub source_range: Range,
+    pub senders: Arc<::std::sync::Mutex<Vec<::std::sync::mpsc::Sender<Variable>>>>,
+    pub has_in: Cell<bool>,
 }
 
 impl Function {
@@ -304,6 +306,8 @@ impl Function {
         mut convert: Convert,
         ignored: &mut Vec<Range>
     ) -> Result<(Range, Function), ()> {
+        use std::sync::Mutex;
+
         let start = convert.clone();
         let start_range = try!(convert.start_node(node));
         convert.update(start_range);
@@ -388,6 +392,8 @@ impl Function {
             block: block,
             ret: ret,
             source_range: convert.source(start).unwrap(),
+            senders: Arc::new(Mutex::new(vec![])),
+            has_in: Cell::new(false),
         }))
     }
 
@@ -1220,7 +1226,8 @@ impl Expression {
                 grab.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             TryExpr(ref try_expr) =>
                 try_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            In(_) => {}
+            In(ref in_expr) =>
+                in_expr.resolve_locals(relative, module, use_lookup),
         }
     }
 }
@@ -3605,7 +3612,9 @@ impl CompareOp {
 
 #[derive(Debug, Clone)]
 pub struct In {
+    pub alias: Option<Arc<String>>,
     pub name: Arc<String>,
+    pub f_index: Cell<FnIndex>,
     pub source_range: Range,
 }
 
@@ -3620,11 +3629,14 @@ impl In {
         convert.update(start_range);
 
         let mut name: Option<Arc<String>> = None;
-
+        let mut alias: Option<Arc<String>> = None;
         loop {
             if let Ok(range) = convert.end_node(node) {
                 convert.update(range);
                 break;
+            } else if let Ok((range, val)) = convert.meta_string("alias") {
+                convert.update(range);
+                alias = Some(val);
             } else if let Ok((range, val)) = convert.meta_string("name") {
                 convert.update(range);
                 name = Some(val);
@@ -3637,8 +3649,28 @@ impl In {
 
         let name = try!(name.ok_or(()));
         Ok((convert.subtract(start), In {
+            alias,
             name,
+            f_index: Cell::new(FnIndex::None),
             source_range: convert.source(start).unwrap()
         }))
+    }
+
+    pub fn resolve_locals(
+        &self,
+        relative: usize,
+        module: &Module,
+        use_lookup: &UseLookup
+    ) {
+        let f_index = if let Some(ref alias) = self.alias {
+            if let Some(&i) = use_lookup.aliases.get(alias).and_then(|map| map.get(&self.name)) {
+                FnIndex::Loaded(i as isize - relative as isize)
+            } else {
+                FnIndex::None
+            }
+        } else {
+            module.find_function(&self.name, relative)
+        };
+        self.f_index.set(f_index);
     }
 }

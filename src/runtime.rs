@@ -53,8 +53,6 @@ pub struct Runtime {
     pub call_stack: Vec<Call>,
     pub local_stack: Vec<(Arc<String>, usize)>,
     pub current_stack: Vec<(Arc<String>, usize)>,
-    /// Stores a list of senders per function.
-    pub senders: HashMap<Arc<String>, Vec<::std::sync::mpsc::Sender<Variable>>>,
     pub ret: Arc<String>,
     pub rng: rand::StdRng,
     pub text_type: Variable,
@@ -216,7 +214,6 @@ impl Runtime {
             call_stack: vec![],
             local_stack: vec![],
             current_stack: vec![],
-            senders: HashMap::new(),
             ret: Arc::new("return".into()),
             rng: rand::StdRng::new().unwrap(),
             text_type: Variable::Text(Arc::new("string".into())),
@@ -400,14 +397,25 @@ impl Runtime {
         }
     }
 
-    fn in_expr(&mut self, in_expr: &ast::In, _module: &Arc<Module>)
+    fn in_expr(&mut self, in_expr: &ast::In, module: &Arc<Module>)
     -> Result<(Option<Variable>, Flow), String> {
         use std::sync::mpsc::channel;
         use std::sync::Mutex;
 
-        let (tx, rx) = channel();
-        self.senders.entry(in_expr.name.clone()).or_insert(vec![]).push(tx);
-        Ok((Some(::Variable::In(Arc::new(Mutex::new(rx)))), Flow::Continue))
+        match in_expr.f_index.get() {
+            FnIndex::Loaded(f_index) => {
+                let relative = self.call_stack.last().map(|c| c.index).unwrap_or(0);
+                let new_index = (f_index + relative as isize) as usize;
+                let f = &module.functions[new_index];
+                let (tx, rx) = channel();
+                f.senders.lock().unwrap().push(tx);
+                f.has_in.set(true);
+                Ok((Some(::Variable::In(Arc::new(Mutex::new(rx)))), Flow::Continue))
+            }
+            _ => Err(module.error(in_expr.source_range,
+                    &format!("{}\nExpected loaded function",
+                        self.stack_trace()), self)),
+        }
     }
 
     fn try_expr(&mut self, try_expr: &ast::TryExpr, module: &Arc<Module>)
@@ -696,7 +704,6 @@ impl Runtime {
                 local_len: 0,
                 current_len: 0,
             }],
-            senders: self.senders.clone(),
             rng: self.rng.clone(),
             ret: self.ret.clone(),
             ref_type: self.ref_type.clone(),
@@ -964,33 +971,6 @@ impl Runtime {
                     };
                 }
 
-                // Send arguments to senders.
-                if self.senders.contains_key(&f.name) {
-                    let n = self.stack.len();
-                    let mut msg = Vec::with_capacity(n - st);
-                    for i in st..n {
-                        msg.push(self.stack[i].deep_clone(&self.stack));
-                    }
-                    let msg = Arc::new(msg);
-                    let open = {
-                        // Uses smart swapping of channels to put the closed ones at the end.
-                        let channels = self.senders.get_mut(&f.name).unwrap();
-                        let mut open = channels.len();
-                        for i in (0..channels.len()).rev() {
-                            match channels[i].send(Variable::Array(msg.clone())) {
-                                Ok(_) => {}
-                                Err(_) => {
-                                    open -= 1;
-                                    channels.swap(i, open);
-                                }
-                            }
-                        }
-                        channels.truncate(open);
-                        open
-                    };
-                    if open == 0 {self.senders.remove(&f.name);}
-                }
-
                 // Look for variable in current stack.
                 if f.currents.len() > 0 {
                     for current in &f.currents {
@@ -1009,6 +989,32 @@ impl Runtime {
                                 "{}\nCould not find current variable `{}`",
                                     self.stack_trace(), current.name), self));
                         }
+                    }
+                }
+                
+                // Send arguments to senders.
+                if f.has_in.get() {
+                    let n = self.stack.len();
+                    let mut msg = Vec::with_capacity(n - st);
+                    for i in st..n {
+                        msg.push(self.stack[i].deep_clone(&self.stack));
+                    }
+                    let msg = Arc::new(msg);
+                    // Uses smart swapping of channels to put the closed ones at the end.
+                    let ref mut channels = f.senders.lock().unwrap();
+                    let mut open = channels.len();
+                    for i in (0..channels.len()).rev() {
+                        match channels[i].send(Variable::Array(msg.clone())) {
+                            Ok(_) => {}
+                            Err(_) => {
+                                open -= 1;
+                                channels.swap(i, open);
+                            }
+                        }
+                    }
+                    channels.truncate(open);
+                    if channels.len() == 0 {
+                        f.has_in.set(false);
                     }
                 }
 
