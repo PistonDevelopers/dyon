@@ -182,6 +182,8 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\\"
     "{}":"obj_any"
     ["thr" ?w "[" ?w type:"thr" ?w "]"]
     "thr":"thr_any"
+    ["in" ?w "[" ?w type:"in" ?w "]"]
+    "in":"in_any"
     closure_type:"closure_type"
     [.._seps!:"ad_hoc" ?[?w type:"ad_hoc_ty"]]
 }

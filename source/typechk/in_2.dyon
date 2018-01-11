@@ -7,6 +7,6 @@ fn main() {
 
 goto(x: f64, y: f64) = true
 
-fn foo(a: in[[f64]]) {
+fn foo(a: f64) {
     println(next(a))
 }

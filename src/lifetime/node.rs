@@ -306,6 +306,7 @@ pub fn convert_meta_data(
                 let ty = match kind {
                     Kind::Array | Kind::ArrayFill => Some(Type::array()),
                     Kind::Vec4 | Kind::Vec4UnLoop => Some(Type::Vec4),
+                    Kind::In => Some(Type::In(Box::new(Type::array()))),
                     Kind::Object => Some(Type::object()),
                     Kind::Sift => Some(Type::array()),
                     Kind::Sum | Kind::Prod => Some(Type::F64),

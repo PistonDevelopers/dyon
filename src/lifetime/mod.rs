@@ -79,6 +79,10 @@ pub fn check(
     let calls: Vec<usize> = nodes.iter().enumerate()
         .filter(|&(_, n)| n.kind == Kind::Call).map(|(i, _)| i).collect();
 
+    // Collect indices to in-nodes.
+    let ins: Vec<usize> = nodes.iter().enumerate()
+        .filter(|&(_, n)| n.kind == Kind::In).map(|(i, _)| i).collect();
+
     // Collect indices to returns.
     let returns: Vec<usize> = nodes.iter().enumerate()
         .filter(|&(_, n)| n.kind == Kind::Return).map(|(i, _)| i).collect();
@@ -444,6 +448,34 @@ pub fn check(
                 name, function_args[i], n, suggestions)));
         }
         node.declaration = Some(functions[i]);
+    }
+
+    // Check in-nodes.
+    for &c in &ins {
+        let node = &mut nodes[c];
+        let name = node.name().expect("Expected name").clone();
+        if let Some(ref alias) = node.alias {
+            if let Some(&i) = use_lookup.aliases.get(alias).and_then(|map| map.get(&name)) {
+                node.lts = prelude.list[i].lts.clone();
+                continue;
+            } else {
+                return Err(node.source.wrap(
+                    format!("Could not find function `{}::{}`", alias, name)));
+            }
+        }
+        match function_lookup.get(&name) {
+            Some(&i) => i,
+            None => {
+                // Check whether it is a prelude function.
+                match prelude.functions.get(&name) {
+                    Some(_) => continue,
+                    None => {}
+                }
+                let suggestions = suggestions(&**name, &function_lookup, prelude);
+                return Err(node.source.wrap(
+                    format!("Could not find function `{}`{}", name, suggestions)));
+            }
+        };
     }
 
     // Build a map from (function, argument_name) => (argument, index).
