@@ -291,7 +291,7 @@ pub struct Function {
     pub currents: Vec<Current>,
     pub block: Block,
     pub ret: Type,
-    pub resolved: Cell<bool>,
+    pub resolved: Arc<::std::sync::atomic::AtomicBool>,
     pub source_range: Range,
     pub senders: Arc<(
         ::std::sync::atomic::AtomicBool,
@@ -386,7 +386,7 @@ impl Function {
         let ret = try!(ret.ok_or(()));
         Ok((convert.subtract(start), Function {
             namespace: namespace.clone(),
-            resolved: Cell::new(false),
+            resolved: Arc::new(AtomicBool::new(false)),
             name: name,
             file: file.clone(),
             source: source.clone(),
@@ -402,7 +402,10 @@ impl Function {
     pub fn returns(&self) -> bool { self.ret != Type::Void }
 
     pub fn resolve_locals(&self, relative: usize, module: &Module, use_lookup: &UseLookup) {
-        if self.resolved.get() { return; }
+        use std::sync::atomic::Ordering;
+
+        // Ensure sequential order just to be safe.
+        if self.resolved.load(Ordering::SeqCst) { return; }
         let mut stack: Vec<Option<Arc<String>>> = vec![];
         let mut closure_stack: Vec<usize> = vec![];
         if self.returns() {
@@ -415,7 +418,7 @@ impl Function {
             stack.push(Some(current.name.clone()));
         }
         self.block.resolve_locals(relative, &mut stack, &mut closure_stack, module, use_lookup);
-        self.resolved.set(true);
+        self.resolved.store(true, Ordering::SeqCst);
     }
 }
 

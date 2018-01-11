@@ -727,10 +727,10 @@ impl Runtime {
             closure_type: self.closure_type.clone(),
             in_type: self.in_type.clone(),
         };
-        let new_module = (**module).clone();
+        let new_module = module.clone();
         let handle: JoinHandle<Result<Variable, String>> = thread::spawn(move || {
             let mut new_rt = new_rt;
-            let new_module = Arc::new(new_module);
+            let new_module = new_module;
             let fake_call = fake_call;
             let loader = false;
             Ok(match new_rt.call_internal(&fake_call, loader, &new_module) {
