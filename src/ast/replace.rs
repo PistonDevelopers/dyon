@@ -274,7 +274,8 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
         E::TryExpr(ref try_expr) => E::TryExpr(Box::new(TryExpr {
             expr: number(&try_expr.expr, name, val),
             source_range: try_expr.source_range
-        }))
+        })),
+        E::In(_) => expr.clone(),
     }
 }
 

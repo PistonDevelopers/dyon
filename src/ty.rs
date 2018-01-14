@@ -24,6 +24,7 @@ pub enum Type {
     Result(Box<Type>),
     Secret(Box<Type>),
     Thread(Box<Type>),
+    In(Box<Type>),
     AdHoc(Arc<String>, Box<Type>),
     Closure(Box<Dfn>),
 }
@@ -89,6 +90,16 @@ impl Type {
                     res
                 }
             }
+            &In(ref ty) => {
+                if let Any = **ty {
+                    "in".into()
+                } else {
+                    let mut res = String::from("in[");
+                    res.push_str(&ty.description());
+                    res.push(']');
+                    res
+                }
+            }
             &AdHoc(ref ad, ref ty) => {
                 (&**ad).clone() + " " + &ty.description()
             }
@@ -126,6 +137,10 @@ impl Type {
 
     pub fn thread() -> Type {
         Type::Thread(Box::new(Type::Any))
+    }
+
+    pub fn in_ty() -> Type {
+        Type::In(Box::new(Type::Any))
     }
 
     /// Returns `true` if a type goes with another type (directional check).
@@ -197,6 +212,15 @@ impl Type {
             &Thread(ref thr) => {
                 if let &Thread(ref other_thr) = other {
                     thr.goes_with(other_thr)
+                } else if let &Any = other {
+                    true
+                } else {
+                    false
+                }
+            }
+            &In(ref in_ty) => {
+                if let &In(ref other_ty) = other {
+                    in_ty.goes_with(other_ty)
                 } else if let &Any = other {
                     true
                 } else {
@@ -395,6 +419,9 @@ impl Type {
             } else if let Ok((range, _)) = convert.meta_bool("thr_any") {
                 convert.update(range);
                 ty = Some(Type::Thread(Box::new(Type::Any)));
+            } else if let Ok((range, _)) = convert.meta_bool("in_any") {
+                convert.update(range);
+                ty = Some(Type::In(Box::new(Type::Any)));
             } else if let Ok((range, val)) = Type::from_meta_data(
                     "opt", convert, ignored) {
                 convert.update(range);
@@ -411,6 +438,10 @@ impl Type {
                     "thr", convert, ignored) {
                 convert.update(range);
                 ty = Some(Type::Thread(Box::new(val)));
+            } else if let Ok((range, val)) = Type::from_meta_data(
+                    "in", convert, ignored) {
+                convert.update(range);
+                ty = Some(Type::In(Box::new(val)));
             } else if let Ok((range, val)) = convert.meta_string("ad_hoc") {
                 convert.update(range);
                 let inner_ty = if let Ok((range, val)) = Type::from_meta_data(

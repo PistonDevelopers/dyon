@@ -1,0 +1,11 @@
+fn main() {
+    a := in goto
+    _ := goto(20, 20)
+    foo(a)
+}
+
+goto(x: f64, y: f64) = true
+
+fn foo(a: in) {
+    println(next(a))
+}

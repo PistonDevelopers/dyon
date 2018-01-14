@@ -442,6 +442,9 @@ pub fn grab_expr(
                 source_range: try_expr.source_range.clone(),
             }))), Flow::Continue))
         }
+        &E::In(_) => {
+            Ok((Grabbed::Expression(expr.clone()), Flow::Continue))
+        }
     }
 }
 

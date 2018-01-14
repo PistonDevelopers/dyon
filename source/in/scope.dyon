@@ -1,0 +1,24 @@
+fn main() {
+    a := in log
+    log(1)
+    b := in log
+    log(2)
+    c := in log
+    log(3)
+    report(a)   // prints `123`
+    report(b)   // prints `23`
+    report(c)   // prints `3`
+}
+
+// Dummy sink.
+fn log(x) {}
+
+fn report(a) {
+    loop {
+        x := next(a)
+        if x == none() {break}
+        x := unwrap(x)
+        print(x[0])
+    }
+    println("")
+}

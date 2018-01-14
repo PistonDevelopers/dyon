@@ -70,6 +70,7 @@ pub struct Runtime {
     pub result_type: Variable,
     pub thread_type: Variable,
     pub closure_type: Variable,
+    pub in_type: Variable,
 }
 
 #[inline(always)]
@@ -230,6 +231,7 @@ impl Runtime {
             result_type: Variable::Text(Arc::new("result".into())),
             thread_type: Variable::Text(Arc::new("thread".into())),
             closure_type: Variable::Text(Arc::new("closure".into())),
+            in_type: Variable::Text(Arc::new("in".into())),
         }
     }
 
@@ -391,6 +393,32 @@ impl Runtime {
                     &format!("{}\n`grab` expressions must be inside a closure",
                         self.stack_trace()), self)),
             TryExpr(ref try_expr) => self.try_expr(try_expr, module),
+            In(ref in_expr) => self.in_expr(in_expr, module),
+        }
+    }
+
+    fn in_expr(&mut self, in_expr: &ast::In, module: &Arc<Module>)
+    -> Result<(Option<Variable>, Flow), String> {
+        use std::sync::mpsc::channel;
+        use std::sync::Mutex;
+        use std::sync::atomic::Ordering;
+
+        match in_expr.f_index.get() {
+            FnIndex::Loaded(f_index) => {
+                let relative = self.call_stack.last().map(|c| c.index).unwrap_or(0);
+                let new_index = (f_index + relative as isize) as usize;
+                let f = &module.functions[new_index];
+                let (tx, rx) = channel();
+                // Guard the change of flag to avoid data race.
+                let mut guard = f.senders.1.lock().unwrap();
+                guard.push(tx);
+                f.senders.0.store(true, Ordering::Relaxed);
+                drop(guard);
+                Ok((Some(::Variable::In(Arc::new(Mutex::new(rx)))), Flow::Continue))
+            }
+            _ => Err(module.error(in_expr.source_range,
+                    &format!("{}\nExpected loaded function",
+                        self.stack_trace()), self)),
         }
     }
 
@@ -697,11 +725,12 @@ impl Runtime {
             vec4_type: self.vec4_type.clone(),
             result_type: self.result_type.clone(),
             closure_type: self.closure_type.clone(),
+            in_type: self.in_type.clone(),
         };
-        let new_module: Module = (**module).clone();
+        let new_module = module.clone();
         let handle: JoinHandle<Result<Variable, String>> = thread::spawn(move || {
             let mut new_rt = new_rt;
-            let new_module = Arc::new(new_module);
+            let new_module = new_module;
             let fake_call = fake_call;
             let loader = false;
             Ok(match new_rt.call_internal(&fake_call, loader, &new_module) {
@@ -912,6 +941,8 @@ impl Runtime {
                 return Ok((Some(self.stack.pop().expect(TINVOTS)), Flow::Continue));
             }
             FnIndex::Loaded(f_index) => {
+                use std::sync::atomic::Ordering;
+
                 let relative = if loader {0} else {
                     self.call_stack.last().map(|c| c.index).unwrap_or(0)
                 };
@@ -933,6 +964,7 @@ impl Runtime {
                 let st = self.stack.len();
                 let lc = self.local_stack.len();
                 let cu = self.current_stack.len();
+
                 for arg in &call.args {
                     match try!(self.expression(arg, Side::Right, module)) {
                         (Some(x), Flow::Continue) => self.stack.push(x),
@@ -964,6 +996,34 @@ impl Runtime {
                                     self.stack_trace(), current.name), self));
                         }
                     }
+                }
+
+                // Send arguments to senders.
+                if f.senders.0.load(Ordering::Relaxed) {
+                    let n = self.stack.len();
+                    let mut msg = Vec::with_capacity(n - st);
+                    for i in st..n {
+                        msg.push(self.stack[i].deep_clone(&self.stack));
+                    }
+                    let msg = Arc::new(msg);
+                    // Uses smart swapping of channels to put the closed ones at the end.
+                    let ref mut channels = f.senders.1.lock().unwrap();
+                    let mut open = channels.len();
+                    for i in (0..channels.len()).rev() {
+                        match channels[i].send(Variable::Array(msg.clone())) {
+                            Ok(_) => {}
+                            Err(_) => {
+                                open -= 1;
+                                channels.swap(i, open);
+                            }
+                        }
+                    }
+                    channels.truncate(open);
+                    if channels.len() == 0 {
+                        // Change of flag is guarded by the mutex.
+                        f.senders.0.store(false, Ordering::Relaxed);
+                    }
+                    drop(channels);
                 }
 
                 self.push_fn(call.name.clone(), new_index, Some(f.file.clone()), st, lc, cu);
@@ -2019,6 +2079,7 @@ impl Runtime {
             &Variable::Result(_) => self.result_type.clone(),
             &Variable::Thread(_) => self.thread_type.clone(),
             &Variable::Closure(_, _) => self.closure_type.clone(),
+            &Variable::In(_) => self.in_type.clone(),
         };
         match v {
             Variable::Text(v) => v,

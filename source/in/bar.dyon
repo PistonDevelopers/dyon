@@ -1,0 +1,37 @@
+fn main() {
+    th := [
+        go watch(in foo, in done),
+        go bar()
+    ]
+
+    for i len(th) {_ := join(thread: pop(mut th))}
+}
+
+/// Task.
+bar() = {
+    for i 3 {foo(i, i + 1)}
+    done()
+}
+
+/// Called when done.
+done() = true
+
+// Do nothing, use as sink.
+fn foo(x: f64, y: f64) {}
+
+fn watch(a, done) -> bool {
+    loop {
+        // Get is-done flag before reading data to avoid race condition.
+        val := next(done)
+        loop {
+            next := next(a)
+            if next == none() {break}
+            println(unwrap(next))
+        }
+        if val != none() {
+            println("done")
+            break
+        }
+    }
+    return true
+}

@@ -136,6 +136,7 @@ pub fn write_variable<W>(
         Variable::UnsafeRef(_) => try!(write!(w, "_unsafe_ref")),
         Variable::RustObject(_) => try!(write!(w, "_rust_object")),
         Variable::Closure(ref closure, _) => try!(write_closure(w, rt, closure, tabs)),
+        Variable::In(_) => try!(write!(w, "_in")),
         // ref x => panic!("Could not print out `{:?}`", x)
     }
     Ok(())
@@ -281,6 +282,9 @@ pub fn write_expr<W: io::Write>(
         &E::Grab(ref grab) => try!(write_grab(w, rt, grab, tabs)),
         &E::TryExpr(ref try_expr) => try!(write_try_expr(w, rt, try_expr, tabs)),
         &E::CallClosure(ref call) => try!(write_call_closure(w, rt, call, tabs)),
+        &E::In(ref in_expr) => {
+            try!(write!(w, "in {}", in_expr.name));
+        }
         // x => panic!("Unimplemented `{:#?}`", x),
     }
     Ok(())

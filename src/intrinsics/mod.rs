@@ -122,6 +122,8 @@ const PARSE_NUMBER: usize = 92;
 const INSERT: usize = 93;
 const INSERT_REF: usize = 94;
 const REMOVE: usize = 95;
+const NEXT: usize = 96;
+const WAIT_NEXT: usize = 97;
 
 const TABLE: &'static [(usize, fn(
         &mut Runtime,
@@ -225,6 +227,8 @@ const TABLE: &'static [(usize, fn(
     (INSERT, insert),
     (INSERT_REF, insert_ref),
     (REMOVE, remove),
+    (NEXT, next),
+    (WAIT_NEXT, wait_next),
 ];
 
 pub fn standard(f: &mut Prelude) {
@@ -469,6 +473,16 @@ pub fn standard(f: &mut Prelude) {
     f.intrinsic(Arc::new("remove(mut,_)".into()), REMOVE, Dfn {
         lts: vec![Lt::Return, Lt::Default],
         tys: vec![Type::array(), Type::F64],
+        ret: Type::Any
+    });
+    f.intrinsic(Arc::new("next".into()), NEXT, Dfn {
+        lts: vec![Lt::Default],
+        tys: vec![Type::in_ty()],
+        ret: Type::Any
+    });
+    f.intrinsic(Arc::new("wait_next".into()), WAIT_NEXT, Dfn {
+        lts: vec![Lt::Default],
+        tys: vec![Type::in_ty()],
         ret: Type::Any
     });
 }
@@ -1539,6 +1553,7 @@ fn _typeof(
         &Variable::Result(_) => rt.result_type.clone(),
         &Variable::Thread(_) => rt.thread_type.clone(),
         &Variable::Closure(_, _) => rt.closure_type.clone(),
+        &Variable::In(_) => rt.in_type.clone(),
     }))
 }
 
@@ -2679,4 +2694,56 @@ fn is_nan(
                         &rt.expected(x, "number"), rt))
     };
     Ok(Some(Variable::bool(v.is_nan())))
+}
+
+fn wait_next(
+    rt: &mut Runtime,
+    call: &ast::Call,
+    module: &Arc<Module>
+) -> Result<Option<Variable>, String> {
+    use std::error::Error;
+
+    let v = rt.stack.pop().expect(TINVOTS);
+    Ok(Some(match rt.resolve(&v) {
+        &Variable::In(ref mutex) => {
+            match mutex.lock() {
+                Ok(x) => match x.recv() {
+                    Ok(x) => Variable::Option(Some(Box::new(x))),
+                    Err(_) => Variable::Option(None),
+                },
+                Err(err) => {
+                    return Err(module.error(call.source_range,
+                    &format!("Can not lock In mutex:\n{}", err.description()), rt));
+                }
+            }
+        }
+        x => return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(x, "in"), rt))
+    }))
+}
+
+fn next(
+    rt: &mut Runtime,
+    call: &ast::Call,
+    module: &Arc<Module>
+) -> Result<Option<Variable>, String> {
+    use std::error::Error;
+
+    let v = rt.stack.pop().expect(TINVOTS);
+    Ok(Some(match rt.resolve(&v) {
+        &Variable::In(ref mutex) => {
+            match mutex.lock() {
+                Ok(x) => match x.try_recv() {
+                    Ok(x) => Variable::Option(Some(Box::new(x))),
+                    Err(_) => Variable::Option(None),
+                },
+                Err(err) => {
+                    return Err(module.error(call.source_range,
+                    &format!("Can not lock In mutex:\n{}", err.description()), rt));
+                }
+            }
+        }
+        x => return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(x, "in"), rt))
+    }))
 }

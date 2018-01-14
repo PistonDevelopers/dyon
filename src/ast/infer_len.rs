@@ -202,6 +202,7 @@ fn infer_expr(
             let res = infer_expr(&tr.expr, name, decls);
             if res.is_some() { return res; }
         }
+        In(_) => {}
     };
     None
 }

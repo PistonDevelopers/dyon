@@ -1,0 +1,22 @@
+fn main() {
+    for i 100 {
+        inbox := in log
+
+        run()
+
+        loop {
+            res := next(inbox)
+            if res == none() {break}
+            res := unwrap(res)
+            print(res[0])
+        }
+    }
+}
+
+fn log(msg: str) {}
+
+fn run() {
+    for i 10 {
+        log(str(i))
+    }
+}

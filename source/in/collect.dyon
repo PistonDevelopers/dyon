@@ -1,0 +1,21 @@
+fn main() {
+    x := []
+    for i 10 {
+        push(mut x, in log)
+        log(i)
+    }
+    for i {println(collect(x[i]))}
+}
+
+// Dummy sink.
+fn log(x) {}
+
+fn collect(a) -> [any] {
+    return = []
+    loop {
+        x := next(a)
+        if x == none() {break}
+        x := unwrap(x)
+        push(mut return, x[0])
+    }
+}

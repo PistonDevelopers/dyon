@@ -291,8 +291,12 @@ pub struct Function {
     pub currents: Vec<Current>,
     pub block: Block,
     pub ret: Type,
-    pub resolved: Cell<bool>,
+    pub resolved: Arc<::std::sync::atomic::AtomicBool>,
     pub source_range: Range,
+    pub senders: Arc<(
+        ::std::sync::atomic::AtomicBool,
+        ::std::sync::Mutex<Vec<::std::sync::mpsc::Sender<Variable>>>
+    )>,
 }
 
 impl Function {
@@ -304,6 +308,9 @@ impl Function {
         mut convert: Convert,
         ignored: &mut Vec<Range>
     ) -> Result<(Range, Function), ()> {
+        use std::sync::Mutex;
+        use std::sync::atomic::AtomicBool;
+
         let start = convert.clone();
         let start_range = try!(convert.start_node(node));
         convert.update(start_range);
@@ -379,7 +386,7 @@ impl Function {
         let ret = try!(ret.ok_or(()));
         Ok((convert.subtract(start), Function {
             namespace: namespace.clone(),
-            resolved: Cell::new(false),
+            resolved: Arc::new(AtomicBool::new(false)),
             name: name,
             file: file.clone(),
             source: source.clone(),
@@ -388,13 +395,17 @@ impl Function {
             block: block,
             ret: ret,
             source_range: convert.source(start).unwrap(),
+            senders: Arc::new((AtomicBool::new(false), Mutex::new(vec![]))),
         }))
     }
 
     pub fn returns(&self) -> bool { self.ret != Type::Void }
 
     pub fn resolve_locals(&self, relative: usize, module: &Module, use_lookup: &UseLookup) {
-        if self.resolved.get() { return; }
+        use std::sync::atomic::Ordering;
+
+        // Ensure sequential order just to be safe.
+        if self.resolved.load(Ordering::SeqCst) { return; }
         let mut stack: Vec<Option<Arc<String>>> = vec![];
         let mut closure_stack: Vec<usize> = vec![];
         if self.returns() {
@@ -407,7 +418,7 @@ impl Function {
             stack.push(Some(current.name.clone()));
         }
         self.block.resolve_locals(relative, &mut stack, &mut closure_stack, module, use_lookup);
-        self.resolved.set(true);
+        self.resolved.store(true, Ordering::SeqCst);
     }
 }
 
@@ -845,6 +856,7 @@ pub enum Expression {
     CallClosure(Box<CallClosure>),
     Grab(Box<Grab>),
     TryExpr(Box<TryExpr>),
+    In(Box<In>),
 }
 
 // Required because the `Sync` impl of `Variable` is unsafe.
@@ -1066,6 +1078,10 @@ impl Expression {
                     file, source, convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::TryExpr(Box::new(val)));
+            } else if let Ok((range, val)) = In::from_meta_data(
+                    "in", convert, ignored) {
+                convert.update(range);
+                result = Some(Expression::In(Box::new(val)));
             } else {
                 let range = convert.ignore();
                 convert.update(range);
@@ -1122,6 +1138,7 @@ impl Expression {
             CallClosure(ref call) => call.source_range,
             Grab(ref grab) => grab.source_range,
             TryExpr(ref try_expr) => try_expr.source_range,
+            In(ref in_expr) => in_expr.source_range,
         }
     }
 
@@ -1214,6 +1231,8 @@ impl Expression {
                 grab.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             TryExpr(ref try_expr) =>
                 try_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
+            In(ref in_expr) =>
+                in_expr.resolve_locals(relative, module, use_lookup),
         }
     }
 }
@@ -3593,5 +3612,70 @@ impl CompareOp {
             CompareOp::Equal => "==",
             CompareOp::NotEqual => "!=",
         }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct In {
+    pub alias: Option<Arc<String>>,
+    pub name: Arc<String>,
+    pub f_index: Cell<FnIndex>,
+    pub source_range: Range,
+}
+
+impl In {
+    pub fn from_meta_data(
+        node: &'static str,
+        mut convert: Convert,
+        ignored: &mut Vec<Range>)
+    -> Result<(Range, In), ()> {
+        let start = convert.clone();
+        let start_range = try!(convert.start_node(node));
+        convert.update(start_range);
+
+        let mut name: Option<Arc<String>> = None;
+        let mut alias: Option<Arc<String>> = None;
+        loop {
+            if let Ok(range) = convert.end_node(node) {
+                convert.update(range);
+                break;
+            } else if let Ok((range, val)) = convert.meta_string("alias") {
+                convert.update(range);
+                alias = Some(val);
+            } else if let Ok((range, val)) = convert.meta_string("name") {
+                convert.update(range);
+                name = Some(val);
+            } else {
+                let range = convert.ignore();
+                convert.update(range);
+                ignored.push(range);
+            }
+        }
+
+        let name = try!(name.ok_or(()));
+        Ok((convert.subtract(start), In {
+            alias,
+            name,
+            f_index: Cell::new(FnIndex::None),
+            source_range: convert.source(start).unwrap()
+        }))
+    }
+
+    pub fn resolve_locals(
+        &self,
+        relative: usize,
+        module: &Module,
+        use_lookup: &UseLookup
+    ) {
+        let f_index = if let Some(ref alias) = self.alias {
+            if let Some(&i) = use_lookup.aliases.get(alias).and_then(|map| map.get(&self.name)) {
+                FnIndex::Loaded(i as isize - relative as isize)
+            } else {
+                FnIndex::None
+            }
+        } else {
+            module.find_function(&self.name, relative)
+        };
+        self.f_index.set(f_index);
     }
 }

@@ -332,3 +332,9 @@ fn now() -> f64 { ... }
 
 /// Returns `true` if number is NaN.
 fn is_nan(v: f64) -> bool { ... }
+
+/// Blocks thread until message is received from channel.
+fn next(channel: in) -> opt[any] { ... }
+
+/// Checks for message on channel.
+fn try_next(channel: in) -> opt[any] { ... }
