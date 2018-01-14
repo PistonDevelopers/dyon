@@ -477,12 +477,12 @@ pub fn standard(f: &mut Prelude) {
     });
     f.intrinsic(Arc::new("next".into()), NEXT, Dfn {
         lts: vec![Lt::Default],
-        tys: vec![Type::Any],
+        tys: vec![Type::in_ty()],
         ret: Type::Any
     });
     f.intrinsic(Arc::new("wait_next".into()), WAIT_NEXT, Dfn {
         lts: vec![Lt::Default],
-        tys: vec![Type::Any],
+        tys: vec![Type::in_ty()],
         ret: Type::Any
     });
 }
