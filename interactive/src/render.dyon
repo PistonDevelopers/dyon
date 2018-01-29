@@ -38,3 +38,45 @@ fn text__font_color_size_pos_string(font: f64, color: vec4, size: f64, pos: vec4
 ~ mut draw_list: [[]] {
     push(mut draw_list, ["text__font_color_size_pos_string", font, color, size, pos, text])
 }
+
+fn image__texture_pos_color(texture: f64, pos: vec4, color: vec4)
+~ mut draw_list: [[]] {
+    push(mut draw_list, ["image__texture_pos_color", texture, pos, color])
+}
+
+fn image__texture_pos(texture: f64, pos: vec4)
+~ mut draw_list: [[]] {
+    push(mut draw_list, ["image__texture_pos_color", texture, pos, #ffffff])
+}
+
+fn image__texture_pos_alpha(texture: f64, pos: vec4, alpha: f64)
+~ mut draw_list: [[]] {
+    push(mut draw_list, ["image__texture_pos_color", texture, pos, (xyz #ffffff, alpha)])
+}
+
+fn image__texture_pos_color_srccorner_srcsize
+(texture: f64, pos: vec4, color: vec4, srccorner: vec4, srcsize: vec4)
+~ mut draw_list: [[]] {
+    push(mut draw_list, [
+        "image__texture_pos_color_srccorner_srcsize",
+        texture, pos, color, srccorner, srcsize
+    ])
+}
+
+fn image__texture_pos_srccorner_srcsize
+(texture: f64, pos: vec4, srccorner: vec4, srcsize: vec4)
+~ mut draw_list: [[]] {
+    push(mut draw_list, [
+        "image__texture_pos_color_srccorner_srcsize",
+        texture, pos, #ffffff, srccorner, srcsize
+    ])
+}
+
+fn image__texture_pos_alpha_srccorner_srcsize
+(texture: f64, pos: vec4, alpha: f64, srccorner: vec4, srcsize: vec4)
+~ mut draw_list: [[]] {
+    push(mut draw_list, [
+        "image__texture_pos_color_srccorner_srcsize",
+        texture, pos, (xyz #ffffff, alpha), srccorner, srcsize
+    ])
+}

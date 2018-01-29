@@ -9,6 +9,9 @@
 /// ```
 fn render_source() -> str { ... }
 
+/// Draws draw list.
+fn draw(draw_list: [any]) { ... }
+
 /// Returns the window size without border in points.
 fn window_size() -> vec4 { ... }
 
@@ -68,5 +71,36 @@ fn font_names() -> [str] { ... }
 
 /// Loads font from file.
 ///
-/// Returns `ok(<file>)` when successful.
-fn load_font(file: str) -> res[str] { ... }
+/// Returns `ok(id)` when successful.
+fn load_font(file: str) -> res[f64] { ... }
+
+/// Returns list of image names.
+fn image_names() -> [str] { ... }
+
+/// Loads image from file.
+///
+/// Returns `ok(id)` when successful.
+fn load_image(file: str) -> res[f64] { ... }
+
+/// Saves image to file.
+fn save__image_file(image: f64, file: str) -> res[str] { ... }
+
+/// Creates empty image.
+fn create_image__name_size(name: str, size: vec4) -> f64 { ... }
+
+/// Returns image size.
+fn image_size(image: f64) -> vec4 { ... }
+
+/// Sets pixel color in image.
+fn pxl__image_pos_color(image: f64, pos: vec4, color: vec4) { ... }
+
+/// Gets pixel color from image.
+fn pxl__image_pos(image: f64, pos: vec4) -> vec4 { ... }
+
+/// Creates texture from image.
+///
+/// Takes an image id and returns a texture id.
+fn create_texture(image: f64) -> f64 { ... }
+
+/// Updates texture with image.
+fn update__texture_image(image: f64, texture: f64) { ... }

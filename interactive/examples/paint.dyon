@@ -1,0 +1,49 @@
+fn main() {
+    img := create_image(name: "image", size: window_draw_size())
+    img_texture := create_texture(img)
+    down := false
+    last_pos := none()
+    loop {
+        if !next_event() {break}
+
+        if render() {
+            ~ draw_list := []
+
+            clear(color: #ffffff)
+            image(texture: img_texture, pos: (0, 0))
+
+            draw(draw_list)
+        }
+
+        cursor_pos := mouse_cursor_pos()
+        if (cursor_pos != none()) && down {
+            pos := unwrap(cursor_pos)
+            size := image_size(img)
+            if (x(pos) >= 0) && (y(pos) >= 0) && (x(pos) < x(size)) && (y(pos) < y(size)) {
+                if last_pos != none() {
+                    last_pos := unwrap(last_pos)
+                    n := |pos - last_pos|
+                    for i n {
+                        pos := last_pos + (pos - last_pos) * i/n
+                        pxl(image: img, pos: pos, color: #000000)
+                        update(texture: img_texture, image: img)
+                    }
+                }
+                pxl(image: img, pos: pos, color: #000000)
+                update(texture: img_texture, image: img)
+                last_pos = some(pos)
+            }
+        }
+
+        button := press_mouse_button()
+        if button != none() {
+            down = true
+        }
+
+        button := release_mouse_button()
+        if button != none() {
+            down = false
+            last_pos = none()
+        }
+    }
+}

@@ -1,0 +1,18 @@
+fn main() {
+    font := unwrap(load_font("../assets/FiraSans-Regular.ttf"))
+    println(font_names())
+    ~ draw_list := []
+    loop {
+        if !next_event() {break}
+
+        if render() {
+            clear(color: #ffffff)
+
+            text(font: font, color: #000000, size: 40, pos: (100, 100),
+                 string: "Hello!")
+
+            draw(draw_list)
+            clear(mut draw_list)
+        }
+    }
+}
