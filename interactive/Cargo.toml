@@ -26,5 +26,6 @@ version = "0.24.0"
 features = ["glyph_cache_rusttype"]
 
 [dev-dependencies]
-piston_window = "0.74.0"
+pistoncore-sdl2_window = "0.47.0"
+piston2d-opengl_graphics = "0.50.0"
 piston-music = "0.24.0"
