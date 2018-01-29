@@ -71,14 +71,16 @@ fn font_names() -> [str] { ... }
 
 /// Loads font from file.
 ///
-/// Returns `ok(<file>)` when successful.
-fn load_font(file: str) -> res[str] { ... }
+/// Returns `ok(id)` when successful.
+fn load_font(file: str) -> res[f64] { ... }
 
 /// Returns list of image names.
 fn image_names() -> [str] { ... }
 
 /// Loads image from file.
-fn load_image(file: str) -> res[str] { ... }
+///
+/// Returns `ok(id)` when successful.
+fn load_image(file: str) -> res[f64] { ... }
 
 /// Saves image to file.
 fn save__image_file(image: f64, file: str) -> res[str] { ... }

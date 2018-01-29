@@ -1,6 +1,6 @@
 fn main() {
-    _ := unwrap(load_image("../assets/test.png"))
-    test := create_texture(TEST())
+    test := unwrap(load_image("../assets/test.png"))
+    test := create_texture(test)
     println(test)
     ~ draw_list := []
     loop {
@@ -19,8 +19,7 @@ fn main() {
                       srccorner: offset, srcsize: (20, 40))
             }
             draw(draw_list)
+            clear(mut draw_list)
         }
     }
 }
-
-fn TEST() -> Image f64 {return 0}

@@ -131,7 +131,7 @@ pub fn add_functions<W, F, C>(module: &mut Module)
         load_font::<F, C::Texture>, Dfn {
             lts: vec![Lt::Default],
             tys: vec![Type::Text],
-            ret: Type::Result(Box::new(Type::Text))
+            ret: Type::Result(Box::new(Type::F64))
         }
     );
     module.add(Arc::new("image_names".into()),
@@ -145,7 +145,7 @@ pub fn add_functions<W, F, C>(module: &mut Module)
         load_image, Dfn {
             lts: vec![Lt::Default],
             tys: vec![Type::Text],
-            ret: Type::Result(Box::new(Type::Text))
+            ret: Type::Result(Box::new(Type::F64))
         }
     );
     module.add(Arc::new("create_image__name_size".into()),
@@ -354,12 +354,13 @@ pub fn load_font<F, T>(rt: &mut Runtime) -> Result<(), String>
     let texture_settings = TextureSettings::new().filter(Filter::Nearest);
     match GlyphCache::<'static, F, T>::new(&**file, factory.clone(), texture_settings) {
         Ok(x) => {
+            let id = glyphs.len();
             glyphs.push(x);
             font_names.0.push(file.clone());
-            rt.push(Ok::<Arc<String>, Arc<String>>(file));
+            rt.push(Ok::<usize, Arc<String>>(id));
         }
         Err(err) => {
-            rt.push(Err::<Arc<String>, Arc<String>>(Arc::new(format!("{}", err))));
+            rt.push(Err::<usize, Arc<String>>(Arc::new(format!("{}", err))));
         }
     }
     Ok(())
@@ -379,12 +380,13 @@ pub fn load_image(rt: &mut Runtime) -> Result<(), String> {
     let file: Arc<String> = rt.pop()?;
     match open(&**file) {
         Ok(x) => {
+            let id = images.len();
             images.push(x.to_rgba());
             image_names.0.push(file.clone());
-            rt.push(Ok::<Arc<String>, Arc<String>>(file));
+            rt.push(Ok::<usize, Arc<String>>(id));
         }
         Err(err) => {
-            rt.push(Err::<Arc<String>, Arc<String>>(Arc::new(format!("{}", err))));
+            rt.push(Err::<usize, Arc<String>>(Arc::new(format!("{}", err))));
         }
     }
     Ok(())
