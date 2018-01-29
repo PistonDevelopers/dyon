@@ -185,6 +185,13 @@ fn load_module(file: &str) -> Option<Module> {
             ret: Type::F64,
         }
     );
+    module.add(Arc::new("update__texture_image".into()),
+        update__texture_image, Dfn {
+            lts: vec![Lt::Default; 2],
+            tys: vec![Type::F64, Type::F64],
+            ret: Type::Void
+        }
+    );
 
     if error(dyon::load_str(
         "render.dyon",
@@ -246,6 +253,26 @@ mod dyon_functions {
         };
         textures.push(Texture::from_image(image, &TextureSettings::new()));
         rt.push(new_id);
+        Ok(())
+    }
+
+    #[allow(non_snake_case)]
+    pub fn update__texture_image(rt: &mut Runtime) -> Result<(), String> {
+        let images = unsafe { &*Current::<Vec<RgbaImage>>::new() };
+        let textures = unsafe { &mut *Current::<Vec<Texture>>::new() };
+        let image_id: usize = rt.pop()?;
+        let texture_id: usize = rt.pop()?;
+        let image = if let Some(x) = images.get(image_id) {
+            x
+        } else {
+            return Err("Image id is out of bounds".into());
+        };
+        let texture = if let Some(x) = textures.get_mut(texture_id) {
+            x
+        } else {
+            return Err("Texture id is out of bounds".into());
+        };
+        texture.update(&image);
         Ok(())
     }
 

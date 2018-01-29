@@ -101,3 +101,6 @@ fn pxl__image_pos(image: f64, pos: vec4) -> vec4 { ... }
 ///
 /// Takes an image id and returns a texture id.
 fn create_texture(image: f64) -> f64 { ... }
+
+/// Updates texture with image.
+fn update__texture_image(image: f64, texture: f64) { ... }
