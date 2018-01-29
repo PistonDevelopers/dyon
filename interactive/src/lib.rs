@@ -3,6 +3,7 @@ extern crate dyon;
 extern crate current;
 extern crate graphics;
 extern crate texture;
+extern crate image;
 
 use std::any::Any;
 use std::sync::Arc;
@@ -128,6 +129,20 @@ pub fn add_functions<W, F, C>(module: &mut Module)
     );
     module.add(Arc::new("load_font".into()),
         load_font::<F, C::Texture>, Dfn {
+            lts: vec![Lt::Default],
+            tys: vec![Type::Text],
+            ret: Type::Result(Box::new(Type::Text))
+        }
+    );
+    module.add(Arc::new("image_names".into()),
+        image_names, Dfn {
+            lts: vec![],
+            tys: vec![],
+            ret: Type::Array(Box::new(Type::Text))
+        }
+    );
+    module.add(Arc::new("load_image".into()),
+        load_image, Dfn {
             lts: vec![Lt::Default],
             tys: vec![Type::Text],
             ret: Type::Result(Box::new(Type::Text))
@@ -281,6 +296,9 @@ pub fn width__font_size_string<C: Any + CharacterCache>(rt: &mut Runtime) -> Res
 /// Wraps font names as a current object.
 pub struct FontNames(pub Vec<Arc<String>>);
 
+/// Wraps image names as a current object.
+pub struct ImageNames(pub Vec<Arc<String>>);
+
 pub fn font_names(rt: &mut Runtime) -> Result<(), String> {
     let font_names = unsafe { &*Current::<FontNames>::new() };
     rt.push(font_names.0.clone());
@@ -303,6 +321,31 @@ pub fn load_font<F, T>(rt: &mut Runtime) -> Result<(), String>
         Ok(x) => {
             glyphs.push(x);
             font_names.0.push(file.clone());
+            rt.push(Ok::<Arc<String>, Arc<String>>(file));
+        }
+        Err(err) => {
+            rt.push(Err::<Arc<String>, Arc<String>>(Arc::new(format!("{}", err))));
+        }
+    }
+    Ok(())
+}
+
+pub fn image_names(rt: &mut Runtime) -> Result<(), String> {
+    let image_names = unsafe { &*Current::<ImageNames>::new() };
+    rt.push(image_names.0.clone());
+    Ok(())
+}
+
+pub fn load_image(rt: &mut Runtime) -> Result<(), String> {
+    use image::{open, RgbaImage};
+
+    let images = unsafe { &mut *Current::<Vec<RgbaImage>>::new() };
+    let image_names = unsafe { &mut *Current::<ImageNames>::new() };
+    let file: Arc<String> = rt.pop()?;
+    match open(&**file) {
+        Ok(x) => {
+            images.push(x.to_rgba());
+            image_names.0.push(file.clone());
             rt.push(Ok::<Arc<String>, Arc<String>>(file));
         }
         Err(err) => {

@@ -1,0 +1,22 @@
+/// These functions are added by `dyongame` to play sound and music.
+
+/// Binds sound to name.
+fn bind_sound__name_file(name: str, file: str) { ... }
+
+/// Binds music to name.
+fn bind_music__name_file(name: str, file: str) { ... }
+
+/// Play sound repeatedly.
+fn play_sound__name_repeat_volume(name: str, repeat: f64, volume: f64) { ... }
+
+/// Play sound forever.
+fn play_sound_forever__name_volume(name: str, volume: f64) { ... }
+
+/// Play music repeatedly.
+fn play_music__name_repeat(name: str, repeat: f64) { ... }
+
+/// Plays music forever.
+fn play_music_forever__name(name: str) { ... }
+
+/// Set music volume.
+fn set_music_volume(volume: f64) { ... }

@@ -4,12 +4,14 @@ extern crate piston_window;
 extern crate current;
 extern crate dyon_interactive;
 extern crate music;
+extern crate image;
 
 use std::sync::Arc;
 use piston_window::*;
 use current::CurrentGuard;
 use dyon::{error, load, Lt, Module, Dfn, Runtime, Type};
-use dyon_interactive::FontNames;
+use dyon_interactive::{FontNames, ImageNames};
+use image::RgbaImage;
 
 #[derive(Clone, Hash, PartialEq, Eq)]
 enum Music {
@@ -67,12 +69,16 @@ fn main() {
         Arc::new("FiraSans-Regular".to_owned()),
         Arc::new("Hack-Regular".to_owned()),
     ]);
+    let mut images = vec![];
+    let mut image_names = ImageNames(vec![]);
 
     let mut e: Option<Event> = None;
     let window_guard = CurrentGuard::new(&mut window);
     let event_guard: CurrentGuard<Option<Event>> = CurrentGuard::new(&mut e);
     let glyphs_guard: CurrentGuard<Vec<Glyphs>> = CurrentGuard::new(&mut glyphs);
     let font_names_guard: CurrentGuard<FontNames> = CurrentGuard::new(&mut font_names);
+    let images_guard: CurrentGuard<Vec<RgbaImage>> = CurrentGuard::new(&mut images);
+    let image_names_guard: CurrentGuard<ImageNames> = CurrentGuard::new(&mut image_names);
     let factory_guard: CurrentGuard<GfxFactory> = CurrentGuard::new(&mut factory);
 
     music::start::<Music, Sound, _>(16, || {
@@ -82,6 +88,8 @@ fn main() {
     });
 
     drop(factory_guard);
+    drop(image_names_guard);
+    drop(images_guard);
     drop(font_names_guard);
     drop(glyphs_guard);
     drop(event_guard);

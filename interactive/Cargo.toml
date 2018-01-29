@@ -19,6 +19,7 @@ path = ".."
 piston = "0.35.0"
 current = "0.1.2"
 piston-texture = "0.6.0"
+image = "0.18.0"
 
 [dependencies.piston2d-graphics]
 version = "0.24.0"

@@ -9,6 +9,9 @@
 /// ```
 fn render_source() -> str { ... }
 
+/// Draws draw list.
+fn draw(draw_list: [any]) { ... }
+
 /// Returns the window size without border in points.
 fn window_size() -> vec4 { ... }
 
@@ -70,3 +73,9 @@ fn font_names() -> [str] { ... }
 ///
 /// Returns `ok(<file>)` when successful.
 fn load_font(file: str) -> res[str] { ... }
+
+/// Returns list of image names.
+fn image_names() -> [str] { ... }
+
+/// Loads image from file.
+fn load_image(file: str) -> res[str] { ... }
