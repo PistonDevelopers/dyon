@@ -79,3 +79,23 @@ fn image_names() -> [str] { ... }
 
 /// Loads image from file.
 fn load_image(file: str) -> res[str] { ... }
+
+/// Saves image to file.
+fn save__image_file(image: f64, file: str) -> res[str] { ... }
+
+/// Creates empty image.
+fn create_image__name_size(name: str, size: vec4) -> f64 { ... }
+
+/// Returns image size.
+fn image_size(image: f64) -> vec4 { ... }
+
+/// Sets pixel color in image.
+fn pxl__image_pos_color(image: f64, pos: vec4, color: vec4) { ... }
+
+/// Gets pixel color from image.
+fn pxl__image_pos(image: f64, pos: vec4) -> vec4 { ... }
+
+/// Creates texture from image.
+///
+/// Takes an image id and returns a texture id.
+fn create_texture(image: f64) -> f64 { ... }

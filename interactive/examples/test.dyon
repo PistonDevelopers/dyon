@@ -1,4 +1,0 @@
-fn main() {
-    _ := unwrap(load_image("../assets/test.png"))
-    println(image_names())
-}

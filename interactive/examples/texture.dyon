@@ -1,0 +1,26 @@
+fn main() {
+    _ := unwrap(load_image("../assets/test.png"))
+    test := create_texture(TEST())
+    println(test)
+    ~ draw_list := []
+    loop {
+        if !next_event() {break}
+
+        if render() {
+            clear(color: #ffffff)
+            image(texture: test, pos: (80, 80), color: #ff0000)
+            image(texture: test, pos: (100, 100), color: #00ff00)
+            image(texture: test, pos: (120, 120), color: #0000ff)
+            image(texture: test, pos: (300, 100), alpha: 0.3)
+
+            offset := (10, 10)
+            for i 10 {
+                image(texture: test, pos: (200 + i * 20, 400) + offset, alpha: i/10,
+                      srccorner: offset, srcsize: (20, 40))
+            }
+            draw(draw_list)
+        }
+    }
+}
+
+fn TEST() -> Image f64 {return 0}

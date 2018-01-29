@@ -148,6 +148,41 @@ pub fn add_functions<W, F, C>(module: &mut Module)
             ret: Type::Result(Box::new(Type::Text))
         }
     );
+    module.add(Arc::new("create_image__name_size".into()),
+        create_image__name_size, Dfn {
+            lts: vec![Lt::Default; 2],
+            tys: vec![Type::Text, Type::Vec4],
+            ret: Type::F64
+        }
+    );
+    module.add(Arc::new("save__image_file".into()),
+        save__image_file, Dfn {
+            lts: vec![Lt::Default; 2],
+            tys: vec![Type::F64, Type::Text],
+            ret: Type::Result(Box::new(Type::Text))
+        }
+    );
+    module.add(Arc::new("image_size".into()),
+        image_size, Dfn {
+            lts: vec![Lt::Default],
+            tys: vec![Type::F64],
+            ret: Type::Vec4
+        }
+    );
+    module.add(Arc::new("pxl__image_pos_color".into()),
+        pxl__image_pos_color, Dfn {
+            lts: vec![Lt::Default; 3],
+            tys: vec![Type::F64, Type::Vec4, Type::Vec4],
+            ret: Type::Void
+        }
+    );
+    module.add(Arc::new("pxl__image_pos".into()),
+        pxl__image_pos, Dfn {
+            lts: vec![Lt::Default; 2],
+            tys: vec![Type::F64, Type::Vec4],
+            ret: Type::Vec4
+        }
+    );
 }
 
 pub fn window_size<W: Any + Window>(rt: &mut Runtime) -> Result<(), String> {
@@ -355,10 +390,114 @@ pub fn load_image(rt: &mut Runtime) -> Result<(), String> {
     Ok(())
 }
 
+#[allow(non_snake_case)]
+pub fn create_image__name_size(rt: &mut Runtime) -> Result<(), String> {
+    use image::RgbaImage;
+
+    let image_names = unsafe { &mut *Current::<ImageNames>::new() };
+    let images = unsafe { &mut *Current::<Vec<RgbaImage>>::new() };
+    let id = images.len();
+    let size: [f64; 2] = rt.pop_vec4()?;
+    let name: Arc<String> = rt.pop()?;
+    image_names.0.push(name);
+    images.push(RgbaImage::new(size[0] as u32, size[1] as u32));
+    rt.push(id);
+    Ok(())
+}
+
+#[allow(non_snake_case)]
+pub fn save__image_file(rt: &mut Runtime) -> Result<(), String> {
+    use image::RgbaImage;
+
+    let images = unsafe { &mut *Current::<Vec<RgbaImage>>::new() };
+    let file: Arc<String> = rt.pop()?;
+    let id: usize = rt.pop()?;
+    match images[id].save(&**file) {
+        Ok(_) => {
+            rt.push(Ok::<Arc<String>, Arc<String>>(file));
+        },
+        Err(err) => {
+            rt.push(Err::<Arc<String>, Arc<String>>(Arc::new(format!("{}", err))));
+        }
+    }
+    Ok(())
+}
+
+pub fn image_size(rt: &mut Runtime) -> Result<(), String> {
+    use image::RgbaImage;
+
+    let images = unsafe { &*Current::<Vec<RgbaImage>>::new() };
+    let id: usize = rt.pop()?;
+    let (w, h) = images[id].dimensions();
+    rt.push_vec4([w as f64, h as f64]);
+    Ok(())
+}
+
+#[allow(non_snake_case)]
+pub fn pxl__image_pos_color(rt: &mut Runtime) -> Result<(), String> {
+    use image::{Rgba, RgbaImage, GenericImage};
+
+    let images = unsafe { &mut *Current::<Vec<RgbaImage>>::new() };
+    let color: [f32; 4] = rt.pop_vec4()?;
+    let pos: [f64; 2] = rt.pop_vec4()?;
+    let id: usize = rt.pop()?;
+    let image = if let Some(x) = images.get_mut(id) {
+        x
+    } else {
+        return Err("Image id is out of bounds".into());
+    };
+    let x = pos[0] as u32;
+    let y = pos[1] as u32;
+    let (w, h) = image.dimensions();
+    if x >= w || y >= h {
+        return Err("Pixel is out of image bounds".into());
+    }
+    unsafe {
+        image.unsafe_put_pixel(x, y, Rgba {
+            data: [
+                (color[0] * 255.0) as u8,
+                (color[1] * 255.0) as u8,
+                (color[2] * 255.0) as u8,
+                (color[3] * 255.0) as u8
+            ]
+        });
+    }
+    Ok(())
+}
+
+#[allow(non_snake_case)]
+pub fn pxl__image_pos(rt: &mut Runtime) -> Result<(), String> {
+    use image::{GenericImage, RgbaImage};
+
+    let images = unsafe { &*Current::<Vec<RgbaImage>>::new() };
+    let pos: [f64; 2] = rt.pop_vec4()?;
+    let id: usize = rt.pop()?;
+    let image = if let Some(x) = images.get(id) {
+        x
+    } else {
+        return Err("Image id is out of bounds".into());
+    };
+    let x = pos[0] as u32;
+    let y = pos[1] as u32;
+    let (w, h) = image.dimensions();
+    if x >= w || y >= h {
+        return Err("Pixel is out of image bounds".into());
+    }
+    let color = unsafe { image.unsafe_get_pixel(x, y).data };
+    rt.push_vec4([
+        color[0] as f32 / 255.0,
+        color[1] as f32 / 255.0,
+        color[2] as f32 / 255.0,
+        color[3] as f32 / 255.0
+    ]);
+    Ok(())
+}
+
 /// Helper method for drawing 2D in Dyon environment.
 pub fn draw_2d<C: CharacterCache<Texture = G::Texture>, G: Graphics>(
     rt: &mut Runtime,
     glyphs: &mut Vec<C>,
+    textures: &mut Vec<G::Texture>,
     c: Context,
     g: &mut G
 ) -> Result<(), String> {
@@ -433,6 +572,30 @@ pub fn draw_2d<C: CharacterCache<Texture = G::Texture>, G: Graphics>(
                             &c.draw_state,
                             transform.trans(pos[0], pos[1]), g
                         ).map_err(|_| "Could not get glyph".to_owned())?;
+                    }
+                    "image__texture_pos_color" => {
+                        let id: usize = rt.var(&it[1])?;
+                        let pos: [f64; 2] = rt.var_vec4(&it[2])?;
+                        let color: [f32; 4] = rt.var_vec4(&it[3])?;
+                        Image::new_color(color).draw(
+                            &textures[id],
+                            &c.draw_state,
+                            transform.trans(pos[0], pos[1]), g
+                        );
+                    }
+                    "image__texture_pos_color_srccorner_srcsize" => {
+                        let id: usize = rt.var(&it[1])?;
+                        let pos: [f64; 2] = rt.var_vec4(&it[2])?;
+                        let color: [f32; 4] = rt.var_vec4(&it[3])?;
+                        let srccorner: [f64; 2] = rt.var_vec4(&it[4])?;
+                        let srcsize: [f64; 2] = rt.var_vec4(&it[5])?;
+                        Image::new_color(color)
+                        .src_rect([srccorner[0], srccorner[1], srcsize[0], srcsize[1]])
+                        .draw(
+                            &textures[id],
+                            &c.draw_state,
+                            transform.trans(pos[0], pos[1]), g
+                        );
                     }
                     _ => {}
                 }

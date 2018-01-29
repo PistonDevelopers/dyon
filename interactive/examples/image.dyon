@@ -1,0 +1,9 @@
+fn main() {
+    img := create_image(name: "img", size: (16, 16))
+    size := image_size(img)
+    for x x(size), y y(size) {
+        pxl(image: img, pos: (x, y), color: #00ff00)
+    }
+    println(str(color: pxl(image: img, pos: (0, 0))))
+    _ := unwrap(save(image: img, file: "../assets/img.png"))
+}

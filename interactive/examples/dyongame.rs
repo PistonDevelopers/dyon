@@ -17,7 +17,7 @@ use piston::input::Event;
 use piston::window::WindowSettings;
 use piston::event_loop::{Events, EventSettings};
 use sdl2_window::Sdl2Window;
-use opengl_graphics::{OpenGL, Filter, GlGraphics, GlyphCache, TextureSettings};
+use opengl_graphics::{OpenGL, Filter, GlGraphics, GlyphCache, Texture, TextureSettings};
 
 #[derive(Clone, Hash, PartialEq, Eq)]
 enum Music {
@@ -65,13 +65,12 @@ fn main() {
     };
 
     let mut dyon_runtime = Runtime::new();
-    let mut factory = ();
     let fira_sans = include_bytes!("../assets/FiraSans-Regular.ttf");
     let hack = include_bytes!("../assets/Hack-Regular.ttf");
     let font_texture_settings = TextureSettings::new().filter(Filter::Nearest);
     let mut glyphs = vec![
-        GlyphCache::from_bytes(&fira_sans[..], factory.clone(), font_texture_settings.clone()).unwrap(),
-        GlyphCache::from_bytes(&hack[..], factory.clone(), font_texture_settings).unwrap()
+        GlyphCache::from_bytes(&fira_sans[..], (), font_texture_settings.clone()).unwrap(),
+        GlyphCache::from_bytes(&hack[..], (), font_texture_settings).unwrap()
     ];
     let mut font_names = FontNames(vec![
         Arc::new("FiraSans-Regular".to_owned()),
@@ -79,6 +78,7 @@ fn main() {
     ]);
     let mut images = vec![];
     let mut image_names = ImageNames(vec![]);
+    let mut textures = vec![];
     let mut gl = GlGraphics::new(opengl);
     let mut events = Events::new(EventSettings::new());
 
@@ -90,7 +90,7 @@ fn main() {
     let font_names_guard: CurrentGuard<FontNames> = CurrentGuard::new(&mut font_names);
     let images_guard: CurrentGuard<Vec<RgbaImage>> = CurrentGuard::new(&mut images);
     let image_names_guard: CurrentGuard<ImageNames> = CurrentGuard::new(&mut image_names);
-    let factory_guard: CurrentGuard<()> = CurrentGuard::new(&mut factory);
+    let textures_guard: CurrentGuard<Vec<Texture>> = CurrentGuard::new(&mut textures);
     let gl_guard: CurrentGuard<GlGraphics> = CurrentGuard::new(&mut gl);
     let events_guard: CurrentGuard<Events> = CurrentGuard::new(&mut events);
 
@@ -102,7 +102,7 @@ fn main() {
 
     drop(events_guard);
     drop(gl_guard);
-    drop(factory_guard);
+    drop(textures_guard);
     drop(image_names_guard);
     drop(images_guard);
     drop(font_names_guard);
@@ -175,6 +175,13 @@ fn load_module(file: &str) -> Option<Module> {
             tys: vec![Type::F64],
             ret: Type::Void
         });
+    module.add(Arc::new("create_texture".into()),
+        create_texture, Dfn {
+            lts: vec![Lt::Default],
+            tys: vec![Type::F64],
+            ret: Type::F64,
+        }
+    );
 
     if error(dyon::load_str(
         "render.dyon",
@@ -195,13 +202,14 @@ mod dyon_functions {
     use sdl2_window::Sdl2Window;
     use piston::input::{Event, RenderEvent};
     use piston::event_loop::Events;
-    use opengl_graphics::{GlGraphics, GlyphCache};
+    use opengl_graphics::{GlGraphics, GlyphCache, Texture, TextureSettings};
     use dyon::Runtime;
     use dyon_interactive::{draw_2d, NO_EVENT};
     use current::Current;
     use std::sync::Arc;
     use music;
     use {Music, Sound};
+    use image::RgbaImage;
 
     dyon_fn!{fn render_source() -> String {include_str!("../src/render.dyon").into()}}
 
@@ -209,10 +217,11 @@ mod dyon_functions {
         let e = unsafe { &*Current::<Option<Event>>::new() };
         let gl = unsafe { &mut *Current::<GlGraphics>::new() };
         let glyphs = unsafe { &mut *Current::<Vec<GlyphCache>>::new() };
+        let textures = unsafe { &mut *Current::<Vec<Texture>>::new() };
         if let &Some(ref e) = e {
             if let Some(args) = e.render_args() {
                 gl.draw(args.viewport(), |c, g| {
-                    draw_2d(rt, glyphs, c, g)
+                    draw_2d(rt, glyphs, textures, c, g)
                 })
             } else {
                 Ok(())
@@ -220,6 +229,21 @@ mod dyon_functions {
         } else {
             Err(NO_EVENT.into())
         }
+    }
+
+    pub fn create_texture(rt: &mut Runtime) -> Result<(), String> {
+        let images = unsafe { &*Current::<Vec<RgbaImage>>::new() };
+        let textures = unsafe { &mut *Current::<Vec<Texture>>::new() };
+        let id: usize = rt.pop()?;
+        let new_id = textures.len();
+        let image = if let Some(x) = images.get(id) {
+            x
+        } else {
+            return Err("Image id is out of bounds".into());
+        };
+        textures.push(Texture::from_image(image, &TextureSettings::new()));
+        rt.push(new_id);
+        Ok(())
     }
 
     pub fn next_event(rt: &mut Runtime) -> Result<(), String> {
