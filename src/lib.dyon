@@ -309,6 +309,9 @@ fn load_data__file(file: str) -> res[any] { ... }
 /// Designed to be easy to use with threads.
 fn save__data_file(data: any, file: str) -> res[str] { ... }
 
+/// Loads Dyon data from string.
+fn load_data__string(string: str) -> res[any] { ... }
+
 /// Generates JSON data from meta data.
 fn json_from_meta_data(meta_data: [[any]]) -> str { ... }
 

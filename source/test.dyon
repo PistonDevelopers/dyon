@@ -1,31 +1,19 @@
 fn main() {
-    done := in done
-    th := go run()
-    sleep(4)
+    /*
+    m := unwrap(load("source/data/success.dyon"))
+    call(m, "main", [])
+    */
 
-    // Shows that drop in listening is possible,
-    // by creating the receiver after starting the task thread.
-    foo_log := in foo
-    loop {
-        done_val := next(done)
-        loop {
-            x := next(foo_log)
-            if x == none() {break}
-            println(unwrap(x))
-        }
-        if done_val != none() {break}
-    }
-}
+    /*
+    m := unwrap(load("source/data/fail.dyon"))
+    call(m, "main", [])
+    */
 
-// This function is used to send data between threads.
-fn foo(x: f64) {}
-fn done() {}
+    /*
+    data := unwrap(load_data(file: "data/err_opt.dyon"))
+    println(data)
+    */
 
-fn run() -> bool {
-    for i 10 {
-        foo(i+1)
-        sleep(1)
-    }
-    done()
-    return true
+    data := unwrap(load_data(string: "[some(3), (1, 5), none()]"))
+    println(data)
 }

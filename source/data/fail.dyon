@@ -10,6 +10,9 @@ fn main() {
         "data/err_vec4_2.dyon",
         "data/err_vec4_3.dyon",
         "data/err_color.dyon",
+        "data/err_opt.dyon",
+        "data/err_opt_2.dyon",
+        "data/err_opt_3.dyon",
     ]
     for i { show_err(files[i]) }
 }

@@ -17,6 +17,8 @@ fn main() {
         "data/comments_3.dyon",
         "data/comments_4.dyon",
         "data/comments_5.dyon",
+        "data/opt.dyon",
+        "data/opt_2.dyon",
     ]
 
     a := all i { is_ok(load_data(file: files[i])) }
