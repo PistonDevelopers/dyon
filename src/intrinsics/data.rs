@@ -118,6 +118,23 @@ fn expr(
         *read = read.consume(range.length);
         return Ok(Variable::bool(true));
     }
+    // Option.
+    if let Some(range) = read.tag("none()") {
+        *read = read.consume(range.length);
+        return Ok(Variable::Option(None));
+    }
+    if let Some(range) = read.tag("some(") {
+        *read = read.consume(range.length);
+        opt_w(read);
+        let res = try!(expr(read, strings, data));
+        opt_w(read);
+        return if let Some(range) = read.tag(")") {
+            *read = read.consume(range.length);
+            Ok(Variable::Option(Some(Box::new(res))))
+        } else {
+            Err(error(read.start(), "Expected `)`", data))
+        }
+    }
     Err(error(read.start(), "Reached end of file", data))
 }
 

@@ -124,6 +124,7 @@ const INSERT_REF: usize = 94;
 const REMOVE: usize = 95;
 const NEXT: usize = 96;
 const WAIT_NEXT: usize = 97;
+const LOAD_DATA__STRING: usize = 98;
 
 const TABLE: &'static [(usize, fn(
         &mut Runtime,
@@ -229,6 +230,7 @@ const TABLE: &'static [(usize, fn(
     (REMOVE, remove),
     (NEXT, next),
     (WAIT_NEXT, wait_next),
+    (LOAD_DATA__STRING, load_data__string),
 ];
 
 pub fn standard(f: &mut Prelude) {
@@ -485,6 +487,7 @@ pub fn standard(f: &mut Prelude) {
         tys: vec![Type::in_ty()],
         ret: Type::Any
     });
+    sarg(f, "load_data__string", LOAD_DATA__STRING, Type::Text, Type::Result(Box::new(Type::Any)));
 }
 
 pub fn call_standard(
@@ -2488,6 +2491,29 @@ fn load_data__file(
             message: Variable::Text(Arc::new(format!(
                         "Error loading data from file `{}`:\n{}",
                         file, err))),
+            trace: vec![]
+        }))
+    };
+    Ok(Some(Variable::Result(res)))
+}
+
+fn load_data__string(
+    rt: &mut Runtime,
+    call: &ast::Call,
+    module: &Arc<Module>,
+) -> Result<Option<Variable>, String> {
+    let text = rt.stack.pop().expect(TINVOTS);
+    let text = match rt.resolve(&text) {
+        &Variable::Text(ref t) => t.clone(),
+        x => return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(x, "string"), rt))
+    };
+    let res = match data::load_data(&text) {
+        Ok(data) => Ok(Box::new(data)),
+        Err(err) => Err(Box::new(super::Error {
+            message: Variable::Text(Arc::new(format!(
+                        "Error loading data from string `{}`:\n{}",
+                        text, err))),
             trace: vec![]
         }))
     };
