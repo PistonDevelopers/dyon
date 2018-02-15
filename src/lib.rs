@@ -353,6 +353,63 @@ pub fn run_str(source: &str, d: Arc<String>) -> Result<(), String> {
     Ok(())
 }
 
+/// Used to call specific functions with arguments.
+pub struct Call {
+    args: Vec<Variable>,
+    name: Arc<String>,
+}
+
+impl Call {
+    /// Creates a new call.
+    pub fn new(name: &str) -> Call {
+        Call {
+            args: vec![],
+            name: Arc::new(name.into())
+        }
+    }
+
+    /// Push value to argument list.
+    pub fn arg<T: embed::PushVariable>(mut self, val: T) -> Self {
+        self.args.push(val.push_var());
+        self
+    }
+
+    /// Push Vec4 to argument list.
+    pub fn vec4<T: embed::ConvertVec4>(mut self, val: T) -> Self {
+        self.args.push(Variable::Vec4(val.to()));
+        self
+    }
+
+    /// Push Rust object to argument list.
+    pub fn rust<T: 'static>(mut self, val: T) -> Self {
+        self.args.push(Variable::RustObject(Arc::new(Mutex::new(val)) as RustObject));
+        self
+    }
+
+    /// Run call without any return value.
+    pub fn run(&self, module: &Arc<Module>) -> Result<(), String> {
+        let ref mut runtime = runtime::Runtime::new();
+        runtime.call_str(&self.name, &self.args, module)
+    }
+
+    /// Run call with return value.
+    pub fn run_ret<T: embed::PopVariable>(&self, module: &Arc<Module>) -> Result<T, String> {
+        let ref mut runtime = runtime::Runtime::new();
+        let val = runtime.call_str_ret(&self.name, &self.args, module)?;
+        T::pop_var(runtime, runtime.resolve(&val))
+    }
+
+    /// Convert return value to a Vec4 convertible type.
+    pub fn run_vec4<T: embed::ConvertVec4>(&self, module: &Arc<Module>) -> Result<T, String> {
+        let ref mut runtime = runtime::Runtime::new();
+        let val = runtime.call_str_ret(&self.name, &self.args, module)?;
+        match runtime.resolve(&val) {
+            &Variable::Vec4(val) => Ok(T::from(val)),
+            x => Err(runtime.expected(x, "vec4"))
+        }
+    }
+}
+
 /// Loads source from file.
 pub fn load(source: &str, module: &mut Module) -> Result<(), String> {
     use std::fs::File;
