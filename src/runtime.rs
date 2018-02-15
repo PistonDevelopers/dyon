@@ -259,12 +259,21 @@ impl Runtime {
         }
     }
 
+    /// Push value to stack.
     pub fn push<T: embed::PushVariable>(&mut self, val: T) {
         self.stack.push(val.push_var())
     }
 
+    /// Push Vec4 to stack.
     pub fn push_vec4<T: embed::ConvertVec4>(&mut self, val: T) {
         self.stack.push(Variable::Vec4(val.to()))
+    }
+
+    /// Pushes Rust object to stack.
+    pub fn push_rust<T: 'static>(&mut self, val: T) {
+        use std::sync::Mutex;
+        use RustObject;
+        self.stack.push(Variable::RustObject(Arc::new(Mutex::new(val)) as RustObject))
     }
 
     pub fn expected(&self, var: &Variable, ty: &str) -> String {
@@ -1137,6 +1146,40 @@ impl Runtime {
                 };
                 try!(self.call(&call, &module));
                 Ok(())
+            }
+            _ => return Err(format!("Could not find function `{}`",function))
+        }
+    }
+
+    /// Call function by name, returning a value.
+    pub fn call_str_ret(
+        &mut self,
+        function: &str,
+        args: &[Variable],
+        module: &Arc<Module>
+    ) -> Result<Variable, String> {
+        use std::cell::Cell;
+
+        let name: Arc<String> = Arc::new(function.into());
+        match module.find_function(&name, 0) {
+            FnIndex::Loaded(f_index) => {
+                let call = ast::Call {
+                    alias: None,
+                    name: name.clone(),
+                    f_index: Cell::new(FnIndex::Loaded(f_index)),
+                    args: args.iter()
+                            .map(|arg| ast::Expression::Variable(Range::empty(0), arg.clone()))
+                            .collect(),
+                    custom_source: None,
+                    source_range: Range::empty(0),
+                };
+                match self.call(&call, &module) {
+                    Ok((Some(val), Flow::Continue)) => Ok(val),
+                    Err(err) => Err(err),
+                    _ => return Err(module.error(call.source_range,
+                                    &format!("{}\nExpected something",
+                                        self.stack_trace()), self))
+                }
             }
             _ => return Err(format!("Could not find function `{}`",function))
         }
