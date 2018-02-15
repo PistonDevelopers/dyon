@@ -125,6 +125,7 @@ const REMOVE: usize = 95;
 const NEXT: usize = 96;
 const WAIT_NEXT: usize = 97;
 const LOAD_DATA__STRING: usize = 98;
+const ARGS_OS: usize = 99;
 
 const TABLE: &'static [(usize, fn(
         &mut Runtime,
@@ -231,6 +232,7 @@ const TABLE: &'static [(usize, fn(
     (NEXT, next),
     (WAIT_NEXT, wait_next),
     (LOAD_DATA__STRING, load_data__string),
+    (ARGS_OS, args_os),
 ];
 
 pub fn standard(f: &mut Prelude) {
@@ -488,6 +490,11 @@ pub fn standard(f: &mut Prelude) {
         ret: Type::Any
     });
     sarg(f, "load_data__string", LOAD_DATA__STRING, Type::Text, Type::Result(Box::new(Type::Any)));
+    f.intrinsic(Arc::new("args_os".into()), ARGS_OS, Dfn {
+        lts: vec![],
+        tys: vec![],
+        ret: Type::Array(Box::new(Type::Text))
+    });
 }
 
 pub fn call_standard(
@@ -2518,6 +2525,23 @@ fn load_data__string(
         }))
     };
     Ok(Some(Variable::Result(res)))
+}
+
+fn args_os(
+    rt: &mut Runtime,
+    call: &ast::Call,
+    module: &Arc<Module>
+) -> Result<Option<Variable>, String> {
+    let mut arr: Vec<Variable> = vec![];
+    for arg in ::std::env::args_os() {
+        if let Ok(t) = arg.into_string() {
+            arr.push(Variable::Text(Arc::new(t)))
+        } else {
+            return Err(module.error(call.source_range,
+                      "Invalid unicode in os argument", rt));
+        }
+    }
+    Ok(Some(Variable::Array(Arc::new(arr))))
 }
 
 #[cfg(feature = "file")]
