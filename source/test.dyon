@@ -1,19 +1,3 @@
 fn main() {
-    /*
-    m := unwrap(load("source/data/success.dyon"))
-    call(m, "main", [])
-    */
-
-    /*
-    m := unwrap(load("source/data/fail.dyon"))
-    call(m, "main", [])
-    */
-
-    /*
-    data := unwrap(load_data(file: "data/err_opt.dyon"))
-    println(data)
-    */
-
-    data := unwrap(load_data(string: "[some(3), (1, 5), none()]"))
-    println(data)
+    println(args_os())
 }

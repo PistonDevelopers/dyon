@@ -312,6 +312,10 @@ fn save__data_file(data: any, file: str) -> res[str] { ... }
 /// Loads Dyon data from string.
 fn load_data__string(string: str) -> res[any] { ... }
 
+/// Returns the arguments which this program was started with.
+/// The first element is usually the path of the executable.
+fn args_os() -> [str] { ... }
+
 /// Generates JSON data from meta data.
 fn json_from_meta_data(meta_data: [[any]]) -> str { ... }
 
