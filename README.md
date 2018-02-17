@@ -69,7 +69,8 @@ dyonrun <file.dyon>
 - [Optional type system](https://github.com/PistonDevelopers/dyon/issues/84) `fn could(list: []) -> f64`
 - [Ad-hoc types](https://github.com/PistonDevelopers/dyon/issues/236) `fn players() -> [Player str] { ... }`
 - [Current objects](https://github.com/PistonDevelopers/dyon/issues/224) `fn render() ~ world { ... }`
-- [Go-like coroutines with `go`](https://github.com/PistonDevelopers/dyon/issues/163)
+- [Go-like coroutines with `go`](https://github.com/PistonDevelopers/dyon/issues/163) `thread := go foo()`
+- [In-types concurrency](https://github.com/PistonDevelopers/dyon/issues/495) `receiver := in foo`
 - [Closures](https://github.com/PistonDevelopers/dyon/issues/314) `\(x) = x + 1`
 - [Grab expressions](https://github.com/PistonDevelopers/dyon/issues/316) `\(x) = (grab a) + x`
 - [4D vectors with `f32` precision `(x, y, z, w)`](https://github.com/PistonDevelopers/dyon/issues/144)
@@ -111,6 +112,7 @@ The idea was to make a simple, but convenient scripting language that integrated
 - Closures that can be printed out, use current objects and grab from closure environment
 - Type safety for secrets, easy load/save of Dyon data
 - Link loop for easier and faster code generation and templates
+- In-types for easy cross thread communication
 
 Main goals:
 
