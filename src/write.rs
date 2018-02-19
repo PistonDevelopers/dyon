@@ -319,11 +319,20 @@ pub fn write_block<W: io::Write>(
     Ok(())
 }
 
-fn binop_needs_parent(expr: &ast::Expression) -> bool {
+fn binop_needs_parens(op: ast::BinOp, expr: &ast::Expression, right: bool) -> bool {
     use ast::Expression as E;
 
     match *expr {
         E::Compare(_) => true,
+        E::BinOp(ref binop) => {
+            match (op.precedence(), binop.op.precedence()) {
+                (3, _) => true,
+                (2, 1) => true,
+                (2, 2) if right => true,
+                (1, 1) if right => true,
+                _ => false
+            }
+        }
         _ => false
     }
 }
@@ -334,8 +343,8 @@ pub fn write_binop<W: io::Write>(
     binop: &ast::BinOpExpression,
     tabs: u32,
 ) -> Result<(), io::Error> {
-    let left_needs_parens = binop_needs_parent(&binop.left);
-    let right_needs_parens = binop_needs_parent(&binop.right);
+    let left_needs_parens = binop_needs_parens(binop.op, &binop.left, false);
+    let right_needs_parens = binop_needs_parens(binop.op, &binop.right, true);
 
     if left_needs_parens {
         try!(write!(w, "("));
