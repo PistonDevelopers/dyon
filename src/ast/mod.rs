@@ -1763,6 +1763,17 @@ impl BinOp {
             _ => self.symbol()
         }
     }
+
+    /// Returns the operator precedence level.
+    pub fn precedence(self) -> u8 {
+        match self {
+            BinOp::OrElse | BinOp::AndAlso => 0,
+            BinOp::Add | BinOp::Sub => 1,
+            BinOp::Mul | BinOp::Dot | BinOp::Cross
+            | BinOp::Div | BinOp::Rem => 2,
+            BinOp::Pow => 3,
+        }
+    }
 }
 
 #[derive(Debug, Copy, Clone)]
