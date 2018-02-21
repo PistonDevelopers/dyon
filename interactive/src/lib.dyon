@@ -89,6 +89,9 @@ fn focus_args() -> opt[bool] { ... }
 /// Returns the position for mouse cursor event.
 fn mouse_cursor_pos() -> opt[vec4] { ... }
 
+/// Extrapolated time in seconds, used to do smooth animation.
+fn render_ext_dt() -> opt[f64] { ... }
+
 /// Returns the delta time in seconds for update event.
 fn update_dt() -> opt[f64] { ... }
 

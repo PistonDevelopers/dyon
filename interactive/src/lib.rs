@@ -152,6 +152,12 @@ pub fn add_functions<W, F, C>(module: &mut Module)
             tys: vec![Type::Bool],
             ret: Type::Void
         });
+    module.add(Arc::new("render_ext_dt".into()),
+        render_ext_dt, Dfn {
+            lts: vec![],
+            tys: vec![],
+            ret: Type::Option(Box::new(Type::F64))
+        });
     module.add(Arc::new("update_dt".into()),
         update_dt, Dfn {
             lts: vec![],
@@ -401,6 +407,12 @@ pub fn mouse_cursor(rt: &mut Runtime) -> Result<(), String> {
 pub fn focus_arg(rt: &mut Runtime) -> Result<(), String> {
     rt.push(unsafe { Current::<Option<Event>>::new()
         .as_ref().expect(NO_EVENT).focus_args() });
+    Ok(())
+}
+
+pub fn render_ext_dt(rt: &mut Runtime) -> Result<(), String> {
+    rt.push(unsafe { Current::<Option<Event>>::new()
+        .as_ref().expect(NO_EVENT).render_args().map(|args| args.ext_dt) });
     Ok(())
 }
 
