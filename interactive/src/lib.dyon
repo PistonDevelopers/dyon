@@ -94,6 +94,9 @@ fn press() -> bool { ... }
 /// Returns `true` when releasing a button.
 fn release() -> bool { ... }
 
+/// Returns `true` when window is resized.
+fn resize() -> bool { ... }
+
 /// Returns `true` when window receives or loses focus.
 fn focus() -> bool { ... }
 

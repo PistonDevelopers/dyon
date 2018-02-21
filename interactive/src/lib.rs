@@ -78,6 +78,11 @@ pub fn add_functions<W, F, C>(module: &mut Module)
         tys: vec![],
         ret: Type::Bool
     });
+    module.add(Arc::new("resize".into()), resize, Dfn {
+        lts: vec![],
+        tys: vec![],
+        ret: Type::Bool,
+    });
     module.add(Arc::new("focus".into()), focus, Dfn {
         lts: vec![],
         tys: vec![],
@@ -476,6 +481,12 @@ pub fn press(rt: &mut Runtime) -> Result<(), String> {
 pub fn release(rt: &mut Runtime) -> Result<(), String> {
     rt.push(unsafe { Current::<Option<Event>>::new()
         .as_ref().expect(NO_EVENT).release_args().is_some() });
+    Ok(())
+}
+
+pub fn resize(rt: &mut Runtime) -> Result<(), String> {
+    rt.push(unsafe { Current::<Option<Event>>::new()
+        .as_ref().expect(NO_EVENT).resize_args().is_some() });
     Ok(())
 }
 
