@@ -33,6 +33,12 @@ fn window_title() -> str { ... }
 /// Sets title of window.
 fn set_window__title(text: str) { ... }
 
+/// The number of updates per second.
+fn event_loop_ups() -> f64 { ... }
+
+/// The number of updates per second.
+fn set_event_loop__ups(frames: f64) { ... }
+
 /// The number of delayed updates before skipping them to catch up.
 /// When set to 0, it will always try to catch up.
 fn event_loop_upsreset() -> f64 { ... }
