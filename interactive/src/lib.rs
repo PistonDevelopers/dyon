@@ -53,6 +53,11 @@ pub fn add_functions<W, F, C>(module: &mut Module)
         tys: vec![],
         ret: Type::Bool
     });
+    module.add(Arc::new("after_render".into()), after_render, Dfn {
+        lts: vec![],
+        tys: vec![],
+        ret: Type::Bool
+    });
     module.add(Arc::new("update".into()), update, Dfn {
         lts: vec![],
         tys: vec![],
@@ -337,6 +342,12 @@ pub fn set_event_loop__lazy(rt: &mut Runtime) -> Result<(), String> {
 pub fn render(rt: &mut Runtime) -> Result<(), String> {
     rt.push(unsafe { Current::<Option<Event>>::new()
         .as_ref().expect(NO_EVENT).render_args().is_some() });
+    Ok(())
+}
+
+pub fn after_render(rt: &mut Runtime) -> Result<(), String> {
+    rt.push(unsafe { Current::<Option<Event>>::new()
+        .as_ref().expect(NO_EVENT).after_render_args().is_some() });
     Ok(())
 }
 

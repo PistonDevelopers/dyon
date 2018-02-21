@@ -59,6 +59,9 @@ fn set_event_loop__lazy(lazy: bool) { ... }
 /// Returns `true` when time to render.
 fn render() -> bool { ... }
 
+/// Returns `true` when rendering is done.
+fn after_render() -> bool { ... }
+
 /// Returns `true` when time to update.
 fn update() -> bool { ... }
 
