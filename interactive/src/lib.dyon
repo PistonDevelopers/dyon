@@ -33,6 +33,12 @@ fn window_title() -> str { ... }
 /// Sets title of window.
 fn set_window__title(text: str) { ... }
 
+/// Gets whether the event loop runs in benchmark mode.
+fn event_loop_benchmode() -> bool { ... }
+
+/// Enable or disable benchmark mode in event loop.
+fn set_event_loop__benchmode(benchmode: bool) { ... }
+
 /// Gets whether the event loop renders only when receiving input.
 fn event_loop_lazy() -> bool { ... }
 
