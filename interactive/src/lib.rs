@@ -110,6 +110,18 @@ pub fn add_functions<W, F, C>(module: &mut Module)
             tys: vec![Type::Text],
             ret: Type::Void
         });
+    module.add(Arc::new("event_loop_upsreset".into()),
+        event_loop_upsreset, Dfn {
+            lts: vec![],
+            tys: vec![],
+            ret: Type::F64
+        });
+    module.add(Arc::new("set_event_loop__upsreset".into()),
+        set_event_loop__upsreset, Dfn {
+            lts: vec![Lt::Default],
+            tys: vec![Type::F64],
+            ret: Type::Void
+        });
     module.add(Arc::new("event_loop_maxfps".into()),
         event_loop_maxfps, Dfn {
             lts: vec![],
@@ -309,6 +321,23 @@ pub fn set_window__position<W: Any + AdvancedWindow>(rt: &mut Runtime) -> Result
     let pos: [f32; 2] = rt.pop_vec4()?;
     let pos: [i32; 2] = [pos[0] as i32, pos[1] as i32];
     unsafe { Current::<W>::new() }.set_position(pos);
+    Ok(())
+}
+
+pub fn event_loop_upsreset(rt: &mut Runtime) -> Result<(), String> {
+    use piston::event_loop::{EventLoop, Events};
+
+    let ups_reset = unsafe { Current::<Events>::new() }.get_event_settings().ups_reset;
+    rt.push(ups_reset as f64);
+    Ok(())
+}
+
+#[allow(non_snake_case)]
+pub fn set_event_loop__upsreset(rt: &mut Runtime) -> Result<(), String> {
+    use piston::event_loop::{EventLoop, Events};
+
+    let ups_reset: f64 = rt.pop()?;
+    unsafe { Current::<Events>::new() }.set_ups_reset(ups_reset as u64);
     Ok(())
 }
 
