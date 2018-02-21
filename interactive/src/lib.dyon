@@ -18,6 +18,12 @@ fn window_size() -> vec4 { ... }
 /// Returns the frame buffer size in pixels.
 fn window_draw_size() -> vec4 { ... }
 
+/// Gets window position.
+fn window_position() -> vec4 { ... }
+
+/// Sets window position.
+fn set_window__position(pos: vec4) { ... }
+
 /// Sets window size.
 fn set_window__size(size: vec4) { ... }
 

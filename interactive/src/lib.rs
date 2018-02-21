@@ -38,6 +38,16 @@ pub fn add_functions<W, F, C>(module: &mut Module)
         tys: vec![],
         ret: Type::Vec4
     });
+    module.add(Arc::new("window_position".into()), window_position::<W>, Dfn {
+        lts: vec![],
+        tys: vec![],
+        ret: Type::Vec4
+    });
+    module.add(Arc::new("set_window__position".into()), set_window__position::<W>, Dfn {
+        lts: vec![Lt::Default],
+        tys: vec![Type::Vec4],
+        ret: Type::Void
+    });
     module.add(Arc::new("render".into()), render, Dfn {
         lts: vec![],
         tys: vec![],
@@ -206,6 +216,23 @@ pub fn window_size<W: Any + Window>(rt: &mut Runtime) -> Result<(), String> {
 pub fn window_draw_size<W: Any + Window>(rt: &mut Runtime) -> Result<(), String> {
     let draw_size = unsafe { Current::<W>::new() }.draw_size();
     rt.push_vec4([draw_size.width as f32, draw_size.height as f32, 0.0, 0.0]);
+    Ok(())
+}
+
+pub fn window_position<W: Any + AdvancedWindow>(rt: &mut Runtime) -> Result<(), String> {
+    if let Some(pos) = unsafe { Current::<W>::new() }.get_position() {
+        rt.push_vec4([pos.x as f32, pos.y as f32]);
+    } else {
+        rt.push_vec4([0.0 as f32; 2]);
+    }
+    Ok(())
+}
+
+#[allow(non_snake_case)]
+pub fn set_window__position<W: Any + AdvancedWindow>(rt: &mut Runtime) -> Result<(), String> {
+    let pos: [f32; 2] = rt.pop_vec4()?;
+    let pos: [i32; 2] = [pos[0] as i32, pos[1] as i32];
+    unsafe { Current::<W>::new() }.set_position(pos);
     Ok(())
 }
 
