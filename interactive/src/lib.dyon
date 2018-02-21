@@ -33,6 +33,16 @@ fn window_title() -> str { ... }
 /// Sets title of window.
 fn set_window__title(text: str) { ... }
 
+/// Gets whether the event loop automatically swaps buffers.
+fn event_loop_swapbuffers() -> bool { ... }
+
+/// Swaps render buffers manually.
+/// Do not use unless `event_loop_swapbuffers` is disabled.
+fn swap_buffers() { ... }
+
+/// Enable or disable automatic swapping of buffers.
+fn set_event_loop__swapbuffers(swapbuffers: bool) { ... }
+
 /// Gets whether the event loop runs in benchmark mode.
 fn event_loop_benchmode() -> bool { ... }
 

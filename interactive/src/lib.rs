@@ -100,6 +100,24 @@ pub fn add_functions<W, F, C>(module: &mut Module)
             tys: vec![Type::Text],
             ret: Type::Void
         });
+    module.add(Arc::new("event_loop_swapbuffers".into()),
+        event_loop_swapbuffers, Dfn {
+            lts: vec![],
+            tys: vec![],
+            ret: Type::Bool
+        });
+    module.add(Arc::new("set_event_loop__swapbuffers".into()),
+        set_event_loop__swapbuffers, Dfn {
+            lts: vec![Lt::Default],
+            tys: vec![Type::Bool],
+            ret: Type::Void
+        });
+    module.add(Arc::new("swap_buffers".into()),
+        swap_buffers::<W>, Dfn {
+            lts: vec![],
+            tys: vec![],
+            ret: Type::Void
+        });
     module.add(Arc::new("event_loop_benchmode".into()),
         event_loop_benchmode, Dfn {
             lts: vec![],
@@ -257,6 +275,28 @@ pub fn set_window__position<W: Any + AdvancedWindow>(rt: &mut Runtime) -> Result
     let pos: [f32; 2] = rt.pop_vec4()?;
     let pos: [i32; 2] = [pos[0] as i32, pos[1] as i32];
     unsafe { Current::<W>::new() }.set_position(pos);
+    Ok(())
+}
+
+pub fn event_loop_swapbuffers(rt: &mut Runtime) -> Result<(), String> {
+    use piston::event_loop::{EventLoop, Events};
+
+    let swap_buffers = unsafe { Current::<Events>::new() }.get_event_settings().swap_buffers;
+    rt.push(swap_buffers);
+    Ok(())
+}
+
+#[allow(non_snake_case)]
+pub fn set_event_loop__swapbuffers(rt: &mut Runtime) -> Result<(), String> {
+    use piston::event_loop::{EventLoop, Events};
+
+    let swap_buffers: bool = rt.pop()?;
+    unsafe { Current::<Events>::new() }.set_swap_buffers(swap_buffers);
+    Ok(())
+}
+
+pub fn swap_buffers<W: Any + Window>(_rt: &mut Runtime) -> Result<(), String> {
+    unsafe { Current::<W>::new() }.swap_buffers();
     Ok(())
 }
 
