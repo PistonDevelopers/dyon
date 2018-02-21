@@ -12,7 +12,7 @@ fn main() {
     ~ settings := call_ret(m, "settings", [])
     ~ data := call_ret(m, "init_data", [settings])
     loader := new_loader(interval: settings.reload_interval)
-    set(title: call_ret(m, "title", []))
+    set_window(title: call_ret(m, "title", []))
     loop {
         if !next_event() { break }
         if render() {

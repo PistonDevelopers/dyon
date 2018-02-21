@@ -4,7 +4,7 @@ fn main() {
 
         text := text_input()
         if text != none() {
-            set(title: unwrap(text))
+            set_window(title: unwrap(text))
         }
     }
 }

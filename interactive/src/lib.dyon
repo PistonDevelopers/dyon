@@ -18,6 +18,12 @@ fn window_size() -> vec4 { ... }
 /// Returns the frame buffer size in pixels.
 fn window_draw_size() -> vec4 { ... }
 
+/// Sets window size.
+fn set_window__size(size: vec4) { ... }
+
+/// Sets title of window.
+fn set_window__title(text: str) { ... }
+
 /// Returns `true` when time to render.
 fn render() -> bool { ... }
 
@@ -44,9 +50,6 @@ fn focus_args() -> opt[bool] { ... }
 
 /// Returns the position for mouse cursor event.
 fn mouse_cursor_pos() -> opt[vec4] { ... }
-
-/// Sets title of window.
-fn set__title(text: str) { ... }
 
 /// Returns the delta time for update event.
 fn update_dt() -> opt[f64] { ... }
