@@ -103,6 +103,9 @@ fn focus() -> bool { ... }
 /// Returns `true` when window gained or lost cursor.
 fn cursor() -> bool { ... }
 
+/// Returns `true` when window received text.
+fn text() -> bool { ... }
+
 /// Returns `true` when there is a mouse cursor event.
 fn mouse_cursor() -> bool { ... }
 
@@ -117,6 +120,9 @@ fn focus_arg() -> opt[bool] { ... }
 /// - `some(false)` when window lost cursor.
 /// - `none()` when there is no cursor event.
 fn cursor_arg() -> opt[bool] { ... }
+
+/// Returns the text input for text event.
+fn text_arg() -> opt[str] { ... }
 
 /// Returns the position for mouse cursor event.
 fn mouse_cursor_pos() -> opt[vec4] { ... }
@@ -141,9 +147,6 @@ fn press_mouse_button() -> opt[f64] { ... }
 
 /// Returns the mouse button for release event.
 fn release_mouse_button() -> opt[f64] { ... }
-
-/// Returns the text input for text event.
-fn text_input() -> opt[str] { ... }
 
 /// Returns the width of rendered text for a given font.
 fn width__font_size_string(font: f64, size: f64, text: str) -> f64 { ... }

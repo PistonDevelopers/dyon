@@ -93,6 +93,11 @@ pub fn add_functions<W, F, C>(module: &mut Module)
         tys: vec![],
         ret: Type::Bool,
     });
+    module.add(Arc::new("text".into()), text, Dfn {
+        lts: vec![],
+        tys: vec![],
+        ret: Type::Bool,
+    });
     module.add(Arc::new("mouse_cursor".into()), mouse_cursor, Dfn {
         lts: vec![],
         tys: vec![],
@@ -245,8 +250,8 @@ pub fn add_functions<W, F, C>(module: &mut Module)
             tys: vec![],
             ret: Type::Option(Box::new(Type::F64))
         });
-    module.add(Arc::new("text_input".into()),
-        text_input, Dfn {
+    module.add(Arc::new("text_arg".into()),
+        text_arg, Dfn {
             lts: vec![],
             tys: vec![],
             ret: Type::Option(Box::new(Type::Text))
@@ -512,6 +517,12 @@ pub fn cursor(rt: &mut Runtime) -> Result<(), String> {
     Ok(())
 }
 
+pub fn text(rt: &mut Runtime) -> Result<(), String> {
+    rt.push(unsafe { Current::<Option<Event>>::new()
+        .as_ref().expect(NO_EVENT).text(|_| ()).is_some() });
+    Ok(())
+}
+
 pub fn mouse_cursor(rt: &mut Runtime) -> Result<(), String> {
     rt.push(unsafe { Current::<Option<Event>>::new()
         .as_ref().expect(NO_EVENT).mouse_cursor_args().is_some() });
@@ -610,7 +621,7 @@ pub fn release_mouse_button(rt: &mut Runtime) -> Result<(), String> {
     }
 }
 
-pub fn text_input(rt: &mut Runtime) -> Result<(), String> {
+pub fn text_arg(rt: &mut Runtime) -> Result<(), String> {
     let e = unsafe { &*Current::<Option<Event>>::new() };
     if let &Some(ref e) = e {
         if let Some(text) = e.text_args() {
