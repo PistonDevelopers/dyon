@@ -21,6 +21,9 @@ fn window_draw_size() -> vec4 { ... }
 /// Sets window size.
 fn set_window__size(size: vec4) { ... }
 
+/// Gets title of window.
+fn window_title() -> str { ... }
+
 /// Sets title of window.
 fn set_window__title(text: str) { ... }
 

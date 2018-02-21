@@ -78,6 +78,12 @@ pub fn add_functions<W, F, C>(module: &mut Module)
         tys: vec![],
         ret: Type::Option(Box::new(Type::Vec4)),
     });
+    module.add(Arc::new("window_title".into()),
+        window_title::<W>, Dfn {
+            lts: vec![],
+            tys: vec![],
+            ret: Type::Text
+        });
     module.add(Arc::new("set_window__title".into()),
         set_window__title::<W>, Dfn {
             lts: vec![Lt::Default],
@@ -325,6 +331,14 @@ pub fn text_input(rt: &mut Runtime) -> Result<(), String> {
     } else {
         Err(NO_EVENT.into())
     }
+}
+
+pub fn window_title<W: Any + AdvancedWindow>(rt: &mut Runtime) -> Result<(), String> {
+    use std::sync::Arc;
+
+    let window = unsafe { &mut *Current::<W>::new() };
+    rt.push(Arc::new(window.get_title()));
+    Ok(())
 }
 
 #[allow(non_snake_case)]
