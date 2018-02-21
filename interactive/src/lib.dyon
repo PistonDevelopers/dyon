@@ -65,6 +65,9 @@ fn after_render() -> bool { ... }
 /// Returns `true` when time to update.
 fn update() -> bool { ... }
 
+/// Returns `true` when event loop got nothing to do for a while.
+fn idle() -> bool { ... }
+
 /// Returns `true` when pressing a button.
 fn press() -> bool { ... }
 
@@ -86,8 +89,11 @@ fn focus_args() -> opt[bool] { ... }
 /// Returns the position for mouse cursor event.
 fn mouse_cursor_pos() -> opt[vec4] { ... }
 
-/// Returns the delta time for update event.
+/// Returns the delta time in seconds for update event.
 fn update_dt() -> opt[f64] { ... }
+
+/// Returns the expected idle time in seconds for idle event.
+fn idle_dt() -> opt[f64] { ... }
 
 /// Returns the keyboard key for press event.
 fn press_keyboard_key() -> opt[f64] { ... }

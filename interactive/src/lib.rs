@@ -63,6 +63,11 @@ pub fn add_functions<W, F, C>(module: &mut Module)
         tys: vec![],
         ret: Type::Bool
     });
+    module.add(Arc::new("idle".into()), idle, Dfn {
+        lts: vec![],
+        tys: vec![],
+        ret: Type::Bool
+    });
     module.add(Arc::new("press".into()), press, Dfn {
         lts: vec![],
         tys: vec![],
@@ -149,6 +154,12 @@ pub fn add_functions<W, F, C>(module: &mut Module)
         });
     module.add(Arc::new("update_dt".into()),
         update_dt, Dfn {
+            lts: vec![],
+            tys: vec![],
+            ret: Type::Option(Box::new(Type::F64))
+        });
+    module.add(Arc::new("idle_dt".into()),
+        idle_dt, Dfn {
             lts: vec![],
             tys: vec![],
             ret: Type::Option(Box::new(Type::F64))
@@ -357,6 +368,12 @@ pub fn update(rt: &mut Runtime) -> Result<(), String> {
     Ok(())
 }
 
+pub fn idle(rt: &mut Runtime) -> Result<(), String> {
+    rt.push(unsafe { Current::<Option<Event>>::new()
+        .as_ref().expect(NO_EVENT).idle_args().is_some() });
+    Ok(())
+}
+
 pub fn press(rt: &mut Runtime) -> Result<(), String> {
     rt.push(unsafe { Current::<Option<Event>>::new()
         .as_ref().expect(NO_EVENT).press_args().is_some() });
@@ -390,6 +407,12 @@ pub fn focus_arg(rt: &mut Runtime) -> Result<(), String> {
 pub fn update_dt(rt: &mut Runtime) -> Result<(), String> {
     rt.push(unsafe { Current::<Option<Event>>::new()
         .as_ref().expect(NO_EVENT).update_args().map(|args| args.dt) });
+    Ok(())
+}
+
+pub fn idle_dt(rt: &mut Runtime) -> Result<(), String> {
+    rt.push(unsafe { Current::<Option<Event>>::new()
+        .as_ref().expect(NO_EVENT).idle_args().map(|args| args.dt) });
     Ok(())
 }
 
