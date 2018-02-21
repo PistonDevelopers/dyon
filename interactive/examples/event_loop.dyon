@@ -1,0 +1,44 @@
+fn main() {
+    set_event_loop(benchmode: false)
+    println(link {"Benchmark mode: "event_loop_benchmode()})
+
+    set_event_loop(lazy: false)
+    println(link {"Lazy: "event_loop_lazy()})
+
+    set_event_loop(swapbuffers: false)
+    println(link {"Swap buffers: "event_loop_swapbuffers()})
+
+    set_event_loop(maxfps: 20)
+    println(link {"Max fps: "event_loop_maxfps()})
+
+    set_event_loop(upsreset: 4)
+    println(link {"Ups reset: "event_loop_upsreset()})
+
+    set_event_loop(ups: 30)
+    println(link {"Ups: "event_loop_ups()})
+
+    loop {
+        if !next_event() {break}
+        if render() {
+            // println(render_ext_dt())
+        }
+        if after_render() {
+            if !event_loop_swapbuffers() {
+                // Swap buffers manually.
+                swap_buffers()
+            }
+        }
+        if idle() {
+            // println(idle_dt())
+        }
+        if resize() {
+            println(link {"Resize: "unwrap(window_size())})
+        }
+        if focus() {
+            println(link {"Focus: "unwrap(focus_arg())})
+        }
+        if cursor() {
+            println(link {"Cursor: "unwrap(cursor_arg())})
+        }
+    }
+}

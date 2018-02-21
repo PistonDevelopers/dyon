@@ -38,12 +38,32 @@ pub fn add_functions<W, F, C>(module: &mut Module)
         tys: vec![],
         ret: Type::Vec4
     });
+    module.add(Arc::new("window_position".into()), window_position::<W>, Dfn {
+        lts: vec![],
+        tys: vec![],
+        ret: Type::Vec4
+    });
+    module.add(Arc::new("set_window__position".into()), set_window__position::<W>, Dfn {
+        lts: vec![Lt::Default],
+        tys: vec![Type::Vec4],
+        ret: Type::Void
+    });
     module.add(Arc::new("render".into()), render, Dfn {
         lts: vec![],
         tys: vec![],
         ret: Type::Bool
     });
+    module.add(Arc::new("after_render".into()), after_render, Dfn {
+        lts: vec![],
+        tys: vec![],
+        ret: Type::Bool
+    });
     module.add(Arc::new("update".into()), update, Dfn {
+        lts: vec![],
+        tys: vec![],
+        ret: Type::Bool
+    });
+    module.add(Arc::new("idle".into()), idle, Dfn {
         lts: vec![],
         tys: vec![],
         ret: Type::Bool
@@ -58,7 +78,22 @@ pub fn add_functions<W, F, C>(module: &mut Module)
         tys: vec![],
         ret: Type::Bool
     });
+    module.add(Arc::new("resize".into()), resize, Dfn {
+        lts: vec![],
+        tys: vec![],
+        ret: Type::Bool,
+    });
     module.add(Arc::new("focus".into()), focus, Dfn {
+        lts: vec![],
+        tys: vec![],
+        ret: Type::Bool,
+    });
+    module.add(Arc::new("cursor".into()), cursor, Dfn {
+        lts: vec![],
+        tys: vec![],
+        ret: Type::Bool,
+    });
+    module.add(Arc::new("text".into()), text, Dfn {
         lts: vec![],
         tys: vec![],
         ret: Type::Bool,
@@ -73,19 +108,120 @@ pub fn add_functions<W, F, C>(module: &mut Module)
         tys: vec![],
         ret: Type::Option(Box::new(Type::Bool)),
     });
+    module.add(Arc::new("cursor_arg".into()), cursor_arg, Dfn {
+        lts: vec![],
+        tys: vec![],
+        ret: Type::Option(Box::new(Type::Bool)),
+    });
     module.add(Arc::new("mouse_cursor_pos".into()), mouse_cursor_pos, Dfn {
         lts: vec![],
         tys: vec![],
         ret: Type::Option(Box::new(Type::Vec4)),
     });
-    module.add(Arc::new("set__title".into()),
-        set__title::<W>, Dfn {
+    module.add(Arc::new("window_title".into()),
+        window_title::<W>, Dfn {
+            lts: vec![],
+            tys: vec![],
+            ret: Type::Text
+        });
+    module.add(Arc::new("set_window__title".into()),
+        set_window__title::<W>, Dfn {
             lts: vec![Lt::Default],
             tys: vec![Type::Text],
             ret: Type::Void
         });
+    module.add(Arc::new("event_loop_ups".into()),
+        event_loop_ups, Dfn {
+            lts: vec![],
+            tys: vec![],
+            ret: Type::F64
+        });
+    module.add(Arc::new("set_event_loop__ups".into()),
+        set_event_loop__ups, Dfn {
+            lts: vec![Lt::Default],
+            tys: vec![Type::F64],
+            ret: Type::Void
+        });
+    module.add(Arc::new("event_loop_upsreset".into()),
+        event_loop_upsreset, Dfn {
+            lts: vec![],
+            tys: vec![],
+            ret: Type::F64
+        });
+    module.add(Arc::new("set_event_loop__upsreset".into()),
+        set_event_loop__upsreset, Dfn {
+            lts: vec![Lt::Default],
+            tys: vec![Type::F64],
+            ret: Type::Void
+        });
+    module.add(Arc::new("event_loop_maxfps".into()),
+        event_loop_maxfps, Dfn {
+            lts: vec![],
+            tys: vec![],
+            ret: Type::F64
+        });
+    module.add(Arc::new("set_event_loop__maxfps".into()),
+        set_event_loop__maxfps, Dfn {
+            lts: vec![Lt::Default],
+            tys: vec![Type::F64],
+            ret: Type::Void
+        });
+    module.add(Arc::new("event_loop_swapbuffers".into()),
+        event_loop_swapbuffers, Dfn {
+            lts: vec![],
+            tys: vec![],
+            ret: Type::Bool
+        });
+    module.add(Arc::new("set_event_loop__swapbuffers".into()),
+        set_event_loop__swapbuffers, Dfn {
+            lts: vec![Lt::Default],
+            tys: vec![Type::Bool],
+            ret: Type::Void
+        });
+    module.add(Arc::new("swap_buffers".into()),
+        swap_buffers::<W>, Dfn {
+            lts: vec![],
+            tys: vec![],
+            ret: Type::Void
+        });
+    module.add(Arc::new("event_loop_benchmode".into()),
+        event_loop_benchmode, Dfn {
+            lts: vec![],
+            tys: vec![],
+            ret: Type::Bool
+        });
+    module.add(Arc::new("set_event_loop__benchmode".into()),
+        set_event_loop__benchmode, Dfn {
+            lts: vec![Lt::Default],
+            tys: vec![Type::Bool],
+            ret: Type::Void
+        });
+    module.add(Arc::new("event_loop_lazy".into()),
+        event_loop_lazy, Dfn {
+            lts: vec![],
+            tys: vec![],
+            ret: Type::Bool
+        });
+    module.add(Arc::new("set_event_loop__lazy".into()),
+        set_event_loop__lazy, Dfn {
+            lts: vec![Lt::Default],
+            tys: vec![Type::Bool],
+            ret: Type::Void
+        });
+    module.add(Arc::new("render_ext_dt".into()),
+        render_ext_dt, Dfn {
+            lts: vec![],
+            tys: vec![],
+            ret: Type::Option(Box::new(Type::F64))
+        });
     module.add(Arc::new("update_dt".into()),
         update_dt, Dfn {
+            lts: vec![],
+            tys: vec![],
+            ret: Type::Option(Box::new(Type::F64))
+        });
+    module.add(Arc::new("idle_dt".into()),
+        idle_dt, Dfn {
             lts: vec![],
             tys: vec![],
             ret: Type::Option(Box::new(Type::F64))
@@ -114,8 +250,8 @@ pub fn add_functions<W, F, C>(module: &mut Module)
             tys: vec![],
             ret: Type::Option(Box::new(Type::F64))
         });
-    module.add(Arc::new("text_input".into()),
-        text_input, Dfn {
+    module.add(Arc::new("text_arg".into()),
+        text_arg, Dfn {
             lts: vec![],
             tys: vec![],
             ret: Type::Option(Box::new(Type::Text))
@@ -203,15 +339,151 @@ pub fn window_draw_size<W: Any + Window>(rt: &mut Runtime) -> Result<(), String>
     Ok(())
 }
 
+pub fn window_position<W: Any + AdvancedWindow>(rt: &mut Runtime) -> Result<(), String> {
+    if let Some(pos) = unsafe { Current::<W>::new() }.get_position() {
+        rt.push_vec4([pos.x as f32, pos.y as f32]);
+    } else {
+        rt.push_vec4([0.0 as f32; 2]);
+    }
+    Ok(())
+}
+
+#[allow(non_snake_case)]
+pub fn set_window__position<W: Any + AdvancedWindow>(rt: &mut Runtime) -> Result<(), String> {
+    let pos: [f32; 2] = rt.pop_vec4()?;
+    let pos: [i32; 2] = [pos[0] as i32, pos[1] as i32];
+    unsafe { Current::<W>::new() }.set_position(pos);
+    Ok(())
+}
+
+pub fn event_loop_ups(rt: &mut Runtime) -> Result<(), String> {
+    use piston::event_loop::{EventLoop, Events};
+
+    let ups = unsafe { Current::<Events>::new() }.get_event_settings().ups;
+    rt.push(ups as f64);
+    Ok(())
+}
+
+#[allow(non_snake_case)]
+pub fn set_event_loop__ups(rt: &mut Runtime) -> Result<(), String> {
+    use piston::event_loop::{EventLoop, Events};
+
+    let ups: f64 = rt.pop()?;
+    unsafe { Current::<Events>::new() }.set_ups(ups as u64);
+    Ok(())
+}
+
+pub fn event_loop_upsreset(rt: &mut Runtime) -> Result<(), String> {
+    use piston::event_loop::{EventLoop, Events};
+
+    let ups_reset = unsafe { Current::<Events>::new() }.get_event_settings().ups_reset;
+    rt.push(ups_reset as f64);
+    Ok(())
+}
+
+#[allow(non_snake_case)]
+pub fn set_event_loop__upsreset(rt: &mut Runtime) -> Result<(), String> {
+    use piston::event_loop::{EventLoop, Events};
+
+    let ups_reset: f64 = rt.pop()?;
+    unsafe { Current::<Events>::new() }.set_ups_reset(ups_reset as u64);
+    Ok(())
+}
+
+pub fn event_loop_maxfps(rt: &mut Runtime) -> Result<(), String> {
+    use piston::event_loop::{EventLoop, Events};
+
+    let max_fps = unsafe { Current::<Events>::new() }.get_event_settings().max_fps;
+    rt.push(max_fps as f64);
+    Ok(())
+}
+
+#[allow(non_snake_case)]
+pub fn set_event_loop__maxfps(rt: &mut Runtime) -> Result<(), String> {
+    use piston::event_loop::{EventLoop, Events};
+
+    let max_fps: f64 = rt.pop()?;
+    unsafe { Current::<Events>::new() }.set_max_fps(max_fps as u64);
+    Ok(())
+}
+
+pub fn event_loop_swapbuffers(rt: &mut Runtime) -> Result<(), String> {
+    use piston::event_loop::{EventLoop, Events};
+
+    let swap_buffers = unsafe { Current::<Events>::new() }.get_event_settings().swap_buffers;
+    rt.push(swap_buffers);
+    Ok(())
+}
+
+#[allow(non_snake_case)]
+pub fn set_event_loop__swapbuffers(rt: &mut Runtime) -> Result<(), String> {
+    use piston::event_loop::{EventLoop, Events};
+
+    let swap_buffers: bool = rt.pop()?;
+    unsafe { Current::<Events>::new() }.set_swap_buffers(swap_buffers);
+    Ok(())
+}
+
+pub fn swap_buffers<W: Any + Window>(_rt: &mut Runtime) -> Result<(), String> {
+    unsafe { Current::<W>::new() }.swap_buffers();
+    Ok(())
+}
+
+pub fn event_loop_benchmode(rt: &mut Runtime) -> Result<(), String> {
+    use piston::event_loop::{EventLoop, Events};
+
+    let bench_mode = unsafe { Current::<Events>::new() }.get_event_settings().bench_mode;
+    rt.push(bench_mode);
+    Ok(())
+}
+
+#[allow(non_snake_case)]
+pub fn set_event_loop__benchmode(rt: &mut Runtime) -> Result<(), String> {
+    use piston::event_loop::{EventLoop, Events};
+
+    let bench_mode: bool = rt.pop()?;
+    unsafe { Current::<Events>::new() }.set_bench_mode(bench_mode);
+    Ok(())
+}
+
+pub fn event_loop_lazy(rt: &mut Runtime) -> Result<(), String> {
+    use piston::event_loop::{EventLoop, Events};
+
+    let lazy = unsafe { Current::<Events>::new() }.get_event_settings().lazy;
+    rt.push(lazy);
+    Ok(())
+}
+
+#[allow(non_snake_case)]
+pub fn set_event_loop__lazy(rt: &mut Runtime) -> Result<(), String> {
+    use piston::event_loop::{EventLoop, Events};
+
+    let lazy: bool = rt.pop()?;
+    unsafe { Current::<Events>::new() }.set_lazy(lazy);
+    Ok(())
+}
+
 pub fn render(rt: &mut Runtime) -> Result<(), String> {
     rt.push(unsafe { Current::<Option<Event>>::new()
         .as_ref().expect(NO_EVENT).render_args().is_some() });
     Ok(())
 }
 
+pub fn after_render(rt: &mut Runtime) -> Result<(), String> {
+    rt.push(unsafe { Current::<Option<Event>>::new()
+        .as_ref().expect(NO_EVENT).after_render_args().is_some() });
+    Ok(())
+}
+
 pub fn update(rt: &mut Runtime) -> Result<(), String> {
     rt.push(unsafe { Current::<Option<Event>>::new()
         .as_ref().expect(NO_EVENT).update_args().is_some() });
+    Ok(())
+}
+
+pub fn idle(rt: &mut Runtime) -> Result<(), String> {
+    rt.push(unsafe { Current::<Option<Event>>::new()
+        .as_ref().expect(NO_EVENT).idle_args().is_some() });
     Ok(())
 }
 
@@ -227,9 +499,27 @@ pub fn release(rt: &mut Runtime) -> Result<(), String> {
     Ok(())
 }
 
+pub fn resize(rt: &mut Runtime) -> Result<(), String> {
+    rt.push(unsafe { Current::<Option<Event>>::new()
+        .as_ref().expect(NO_EVENT).resize_args().is_some() });
+    Ok(())
+}
+
 pub fn focus(rt: &mut Runtime) -> Result<(), String> {
     rt.push(unsafe { Current::<Option<Event>>::new()
         .as_ref().expect(NO_EVENT).focus_args().is_some() });
+    Ok(())
+}
+
+pub fn cursor(rt: &mut Runtime) -> Result<(), String> {
+    rt.push(unsafe { Current::<Option<Event>>::new()
+        .as_ref().expect(NO_EVENT).cursor_args().is_some() });
+    Ok(())
+}
+
+pub fn text(rt: &mut Runtime) -> Result<(), String> {
+    rt.push(unsafe { Current::<Option<Event>>::new()
+        .as_ref().expect(NO_EVENT).text(|_| ()).is_some() });
     Ok(())
 }
 
@@ -245,9 +535,27 @@ pub fn focus_arg(rt: &mut Runtime) -> Result<(), String> {
     Ok(())
 }
 
+pub fn cursor_arg(rt: &mut Runtime) -> Result<(), String> {
+    rt.push(unsafe { Current::<Option<Event>>::new()
+        .as_ref().expect(NO_EVENT).cursor_args() });
+    Ok(())
+}
+
+pub fn render_ext_dt(rt: &mut Runtime) -> Result<(), String> {
+    rt.push(unsafe { Current::<Option<Event>>::new()
+        .as_ref().expect(NO_EVENT).render_args().map(|args| args.ext_dt) });
+    Ok(())
+}
+
 pub fn update_dt(rt: &mut Runtime) -> Result<(), String> {
     rt.push(unsafe { Current::<Option<Event>>::new()
         .as_ref().expect(NO_EVENT).update_args().map(|args| args.dt) });
+    Ok(())
+}
+
+pub fn idle_dt(rt: &mut Runtime) -> Result<(), String> {
+    rt.push(unsafe { Current::<Option<Event>>::new()
+        .as_ref().expect(NO_EVENT).idle_args().map(|args| args.dt) });
     Ok(())
 }
 
@@ -313,7 +621,7 @@ pub fn release_mouse_button(rt: &mut Runtime) -> Result<(), String> {
     }
 }
 
-pub fn text_input(rt: &mut Runtime) -> Result<(), String> {
+pub fn text_arg(rt: &mut Runtime) -> Result<(), String> {
     let e = unsafe { &*Current::<Option<Event>>::new() };
     if let &Some(ref e) = e {
         if let Some(text) = e.text_args() {
@@ -327,8 +635,16 @@ pub fn text_input(rt: &mut Runtime) -> Result<(), String> {
     }
 }
 
+pub fn window_title<W: Any + AdvancedWindow>(rt: &mut Runtime) -> Result<(), String> {
+    use std::sync::Arc;
+
+    let window = unsafe { &mut *Current::<W>::new() };
+    rt.push(Arc::new(window.get_title()));
+    Ok(())
+}
+
 #[allow(non_snake_case)]
-pub fn set__title<W: Any + AdvancedWindow>(rt: &mut Runtime) -> Result<(), String> {
+pub fn set_window__title<W: Any + AdvancedWindow>(rt: &mut Runtime) -> Result<(), String> {
     use std::sync::Arc;
 
     let window = unsafe { &mut *Current::<W>::new() };

@@ -18,11 +18,75 @@ fn window_size() -> vec4 { ... }
 /// Returns the frame buffer size in pixels.
 fn window_draw_size() -> vec4 { ... }
 
+/// Gets window position.
+fn window_position() -> vec4 { ... }
+
+/// Sets window position.
+fn set_window__position(pos: vec4) { ... }
+
+/// Sets window size.
+fn set_window__size(size: vec4) { ... }
+
+/// Gets title of window.
+fn window_title() -> str { ... }
+
+/// Sets title of window.
+fn set_window__title(text: str) { ... }
+
+/// The number of updates per second.
+fn event_loop_ups() -> f64 { ... }
+
+/// The number of updates per second.
+fn set_event_loop__ups(frames: f64) { ... }
+
+/// The number of delayed updates before skipping them to catch up.
+/// When set to 0, it will always try to catch up.
+fn event_loop_upsreset() -> f64 { ... }
+
+/// The number of delayed updates before skipping them to catch up.
+/// When set to 0, it will always try to catch up.
+fn set_event_loop__upsreset(frames: f64) { ... }
+
+/// The maximum number of frames per second.
+fn event_loop_maxfps() -> f64 { ... }
+
+/// Sets maximum number of frames per second.
+fn set_event_loop__maxfps(maxfps: f64) { ... }
+
+/// Gets whether the event loop automatically swaps buffers.
+fn event_loop_swapbuffers() -> bool { ... }
+
+/// Swaps render buffers manually.
+/// Do not use unless `event_loop_swapbuffers` is disabled.
+fn swap_buffers() { ... }
+
+/// Enable or disable automatic swapping of buffers.
+fn set_event_loop__swapbuffers(swapbuffers: bool) { ... }
+
+/// Gets whether the event loop runs in benchmark mode.
+fn event_loop_benchmode() -> bool { ... }
+
+/// Enable or disable benchmark mode in event loop.
+fn set_event_loop__benchmode(benchmode: bool) { ... }
+
+/// Gets whether the event loop renders only when receiving input.
+fn event_loop_lazy() -> bool { ... }
+
+/// Enable or disable rendering only when receiving input.
+/// When enabled, update and idle events are disabled.
+fn set_event_loop__lazy(lazy: bool) { ... }
+
 /// Returns `true` when time to render.
 fn render() -> bool { ... }
 
+/// Returns `true` when rendering is done.
+fn after_render() -> bool { ... }
+
 /// Returns `true` when time to update.
 fn update() -> bool { ... }
+
+/// Returns `true` when event loop got nothing to do for a while.
+fn idle() -> bool { ... }
 
 /// Returns `true` when pressing a button.
 fn press() -> bool { ... }
@@ -30,8 +94,17 @@ fn press() -> bool { ... }
 /// Returns `true` when releasing a button.
 fn release() -> bool { ... }
 
+/// Returns `true` when window is resized.
+fn resize() -> bool { ... }
+
 /// Returns `true` when window receives or loses focus.
 fn focus() -> bool { ... }
+
+/// Returns `true` when window gained or lost cursor.
+fn cursor() -> bool { ... }
+
+/// Returns `true` when window received text.
+fn text() -> bool { ... }
 
 /// Returns `true` when there is a mouse cursor event.
 fn mouse_cursor() -> bool { ... }
@@ -39,17 +112,29 @@ fn mouse_cursor() -> bool { ... }
 /// Returns:
 /// - `some(true)` when window received focus.
 /// - `some(false)` when window looses focus.
-/// - `none` when there is no focus event.
-fn focus_args() -> opt[bool] { ... }
+/// - `none()` when there is no focus event.
+fn focus_arg() -> opt[bool] { ... }
+
+/// Returns:
+/// - `some(true)` when window gained cursor.
+/// - `some(false)` when window lost cursor.
+/// - `none()` when there is no cursor event.
+fn cursor_arg() -> opt[bool] { ... }
+
+/// Returns the text input for text event.
+fn text_arg() -> opt[str] { ... }
 
 /// Returns the position for mouse cursor event.
 fn mouse_cursor_pos() -> opt[vec4] { ... }
 
-/// Sets title of window.
-fn set__title(text: str) { ... }
+/// Extrapolated time in seconds, used to do smooth animation.
+fn render_ext_dt() -> opt[f64] { ... }
 
-/// Returns the delta time for update event.
+/// Returns the delta time in seconds for update event.
 fn update_dt() -> opt[f64] { ... }
+
+/// Returns the expected idle time in seconds for idle event.
+fn idle_dt() -> opt[f64] { ... }
 
 /// Returns the keyboard key for press event.
 fn press_keyboard_key() -> opt[f64] { ... }
@@ -62,9 +147,6 @@ fn press_mouse_button() -> opt[f64] { ... }
 
 /// Returns the mouse button for release event.
 fn release_mouse_button() -> opt[f64] { ... }
-
-/// Returns the text input for text event.
-fn text_input() -> opt[str] { ... }
 
 /// Returns the width of rendered text for a given font.
 fn width__font_size_string(font: f64, size: f64, text: str) -> f64 { ... }

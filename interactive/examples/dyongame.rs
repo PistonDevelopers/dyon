@@ -130,6 +130,11 @@ fn load_module(file: &str) -> Option<Module> {
         tys: vec![Type::array()],
         ret: Type::Void
     });
+    module.add(Arc::new("set_window__size".into()), set_window__size, Dfn {
+        lts: vec![Lt::Default],
+        tys: vec![Type::Vec4],
+        ret: Type::Void
+    });
     module.add(Arc::new("next_event".into()),
         next_event, Dfn {
             lts: vec![],
@@ -273,6 +278,14 @@ mod dyon_functions {
             return Err("Texture id is out of bounds".into());
         };
         texture.update(&image);
+        Ok(())
+    }
+
+    #[allow(non_snake_case)]
+    pub fn set_window__size(rt: &mut Runtime) -> Result<(), String> {
+        let window = unsafe { &mut *Current::<Sdl2Window>::new() };
+        let size: [f32; 2] = rt.pop_vec4()?;
+        let _ = window.window.set_size(size[0] as u32, size[1] as u32);
         Ok(())
     }
 
