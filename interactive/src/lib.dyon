@@ -36,6 +36,12 @@ fn set_window__title(text: str) { ... }
 /// Gets whether the event loop automatically swaps buffers.
 fn event_loop_swapbuffers() -> bool { ... }
 
+/// The maximum number of frames per second.
+fn event_loop_maxfps() -> f64 { ... }
+
+/// Sets maximum number of frames per second.
+fn set_event_loop__maxfps(maxfps: f64) { ... }
+
 /// Swaps render buffers manually.
 /// Do not use unless `event_loop_swapbuffers` is disabled.
 fn swap_buffers() { ... }
