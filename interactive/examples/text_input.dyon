@@ -1,0 +1,10 @@
+fn main() {
+    loop {
+        if !next_event() {break}
+
+        text := text_input()
+        if text != none() {
+            set(title: unwrap(text))
+        }
+    }
+}

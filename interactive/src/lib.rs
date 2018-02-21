@@ -114,6 +114,12 @@ pub fn add_functions<W, F, C>(module: &mut Module)
             tys: vec![],
             ret: Type::Option(Box::new(Type::F64))
         });
+    module.add(Arc::new("text_input".into()),
+        text_input, Dfn {
+            lts: vec![],
+            tys: vec![],
+            ret: Type::Option(Box::new(Type::Text))
+        });
     module.add(Arc::new("width__font_size_string".into()),
         width__font_size_string::<C>, Dfn {
             lts: vec![Lt::Default; 3],
@@ -300,6 +306,20 @@ pub fn release_mouse_button(rt: &mut Runtime) -> Result<(), String> {
             rt.push(Some(button as u64 as f64));
         } else {
             rt.push::<Option<f64>>(None);
+        }
+        Ok(())
+    } else {
+        Err(NO_EVENT.into())
+    }
+}
+
+pub fn text_input(rt: &mut Runtime) -> Result<(), String> {
+    let e = unsafe { &*Current::<Option<Event>>::new() };
+    if let &Some(ref e) = e {
+        if let Some(text) = e.text_args() {
+            rt.push(Some(text))
+        } else {
+            rt.push::<Option<String>>(None);
         }
         Ok(())
     } else {

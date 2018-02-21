@@ -63,6 +63,9 @@ fn press_mouse_button() -> opt[f64] { ... }
 /// Returns the mouse button for release event.
 fn release_mouse_button() -> opt[f64] { ... }
 
+/// Returns the text input for text event.
+fn text_input() -> opt[str] { ... }
+
 /// Returns the width of rendered text for a given font.
 fn width__font_size_string(font: f64, size: f64, text: str) -> f64 { ... }
 
