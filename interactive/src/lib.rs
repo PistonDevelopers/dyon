@@ -100,6 +100,18 @@ pub fn add_functions<W, F, C>(module: &mut Module)
             tys: vec![Type::Text],
             ret: Type::Void
         });
+    module.add(Arc::new("event_loop_lazy".into()),
+        event_loop_lazy, Dfn {
+            lts: vec![],
+            tys: vec![],
+            ret: Type::Bool
+        });
+    module.add(Arc::new("set_event_loop__lazy".into()),
+        set_event_loop__lazy, Dfn {
+            lts: vec![Lt::Default],
+            tys: vec![Type::Bool],
+            ret: Type::Void
+        });
     module.add(Arc::new("update_dt".into()),
         update_dt, Dfn {
             lts: vec![],
@@ -233,6 +245,23 @@ pub fn set_window__position<W: Any + AdvancedWindow>(rt: &mut Runtime) -> Result
     let pos: [f32; 2] = rt.pop_vec4()?;
     let pos: [i32; 2] = [pos[0] as i32, pos[1] as i32];
     unsafe { Current::<W>::new() }.set_position(pos);
+    Ok(())
+}
+
+pub fn event_loop_lazy(rt: &mut Runtime) -> Result<(), String> {
+    use piston::event_loop::{EventLoop, Events};
+
+    let lazy = unsafe { Current::<Events>::new() }.get_event_settings().lazy;
+    rt.push(lazy);
+    Ok(())
+}
+
+#[allow(non_snake_case)]
+pub fn set_event_loop__lazy(rt: &mut Runtime) -> Result<(), String> {
+    use piston::event_loop::{EventLoop, Events};
+
+    let lazy: bool = rt.pop()?;
+    unsafe { Current::<Events>::new() }.set_lazy(lazy);
     Ok(())
 }
 

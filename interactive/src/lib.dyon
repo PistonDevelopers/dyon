@@ -33,6 +33,13 @@ fn window_title() -> str { ... }
 /// Sets title of window.
 fn set_window__title(text: str) { ... }
 
+/// Gets whether the event loop renders only when receiving input.
+fn event_loop_lazy() -> bool { ... }
+
+/// Enable or disable rendering only when receiving input.
+/// When enabled, update and idle events are disabled.
+fn set_event_loop__lazy(lazy: bool) { ... }
+
 /// Returns `true` when time to render.
 fn render() -> bool { ... }
 
