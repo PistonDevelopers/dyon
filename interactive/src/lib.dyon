@@ -100,14 +100,23 @@ fn resize() -> bool { ... }
 /// Returns `true` when window receives or loses focus.
 fn focus() -> bool { ... }
 
+/// Returns `true` when window gained or lost cursor.
+fn cursor() -> bool { ... }
+
 /// Returns `true` when there is a mouse cursor event.
 fn mouse_cursor() -> bool { ... }
 
 /// Returns:
 /// - `some(true)` when window received focus.
 /// - `some(false)` when window looses focus.
-/// - `none` when there is no focus event.
-fn focus_args() -> opt[bool] { ... }
+/// - `none()` when there is no focus event.
+fn focus_arg() -> opt[bool] { ... }
+
+/// Returns:
+/// - `some(true)` when window gained cursor.
+/// - `some(false)` when window lost cursor.
+/// - `none()` when there is no cursor event.
+fn cursor_arg() -> opt[bool] { ... }
 
 /// Returns the position for mouse cursor event.
 fn mouse_cursor_pos() -> opt[vec4] { ... }

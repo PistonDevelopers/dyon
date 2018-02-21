@@ -88,12 +88,22 @@ pub fn add_functions<W, F, C>(module: &mut Module)
         tys: vec![],
         ret: Type::Bool,
     });
+    module.add(Arc::new("cursor".into()), cursor, Dfn {
+        lts: vec![],
+        tys: vec![],
+        ret: Type::Bool,
+    });
     module.add(Arc::new("mouse_cursor".into()), mouse_cursor, Dfn {
         lts: vec![],
         tys: vec![],
         ret: Type::Bool
     });
     module.add(Arc::new("focus_arg".into()), focus_arg, Dfn {
+        lts: vec![],
+        tys: vec![],
+        ret: Type::Option(Box::new(Type::Bool)),
+    });
+    module.add(Arc::new("cursor_arg".into()), cursor_arg, Dfn {
         lts: vec![],
         tys: vec![],
         ret: Type::Option(Box::new(Type::Bool)),
@@ -496,6 +506,12 @@ pub fn focus(rt: &mut Runtime) -> Result<(), String> {
     Ok(())
 }
 
+pub fn cursor(rt: &mut Runtime) -> Result<(), String> {
+    rt.push(unsafe { Current::<Option<Event>>::new()
+        .as_ref().expect(NO_EVENT).cursor_args().is_some() });
+    Ok(())
+}
+
 pub fn mouse_cursor(rt: &mut Runtime) -> Result<(), String> {
     rt.push(unsafe { Current::<Option<Event>>::new()
         .as_ref().expect(NO_EVENT).mouse_cursor_args().is_some() });
@@ -505,6 +521,12 @@ pub fn mouse_cursor(rt: &mut Runtime) -> Result<(), String> {
 pub fn focus_arg(rt: &mut Runtime) -> Result<(), String> {
     rt.push(unsafe { Current::<Option<Event>>::new()
         .as_ref().expect(NO_EVENT).focus_args() });
+    Ok(())
+}
+
+pub fn cursor_arg(rt: &mut Runtime) -> Result<(), String> {
+    rt.push(unsafe { Current::<Option<Event>>::new()
+        .as_ref().expect(NO_EVENT).cursor_args() });
     Ok(())
 }
 
