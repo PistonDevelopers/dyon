@@ -33,6 +33,11 @@ pub fn add_functions<W, F, C>(module: &mut Module)
         tys: vec![],
         ret: Type::Vec4
     });
+    module.add(Arc::new("set_window__size".into()), set_window__size::<W>, Dfn {
+        lts: vec![Lt::Default],
+        tys: vec![Type::Vec4],
+        ret: Type::Void
+    });
     module.add(Arc::new("window_draw_size".into()), window_draw_size::<W>, Dfn {
         lts: vec![],
         tys: vec![],
@@ -336,6 +341,14 @@ pub fn window_size<W: Any + Window>(rt: &mut Runtime) -> Result<(), String> {
 pub fn window_draw_size<W: Any + Window>(rt: &mut Runtime) -> Result<(), String> {
     let draw_size = unsafe { Current::<W>::new() }.draw_size();
     rt.push_vec4([draw_size.width as f32, draw_size.height as f32, 0.0, 0.0]);
+    Ok(())
+}
+
+#[allow(non_snake_case)]
+pub fn set_window__size<W: Any + AdvancedWindow>(rt: &mut Runtime) -> Result<(), String> {
+    let size: [f32; 2] = rt.pop_vec4()?;
+    let size: [u32; 2] = [size[0] as u32, size[1] as u32];
+    unsafe { Current::<W>::new() }.set_size(size);
     Ok(())
 }
 
