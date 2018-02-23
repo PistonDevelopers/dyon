@@ -21,7 +21,8 @@ dyonrun <file.dyon>
 
 ### Editor-plugins
 
-[Dyon for the Atom Editor](https://github.com/PistonDevelopers/atom-language-dyon)
+[Dyon for the Atom Editor](https://github.com/PistonDevelopers/atom-language-dyon)  
+[Dyon for the Vim Editor](https://github.com/thyrgle/vim-dyon)  
 
 ![coding](./images/code.png)
 
