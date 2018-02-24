@@ -141,7 +141,6 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
                 source_range: vec4_expr.source_range,
             })
         }
-        E::Bool(_) => expr.clone(),
         E::For(ref for_expr) => {
             let mut init: Option<Expression> = None;
             if let Expression::Assign(ref assign_expr) = for_expr.init {

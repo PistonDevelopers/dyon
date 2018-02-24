@@ -831,7 +831,6 @@ pub enum Expression {
     Assign(Box<Assign>),
     Text(Text),
     Vec4(Vec4),
-    Bool(Bool),
     For(Box<For>),
     ForN(Box<ForN>),
     Sum(Box<ForN>),
@@ -959,10 +958,9 @@ impl Expression {
                 result = Some(val.to_expression());
             } else if let Ok((range, val)) = convert.meta_bool("bool") {
                 convert.update(range);
-                result = Some(Expression::Bool(Bool {
-                    val: val,
-                    source_range: convert.source(start).unwrap(),
-                }));
+                result = Some(Expression::Variable(
+                    convert.source(start).unwrap(), Variable::bool(val)
+                ));
             } else if let Ok((range, val)) = convert.meta_string("color") {
                 use read_color;
 
@@ -1112,7 +1110,6 @@ impl Expression {
             Assign(ref assign) => assign.source_range,
             Text(ref text) => text.source_range,
             Vec4(ref vec4) => vec4.source_range,
-            Bool(ref b) => b.source_range,
             For(ref for_expr) => for_expr.source_range,
             ForN(ref for_n_expr) => for_n_expr.source_range,
             Sum(ref for_n_expr) => for_n_expr.source_range,
@@ -1182,7 +1179,6 @@ impl Expression {
             Text(_) => {}
             Vec4(ref vec4) =>
                 vec4.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            Bool(_) => {}
             For(ref for_expr) =>
                 for_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             ForN(ref for_n_expr) =>
@@ -3011,12 +3007,6 @@ pub struct Text {
 }
 
 #[derive(Debug, Clone)]
-pub struct Bool {
-    pub val: bool,
-    pub source_range: Range,
-}
-
-#[derive(Debug, Clone)]
 pub struct For {
     pub init: Expression,
     pub cond: Expression,
@@ -3315,10 +3305,7 @@ impl Loop {
                 expressions: vec![],
                 source_range: source_range,
             }),
-            cond: Expression::Bool(Bool {
-                val: true,
-                source_range: source_range,
-            }),
+            cond: Expression::Variable(source_range, Variable::bool(true)),
             source_range: source_range,
         }))
     }

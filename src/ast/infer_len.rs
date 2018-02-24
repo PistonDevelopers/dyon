@@ -106,7 +106,6 @@ fn infer_expr(
                 if res.is_some() { return res; }
             }
         }
-        Bool(_) => {}
         For(ref for_expr) => {
             // TODO: Declaring counter with same name probably leads to a bug.
             let res = infer_expr(&for_expr.init, name, decls);
