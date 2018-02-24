@@ -72,7 +72,6 @@ pub fn grab_expr(
                 source_range: binop_expr.source_range,
             }))), Flow::Continue))
         }
-        &E::Number(_) |
         &E::Bool(_) |
         &E::Text(_) |
         &E::ReturnVoid(_) |

@@ -372,7 +372,6 @@ impl Runtime {
             UnOp(ref unop) => self.unop(unop, side, module),
             BinOp(ref binop) => self.binop(binop, side, module),
             Assign(ref assign) => self.assign(assign.op, &assign.left, &assign.right, module),
-            Number(ref num) => Ok((Some(::Variable::f64(num.num)), Flow::Continue)),
             Vec4(ref vec4) => self.vec4(vec4, side, module),
             Text(ref text) => Ok((Some(::Variable::Text(text.text.clone())), Flow::Continue)),
             Bool(ref b) => Ok((Some(::Variable::bool(b.val)), Flow::Continue)),

@@ -189,7 +189,6 @@ pub fn write_expr<W: io::Write>(
     match expr {
         &E::BinOp(ref binop) => try!(write_binop(w, rt, binop, tabs)),
         &E::Item(ref item) => try!(write_item(w, rt, item, tabs)),
-        &E::Number(ref number) => try!(write!(w, "{}", number.num)),
         &E::Text(ref text) => try!(json::write_string(w, &text.text)),
         &E::Bool(ref b) => try!(write!(w, "{}", b.val)),
         &E::Variable(_, ref var) => try!(write_variable(w, rt, var, EscapeString::Json, tabs)),
@@ -551,8 +550,8 @@ pub fn write_vec4<W: io::Write>(
 ) -> Result<(), io::Error> {
     let mut n = vec4.args.len();
     for expr in vec4.args.iter().rev() {
-        if let &ast::Expression::Number(ref num) = expr {
-            if num.num == 0.0 {
+        if let &ast::Expression::Variable(_, Variable::F64(num, _)) = expr {
+            if num == 0.0 {
                 n -= 1;
                 continue;
             }

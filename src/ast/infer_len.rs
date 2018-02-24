@@ -62,7 +62,6 @@ fn infer_expr(
             let right = infer_expr(&assign_expr.right, name, decls);
             if right.is_some() { return right; }
         }
-        Number(_) => {}
         Object(ref obj) => {
             for &(_, ref v) in &obj.key_values {
                 let res = infer_expr(v, name, decls);

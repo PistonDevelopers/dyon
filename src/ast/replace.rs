@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use Variable;
 use super::{
     Array,
     ArrayFill,
@@ -19,7 +20,6 @@ use super::{
     Link,
     Object,
     Norm,
-    Number,
     Swizzle,
     UnOpExpression,
     Vec4,
@@ -44,7 +44,6 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
                 source_range: link_expr.source_range,
             })
         }
-        E::Number(_) => expr.clone(),
         E::BinOp(ref bin_op_expr) => {
             E::BinOp(Box::new(BinOpExpression {
                 op: bin_op_expr.op,
@@ -55,10 +54,7 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
         }
         E::Item(ref item) => {
             if &item.name == name {
-                E::Number(Number {
-                    num: val,
-                    source_range: item.source_range,
-                })
+                E::Variable(item.source_range, Variable::f64(val))
             } else {
                 let mut new_ids: Vec<Id> = vec![];
                 for id in &item.ids {

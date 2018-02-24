@@ -830,7 +830,6 @@ pub enum Expression {
     BinOp(Box<BinOpExpression>),
     Assign(Box<Assign>),
     Text(Text),
-    Number(Number),
     Vec4(Vec4),
     Bool(Bool),
     For(Box<For>),
@@ -946,10 +945,10 @@ impl Expression {
                 }));
             } else if let Ok((range, val)) = convert.meta_f64("num") {
                 convert.update(range);
-                result = Some(Expression::Number(Number {
-                    num: val,
-                    source_range: convert.source(start).unwrap(),
-                }));
+                result = Some(Expression::Variable(
+                    convert.source(start).unwrap(),
+                    Variable::f64(val)
+                ));
             } else if let Ok((range, val)) = Vec4::from_meta_data(
                     file, source, convert, ignored) {
                 convert.update(range);
@@ -1112,7 +1111,6 @@ impl Expression {
             BinOp(ref binop) => binop.source_range,
             Assign(ref assign) => assign.source_range,
             Text(ref text) => text.source_range,
-            Number(ref num) => num.source_range,
             Vec4(ref vec4) => vec4.source_range,
             Bool(ref b) => b.source_range,
             For(ref for_expr) => for_expr.source_range,
@@ -1182,7 +1180,6 @@ impl Expression {
             Assign(ref assign) =>
                 assign.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             Text(_) => {}
-            Number(_) => {}
             Vec4(ref vec4) =>
                 vec4.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             Bool(_) => {}
@@ -2710,12 +2707,6 @@ impl AssignOp {
 }
 
 #[derive(Debug, Clone)]
-pub struct Number {
-    pub num: f64,
-    pub source_range: Range,
-}
-
-#[derive(Debug, Clone)]
 pub struct Vec4 {
     pub args: Vec<Expression>,
     pub source_range: Range,
@@ -2765,15 +2756,9 @@ impl Vec4 {
         }
 
         let x = try!(x.ok_or(()));
-        let y = y.unwrap_or(Expression::Number(
-            Number { num: 0.0, source_range: Range::empty(0) }
-        ));
-        let z = z.unwrap_or(Expression::Number(
-            Number { num: 0.0, source_range: Range::empty(0) }
-        ));
-        let w = w.unwrap_or(Expression::Number(
-            Number { num: 0.0, source_range: Range::empty(0) }
-        ));
+        let y = y.unwrap_or(Expression::Variable(Range::empty(0), Variable::f64(0.0)));
+        let z = z.unwrap_or(Expression::Variable(Range::empty(0), Variable::f64(0.0)));
+        let w = w.unwrap_or(Expression::Variable(Range::empty(0), Variable::f64(0.0)));
         Ok((convert.subtract(start), Vec4 {
             args: vec![x, y, z, w],
             source_range: convert.source(start).unwrap(),
@@ -2871,8 +2856,7 @@ impl Vec4UnLoop {
     pub fn to_expression(self) -> Expression {
         let source_range = self.source_range;
 
-        let zero = || Expression::Number(
-            Number { num: 0.0, source_range: source_range });
+        let zero = || Expression::Variable(source_range, Variable::f64(0.0));
 
         let replace_0 = replace::number(&self.expr, &self.name, 0.0);
         let replace_1 = replace::number(&self.expr, &self.name, 1.0);
