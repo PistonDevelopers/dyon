@@ -387,21 +387,18 @@ impl Call {
     }
 
     /// Run call without any return value.
-    pub fn run(&self, module: &Arc<Module>) -> Result<(), String> {
-        let ref mut runtime = runtime::Runtime::new();
+    pub fn run(&self, runtime: &mut Runtime, module: &Arc<Module>) -> Result<(), String> {
         runtime.call_str(&self.name, &self.args, module)
     }
 
     /// Run call with return value.
-    pub fn run_ret<T: embed::PopVariable>(&self, module: &Arc<Module>) -> Result<T, String> {
-        let ref mut runtime = runtime::Runtime::new();
+    pub fn run_ret<T: embed::PopVariable>(&self, runtime: &mut Runtime, module: &Arc<Module>) -> Result<T, String> {
         let val = runtime.call_str_ret(&self.name, &self.args, module)?;
         T::pop_var(runtime, runtime.resolve(&val))
     }
 
     /// Convert return value to a Vec4 convertible type.
-    pub fn run_vec4<T: embed::ConvertVec4>(&self, module: &Arc<Module>) -> Result<T, String> {
-        let ref mut runtime = runtime::Runtime::new();
+    pub fn run_vec4<T: embed::ConvertVec4>(&self, runtime: &mut Runtime, module: &Arc<Module>) -> Result<T, String> {
         let val = runtime.call_str_ret(&self.name, &self.args, module)?;
         match runtime.resolve(&val) {
             &Variable::Vec4(val) => Ok(T::from(val)),
