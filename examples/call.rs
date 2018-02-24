@@ -2,7 +2,7 @@
 extern crate dyon;
 
 use std::sync::Arc;
-use dyon::{load_str, error, Call, Module, Dfn, Lt, Type, RustObject};
+use dyon::{load_str, error, Call, Module, Dfn, Lt, Type, Runtime, RustObject};
 
 fn main() {
     let mut module = Module::new();
@@ -50,33 +50,33 @@ fn main() {
 
     // Call with multiple arguments.
     let call = Call::new("add_args").arg(a).arg(b);
-    error(call.run(module));
+    error(call.run(&mut Runtime::new(), module));
 
     // Call with object.
     let call = Call::new("add_obj").arg(Args {a, b});
-    error(call.run(module));
+    error(call.run(&mut Runtime::new(), module));
 
     // Call with rust object.
     let call = Call::new("add_rust").rust(RustArgs {a, b});
-    error(call.run(module));
+    error(call.run(&mut Runtime::new(), module));
 
     // Call function with return value.
     let call = Call::new("add").arg(a).arg(b);
-    match call.run_ret::<f64>(module) {
+    match call.run_ret::<f64>(&mut Runtime::new(), module) {
         Ok(answer) => {println!("{}", answer);}
         Err(err) => {error(Err(err));}
     }
 
     // Call function that returns vec4.
     let call = Call::new("create_vec").arg(a).arg(b);
-    match call.run_vec4::<[f64; 2]>(module) {
+    match call.run_vec4::<[f64; 2]>(&mut Runtime::new(), module) {
         Ok(answer) => {println!("{:?}", answer);}
         Err(err) => {error(Err(err));}
     }
 
     // Call function that returns Rust object.
     let call = Call::new("id").rust(RustArgs {a, b});
-    match call.run_ret::<RustObject>(module) {
+    match call.run_ret::<RustObject>(&mut Runtime::new(), module) {
         Ok(answer) => {println!("{:?}", answer.lock().unwrap().downcast_ref::<RustArgs>());}
         Err(err) => {error(Err(err));}
     }
