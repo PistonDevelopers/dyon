@@ -829,7 +829,6 @@ pub enum Expression {
     Item(Item),
     BinOp(Box<BinOpExpression>),
     Assign(Box<Assign>),
-    Text(Text),
     Vec4(Vec4),
     For(Box<For>),
     ForN(Box<ForN>),
@@ -938,10 +937,10 @@ impl Expression {
                 result = Some(Expression::Norm(Box::new(val)));
             } else if let Ok((range, val)) = convert.meta_string("text") {
                 convert.update(range);
-                result = Some(Expression::Text(Text {
-                    text: val,
-                    source_range: convert.source(start).unwrap(),
-                }));
+                result = Some(Expression::Variable(
+                    convert.source(start).unwrap(),
+                    Variable::Text(val)
+                ));
             } else if let Ok((range, val)) = convert.meta_f64("num") {
                 convert.update(range);
                 result = Some(Expression::Variable(
@@ -1108,7 +1107,6 @@ impl Expression {
             Item(ref it) => it.source_range,
             BinOp(ref binop) => binop.source_range,
             Assign(ref assign) => assign.source_range,
-            Text(ref text) => text.source_range,
             Vec4(ref vec4) => vec4.source_range,
             For(ref for_expr) => for_expr.source_range,
             ForN(ref for_n_expr) => for_n_expr.source_range,
@@ -1176,7 +1174,6 @@ impl Expression {
                 binop.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             Assign(ref assign) =>
                 assign.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            Text(_) => {}
             Vec4(ref vec4) =>
                 vec4.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             For(ref for_expr) =>
@@ -2998,12 +2995,6 @@ impl Sw {
             source_range: convert.source(start).unwrap(),
         }))
     }
-}
-
-#[derive(Debug, Clone)]
-pub struct Text {
-    pub text: Arc<String>,
-    pub source_range: Range,
 }
 
 #[derive(Debug, Clone)]

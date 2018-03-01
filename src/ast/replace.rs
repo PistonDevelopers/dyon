@@ -130,7 +130,6 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
                 source_range: go.source_range,
             }))
         }
-        E::Text(_) => expr.clone(),
         E::Vec4(ref vec4_expr) => {
             let mut new_args: Vec<Expression> = vec![];
             for arg in &vec4_expr.args {

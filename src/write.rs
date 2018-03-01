@@ -189,7 +189,6 @@ pub fn write_expr<W: io::Write>(
     match expr {
         &E::BinOp(ref binop) => try!(write_binop(w, rt, binop, tabs)),
         &E::Item(ref item) => try!(write_item(w, rt, item, tabs)),
-        &E::Text(ref text) => try!(json::write_string(w, &text.text)),
         &E::Variable(_, ref var) => try!(write_variable(w, rt, var, EscapeString::Json, tabs)),
         &E::Link(ref link) => try!(write_link(w, rt, link, tabs)),
         &E::Object(ref obj) => try!(write_obj(w, rt, obj, tabs)),

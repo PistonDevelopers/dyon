@@ -373,7 +373,6 @@ impl Runtime {
             BinOp(ref binop) => self.binop(binop, side, module),
             Assign(ref assign) => self.assign(assign.op, &assign.left, &assign.right, module),
             Vec4(ref vec4) => self.vec4(vec4, side, module),
-            Text(ref text) => Ok((Some(::Variable::Text(text.text.clone())), Flow::Continue)),
             For(ref for_expr) => self.for_expr(for_expr, module),
             ForN(ref for_n_expr) => self.for_n_expr(for_n_expr, module),
             Sum(ref for_n_expr) => self.sum_n_expr(for_n_expr, module),
