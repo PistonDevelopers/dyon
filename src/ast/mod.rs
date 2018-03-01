@@ -570,6 +570,10 @@ impl Grab {
         }))
     }
 
+    fn precompute(&self) -> Option<Variable> {
+        self.expr.precompute()
+    }
+
     pub fn resolve_locals(
         &self,
         relative: usize,
@@ -1069,7 +1073,11 @@ impl Expression {
             } else if let Ok((range, val)) = Grab::from_meta_data(
                     file, source, convert, ignored) {
                 convert.update(range);
-                result = Some(Expression::Grab(Box::new(val)));
+                if let Some(v) = val.precompute() {
+                    result = Some(Expression::Variable(val.source_range, v));
+                } else {
+                    result = Some(Expression::Grab(Box::new(val)));
+                }
             } else if let Ok((range, val)) = TryExpr::from_meta_data(
                     file, source, convert, ignored) {
                 convert.update(range);
@@ -1087,6 +1095,20 @@ impl Expression {
 
         let result = try!(result.ok_or(()));
         Ok((convert.subtract(start), result))
+    }
+
+    fn precompute(&self) -> Option<Variable> {
+        use self::Expression::*;
+
+        match *self {
+            ArrayFill(ref array_fill) => array_fill.precompute(),
+            Array(ref array) => array.precompute(),
+            Object(ref obj) => obj.precompute(),
+            Vec4(ref vec4) => vec4.precompute(),
+            Link(ref link) => link.precompute(),
+            Variable(_, ref v) => Some(v.clone()),
+            _ => None
+        }
     }
 
     pub fn source_range(&self) -> Range {
@@ -1267,6 +1289,18 @@ impl Link {
         }))
     }
 
+    fn precompute(&self) -> Option<Variable> {
+        let mut link = ::link::Link::new();
+        for it in &self.items {
+            if let Some(v) = it.precompute() {
+                if link.push(&v).is_err() {return None};
+            } else {
+                return None;
+            }
+        }
+        Some(Variable::Link(Box::new(link)))
+    }
+
     pub fn resolve_locals(
         &self,
         relative: usize,
@@ -1321,6 +1355,18 @@ impl Object {
             key_values: key_values,
             source_range: convert.source(start).unwrap(),
         }))
+    }
+
+    fn precompute(&self) -> Option<Variable> {
+        let mut object: HashMap<_, _> = HashMap::new();
+        for &(ref key, ref value) in &self.key_values {
+            if let Some(v) = value.precompute() {
+                object.insert(key.clone(), v);
+            } else {
+                return None;
+            }
+        }
+        Some(Variable::Object(Arc::new(object)))
     }
 
     pub fn key_value_from_meta_data(
@@ -1415,6 +1461,18 @@ impl Array {
         }))
     }
 
+    fn precompute(&self) -> Option<Variable> {
+        let mut res = Vec::with_capacity(self.items.len());
+        for item in &self.items {
+            if let Some(v) = item.precompute() {
+                res.push(v);
+            } else {
+                return None;
+            }
+        }
+        Some(Variable::Array(Arc::new(res)))
+    }
+
     pub fn resolve_locals(
         &self,
         relative: usize,
@@ -1478,6 +1536,15 @@ impl ArrayFill {
             n: n,
             source_range: convert.source(start).unwrap(),
         }))
+    }
+
+    fn precompute(&self) -> Option<Variable> {
+        if let Expression::Variable(_, Variable::F64(n, _)) = self.n {
+            if let Expression::Variable(_, ref x) = self.fill {
+                return Some(Variable::Array(Arc::new(vec![x.clone(); n as usize])));
+            }
+        }
+        None
     }
 
     pub fn resolve_locals(
@@ -2756,6 +2823,22 @@ impl Vec4 {
             args: vec![x, y, z, w],
             source_range: convert.source(start).unwrap(),
         }))
+    }
+
+    fn precompute(&self) -> Option<Variable> {
+        let mut v: [f32; 4] = [0.0; 4];
+        for i in 0..self.args.len().min(4) {
+            if let Some(val) = self.args[i].precompute() {
+                if let Variable::F64(val, _) = val {
+                    v[i] = val as f32;
+                } else {
+                    return None;
+                }
+            } else {
+                return None;
+            }
+        }
+        Some(Variable::Vec4(v))
     }
 
     pub fn resolve_locals(
