@@ -1105,6 +1105,7 @@ impl Expression {
             Array(ref array) => array.precompute(),
             Object(ref obj) => obj.precompute(),
             Vec4(ref vec4) => vec4.precompute(),
+            Link(ref link) => link.precompute(),
             Variable(_, ref v) => Some(v.clone()),
             _ => None
         }
@@ -1286,6 +1287,18 @@ impl Link {
             items: items,
             source_range: convert.source(start).unwrap(),
         }))
+    }
+
+    fn precompute(&self) -> Option<Variable> {
+        let mut link = ::link::Link::new();
+        for it in &self.items {
+            if let Some(v) = it.precompute() {
+                if link.push(&v).is_err() {return None};
+            } else {
+                return None;
+            }
+        }
+        Some(Variable::Link(Box::new(link)))
     }
 
     pub fn resolve_locals(

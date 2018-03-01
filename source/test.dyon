@@ -1,7 +1,7 @@
 fn main() {
     start := now()
-    for i 100000000 {
-        a := grab (0, 1, 2, 3)
+    for i 10000000 {
+        a := grab link {1 2 3 4 5 7 8 9 0909 09}
     }
     println(now() - start)
 }
