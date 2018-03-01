@@ -1103,6 +1103,7 @@ impl Expression {
         match *self {
             ArrayFill(ref array_fill) => array_fill.precompute(),
             Array(ref array) => array.precompute(),
+            Object(ref obj) => obj.precompute(),
             Variable(_, ref v) => Some(v.clone()),
             _ => None
         }
@@ -1340,6 +1341,18 @@ impl Object {
             key_values: key_values,
             source_range: convert.source(start).unwrap(),
         }))
+    }
+
+    fn precompute(&self) -> Option<Variable> {
+        let mut object: HashMap<_, _> = HashMap::new();
+        for &(ref key, ref value) in &self.key_values {
+            if let Some(v) = value.precompute() {
+                object.insert(key.clone(), v);
+            } else {
+                return None;
+            }
+        }
+        Some(Variable::Object(Arc::new(object)))
     }
 
     pub fn key_value_from_meta_data(
