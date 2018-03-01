@@ -1104,6 +1104,7 @@ impl Expression {
             ArrayFill(ref array_fill) => array_fill.precompute(),
             Array(ref array) => array.precompute(),
             Object(ref obj) => obj.precompute(),
+            Vec4(ref vec4) => vec4.precompute(),
             Variable(_, ref v) => Some(v.clone()),
             _ => None
         }
@@ -2809,6 +2810,22 @@ impl Vec4 {
             args: vec![x, y, z, w],
             source_range: convert.source(start).unwrap(),
         }))
+    }
+
+    fn precompute(&self) -> Option<Variable> {
+        let mut v: [f32; 4] = [0.0; 4];
+        for i in 0..self.args.len().min(4) {
+            if let Some(val) = self.args[i].precompute() {
+                if let Variable::F64(val, _) = val {
+                    v[i] = val as f32;
+                } else {
+                    return None;
+                }
+            } else {
+                return None;
+            }
+        }
+        Some(Variable::Vec4(v))
     }
 
     pub fn resolve_locals(

@@ -1,7 +1,7 @@
 fn main() {
     start := now()
-    for i 10000000 {
-        a := grab {a: 3, b: 4, c: 5, d: 6}
+    for i 100000000 {
+        a := grab (0, 1, 2, 3)
     }
     println(now() - start)
 }
