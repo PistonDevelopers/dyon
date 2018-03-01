@@ -570,6 +570,12 @@ impl Grab {
         }))
     }
 
+    pub fn precompute(&self) -> Option<Variable> {
+        if let Expression::ArrayFill(ref array_fill) = self.expr {
+            array_fill.precompute()
+        } else {None}
+    }
+
     pub fn resolve_locals(
         &self,
         relative: usize,
@@ -1069,7 +1075,11 @@ impl Expression {
             } else if let Ok((range, val)) = Grab::from_meta_data(
                     file, source, convert, ignored) {
                 convert.update(range);
-                result = Some(Expression::Grab(Box::new(val)));
+                if let Some(v) = val.precompute() {
+                    result = Some(Expression::Variable(val.source_range, v));
+                } else {
+                    result = Some(Expression::Grab(Box::new(val)));
+                }
             } else if let Ok((range, val)) = TryExpr::from_meta_data(
                     file, source, convert, ignored) {
                 convert.update(range);
@@ -1478,6 +1488,15 @@ impl ArrayFill {
             n: n,
             source_range: convert.source(start).unwrap(),
         }))
+    }
+
+    fn precompute(&self) -> Option<Variable> {
+        if let Expression::Variable(_, Variable::F64(n, _)) = self.n {
+            if let Expression::Variable(_, ref x) = self.fill {
+                return Some(Variable::Array(Arc::new(vec![x.clone(); n as usize])));
+            }
+        }
+        None
     }
 
     pub fn resolve_locals(
