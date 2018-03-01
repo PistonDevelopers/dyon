@@ -570,10 +570,8 @@ impl Grab {
         }))
     }
 
-    pub fn precompute(&self) -> Option<Variable> {
-        if let Expression::ArrayFill(ref array_fill) = self.expr {
-            array_fill.precompute()
-        } else {None}
+    fn precompute(&self) -> Option<Variable> {
+        self.expr.precompute()
     }
 
     pub fn resolve_locals(
@@ -1099,6 +1097,17 @@ impl Expression {
         Ok((convert.subtract(start), result))
     }
 
+    fn precompute(&self) -> Option<Variable> {
+        use self::Expression::*;
+
+        match *self {
+            ArrayFill(ref array_fill) => array_fill.precompute(),
+            Array(ref array) => array.precompute(),
+            Variable(_, ref v) => Some(v.clone()),
+            _ => None
+        }
+    }
+
     pub fn source_range(&self) -> Range {
         use self::Expression::*;
 
@@ -1423,6 +1432,18 @@ impl Array {
             items: items,
             source_range: convert.source(start).unwrap(),
         }))
+    }
+
+    fn precompute(&self) -> Option<Variable> {
+        let mut res = Vec::with_capacity(self.items.len());
+        for item in &self.items {
+            if let Some(v) = item.precompute() {
+                res.push(v);
+            } else {
+                return None;
+            }
+        }
+        Some(Variable::Array(Arc::new(res)))
     }
 
     pub fn resolve_locals(
