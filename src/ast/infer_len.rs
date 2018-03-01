@@ -62,7 +62,6 @@ fn infer_expr(
             let right = infer_expr(&assign_expr.right, name, decls);
             if right.is_some() { return right; }
         }
-        Number(_) => {}
         Object(ref obj) => {
             for &(_, ref v) in &obj.key_values {
                 let res = infer_expr(v, name, decls);
@@ -100,14 +99,12 @@ fn infer_expr(
             let res = infer_call(call, name, decls);
             if res.is_some() { return res; }
         }
-        Text(_) => {}
         Vec4(ref vec4_expr) => {
             for expr in &vec4_expr.args {
                 let res = infer_expr(expr, name, decls);
                 if res.is_some() { return res; }
             }
         }
-        Bool(_) => {}
         For(ref for_expr) => {
             // TODO: Declaring counter with same name probably leads to a bug.
             let res = infer_expr(&for_expr.init, name, decls);

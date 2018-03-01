@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use Variable;
 use super::{
     Array,
     ArrayFill,
@@ -19,7 +20,6 @@ use super::{
     Link,
     Object,
     Norm,
-    Number,
     Swizzle,
     UnOpExpression,
     Vec4,
@@ -44,7 +44,6 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
                 source_range: link_expr.source_range,
             })
         }
-        E::Number(_) => expr.clone(),
         E::BinOp(ref bin_op_expr) => {
             E::BinOp(Box::new(BinOpExpression {
                 op: bin_op_expr.op,
@@ -55,10 +54,7 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
         }
         E::Item(ref item) => {
             if &item.name == name {
-                E::Number(Number {
-                    num: val,
-                    source_range: item.source_range,
-                })
+                E::Variable(item.source_range, Variable::f64(val))
             } else {
                 let mut new_ids: Vec<Id> = vec![];
                 for id in &item.ids {
@@ -134,7 +130,6 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
                 source_range: go.source_range,
             }))
         }
-        E::Text(_) => expr.clone(),
         E::Vec4(ref vec4_expr) => {
             let mut new_args: Vec<Expression> = vec![];
             for arg in &vec4_expr.args {
@@ -145,7 +140,6 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
                 source_range: vec4_expr.source_range,
             })
         }
-        E::Bool(_) => expr.clone(),
         E::For(ref for_expr) => {
             let mut init: Option<Expression> = None;
             if let Expression::Assign(ref assign_expr) = for_expr.init {
