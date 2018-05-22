@@ -1,12 +1,11 @@
 # dyon_interactive
 A library for interactive coding with the Piston game engine
 
-![snake](../images/snake.png)
+Install: `cargo install piston-dyon_interactive --example dyongame`
 
-1. [Install Rust](https://www.rust-lang.org/) (Rust Nightly is required at the moment)
-2. Fork the repo to your local hard drive
-3. In Terminal, go to "dyon/interactive" and type `cargo run --release --example piston_window`
-4. Edit "source/piston_window/snake.rs" while running the demo
+Run script: `dyongame <file.dyon>`
+
+![snake](../images/snake.png)
 
 ### Made with dyon_interactive
 
