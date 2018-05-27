@@ -209,13 +209,15 @@ fn item_lookup(
 
 impl Runtime {
     pub fn new() -> Runtime {
+        use rand::FromEntropy;
+
         Runtime {
             stack: vec![],
             call_stack: vec![],
             local_stack: vec![],
             current_stack: vec![],
             ret: Arc::new("return".into()),
-            rng: rand::StdRng::new().unwrap(),
+            rng: rand::StdRng::from_entropy(),
             text_type: Variable::Text(Arc::new("string".into())),
             f64_type: Variable::Text(Arc::new("number".into())),
             vec4_type: Variable::Text(Arc::new("vec4".into())),
