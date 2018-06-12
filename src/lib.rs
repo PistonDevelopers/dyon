@@ -302,7 +302,9 @@ impl Module {
     }
 
     pub fn error(&self, range: Range, msg: &str, rt: &Runtime) -> String {
-        self.error_fnindex(range, msg, rt.call_stack.last().unwrap().index)
+        let fnindex = if let Some(x) = rt.call_stack.last() {x.index}
+                      else {return msg.into()};
+        self.error_fnindex(range, msg, fnindex)
     }
 
     pub fn error_fnindex(&self, range: Range, msg: &str, fnindex: usize) -> String {
