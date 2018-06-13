@@ -310,7 +310,7 @@ pub fn convert_meta_data(
                     Kind::In => Some(Type::In(Box::new(Type::array()))),
                     Kind::Object => Some(Type::object()),
                     Kind::Sift => Some(Type::array()),
-                    Kind::Sum | Kind::SumIn | Kind::Prod => Some(Type::F64),
+                    Kind::Sum | Kind::SumIn | Kind::Prod | Kind::ProdIn => Some(Type::F64),
                     Kind::Norm => Some(Type::F64),
                     Kind::Swizzle => Some(Type::F64),
                     Kind::Link | Kind::LinkFor => Some(Type::Link),

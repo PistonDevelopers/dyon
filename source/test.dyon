@@ -16,9 +16,11 @@ fn main() {
     finish := in finish
     n := 10
     for i n {_ := go bar(i, 2)}
+    pr := 1
     loop {
-        for msg in log {println(msg[0])}
+        pr += prod msg in log {msg[0]}
         if n == 0 {break}
         n -= sum _ in finish {1}
     }
+    println(pr)
 }
