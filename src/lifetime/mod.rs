@@ -205,7 +205,8 @@ pub fn check(
 
         'search: loop {
             if nodes[parent].kind.is_decl_loop() ||
-               nodes[parent].kind.is_decl_un_loop() {
+               nodes[parent].kind.is_decl_un_loop() ||
+               nodes[parent].kind == Kind::ForIn {
                 let my_name = nodes[i].name().unwrap();
                 for name in &nodes[parent].names {
                     if name == my_name {

@@ -227,6 +227,10 @@ pub fn write_expr<W: io::Write>(
             try!(write!(w, "for "));
             try!(write_for_n(w, rt, for_n, tabs));
         }
+        &E::ForIn(ref for_in) => {
+            try!(write!(w, "for "));
+            try!(write_for_in(w, rt, for_in, tabs));
+        }
         &E::Sum(ref for_n) => {
             try!(write!(w, "sum "));
             try!(write_for_n(w, rt, for_n, tabs));
@@ -685,6 +689,19 @@ pub fn write_for_n<W: io::Write>(
         try!(write!(w, " "));
     }
     try!(write_block(w, rt, &for_n.block, tabs + 1));
+    Ok(())
+}
+
+pub fn write_for_in<W: io::Write>(
+    w: &mut W,
+    rt: &Runtime,
+    for_in: &ast::ForIn,
+    tabs: u32
+) -> Result<(), io::Error> {
+    try!(write!(w, "{} in ", for_in.name));
+    try!(write_expr(w, rt, &for_in.iter, tabs));
+    try!(write!(w, " "));
+    try!(write_block(w, rt, &for_in.block, tabs + 1));
     Ok(())
 }
 

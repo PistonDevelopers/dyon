@@ -836,6 +836,7 @@ pub enum Expression {
     Vec4(Vec4),
     For(Box<For>),
     ForN(Box<ForN>),
+    ForIn(Box<ForIn>),
     Sum(Box<ForN>),
     SumVec4(Box<ForN>),
     Prod(Box<ForN>),
@@ -995,6 +996,10 @@ impl Expression {
                     file, source, convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::For(Box::new(val)));
+            } else if let Ok((range, val)) = ForIn::from_meta_data(
+                    file, source, "for_in", convert, ignored) {
+                convert.update(range);
+                result = Some(Expression::ForIn(Box::new(val)));
             } else if let Ok((range, val)) = ForN::from_meta_data(
                     file, source, "for_n", convert, ignored) {
                 convert.update(range);
@@ -1132,6 +1137,7 @@ impl Expression {
             Vec4(ref vec4) => vec4.source_range,
             For(ref for_expr) => for_expr.source_range,
             ForN(ref for_n_expr) => for_n_expr.source_range,
+            ForIn(ref for_in_expr) => for_in_expr.source_range,
             Sum(ref for_n_expr) => for_n_expr.source_range,
             SumVec4(ref for_n_expr) => for_n_expr.source_range,
             Prod(ref for_n_expr) => for_n_expr.source_range,
@@ -1201,6 +1207,8 @@ impl Expression {
             For(ref for_expr) =>
                 for_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             ForN(ref for_n_expr) =>
+                for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
+            ForIn(ref for_n_expr) =>
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             Sum(ref for_n_expr) =>
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
@@ -3165,6 +3173,81 @@ impl For {
         stack.truncate(after_init);
         self.step.resolve_locals(relative, stack, closure_stack, module, use_lookup);
         stack.truncate(after_init);
+        self.block.resolve_locals(relative, stack, closure_stack, module, use_lookup);
+        stack.truncate(st);
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ForIn {
+    pub name: Arc<String>,
+    pub iter: Expression,
+    pub block: Block,
+    pub label: Option<Arc<String>>,
+    pub source_range: Range,
+}
+
+impl ForIn {
+    pub fn from_meta_data(
+        file: &Arc<String>,
+        source: &Arc<String>,
+        node: &str,
+        mut convert: Convert,
+        ignored: &mut Vec<Range>)
+    -> Result<(Range, ForIn), ()> {
+        let start = convert.clone();
+        let start_range = try!(convert.start_node(node));
+        convert.update(start_range);
+
+        let mut name: Option<Arc<String>> = None;
+        let mut iter: Option<Expression> = None;
+        let mut block: Option<Block> = None;
+        let mut label: Option<Arc<String>> = None;
+        loop {
+            if let Ok(range) = convert.end_node(node) {
+                convert.update(range);
+                break;
+            } else if let Ok((range, val)) = convert.meta_string("name") {
+                convert.update(range);
+                name = Some(val);
+            } else if let Ok((range, val)) = Expression::from_meta_data(
+                file, source, "iter", convert, ignored) {
+                convert.update(range);
+                iter = Some(val);
+            } else if let Ok((range, val)) = Block::from_meta_data(
+                    file, source, "block", convert, ignored) {
+                convert.update(range);
+                block = Some(val);
+            } else if let Ok((range, val)) = convert.meta_string("label") {
+                convert.update(range);
+                label = Some(val);
+            } else {
+                let range = convert.ignore();
+                convert.update(range);
+                ignored.push(range);
+            }
+        }
+
+        let name = try!(name.ok_or(()));
+        let iter = try!(iter.ok_or(()));
+        let block = try!(block.ok_or(()));
+        Ok((convert.subtract(start), ForIn {
+            name, iter, block, label,
+            source_range: convert.source(start).unwrap(),
+        }))
+    }
+
+    pub fn resolve_locals(
+        &self, relative: usize,
+        stack: &mut Vec<Option<Arc<String>>>,
+        closure_stack: &mut Vec<usize>,
+        module: &Module,
+        use_lookup: &UseLookup,
+    ) {
+        let st = stack.len();
+        self.iter.resolve_locals(relative, stack, closure_stack, module, use_lookup);
+        stack.truncate(st);
+        stack.push(Some(self.name.clone()));
         self.block.resolve_locals(relative, stack, closure_stack, module, use_lookup);
         stack.truncate(st);
     }

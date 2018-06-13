@@ -377,6 +377,7 @@ impl Runtime {
             Vec4(ref vec4) => self.vec4(vec4, side, module),
             For(ref for_expr) => self.for_expr(for_expr, module),
             ForN(ref for_n_expr) => self.for_n_expr(for_n_expr, module),
+            ForIn(ref for_in_expr) => self.for_in_expr(for_in_expr, module),
             Sum(ref for_n_expr) => self.sum_n_expr(for_n_expr, module),
             SumVec4(ref for_n_expr) => self.sum_vec4_n_expr(for_n_expr, module),
             Prod(ref for_n_expr) => self.prod_n_expr(for_n_expr, module),
@@ -2425,6 +2426,103 @@ impl Runtime {
                     &format!("{}\nExpected nothing from for step",
                         self.stack_trace()), self))
             };
+            self.stack.truncate(st);
+            self.local_stack.truncate(lc);
+        };
+        self.stack.truncate(prev_st);
+        self.local_stack.truncate(prev_lc);
+        Ok((None, flow))
+    }
+    fn for_in_expr(
+        &mut self,
+        for_in_expr: &ast::ForIn,
+        module: &Arc<Module>
+    ) -> Result<(Option<Variable>, Flow), String> {
+        use std::error::Error;
+
+        let prev_st = self.stack.len();
+        let prev_lc = self.local_stack.len();
+
+        // Evaluate end such that it's on the stack.
+        let iter = match try!(self.expression(&for_in_expr.iter, Side::Right, module)) {
+            (x, Flow::Return) => { return Ok((x, Flow::Return)); }
+            (Some(x), Flow::Continue) => x,
+            _ => return Err(module.error(for_in_expr.iter.source_range(),
+                &format!("{}\nExpected in-type from for iter",
+                    self.stack_trace()), self))
+        };
+        let iter = match self.resolve(&iter) {
+            &Variable::In(ref val) => val.clone(),
+            x => return Err(module.error(for_in_expr.iter.source_range(),
+                            &self.expected(x, "in"), self))
+        };
+
+        let iter_val = match iter.lock() {
+            Ok(x) => match x.try_recv() {
+                Ok(x) => x,
+                Err(_) => return Ok((None, Flow::Continue)),
+            },
+            Err(err) => {
+                return Err(module.error(for_in_expr.source_range,
+                &format!("Can not lock In mutex:\n{}", err.description()), self));
+            }
+        };
+
+        // Initialize counter.
+        self.local_stack.push((for_in_expr.name.clone(), self.stack.len()));
+        self.stack.push(iter_val);
+
+        let st = self.stack.len();
+        let lc = self.local_stack.len();
+        let mut flow = Flow::Continue;
+        loop {
+            match try!(self.block(&for_in_expr.block, module)) {
+                (x, Flow::Return) => { return Ok((x, Flow::Return)); }
+                (_, Flow::Continue) => {}
+                (_, Flow::Break(x)) => {
+                    match x {
+                        Some(label) => {
+                            let same =
+                            if let Some(ref for_label) = for_in_expr.label {
+                                &label == for_label
+                            } else { false };
+                            if !same {
+                                flow = Flow::Break(Some(label))
+                            }
+                        }
+                        None => {}
+                    }
+                    break;
+                }
+                (_, Flow::ContinueLoop(x)) => {
+                    match x {
+                        Some(label) => {
+                            let same =
+                            if let Some(ref for_label) = for_in_expr.label {
+                                &label == for_label
+                            } else { false };
+                            if !same {
+                                flow = Flow::ContinueLoop(Some(label));
+                                break;
+                            }
+                        }
+                        None => {}
+                    }
+                }
+            }
+
+            let iter_val = match iter.lock() {
+                Ok(x) => match x.try_recv() {
+                    Ok(x) => x,
+                    Err(_) => break,
+                },
+                Err(err) => {
+                    return Err(module.error(for_in_expr.source_range,
+                    &format!("Can not lock In mutex:\n{}", err.description()), self));
+                }
+            };
+            self.stack[st - 1] = iter_val;
+
             self.stack.truncate(st);
             self.local_stack.truncate(lc);
         };
