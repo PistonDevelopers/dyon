@@ -39,6 +39,7 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\\"
     object:"object"
     arr
     ["return" wn expr:"return"]
+    for_in:"for_in"
     for_n:"for_n"
     for:"for"
     loop:"loop"
@@ -111,24 +112,25 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\\"
     expr:"cond" ?w ";" ?w
     expr:"step" ?w block:"block"]
 36 for_n = [label "for" short_body]
-37 loop = [label "loop" .w!  block:"block"]
-38 break = ["break" ?w ?["'" .._seps!:"label"]]
-39 continue = ["continue" ?w ?["'" .._seps!:"label"]]
-40 if = ["if" .w! expr:"cond" ?w block:"true_block"
+37 for_in = [label "for" .w! .._seps!:"name" .w! "in" .w! expr:"iter" ?w block:"block"]
+38 loop = [label "loop" .w!  block:"block"]
+39 break = ["break" ?w ?["'" .._seps!:"label"]]
+40 continue = ["continue" ?w ?["'" .._seps!:"label"]]
+41 if = ["if" .w! expr:"cond" ?w block:"true_block"
          .r?([?w "else" w "if" ?w expr:"else_if_cond" ?w block:"else_if_block"])
          ?[?w "else" ?w block:"else_block"]]
-41 call = [?[.._seps!:"alias" "::"] .._seps!:"name" wn "(" ?w
+42 call = [?[.._seps!:"alias" "::"] .._seps!:"name" wn "(" ?w
     .s?.(, arg_expr:"call_arg") ?w ")"]
-42 named_call = [?[.._seps!:"alias" "::"] .._seps!:"word" wn "(" ?w
+43 named_call = [?[.._seps!:"alias" "::"] .._seps!:"word" wn "(" ?w
     .s?.(, [.._seps!:"word" ?w ":" ?w arg_expr:"call_arg" ?w]) ")"]
-43 go = ["go " ?w {call:"call" named_call:"named_call"}]
-44 assign = [lexpr:"left" ?w assign_op ?w expr:"right"]
-45 assign_op = {":=":":=" "=":"=" "+=":"+=" "-=":"-=" "*=":"*=" "/=":"/=" "%=":"%="}
-46 compare = [lexpr:"left" ?w compare_op ?w expr:"right"]
-47 compare_op = {"==":"==" "!=":"!=" "¬=":"!=" "<=":"<=" "<":"<" ">=":">=" ">":">"}
-48 grab = ["grab" ?[w "'" .$:"grab_level"] w expr:"expr"]
-49 try_expr = ["try" w expr:"expr"]
-50 in = ["in" w ?[.._seps!:"alias" "::"] .._seps!:"name"]
+44 go = ["go " ?w {call:"call" named_call:"named_call"}]
+45 assign = [lexpr:"left" ?w assign_op ?w expr:"right"]
+46 assign_op = {":=":":=" "=":"=" "+=":"+=" "-=":"-=" "*=":"*=" "/=":"/=" "%=":"%="}
+47 compare = [lexpr:"left" ?w compare_op ?w expr:"right"]
+48 compare_op = {"==":"==" "!=":"!=" "¬=":"!=" "<=":"<=" "<":"<" ">=":">=" ">":">"}
+49 grab = ["grab" ?[w "'" .$:"grab_level"] w expr:"expr"]
+50 try_expr = ["try" w expr:"expr"]
+51 in = ["in" w ?[.._seps!:"alias" "::"] .._seps!:"name"]
 
 60 label = ?["'" .._seps!:"label" ?w ":" ?w]
 61 short_body = [.w! .s!.(, [.._seps!:"name" ?w

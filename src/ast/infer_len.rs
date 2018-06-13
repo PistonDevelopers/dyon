@@ -119,6 +119,10 @@ fn infer_expr(
         ForN(ref for_n_expr) => {
             return infer_for_n(for_n_expr, name, decls)
         }
+        ForIn(ref for_in_expr) => {
+            let res = infer_expr(&for_in_expr.iter, name, decls);
+            if res.is_some() { return res; }
+        }
         Sum(ref for_n_expr) => {
             return infer_for_n(for_n_expr, name, decls)
         }
