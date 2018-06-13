@@ -138,6 +138,10 @@ fn infer_expr(
             let res = infer_expr(&for_in_expr.iter, name, decls);
             if res.is_some() { return res; }
         }
+        MaxIn(ref for_in_expr) => {
+            let res = infer_expr(&for_in_expr.iter, name, decls);
+            if res.is_some() { return res; }
+        }
         SumVec4(ref for_n_expr) => {
             return infer_for_n(for_n_expr, name, decls)
         }

@@ -477,6 +477,21 @@ pub fn grab_expr(
                 source_range: for_in_expr.source_range.clone(),
             }))), Flow::Continue))
         }
+        &E::MaxIn(ref for_in_expr) => {
+            Ok((Grabbed::Expression(E::MaxIn(Box::new(ast::ForIn {
+                name: for_in_expr.name.clone(),
+                iter: match grab_expr(level, rt, &for_in_expr.iter, side, module) {
+                    Ok((Grabbed::Expression(x), Flow::Continue)) => x,
+                    x => return x,
+                },
+                block: match grab_block(level, rt, &for_in_expr.block, side, module) {
+                    Ok((Grabbed::Block(x), Flow::Continue)) => x,
+                    x => return x,
+                },
+                label: for_in_expr.label.clone(),
+                source_range: for_in_expr.source_range.clone(),
+            }))), Flow::Continue))
+        }
         &E::Swizzle(ref swizzle) => {
             Ok((Grabbed::Expression(E::Swizzle(Box::new(ast::Swizzle {
                 sw0: swizzle.sw0.clone(),
