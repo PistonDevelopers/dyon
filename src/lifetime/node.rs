@@ -94,7 +94,8 @@ impl Node {
         use super::kind::Kind::*;
 
         match self.kind {
-            Pow | Sum | SumIn | Prod | ProdIn | SumVec4 | Min | MinIn | Max | MaxIn | Any | All |
+            Pow | Sum | SumIn | Prod | ProdIn | SumVec4 | Min | MinIn | Max | MaxIn |
+            Any | AnyIn | All |
             Vec4 | Vec4UnLoop | Swizzle |
             Assign | For | ForN | ForIn | Link | LinkFor |
             Closure | CallClosure | Grab | TryExpr | Norm | In => false,
@@ -182,6 +183,7 @@ impl Node {
                 (_, Kind::Max) => {}
                 (_, Kind::MaxIn) => {}
                 (_, Kind::Any) => {}
+                (_, Kind::AnyIn) => {}
                 (_, Kind::All) => {}
                 (_, Kind::Vec4UnLoop) => {}
                 (_, Kind::Vec4) => {}
@@ -318,7 +320,8 @@ pub fn convert_meta_data(
                     Kind::Norm => Some(Type::F64),
                     Kind::Swizzle => Some(Type::F64),
                     Kind::Link | Kind::LinkFor => Some(Type::Link),
-                    Kind::Any | Kind::All => Some(Type::Secret(Box::new(Type::Bool))),
+                    Kind::Any | Kind::AnyIn | Kind::All =>
+                        Some(Type::Secret(Box::new(Type::Bool))),
                     Kind::Min | Kind::MinIn | Kind::Max | Kind::MaxIn =>
                         Some(Type::Secret(Box::new(Type::F64))),
                     Kind::For | Kind::ForN => Some(Type::Void),

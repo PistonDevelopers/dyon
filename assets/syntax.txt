@@ -155,11 +155,12 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\\"
 67 wn = .r?({" " "\t" "\r"})
 
 70 in_loops = {sum_in:"sum_in" prod_in:"prod_in"
-    min_in:"min_in" max_in:"max_in"}
+    min_in:"min_in" max_in:"max_in" any_in:"any_in"}
 71 sum_in = [label {"sum" "∑"} in_body]
 72 prod_in = [label {"prod" "∏"} in_body]
 73 min_in = [label "min" in_body]
 74 max_in = [label "max" in_body]
+75 any_in = [label {"any" "∃"} in_body]
 
 80 short_loops = {sum:"sum" prod:"prod" sum_vec4:"sum_vec4"
     prod_vec4:"prod_vec4" min:"min" max:"max" sift:"sift"

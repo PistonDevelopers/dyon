@@ -390,6 +390,7 @@ impl Runtime {
             MaxIn(ref for_in_expr) => self.max_in_expr(for_in_expr, module),
             Sift(ref for_n_expr) => self.sift_n_expr(for_n_expr, module),
             Any(ref for_n_expr) => self.any_n_expr(for_n_expr, module),
+            AnyIn(ref for_in_expr) => self.any_in_expr(for_in_expr, module),
             All(ref for_n_expr) => self.all_n_expr(for_n_expr, module),
             LinkFor(ref for_n_expr) => self.link_for_n_expr(for_n_expr, module),
             If(ref if_expr) => self.if_expr(if_expr, module),
@@ -3942,6 +3943,129 @@ impl Runtime {
                 return Err(module.error(for_n_expr.source_range,
                            &self.expected(&self.stack[st - 1], "number"), self))
             }
+            self.stack.truncate(st);
+            self.local_stack.truncate(lc);
+        };
+        self.stack.truncate(prev_st);
+        self.local_stack.truncate(prev_lc);
+        Ok((Some(Variable::Bool(any, sec)), flow))
+    }
+    fn any_in_expr(
+        &mut self,
+        for_in_expr: &ast::ForIn,
+        module: &Arc<Module>
+    ) -> Result<(Option<Variable>, Flow), String> {
+        use std::error::Error;
+
+        let prev_st = self.stack.len();
+        let prev_lc = self.local_stack.len();
+
+        let iter = match try!(self.expression(&for_in_expr.iter, Side::Right, module)) {
+            (x, Flow::Return) => { return Ok((x, Flow::Return)); }
+            (Some(x), Flow::Continue) => x,
+            _ => return Err(module.error(for_in_expr.iter.source_range(),
+                &format!("{}\nExpected in-type from for iter",
+                    self.stack_trace()), self))
+        };
+        let iter = match self.resolve(&iter) {
+            &Variable::In(ref val) => val.clone(),
+            x => return Err(module.error(for_in_expr.iter.source_range(),
+                            &self.expected(x, "in"), self))
+        };
+
+        let iter_val = match iter.lock() {
+            Ok(x) => match x.try_recv() {
+                Ok(x) => x,
+                Err(_) => return Ok((Some(Variable::f64(::std::f64::NAN)), Flow::Continue)),
+            },
+            Err(err) => {
+                return Err(module.error(for_in_expr.source_range,
+                &format!("Can not lock In mutex:\n{}", err.description()), self));
+            }
+        };
+
+        let mut any = false;
+        let mut sec = None;
+        // Initialize counter.
+        self.local_stack.push((for_in_expr.name.clone(), self.stack.len()));
+        self.stack.push(iter_val);
+
+        let st = self.stack.len();
+        let lc = self.local_stack.len();
+        let mut flow = Flow::Continue;
+        loop {
+            match try!(self.block(&for_in_expr.block, module)) {
+                (Some(x), Flow::Continue) => {
+                    match self.resolve(&x) {
+                        &Variable::Bool(val, ref val_sec) => {
+                            if val {
+                                any = true;
+                                sec = match val_sec {
+                                    &None => {
+                                        Some(Box::new(vec![self.stack[st - 1].clone()]))
+                                    }
+                                    &Some(ref arr) => {
+                                        let mut arr = arr.clone();
+                                        arr.push(self.stack[st - 1].clone());
+                                        Some(arr)
+                                    }
+                                };
+                                break;
+                            }
+                        },
+                        x => return Err(module.error(for_in_expr.block.source_range,
+                                &self.expected(x, "boolean"), self))
+                    };
+                }
+                (x, Flow::Return) => { return Ok((x, Flow::Return)); }
+                (None, Flow::Continue) => {
+                    return Err(module.error(for_in_expr.block.source_range,
+                                "Expected `boolean`", self))
+                }
+                (_, Flow::Break(x)) => {
+                    match x {
+                        Some(label) => {
+                            let same =
+                            if let Some(ref for_label) = for_in_expr.label {
+                                &label == for_label
+                            } else { false };
+                            if !same {
+                                flow = Flow::Break(Some(label))
+                            }
+                        }
+                        None => {}
+                    }
+                    break;
+                }
+                (_, Flow::ContinueLoop(x)) => {
+                    match x {
+                        Some(label) => {
+                            let same =
+                            if let Some(ref for_label) = for_in_expr.label {
+                                &label == for_label
+                            } else { false };
+                            if !same {
+                                flow = Flow::ContinueLoop(Some(label));
+                                break;
+                            }
+                        }
+                        None => {}
+                    }
+                }
+            }
+
+            let iter_val = match iter.lock() {
+                Ok(x) => match x.try_recv() {
+                    Ok(x) => x,
+                    Err(_) => break,
+                },
+                Err(err) => {
+                    return Err(module.error(for_in_expr.source_range,
+                    &format!("Can not lock In mutex:\n{}", err.description()), self));
+                }
+            };
+            self.stack[st - 1] = iter_val;
+
             self.stack.truncate(st);
             self.local_stack.truncate(lc);
         };

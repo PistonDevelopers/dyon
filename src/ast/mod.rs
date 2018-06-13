@@ -849,6 +849,7 @@ pub enum Expression {
     MaxIn(Box<ForIn>),
     Sift(Box<ForN>),
     Any(Box<ForN>),
+    AnyIn(Box<ForIn>),
     All(Box<ForN>),
     LinkFor(Box<ForN>),
     If(Box<If>),
@@ -1056,6 +1057,10 @@ impl Expression {
                     file, source, "any", convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::Any(Box::new(val)));
+            } else if let Ok((range, val)) = ForIn::from_meta_data(
+                    file, source, "any_in", convert, ignored) {
+                convert.update(range);
+                result = Some(Expression::AnyIn(Box::new(val)));
             } else if let Ok((range, val)) = ForN::from_meta_data(
                     file, source, "all", convert, ignored) {
                 convert.update(range);
@@ -1170,6 +1175,7 @@ impl Expression {
             MaxIn(ref for_in_expr) => for_in_expr.source_range,
             Sift(ref for_n_expr) => for_n_expr.source_range,
             Any(ref for_n_expr) => for_n_expr.source_range,
+            AnyIn(ref for_in_expr) => for_in_expr.source_range,
             All(ref for_n_expr) => for_n_expr.source_range,
             LinkFor(ref for_n_expr) => for_n_expr.source_range,
             If(ref if_expr) => if_expr.source_range,
@@ -1257,6 +1263,8 @@ impl Expression {
             Sift(ref for_n_expr) =>
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             Any(ref for_n_expr) =>
+                for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
+            AnyIn(ref for_n_expr) =>
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             All(ref for_n_expr) =>
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),

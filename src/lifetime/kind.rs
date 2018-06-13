@@ -45,6 +45,7 @@ pub enum Kind {
     MaxIn,
     Sift,
     Any,
+    AnyIn,
     All,
     Vec4UnLoop,
     Start,
@@ -144,6 +145,7 @@ impl Kind {
             "sift" => Kind::Sift,
             "start" => Kind::Start,
             "any" => Kind::Any,
+            "any_in" => Kind::AnyIn,
             "all" => Kind::All,
             "vec4_un_loop" => Kind::Vec4UnLoop,
             "end" => Kind::End,
@@ -212,7 +214,7 @@ impl Kind {
         use self::Kind::*;
 
         match *self {
-            ForIn | SumIn | ProdIn | MinIn | MaxIn => true,
+            ForIn | SumIn | ProdIn | MinIn | MaxIn | AnyIn => true,
             _ => false
         }
     }
