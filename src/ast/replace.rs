@@ -185,6 +185,15 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
                 source_range: for_in_expr.source_range,
             }))
         }
+        E::SumIn(ref for_in_expr) => {
+            E::SumIn(Box::new(ForIn {
+                label: for_in_expr.label.clone(),
+                name: for_in_expr.name.clone(),
+                iter: number(&for_in_expr.iter, name, val),
+                block: number_block(&for_in_expr.block, name, val),
+                source_range: for_in_expr.source_range,
+            }))
+        }
         E::ForN(ref for_n_expr) => {
             E::ForN(Box::new(number_for_n(for_n_expr, name, val)))
         }

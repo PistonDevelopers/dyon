@@ -3,12 +3,12 @@ fn log(a: f64) {}
 fn finish() {}
 
 fn bar(id: f64, n: f64) -> bool {
+    return = true
     for i n {
         log((id + 1) * 1000 + i)
         sleep(0.1)
     }
     finish()
-    return true
 }
 
 fn main() {
@@ -19,6 +19,6 @@ fn main() {
     loop {
         for msg in log {println(msg[0])}
         if n == 0 {break}
-        for done in finish {n -= 1}
+        n -= sum _ in finish {1}
     }
 }

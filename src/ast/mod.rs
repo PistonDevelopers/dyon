@@ -838,6 +838,7 @@ pub enum Expression {
     ForN(Box<ForN>),
     ForIn(Box<ForIn>),
     Sum(Box<ForN>),
+    SumIn(Box<ForIn>),
     SumVec4(Box<ForN>),
     Prod(Box<ForN>),
     ProdVec4(Box<ForN>),
@@ -1008,6 +1009,10 @@ impl Expression {
                     file, source, "sum", convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::Sum(Box::new(val)));
+            } else if let Ok((range, val)) = ForIn::from_meta_data(
+                    file, source, "sum_in", convert, ignored) {
+                convert.update(range);
+                result = Some(Expression::SumIn(Box::new(val)));
             } else if let Ok((range, val)) = ForN::from_meta_data(
                     file, source, "sum_vec4", convert, ignored) {
                 convert.update(range);
@@ -1139,6 +1144,7 @@ impl Expression {
             ForN(ref for_n_expr) => for_n_expr.source_range,
             ForIn(ref for_in_expr) => for_in_expr.source_range,
             Sum(ref for_n_expr) => for_n_expr.source_range,
+            SumIn(ref for_in_expr) => for_in_expr.source_range,
             SumVec4(ref for_n_expr) => for_n_expr.source_range,
             Prod(ref for_n_expr) => for_n_expr.source_range,
             ProdVec4(ref for_n_expr) => for_n_expr.source_range,
@@ -1212,6 +1218,8 @@ impl Expression {
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             Sum(ref for_n_expr) =>
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
+            SumIn(ref for_in_expr) =>
+                for_in_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             SumVec4(ref for_n_expr) =>
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             Prod(ref for_n_expr) =>

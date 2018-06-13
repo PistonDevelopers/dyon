@@ -51,6 +51,7 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\\"
     compare:"compare"
     ["return":"return_void"]
     add:"add"
+    in_loops
     short_loops
     items
 } try]
@@ -67,6 +68,7 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\\"
         block:"block"
         compare:"compare"
         add:"add"
+        in_loops
         short_loops
         items
     } try]
@@ -75,6 +77,7 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\\"
     closure:"closure"
     object:"object"
     arr
+    in_loops
     short_loops
     block:"block"
     items
@@ -112,7 +115,7 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\\"
     expr:"cond" ?w ";" ?w
     expr:"step" ?w block:"block"]
 36 for_n = [label "for" short_body]
-37 for_in = [label "for" .w! .._seps!:"name" .w! "in" .w! expr:"iter" ?w block:"block"]
+37 for_in = [label "for" in_body]
 38 loop = [label "loop" .w!  block:"block"]
 39 break = ["break" ?w ?["'" .._seps!:"label"]]
 40 continue = ["continue" ?w ?["'" .._seps!:"label"]]
@@ -138,36 +141,40 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\\"
         ["[" ?w expr:"start" , expr:"end" ?w ")"]
         [!"{" expr:"end"]
     }]) ?w block:"block"]
-62 try = ?[?w "?":"try"]
-63 , = [?w "," ?w]
-64 arr = {array:"array" array_fill:"array_fill"}
-65 items = {vec4:"vec4" link:"link" grab:"grab" try_expr:"try_expr"
+62 in_body = [.w! .._seps!:"name" .w! "in" .w! expr:"iter" ?w block:"block"]
+63 try = ?[?w "?":"try"]
+64 , = [?w "," ?w]
+65 arr = {array:"array" array_fill:"array_fill"}
+66 items = {vec4:"vec4" link:"link" grab:"grab" try_expr:"try_expr"
             ["(" ?w expr ?w ")"] unop_not:"unop" norm:"norm"
             text go:"go"
             call_closure:"call_closure" named_call_closure:"named_call_closure"
             call:"call" named_call:"named_call"
             num bool color item:"item"}
 // Allow whitespace, but no new line.
-66 wn = .r?({" " "\t" "\r"})
+67 wn = .r?({" " "\t" "\r"})
 
-70 short_loops = {sum:"sum" prod:"prod" sum_vec4:"sum_vec4"
+70 in_loops = {sum_in:"sum_in"}
+71 sum_in = [label {"sum" "∑"} in_body]
+
+80 short_loops = {sum:"sum" prod:"prod" sum_vec4:"sum_vec4"
     prod_vec4:"prod_vec4" min:"min" max:"max" sift:"sift"
     any:"any" all:"all" vec4_un_loop:"vec4_un_loop" link_for:"link_for"}
-71 sum = [label {"sum" "∑"} short_body]
-72 prod = [label {"prod" "∏"} short_body]
-73 min = [label "min" short_body]
-74 max = [label "max" short_body]
-75 sift = [label "sift" short_body]
-76 any = [label {"any" "∃"} short_body]
-77 all = [label {"all" "∀"} short_body]
-78 sum_vec4 = [label {"sum_vec4" "∑vec4"} short_body]
-79 prod_vec4 = [label {"prod_vec4" "∏vec4"} short_body]
-80 vec4_un_loop = ["vec" {"4":"4" "3":"3" "2":"2"}
+81 sum = [label {"sum" "∑"} short_body]
+82 prod = [label {"prod" "∏"} short_body]
+83 min = [label "min" short_body]
+84 max = [label "max" short_body]
+85 sift = [label "sift" short_body]
+86 any = [label {"any" "∃"} short_body]
+87 all = [label {"all" "∀"} short_body]
+88 sum_vec4 = [label {"sum_vec4" "∑vec4"} short_body]
+89 prod_vec4 = [label {"prod_vec4" "∏vec4"} short_body]
+90 vec4_un_loop = ["vec" {"4":"4" "3":"3" "2":"2"}
                    w .._seps!:"name" w expr:"expr"]
-81 swizzle = [sw:"sw0" sw:"sw1" ?sw:"sw2" ?sw:"sw3" w expr:"expr"]
-82 sw = {"x":"x" "y":"y" "z":"z" "w":"w"}
+91 swizzle = [sw:"sw0" sw:"sw1" ?sw:"sw2" ?sw:"sw3" w expr:"expr"]
+92 sw = {"x":"x" "y":"y" "z":"z" "w":"w"}
 
-90 type = {
+100 type = {
     "any":"any"
     "bool":"bool"
     "f64":"f64"
@@ -189,23 +196,23 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\\"
     closure_type:"closure_type"
     [.._seps!:"ad_hoc" ?[?w type:"ad_hoc_ty"]]
 }
-91 closure_type = ["\\(" ?w .s?.(, type:"cl_arg") ?w ")"
+101 closure_type = ["\\(" ?w .s?.(, type:"cl_arg") ?w ")"
     ?w "->" ?w type:"cl_ret"]
 
-100 + = [?w {"+":"+" "||":"||" "∨":"+" ["or":"+" w]} ?w]
-101 - = [wn "-":"-" ?w]
+200 + = [?w {"+":"+" "||":"||" "∨":"+" ["or":"+" w]} ?w]
+201 - = [wn "-":"-" ?w]
 // Allow whitespace before multiplication sign, but no new line.
 // This prevents `x` on a new line from being interpreted as multiplication sign.
-102 * = [wn {
+202 * = [wn {
     "*.":"*." "·":"*."
     ["x":"x" w] "⨯":"x"
     "*":"*" "&&":"&&" "∧":"*" ["and":"*" w]
 } ?w]
-103 / = [?w "/":"/" ?w]
-104 % = [?w "%":"%" ?w]
-105 pow = [lexpr:"base" ?w "^" ?w lexpr:"exp"]
-106 mul = .s!({* / %} {unop_neg:"unop" pow:"pow" lexpr:"val"})
-107 mul_expr = {mul:"mul"}
-108 add = .s!({+ -} mul_expr:"expr")
+203 / = [?w "/":"/" ?w]
+204 % = [?w "%":"%" ?w]
+205 pow = [lexpr:"base" ?w "^" ?w lexpr:"exp"]
+206 mul = .s!({* / %} {unop_neg:"unop" pow:"pow" lexpr:"val"})
+207 mul_expr = {mul:"mul"}
+208 add = .s!({+ -} mul_expr:"expr")
 
 1000 document = [?ns:"ns" ?w ?uses:"uses" ?w .l({[.w? fn:"fn"] comment})]

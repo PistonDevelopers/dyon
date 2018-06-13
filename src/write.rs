@@ -235,6 +235,10 @@ pub fn write_expr<W: io::Write>(
             try!(write!(w, "sum "));
             try!(write_for_n(w, rt, for_n, tabs));
         }
+        &E::SumIn(ref for_n) => {
+            try!(write!(w, "sum "));
+            try!(write_for_in(w, rt, for_n, tabs));
+        }
         &E::SumVec4(ref for_n) => {
             try!(write!(w, "sum_vec4 "));
             try!(write_for_n(w, rt, for_n, tabs));
