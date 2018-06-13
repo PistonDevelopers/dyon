@@ -40,6 +40,7 @@ pub enum Kind {
     ProdIn,
     ProdVec4,
     Min,
+    MinIn,
     Max,
     Sift,
     Any,
@@ -136,6 +137,7 @@ impl Kind {
             "prod_in" => Kind::ProdIn,
             "prod_vec4" => Kind::ProdVec4,
             "min" => Kind::Min,
+            "min_in" => Kind::MinIn,
             "max" => Kind::Max,
             "sift" => Kind::Sift,
             "start" => Kind::Start,
@@ -208,7 +210,7 @@ impl Kind {
         use self::Kind::*;
 
         match *self {
-            ForIn | SumIn | ProdIn => true,
+            ForIn | SumIn | ProdIn | MinIn => true,
             _ => false
         }
     }

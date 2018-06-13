@@ -94,7 +94,7 @@ impl Node {
         use super::kind::Kind::*;
 
         match self.kind {
-            Pow | Sum | Prod | SumVec4 | Min | Max | Any | All |
+            Pow | Sum | SumIn | Prod | ProdIn | SumVec4 | Min | MinIn | Max | Any | All |
             Vec4 | Vec4UnLoop | Swizzle |
             Assign | For | ForN | ForIn | Link | LinkFor |
             Closure | CallClosure | Grab | TryExpr | Norm | In => false,
@@ -173,9 +173,12 @@ impl Node {
                 (_, Kind::Sift) => {}
                 (_, Kind::SumVec4) => {}
                 (_, Kind::Sum) => {}
+                (_, Kind::SumIn) => {}
                 (_, Kind::Prod) => {}
+                (_, Kind::ProdIn) => {}
                 (_, Kind::ProdVec4) => {}
                 (_, Kind::Min) => {}
+                (_, Kind::MinIn) => {}
                 (_, Kind::Max) => {}
                 (_, Kind::Any) => {}
                 (_, Kind::All) => {}

@@ -235,9 +235,9 @@ pub fn write_expr<W: io::Write>(
             try!(write!(w, "sum "));
             try!(write_for_n(w, rt, for_n, tabs));
         }
-        &E::SumIn(ref for_n) => {
+        &E::SumIn(ref for_in) => {
             try!(write!(w, "sum "));
-            try!(write_for_in(w, rt, for_n, tabs));
+            try!(write_for_in(w, rt, for_in, tabs));
         }
         &E::SumVec4(ref for_n) => {
             try!(write!(w, "sum_vec4 "));
@@ -247,9 +247,9 @@ pub fn write_expr<W: io::Write>(
             try!(write!(w, "prod "));
             try!(write_for_n(w, rt, for_n, tabs));
         }
-        &E::ProdIn(ref for_n) => {
+        &E::ProdIn(ref for_in) => {
             try!(write!(w, "prod "));
-            try!(write_for_in(w, rt, for_n, tabs));
+            try!(write_for_in(w, rt, for_in, tabs));
         }
         &E::ProdVec4(ref for_n) => {
             try!(write!(w, "prod_vec4 "));
@@ -258,6 +258,10 @@ pub fn write_expr<W: io::Write>(
         &E::Min(ref for_n) => {
             try!(write!(w, "min "));
             try!(write_for_n(w, rt, for_n, tabs));
+        }
+        &E::MinIn(ref for_in) => {
+            try!(write!(w, "min "));
+            try!(write_for_in(w, rt, for_in, tabs));
         }
         &E::Max(ref for_n) => {
             try!(write!(w, "max "));
