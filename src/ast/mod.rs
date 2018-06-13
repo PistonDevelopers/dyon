@@ -851,6 +851,7 @@ pub enum Expression {
     Any(Box<ForN>),
     AnyIn(Box<ForIn>),
     All(Box<ForN>),
+    AllIn(Box<ForIn>),
     LinkFor(Box<ForN>),
     If(Box<If>),
     Compare(Box<Compare>),
@@ -1065,6 +1066,10 @@ impl Expression {
                     file, source, "all", convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::All(Box::new(val)));
+            } else if let Ok((range, val)) = ForIn::from_meta_data(
+                    file, source, "all_in", convert, ignored) {
+                convert.update(range);
+                result = Some(Expression::AllIn(Box::new(val)));
             } else if let Ok((range, val)) = ForN::from_meta_data(
                     file, source, "link_for", convert, ignored) {
                 convert.update(range);
@@ -1177,6 +1182,7 @@ impl Expression {
             Any(ref for_n_expr) => for_n_expr.source_range,
             AnyIn(ref for_in_expr) => for_in_expr.source_range,
             All(ref for_n_expr) => for_n_expr.source_range,
+            AllIn(ref for_in_expr) => for_in_expr.source_range,
             LinkFor(ref for_n_expr) => for_n_expr.source_range,
             If(ref if_expr) => if_expr.source_range,
             Compare(ref comp) => comp.source_range,
@@ -1264,10 +1270,12 @@ impl Expression {
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             Any(ref for_n_expr) =>
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            AnyIn(ref for_n_expr) =>
-                for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
+            AnyIn(ref for_in_expr) =>
+                for_in_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             All(ref for_n_expr) =>
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
+            AllIn(ref for_in_expr) =>
+                for_in_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             LinkFor(ref for_n_expr) =>
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             If(ref if_expr) =>

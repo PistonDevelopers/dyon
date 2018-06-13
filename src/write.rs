@@ -287,6 +287,10 @@ pub fn write_expr<W: io::Write>(
             try!(write!(w, "all "));
             try!(write_for_n(w, rt, for_n, tabs));
         }
+        &E::AllIn(ref for_in) => {
+            try!(write!(w, "all "));
+            try!(write_for_in(w, rt, for_in, tabs));
+        }
         &E::LinkFor(ref for_n) => {
             try!(write!(w, "link "));
             try!(write_for_n(w, rt, for_n, tabs));

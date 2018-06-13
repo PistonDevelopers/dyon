@@ -5,5 +5,5 @@ fn main() {
     log(1)
     log(2)
     log(3)
-    println(why(any msg in log {msg[0] == 2}))
+    println(all msg in log {msg[0] > 0})
 }
