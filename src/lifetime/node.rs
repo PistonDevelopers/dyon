@@ -172,6 +172,8 @@ impl Node {
                 (_, Kind::Break) => {}
                 (_, Kind::Continue) => {}
                 (_, Kind::Sift) => {}
+                (_, Kind::SiftIn) => {}
+                (_, Kind::Iter) => { continue }
                 (_, Kind::SumVec4) => {}
                 (_, Kind::Sum) => {}
                 (_, Kind::SumIn) => {}
@@ -316,7 +318,7 @@ pub fn convert_meta_data(
                     Kind::Vec4 | Kind::Vec4UnLoop => Some(Type::Vec4),
                     Kind::In => Some(Type::In(Box::new(Type::array()))),
                     Kind::Object => Some(Type::object()),
-                    Kind::Sift => Some(Type::array()),
+                    Kind::Sift | Kind::SiftIn => Some(Type::array()),
                     Kind::Sum | Kind::SumIn | Kind::Prod | Kind::ProdIn => Some(Type::F64),
                     Kind::Norm => Some(Type::F64),
                     Kind::Swizzle => Some(Type::F64),

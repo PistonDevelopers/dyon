@@ -5,5 +5,5 @@ fn main() {
     log(1)
     log(2)
     log(3)
-    println(all msg in log {msg[0] > 0})
+    println(sift msg in log {clone(msg[0])})
 }
