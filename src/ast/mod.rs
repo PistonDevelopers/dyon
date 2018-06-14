@@ -838,14 +838,20 @@ pub enum Expression {
     ForN(Box<ForN>),
     ForIn(Box<ForIn>),
     Sum(Box<ForN>),
+    SumIn(Box<ForIn>),
     SumVec4(Box<ForN>),
     Prod(Box<ForN>),
+    ProdIn(Box<ForIn>),
     ProdVec4(Box<ForN>),
     Min(Box<ForN>),
+    MinIn(Box<ForIn>),
     Max(Box<ForN>),
+    MaxIn(Box<ForIn>),
     Sift(Box<ForN>),
     Any(Box<ForN>),
+    AnyIn(Box<ForIn>),
     All(Box<ForN>),
+    AllIn(Box<ForIn>),
     LinkFor(Box<ForN>),
     If(Box<If>),
     Compare(Box<Compare>),
@@ -1008,6 +1014,10 @@ impl Expression {
                     file, source, "sum", convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::Sum(Box::new(val)));
+            } else if let Ok((range, val)) = ForIn::from_meta_data(
+                    file, source, "sum_in", convert, ignored) {
+                convert.update(range);
+                result = Some(Expression::SumIn(Box::new(val)));
             } else if let Ok((range, val)) = ForN::from_meta_data(
                     file, source, "sum_vec4", convert, ignored) {
                 convert.update(range);
@@ -1016,6 +1026,10 @@ impl Expression {
                     file, source, "prod", convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::Prod(Box::new(val)));
+            } else if let Ok((range, val)) = ForIn::from_meta_data(
+                    file, source, "prod_in", convert, ignored) {
+                convert.update(range);
+                result = Some(Expression::ProdIn(Box::new(val)));
             } else if let Ok((range, val)) = ForN::from_meta_data(
                     file, source, "prod_vec4", convert, ignored) {
                 convert.update(range);
@@ -1024,10 +1038,18 @@ impl Expression {
                     file, source, "min", convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::Min(Box::new(val)));
+            } else if let Ok((range, val)) = ForIn::from_meta_data(
+                    file, source, "min_in", convert, ignored) {
+                convert.update(range);
+                result = Some(Expression::MinIn(Box::new(val)));
             } else if let Ok((range, val)) = ForN::from_meta_data(
                     file, source, "max", convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::Max(Box::new(val)));
+            } else if let Ok((range, val)) = ForIn::from_meta_data(
+                    file, source, "max_in", convert, ignored) {
+                convert.update(range);
+                result = Some(Expression::MaxIn(Box::new(val)));
             } else if let Ok((range, val)) = ForN::from_meta_data(
                     file, source, "sift", convert, ignored) {
                 convert.update(range);
@@ -1036,10 +1058,18 @@ impl Expression {
                     file, source, "any", convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::Any(Box::new(val)));
+            } else if let Ok((range, val)) = ForIn::from_meta_data(
+                    file, source, "any_in", convert, ignored) {
+                convert.update(range);
+                result = Some(Expression::AnyIn(Box::new(val)));
             } else if let Ok((range, val)) = ForN::from_meta_data(
                     file, source, "all", convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::All(Box::new(val)));
+            } else if let Ok((range, val)) = ForIn::from_meta_data(
+                    file, source, "all_in", convert, ignored) {
+                convert.update(range);
+                result = Some(Expression::AllIn(Box::new(val)));
             } else if let Ok((range, val)) = ForN::from_meta_data(
                     file, source, "link_for", convert, ignored) {
                 convert.update(range);
@@ -1139,14 +1169,20 @@ impl Expression {
             ForN(ref for_n_expr) => for_n_expr.source_range,
             ForIn(ref for_in_expr) => for_in_expr.source_range,
             Sum(ref for_n_expr) => for_n_expr.source_range,
+            SumIn(ref for_in_expr) => for_in_expr.source_range,
             SumVec4(ref for_n_expr) => for_n_expr.source_range,
             Prod(ref for_n_expr) => for_n_expr.source_range,
+            ProdIn(ref for_in_expr) => for_in_expr.source_range,
             ProdVec4(ref for_n_expr) => for_n_expr.source_range,
             Min(ref for_n_expr) => for_n_expr.source_range,
+            MinIn(ref for_in_expr) => for_in_expr.source_range,
             Max(ref for_n_expr) => for_n_expr.source_range,
+            MaxIn(ref for_in_expr) => for_in_expr.source_range,
             Sift(ref for_n_expr) => for_n_expr.source_range,
             Any(ref for_n_expr) => for_n_expr.source_range,
+            AnyIn(ref for_in_expr) => for_in_expr.source_range,
             All(ref for_n_expr) => for_n_expr.source_range,
+            AllIn(ref for_in_expr) => for_in_expr.source_range,
             LinkFor(ref for_n_expr) => for_n_expr.source_range,
             If(ref if_expr) => if_expr.source_range,
             Compare(ref comp) => comp.source_range,
@@ -1212,22 +1248,34 @@ impl Expression {
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             Sum(ref for_n_expr) =>
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
+            SumIn(ref for_in_expr) =>
+                for_in_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             SumVec4(ref for_n_expr) =>
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             Prod(ref for_n_expr) =>
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
+            ProdIn(ref for_in_expr) =>
+                for_in_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             ProdVec4(ref for_n_expr) =>
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             Min(ref for_n_expr) =>
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
+            MinIn(ref for_in_expr) =>
+                for_in_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             Max(ref for_n_expr) =>
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
+            MaxIn(ref for_in_expr) =>
+                for_in_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             Sift(ref for_n_expr) =>
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             Any(ref for_n_expr) =>
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
+            AnyIn(ref for_in_expr) =>
+                for_in_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             All(ref for_n_expr) =>
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
+            AllIn(ref for_in_expr) =>
+                for_in_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             LinkFor(ref for_n_expr) =>
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             If(ref if_expr) =>

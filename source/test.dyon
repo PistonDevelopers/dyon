@@ -1,24 +1,9 @@
 fn log(a: f64) {}
 
-fn finish() {}
-
-fn bar(id: f64, n: f64) -> bool {
-    for i n {
-        log((id + 1) * 1000 + i)
-        sleep(0.1)
-    }
-    finish()
-    return true
-}
-
 fn main() {
     log := in log
-    finish := in finish
-    n := 10
-    for i n {_ := go bar(i, 2)}
-    loop {
-        for msg in log {println(msg[0])}
-        if n == 0 {break}
-        for done in finish {n -= 1}
-    }
+    log(1)
+    log(2)
+    log(3)
+    println(all msg in log {msg[0] > 0})
 }

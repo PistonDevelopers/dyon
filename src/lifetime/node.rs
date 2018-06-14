@@ -94,7 +94,8 @@ impl Node {
         use super::kind::Kind::*;
 
         match self.kind {
-            Pow | Sum | Prod | SumVec4 | Min | Max | Any | All |
+            Pow | Sum | SumIn | Prod | ProdIn | SumVec4 | Min | MinIn | Max | MaxIn |
+            Any | AnyIn | All | AllIn |
             Vec4 | Vec4UnLoop | Swizzle |
             Assign | For | ForN | ForIn | Link | LinkFor |
             Closure | CallClosure | Grab | TryExpr | Norm | In => false,
@@ -173,12 +174,18 @@ impl Node {
                 (_, Kind::Sift) => {}
                 (_, Kind::SumVec4) => {}
                 (_, Kind::Sum) => {}
+                (_, Kind::SumIn) => {}
                 (_, Kind::Prod) => {}
+                (_, Kind::ProdIn) => {}
                 (_, Kind::ProdVec4) => {}
                 (_, Kind::Min) => {}
+                (_, Kind::MinIn) => {}
                 (_, Kind::Max) => {}
+                (_, Kind::MaxIn) => {}
                 (_, Kind::Any) => {}
+                (_, Kind::AnyIn) => {}
                 (_, Kind::All) => {}
+                (_, Kind::AllIn) => {}
                 (_, Kind::Vec4UnLoop) => {}
                 (_, Kind::Vec4) => {}
                 (_, Kind::Start) => { continue }
@@ -310,12 +317,14 @@ pub fn convert_meta_data(
                     Kind::In => Some(Type::In(Box::new(Type::array()))),
                     Kind::Object => Some(Type::object()),
                     Kind::Sift => Some(Type::array()),
-                    Kind::Sum | Kind::Prod => Some(Type::F64),
+                    Kind::Sum | Kind::SumIn | Kind::Prod | Kind::ProdIn => Some(Type::F64),
                     Kind::Norm => Some(Type::F64),
                     Kind::Swizzle => Some(Type::F64),
                     Kind::Link | Kind::LinkFor => Some(Type::Link),
-                    Kind::Any | Kind::All => Some(Type::Secret(Box::new(Type::Bool))),
-                    Kind::Min | Kind::Max => Some(Type::Secret(Box::new(Type::F64))),
+                    Kind::Any | Kind::AnyIn | Kind::All | Kind::AllIn =>
+                        Some(Type::Secret(Box::new(Type::Bool))),
+                    Kind::Min | Kind::MinIn | Kind::Max | Kind::MaxIn =>
+                        Some(Type::Secret(Box::new(Type::F64))),
                     Kind::For | Kind::ForN => Some(Type::Void),
                     _ => None
                 };

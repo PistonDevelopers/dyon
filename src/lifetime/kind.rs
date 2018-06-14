@@ -34,14 +34,20 @@ pub enum Kind {
     ForN,
     ForIn,
     Sum,
+    SumIn,
     SumVec4,
     Prod,
+    ProdIn,
     ProdVec4,
     Min,
+    MinIn,
     Max,
+    MaxIn,
     Sift,
     Any,
+    AnyIn,
     All,
+    AllIn,
     Vec4UnLoop,
     Start,
     End,
@@ -128,15 +134,21 @@ impl Kind {
             "for_n" => Kind::ForN,
             "for_in" => Kind::ForIn,
             "sum" => Kind::Sum,
+            "sum_in" => Kind::SumIn,
             "sum_vec4" => Kind::SumVec4,
             "prod" => Kind::Prod,
+            "prod_in" => Kind::ProdIn,
             "prod_vec4" => Kind::ProdVec4,
             "min" => Kind::Min,
+            "min_in" => Kind::MinIn,
             "max" => Kind::Max,
+            "max_in" => Kind::MaxIn,
             "sift" => Kind::Sift,
             "start" => Kind::Start,
             "any" => Kind::Any,
+            "any_in" => Kind::AnyIn,
             "all" => Kind::All,
+            "all_in" => Kind::AllIn,
             "vec4_un_loop" => Kind::Vec4UnLoop,
             "end" => Kind::End,
             "init" => Kind::Init,
@@ -195,6 +207,16 @@ impl Kind {
         match *self {
             ForN | Sum | Prod | SumVec4 | Min | Max | Sift
             | Any | All | LinkFor => true,
+            _ => false
+        }
+    }
+
+    /// An in-loop receives an object from a receiver channel.
+    pub fn is_in_loop(&self) -> bool {
+        use self::Kind::*;
+
+        match *self {
+            ForIn | SumIn | ProdIn | MinIn | MaxIn | AnyIn | AllIn => true,
             _ => false
         }
     }

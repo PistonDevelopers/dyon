@@ -235,6 +235,10 @@ pub fn write_expr<W: io::Write>(
             try!(write!(w, "sum "));
             try!(write_for_n(w, rt, for_n, tabs));
         }
+        &E::SumIn(ref for_in) => {
+            try!(write!(w, "sum "));
+            try!(write_for_in(w, rt, for_in, tabs));
+        }
         &E::SumVec4(ref for_n) => {
             try!(write!(w, "sum_vec4 "));
             try!(write_for_n(w, rt, for_n, tabs));
@@ -242,6 +246,10 @@ pub fn write_expr<W: io::Write>(
         &E::Prod(ref for_n) => {
             try!(write!(w, "prod "));
             try!(write_for_n(w, rt, for_n, tabs));
+        }
+        &E::ProdIn(ref for_in) => {
+            try!(write!(w, "prod "));
+            try!(write_for_in(w, rt, for_in, tabs));
         }
         &E::ProdVec4(ref for_n) => {
             try!(write!(w, "prod_vec4 "));
@@ -251,9 +259,17 @@ pub fn write_expr<W: io::Write>(
             try!(write!(w, "min "));
             try!(write_for_n(w, rt, for_n, tabs));
         }
+        &E::MinIn(ref for_in) => {
+            try!(write!(w, "min "));
+            try!(write_for_in(w, rt, for_in, tabs));
+        }
         &E::Max(ref for_n) => {
             try!(write!(w, "max "));
             try!(write_for_n(w, rt, for_n, tabs));
+        }
+        &E::MaxIn(ref for_in) => {
+            try!(write!(w, "max "));
+            try!(write_for_in(w, rt, for_in, tabs));
         }
         &E::Sift(ref for_n) => {
             try!(write!(w, "sift "));
@@ -263,9 +279,17 @@ pub fn write_expr<W: io::Write>(
             try!(write!(w, "any "));
             try!(write_for_n(w, rt, for_n, tabs));
         }
+        &E::AnyIn(ref for_in) => {
+            try!(write!(w, "any "));
+            try!(write_for_in(w, rt, for_in, tabs));
+        }
         &E::All(ref for_n) => {
             try!(write!(w, "all "));
             try!(write_for_n(w, rt, for_n, tabs));
+        }
+        &E::AllIn(ref for_in) => {
+            try!(write!(w, "all "));
+            try!(write_for_in(w, rt, for_in, tabs));
         }
         &E::LinkFor(ref for_n) => {
             try!(write!(w, "link "));
