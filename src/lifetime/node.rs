@@ -95,7 +95,7 @@ impl Node {
 
         match self.kind {
             Pow | Sum | SumIn | Prod | ProdIn | SumVec4 | Min | MinIn | Max | MaxIn |
-            Any | AnyIn | All | AllIn |
+            Any | AnyIn | All | AllIn | LinkIn |
             Vec4 | Vec4UnLoop | Swizzle |
             Assign | For | ForN | ForIn | Link | LinkFor |
             Closure | CallClosure | Grab | TryExpr | Norm | In => false,
@@ -161,6 +161,7 @@ impl Node {
             match (self.kind, nodes[c].kind) {
                 (_, Kind::Link) => {}
                 (_, Kind::LinkFor) => {}
+                (_, Kind::LinkIn) => {}
                 (_, Kind::LinkItem) => {}
                 (_, Kind::ReturnVoid) => {}
                 (_, Kind::Swizzle) => {}

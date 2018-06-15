@@ -854,6 +854,7 @@ pub enum Expression {
     All(Box<ForN>),
     AllIn(Box<ForIn>),
     LinkFor(Box<ForN>),
+    LinkIn(Box<ForIn>),
     If(Box<If>),
     Compare(Box<Compare>),
     UnOp(Box<UnOpExpression>),
@@ -1079,6 +1080,10 @@ impl Expression {
                     file, source, "link_for", convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::LinkFor(Box::new(val)));
+            } else if let Ok((range, val)) = ForIn::from_meta_data(
+                    file, source, "link_in", convert, ignored) {
+                convert.update(range);
+                result = Some(Expression::LinkIn(Box::new(val)));
             } else if let Ok((range, val)) = Loop::from_meta_data(
                     file, source, convert, ignored) {
                 convert.update(range);
@@ -1190,6 +1195,7 @@ impl Expression {
             All(ref for_n_expr) => for_n_expr.source_range,
             AllIn(ref for_in_expr) => for_in_expr.source_range,
             LinkFor(ref for_n_expr) => for_n_expr.source_range,
+            LinkIn(ref for_in_expr) => for_in_expr.source_range,
             If(ref if_expr) => if_expr.source_range,
             Compare(ref comp) => comp.source_range,
             Norm(ref norm) => norm.source_range,
@@ -1286,6 +1292,8 @@ impl Expression {
                 for_in_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             LinkFor(ref for_n_expr) =>
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
+            LinkIn(ref for_in_expr) =>
+                for_in_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             If(ref if_expr) =>
                 if_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             Compare(ref comp) =>
