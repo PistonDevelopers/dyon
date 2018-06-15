@@ -44,6 +44,7 @@ pub enum Kind {
     Max,
     MaxIn,
     Sift,
+    SiftIn,
     Any,
     AnyIn,
     All,
@@ -144,6 +145,7 @@ impl Kind {
             "max" => Kind::Max,
             "max_in" => Kind::MaxIn,
             "sift" => Kind::Sift,
+            "sift_in" => Kind::SiftIn,
             "start" => Kind::Start,
             "any" => Kind::Any,
             "any_in" => Kind::AnyIn,
@@ -216,7 +218,8 @@ impl Kind {
         use self::Kind::*;
 
         match *self {
-            ForIn | SumIn | ProdIn | MinIn | MaxIn | AnyIn | AllIn => true,
+            ForIn | SumIn | ProdIn | MinIn | MaxIn | AnyIn | AllIn |
+            SiftIn => true,
             _ => false
         }
     }

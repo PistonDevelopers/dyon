@@ -275,6 +275,10 @@ pub fn write_expr<W: io::Write>(
             try!(write!(w, "sift "));
             try!(write_for_n(w, rt, for_n, tabs));
         }
+        &E::SiftIn(ref for_in) => {
+            try!(write!(w, "sift "));
+            try!(write_for_in(w, rt, for_in, tabs));
+        }
         &E::Any(ref for_n) => {
             try!(write!(w, "any "));
             try!(write_for_n(w, rt, for_n, tabs));
