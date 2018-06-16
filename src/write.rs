@@ -299,6 +299,10 @@ pub fn write_expr<W: io::Write>(
             try!(write!(w, "link "));
             try!(write_for_n(w, rt, for_n, tabs));
         }
+        &E::LinkIn(ref for_in) => {
+            try!(write!(w, "link "));
+            try!(write_for_in(w, rt, for_in, tabs));
+        }
         &E::If(ref if_expr) => try!(write_if(w, rt, if_expr, tabs)),
         &E::Norm(ref norm) => try!(write_norm(w, rt, norm, tabs)),
         &E::UnOp(ref unop) => try!(write_unop(w, rt, unop, tabs)),

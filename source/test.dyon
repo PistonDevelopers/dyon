@@ -5,5 +5,5 @@ fn main() {
     log(1)
     log(2)
     log(3)
-    println(sift msg in log {clone(msg[0])})
+    println(link msg in log {msg[0]})
 }
