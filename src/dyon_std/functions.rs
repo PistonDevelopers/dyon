@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use std::collections::HashMap;
 
-use super::standard;
+use intrinsics::standard;
 use Lt;
 use Module;
 use Prelude;
