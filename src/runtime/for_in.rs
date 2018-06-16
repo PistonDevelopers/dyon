@@ -32,6 +32,24 @@ macro_rules! iter_val(
     };
 );
 
+macro_rules! break_(
+    ($x:ident, $for_in_expr:ident, $flow:ident) => {{
+        match $x {
+            Some(label) => {
+                let same =
+                if let Some(ref for_label) = $for_in_expr.label {
+                    &label == for_label
+                } else { false };
+                if !same {
+                    $flow = Flow::Break(Some(label))
+                }
+            }
+            None => {}
+        }
+        break;
+    }};
+);
+
 impl Runtime {
     pub(crate) fn for_in_expr(
         &mut self,
@@ -57,21 +75,7 @@ impl Runtime {
             match try!(self.block(&for_in_expr.block, module)) {
                 (x, Flow::Return) => { return Ok((x, Flow::Return)); }
                 (_, Flow::Continue) => {}
-                (_, Flow::Break(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_in_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::Break(Some(label))
-                            }
-                        }
-                        None => {}
-                    }
-                    break;
-                }
+                (_, Flow::Break(x)) => break_!(x, for_in_expr, flow),
                 (_, Flow::ContinueLoop(x)) => {
                     match x {
                         Some(label) => {
@@ -142,21 +146,7 @@ impl Runtime {
                 }
                 (x, Flow::Return) => { return Ok((x, Flow::Return)); }
                 (_, Flow::Continue) => {}
-                (_, Flow::Break(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_in_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::Break(Some(label))
-                            }
-                        }
-                        None => {}
-                    }
-                    break;
-                }
+                (_, Flow::Break(x)) => break_!(x, for_in_expr, flow),
                 (_, Flow::ContinueLoop(x)) => {
                     match x {
                         Some(label) => {
@@ -227,21 +217,7 @@ impl Runtime {
                 }
                 (x, Flow::Return) => { return Ok((x, Flow::Return)); }
                 (_, Flow::Continue) => {}
-                (_, Flow::Break(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_in_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::Break(Some(label))
-                            }
-                        }
-                        None => {}
-                    }
-                    break;
-                }
+                (_, Flow::Break(x)) => break_!(x, for_in_expr, flow),
                 (_, Flow::ContinueLoop(x)) => {
                     match x {
                         Some(label) => {
@@ -328,21 +304,7 @@ impl Runtime {
                     return Err(module.error(for_in_expr.block.source_range,
                                 "Expected `number or option`", self))
                 }
-                (_, Flow::Break(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_in_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::Break(Some(label))
-                            }
-                        }
-                        None => {}
-                    }
-                    break;
-                }
+                (_, Flow::Break(x)) => break_!(x, for_in_expr, flow),
                 (_, Flow::ContinueLoop(x)) => {
                     match x {
                         Some(label) => {
@@ -429,21 +391,7 @@ impl Runtime {
                     return Err(module.error(for_in_expr.block.source_range,
                                 "Expected `number or option`", self))
                 }
-                (_, Flow::Break(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_in_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::Break(Some(label))
-                            }
-                        }
-                        None => {}
-                    }
-                    break;
-                }
+                (_, Flow::Break(x)) => break_!(x, for_in_expr, flow),
                 (_, Flow::ContinueLoop(x)) => {
                     match x {
                         Some(label) => {
@@ -532,21 +480,7 @@ impl Runtime {
                     return Err(module.error(for_in_expr.block.source_range,
                                 "Expected `boolean`", self))
                 }
-                (_, Flow::Break(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_in_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::Break(Some(label))
-                            }
-                        }
-                        None => {}
-                    }
-                    break;
-                }
+                (_, Flow::Break(x)) => break_!(x, for_in_expr, flow),
                 (_, Flow::ContinueLoop(x)) => {
                     match x {
                         Some(label) => {
@@ -635,21 +569,7 @@ impl Runtime {
                     return Err(module.error(for_in_expr.block.source_range,
                                 "Expected `boolean`", self))
                 }
-                (_, Flow::Break(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_in_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::Break(Some(label))
-                            }
-                        }
-                        None => {}
-                    }
-                    break;
-                }
+                (_, Flow::Break(x)) => break_!(x, for_in_expr, flow),
                 (_, Flow::ContinueLoop(x)) => {
                     match x {
                         Some(label) => {
@@ -870,21 +790,7 @@ impl Runtime {
                     return Err(module.error(for_in_expr.block.source_range,
                                 "Expected variable", self))
                 }
-                (_, Flow::Break(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_in_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::Break(Some(label))
-                            }
-                        }
-                        None => {}
-                    }
-                    break;
-                }
+                (_, Flow::Break(x)) => break_!(x, for_in_expr, flow),
                 (_, Flow::ContinueLoop(x)) => {
                     match x {
                         Some(label) => {
