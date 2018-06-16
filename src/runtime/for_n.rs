@@ -37,6 +37,84 @@ macro_rules! end(
     }};
 );
 
+macro_rules! cond(
+    ($rt:ident, $for_n_expr:ident, $st:ident, $end:ident, $module:ident) => {
+        match &$rt.stack[$st - 1] {
+            &Variable::F64(val, _) => {
+                if val < $end {}
+                else { break }
+                val
+            }
+            x => return Err($module.error($for_n_expr.source_range,
+                            &$rt.expected(x, "number"), $rt))
+        }
+    };
+);
+
+macro_rules! break_(
+    ($x:ident, $for_n_expr:ident, $flow:ident) => {{
+        match $x {
+            Some(label) => {
+                let same =
+                if let Some(ref for_label) = $for_n_expr.label {
+                    &label == for_label
+                } else { false };
+                if !same {
+                    $flow = Flow::Break(Some(label))
+                }
+            }
+            None => {}
+        }
+        break;
+    }};
+    ($x:ident, $for_n_expr:ident, $flow:ident, $label:tt) => {{
+        match $x {
+            Some(label) => {
+                let same =
+                if let Some(ref for_label) = $for_n_expr.label {
+                    &label == for_label
+                } else { false };
+                if !same {
+                    $flow = Flow::Break(Some(label))
+                }
+            }
+            None => {}
+        }
+        break $label;
+    }};
+);
+
+macro_rules! continue_(
+    ($x:ident, $for_n_expr:ident, $flow:ident) => {{
+        match $x {
+            Some(label) => {
+                let same =
+                if let Some(ref for_label) = $for_n_expr.label {
+                    &label == for_label
+                } else { false };
+                if !same {
+                    $flow = Flow::ContinueLoop(Some(label));
+                    break;
+                }
+            }
+            None => {}
+        }
+    }};
+);
+
+macro_rules! inc(
+    ($rt:ident, $for_n_expr:ident, $st:ident, $module:ident) => {{
+        let error = if let Variable::F64(ref mut val, _) = $rt.stack[$st - 1] {
+            *val += 1.0;
+            false
+        } else { true };
+        if error {
+            return Err($module.error($for_n_expr.source_range,
+                       &$rt.expected(&$rt.stack[$st - 1], "number"), $rt))
+        }
+    }};
+);
+
 impl Runtime {
     pub(crate) fn for_n_expr(
         &mut self,
@@ -57,56 +135,14 @@ impl Runtime {
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
         loop {
-            match &self.stack[st - 1] {
-                &Variable::F64(val, _) => {
-                    if val < end {}
-                    else { break }
-                }
-                x => return Err(module.error(for_n_expr.source_range,
-                                &self.expected(x, "number"), self))
-            };
+            cond!(self, for_n_expr, st, end, module);
             match try!(self.block(&for_n_expr.block, module)) {
                 (x, Flow::Return) => { return Ok((x, Flow::Return)); }
                 (_, Flow::Continue) => {}
-                (_, Flow::Break(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_n_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::Break(Some(label))
-                            }
-                        }
-                        None => {}
-                    }
-                    break;
-                }
-                (_, Flow::ContinueLoop(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_n_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::ContinueLoop(Some(label));
-                                break;
-                            }
-                        }
-                        None => {}
-                    }
-                }
+                (_, Flow::Break(x)) => break_!(x, for_n_expr, flow),
+                (_, Flow::ContinueLoop(x)) => continue_!(x, for_n_expr, flow),
             }
-            let error = if let Variable::F64(ref mut val, _) = self.stack[st - 1] {
-                *val += 1.0;
-                false
-            } else { true };
-            if error {
-                return Err(module.error(for_n_expr.source_range,
-                           &self.expected(&self.stack[st - 1], "number"), self))
-            }
+            inc!(self, for_n_expr, st, module);
             self.stack.truncate(st);
             self.local_stack.truncate(lc);
         };
@@ -135,14 +171,7 @@ impl Runtime {
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
         loop {
-            match &self.stack[st - 1] {
-                &Variable::F64(val, _) => {
-                    if val < end {}
-                    else { break }
-                }
-                x => return Err(module.error(for_n_expr.source_range,
-                                &self.expected(x, "number"), self))
-            };
+            cond!(self, for_n_expr, st, end, module);
             match try!(self.block(&for_n_expr.block, module)) {
                 (Some(x), Flow::Continue) => {
                     match self.resolve(&x) {
@@ -156,45 +185,10 @@ impl Runtime {
                     return Err(module.error(for_n_expr.block.source_range,
                                 "Expected `number`", self))
                 }
-                (_, Flow::Break(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_n_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::Break(Some(label))
-                            }
-                        }
-                        None => {}
-                    }
-                    break;
-                }
-                (_, Flow::ContinueLoop(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_n_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::ContinueLoop(Some(label));
-                                break;
-                            }
-                        }
-                        None => {}
-                    }
-                }
+                (_, Flow::Break(x)) => break_!(x, for_n_expr, flow),
+                (_, Flow::ContinueLoop(x)) => continue_!(x, for_n_expr, flow),
             }
-            let error = if let Variable::F64(ref mut val, _) = self.stack[st - 1] {
-                *val += 1.0;
-                false
-            } else { true };
-            if error {
-                return Err(module.error(for_n_expr.source_range,
-                           &self.expected(&self.stack[st - 1], "number"), self))
-            }
+            inc!(self, for_n_expr, st, module);
             self.stack.truncate(st);
             self.local_stack.truncate(lc);
         };
@@ -223,14 +217,7 @@ impl Runtime {
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
         loop {
-            match &self.stack[st - 1] {
-                &Variable::F64(val, _) => {
-                    if val < end {}
-                    else { break }
-                }
-                x => return Err(module.error(for_n_expr.source_range,
-                                &self.expected(x, "number"), self))
-            };
+            cond!(self, for_n_expr, st, end, module);
             match try!(self.block(&for_n_expr.block, module)) {
                 (Some(x), Flow::Continue) => {
                     match self.resolve(&x) {
@@ -244,45 +231,10 @@ impl Runtime {
                     return Err(module.error(for_n_expr.block.source_range,
                                 "Expected `number`", self))
                 }
-                (_, Flow::Break(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_n_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::Break(Some(label))
-                            }
-                        }
-                        None => {}
-                    }
-                    break;
-                }
-                (_, Flow::ContinueLoop(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_n_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::ContinueLoop(Some(label));
-                                break;
-                            }
-                        }
-                        None => {}
-                    }
-                }
+                (_, Flow::Break(x)) => break_!(x, for_n_expr, flow),
+                (_, Flow::ContinueLoop(x)) => continue_!(x, for_n_expr, flow),
             }
-            let error = if let Variable::F64(ref mut val, _) = self.stack[st - 1] {
-                *val += 1.0;
-                false
-            } else { true };
-            if error {
-                return Err(module.error(for_n_expr.source_range,
-                           &self.expected(&self.stack[st - 1], "number"), self))
-            }
+            inc!(self, for_n_expr, st, module);
             self.stack.truncate(st);
             self.local_stack.truncate(lc);
         };
@@ -311,15 +263,7 @@ impl Runtime {
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
         loop {
-            let ind = match &self.stack[st - 1] {
-                &Variable::F64(val, _) => {
-                    if val < end {}
-                    else { break }
-                    val
-                }
-                x => return Err(module.error(for_n_expr.source_range,
-                                &self.expected(x, "number"), self))
-            };
+            let ind = cond!(self, for_n_expr, st, end, module);
             match try!(self.block(&for_n_expr.block, module)) {
                 (Some(x), Flow::Continue) => {
                     match self.resolve(&x) {
@@ -347,45 +291,10 @@ impl Runtime {
                     return Err(module.error(for_n_expr.block.source_range,
                                 "Expected `number or option`", self))
                 }
-                (_, Flow::Break(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_n_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::Break(Some(label))
-                            }
-                        }
-                        None => {}
-                    }
-                    break;
-                }
-                (_, Flow::ContinueLoop(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_n_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::ContinueLoop(Some(label));
-                                break;
-                            }
-                        }
-                        None => {}
-                    }
-                }
+                (_, Flow::Break(x)) => break_!(x, for_n_expr, flow),
+                (_, Flow::ContinueLoop(x)) => continue_!(x, for_n_expr, flow),
             }
-            let error = if let Variable::F64(ref mut val, _) = self.stack[st - 1] {
-                *val += 1.0;
-                false
-            } else { true };
-            if error {
-                return Err(module.error(for_n_expr.source_range,
-                           &self.expected(&self.stack[st - 1], "number"), self))
-            }
+            inc!(self, for_n_expr, st, module);
             self.stack.truncate(st);
             self.local_stack.truncate(lc);
         };
@@ -415,15 +324,7 @@ impl Runtime {
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
         loop {
-            let ind = match &self.stack[st - 1] {
-                &Variable::F64(val, _) => {
-                    if val < end {}
-                    else { break }
-                    val
-                }
-                x => return Err(module.error(for_n_expr.source_range,
-                                &self.expected(x, "number"), self))
-            };
+            let ind = cond!(self, for_n_expr, st, end, module);
             match try!(self.block(&for_n_expr.block, module)) {
                 (Some(x), Flow::Continue) => {
                     match self.resolve(&x) {
@@ -451,45 +352,10 @@ impl Runtime {
                     return Err(module.error(for_n_expr.block.source_range,
                                 "Expected `number`", self))
                 }
-                (_, Flow::Break(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_n_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::Break(Some(label))
-                            }
-                        }
-                        None => {}
-                    }
-                    break;
-                }
-                (_, Flow::ContinueLoop(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_n_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::ContinueLoop(Some(label));
-                                break;
-                            }
-                        }
-                        None => {}
-                    }
-                }
+                (_, Flow::Break(x)) => break_!(x, for_n_expr, flow),
+                (_, Flow::ContinueLoop(x)) => continue_!(x, for_n_expr, flow),
             }
-            let error = if let Variable::F64(ref mut val, _) = self.stack[st - 1] {
-                *val += 1.0;
-                false
-            } else { true };
-            if error {
-                return Err(module.error(for_n_expr.source_range,
-                           &self.expected(&self.stack[st - 1], "number"), self))
-            }
+            inc!(self, for_n_expr, st, module);
             self.stack.truncate(st);
             self.local_stack.truncate(lc);
         };
@@ -519,14 +385,7 @@ impl Runtime {
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
         loop {
-            let ind = match &self.stack[st - 1] {
-                &Variable::F64(val, _) => {
-                    if val < end { val }
-                    else { break }
-                }
-                x => return Err(module.error(for_n_expr.source_range,
-                                &self.expected(x, "number"), self))
-            };
+            let ind = cond!(self, for_n_expr, st, end, module);
             match try!(self.block(&for_n_expr.block, module)) {
                 (Some(x), Flow::Continue) => {
                     match self.resolve(&x) {
@@ -555,45 +414,10 @@ impl Runtime {
                     return Err(module.error(for_n_expr.block.source_range,
                                 "Expected `boolean`", self))
                 }
-                (_, Flow::Break(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_n_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::Break(Some(label))
-                            }
-                        }
-                        None => {}
-                    }
-                    break;
-                }
-                (_, Flow::ContinueLoop(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_n_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::ContinueLoop(Some(label));
-                                break;
-                            }
-                        }
-                        None => {}
-                    }
-                }
+                (_, Flow::Break(x)) => break_!(x, for_n_expr, flow),
+                (_, Flow::ContinueLoop(x)) => continue_!(x, for_n_expr, flow),
             }
-            let error = if let Variable::F64(ref mut val, _) = self.stack[st - 1] {
-                *val += 1.0;
-                false
-            } else { true };
-            if error {
-                return Err(module.error(for_n_expr.source_range,
-                           &self.expected(&self.stack[st - 1], "number"), self))
-            }
+            inc!(self, for_n_expr, st, module);
             self.stack.truncate(st);
             self.local_stack.truncate(lc);
         };
@@ -623,14 +447,7 @@ impl Runtime {
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
         loop {
-            let ind = match &self.stack[st - 1] {
-                &Variable::F64(val, _) => {
-                    if val < end { val }
-                    else { break }
-                }
-                x => return Err(module.error(for_n_expr.source_range,
-                                &self.expected(x, "number"), self))
-            };
+            let ind = cond!(self, for_n_expr, st, end, module);
             match try!(self.block(&for_n_expr.block, module)) {
                 (Some(x), Flow::Continue) => {
                     match self.resolve(&x) {
@@ -659,45 +476,10 @@ impl Runtime {
                     return Err(module.error(for_n_expr.block.source_range,
                                 "Expected `boolean`", self))
                 }
-                (_, Flow::Break(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_n_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::Break(Some(label))
-                            }
-                        }
-                        None => {}
-                    }
-                    break;
-                }
-                (_, Flow::ContinueLoop(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_n_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::ContinueLoop(Some(label));
-                                break;
-                            }
-                        }
-                        None => {}
-                    }
-                }
+                (_, Flow::Break(x)) => break_!(x, for_n_expr, flow),
+                (_, Flow::ContinueLoop(x)) => continue_!(x, for_n_expr, flow),
             }
-            let error = if let Variable::F64(ref mut val, _) = self.stack[st - 1] {
-                *val += 1.0;
-                false
-            } else { true };
-            if error {
-                return Err(module.error(for_n_expr.source_range,
-                           &self.expected(&self.stack[st - 1], "number"), self))
-            }
+            inc!(self, for_n_expr, st, module);
             self.stack.truncate(st);
             self.local_stack.truncate(lc);
         };
@@ -734,14 +516,7 @@ impl Runtime {
             let mut flow = Flow::Continue;
 
             'outer: loop {
-                match &rt.stack[st - 1] {
-                    &Variable::F64(val, _) => {
-                        if val < end {}
-                        else { break }
-                    }
-                    x => return Err(module.error(for_n_expr.source_range,
-                                    &rt.expected(x, "number"), rt))
-                };
+                cond!(rt, for_n_expr, st, end, module);
 
                 match for_n_expr.block.expressions[0] {
                     ast::Expression::Link(ref link) => {
@@ -760,21 +535,7 @@ impl Runtime {
                                 }
                                 (x, Flow::Return) => { return Ok((x, Flow::Return)); }
                                 (None, Flow::Continue) => {}
-                                (_, Flow::Break(x)) => {
-                                    match x {
-                                        Some(label) => {
-                                            let same =
-                                            if let Some(ref for_label) = for_n_expr.label {
-                                                &label == for_label
-                                            } else { false };
-                                            if !same {
-                                                flow = Flow::Break(Some(label))
-                                            }
-                                        }
-                                        None => {}
-                                    }
-                                    break 'outer;
-                                }
+                                (_, Flow::Break(x)) => break_!(x, for_n_expr, flow, 'outer),
                                 (_, Flow::ContinueLoop(x)) => {
                                     match x {
                                         Some(label) => {
@@ -801,21 +562,7 @@ impl Runtime {
                         // Pass on control to next link loop.
                         match sub_link_for_n_expr(res, rt, for_n, module) {
                             Ok((None, Flow::Continue)) => {}
-                            Ok((_, Flow::Break(x))) => {
-                                match x {
-                                    Some(label) => {
-                                        let same =
-                                        if let Some(ref for_label) = for_n_expr.label {
-                                            &label == for_label
-                                        } else { false };
-                                        if !same {
-                                            flow = Flow::Break(Some(label))
-                                        }
-                                    }
-                                    None => {}
-                                }
-                                break 'outer;
-                            }
+                            Ok((_, Flow::Break(x))) => break_!(x, for_n_expr, flow, 'outer),
                             Ok((_, Flow::ContinueLoop(x))) => {
                                 match x {
                                     Some(label) => {
@@ -839,14 +586,7 @@ impl Runtime {
                     }
                 }
 
-                let error = if let Variable::F64(ref mut val, _) = rt.stack[st - 1] {
-                    *val += 1.0;
-                    false
-                } else { true };
-                if error {
-                    return Err(module.error(for_n_expr.source_range,
-                               &rt.expected(&rt.stack[st - 1], "number"), rt))
-                }
+                inc!(rt, for_n_expr, st, module);
                 rt.stack.truncate(st);
                 rt.local_stack.truncate(lc);
             };
@@ -883,14 +623,7 @@ impl Runtime {
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
         loop {
-            match &self.stack[st - 1] {
-                &Variable::F64(val, _) => {
-                    if val < end {}
-                    else { break }
-                }
-                x => return Err(module.error(for_n_expr.source_range,
-                                &self.expected(x, "number"), self))
-            };
+            cond!(self, for_n_expr, st, end, module);
             match try!(self.block(&for_n_expr.block, module)) {
                 (Some(x), Flow::Continue) => res.push(x),
                 (x, Flow::Return) => { return Ok((x, Flow::Return)); }
@@ -898,45 +631,10 @@ impl Runtime {
                     return Err(module.error(for_n_expr.block.source_range,
                                 "Expected variable", self))
                 }
-                (_, Flow::Break(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_n_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::Break(Some(label))
-                            }
-                        }
-                        None => {}
-                    }
-                    break;
-                }
-                (_, Flow::ContinueLoop(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_n_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::ContinueLoop(Some(label));
-                                break;
-                            }
-                        }
-                        None => {}
-                    }
-                }
+                (_, Flow::Break(x)) => break_!(x, for_n_expr, flow),
+                (_, Flow::ContinueLoop(x)) => continue_!(x, for_n_expr, flow),
             }
-            let error = if let Variable::F64(ref mut val, _) = self.stack[st - 1] {
-                *val += 1.0;
-                false
-            } else { true };
-            if error {
-                return Err(module.error(for_n_expr.source_range,
-                           &self.expected(&self.stack[st - 1], "number"), self))
-            }
+            inc!(self, for_n_expr, st, module);
             self.stack.truncate(st);
             self.local_stack.truncate(lc);
         };
@@ -965,14 +663,7 @@ impl Runtime {
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
         loop {
-            match &self.stack[st - 1] {
-                &Variable::F64(val, _) => {
-                    if val < end {}
-                    else { break }
-                }
-                x => return Err(module.error(for_n_expr.source_range,
-                                &self.expected(x, "number"), self))
-            };
+            cond!(self, for_n_expr, st, end, module);
             match try!(self.block(&for_n_expr.block, module)) {
                 (Some(x), Flow::Continue) => {
                     match self.resolve(&x) {
@@ -990,45 +681,10 @@ impl Runtime {
                     return Err(module.error(for_n_expr.block.source_range,
                                 "Expected `vec4`", self))
                 }
-                (_, Flow::Break(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_n_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::Break(Some(label))
-                            }
-                        }
-                        None => {}
-                    }
-                    break;
-                }
-                (_, Flow::ContinueLoop(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_n_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::ContinueLoop(Some(label));
-                                break;
-                            }
-                        }
-                        None => {}
-                    }
-                }
+                (_, Flow::Break(x)) => break_!(x, for_n_expr, flow),
+                (_, Flow::ContinueLoop(x)) => continue_!(x, for_n_expr, flow),
             }
-            let error = if let Variable::F64(ref mut val, _) = self.stack[st - 1] {
-                *val += 1.0;
-                false
-            } else { true };
-            if error {
-                return Err(module.error(for_n_expr.source_range,
-                           &self.expected(&self.stack[st - 1], "number"), self))
-            }
+            inc!(self, for_n_expr, st, module);
             self.stack.truncate(st);
             self.local_stack.truncate(lc);
         };
@@ -1057,14 +713,7 @@ impl Runtime {
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
         loop {
-            match &self.stack[st - 1] {
-                &Variable::F64(val, _) => {
-                    if val < end {}
-                    else { break }
-                }
-                x => return Err(module.error(for_n_expr.source_range,
-                                &self.expected(x, "number"), self))
-            };
+            cond!(self, for_n_expr, st, end, module);
             match try!(self.block(&for_n_expr.block, module)) {
                 (Some(x), Flow::Continue) => {
                     match self.resolve(&x) {
@@ -1082,45 +731,10 @@ impl Runtime {
                     return Err(module.error(for_n_expr.block.source_range,
                                 "Expected `vec4`", self))
                 }
-                (_, Flow::Break(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_n_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::Break(Some(label))
-                            }
-                        }
-                        None => {}
-                    }
-                    break;
-                }
-                (_, Flow::ContinueLoop(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_n_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::ContinueLoop(Some(label));
-                                break;
-                            }
-                        }
-                        None => {}
-                    }
-                }
+                (_, Flow::Break(x)) => break_!(x, for_n_expr, flow),
+                (_, Flow::ContinueLoop(x)) => continue_!(x, for_n_expr, flow),
             }
-            let error = if let Variable::F64(ref mut val, _) = self.stack[st - 1] {
-                *val += 1.0;
-                false
-            } else { true };
-            if error {
-                return Err(module.error(for_n_expr.source_range,
-                           &self.expected(&self.stack[st - 1], "number"), self))
-            }
+            inc!(self, for_n_expr, st, module);
             self.stack.truncate(st);
             self.local_stack.truncate(lc);
         };
