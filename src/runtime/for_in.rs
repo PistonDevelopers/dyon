@@ -1,5 +1,88 @@
 use super::*;
 
+macro_rules! iter(
+    ($rt:ident, $for_in_expr:ident, $module:ident) => {{
+        let iter = match try!($rt.expression(&$for_in_expr.iter, Side::Right, $module)) {
+            (x, Flow::Return) => { return Ok((x, Flow::Return)); }
+            (Some(x), Flow::Continue) => x,
+            _ => return Err($module.error($for_in_expr.iter.source_range(),
+                &format!("{}\nExpected in-type from for iter",
+                    $rt.stack_trace()), $rt))
+        };
+        match $rt.resolve(&iter) {
+            &Variable::In(ref val) => val.clone(),
+            x => return Err($module.error($for_in_expr.iter.source_range(),
+                            &$rt.expected(x, "in"), $rt))
+        }
+    }};
+);
+
+macro_rules! iter_val(
+    ($iter:ident, $rt:ident, $for_in_expr:ident, $module:ident) => {
+        match $iter.lock() {
+            Ok(x) => match x.try_recv() {
+                Ok(x) => x,
+                Err(_) => return Ok((None, Flow::Continue)),
+            },
+            Err(err) => {
+                return Err($module.error($for_in_expr.source_range,
+                &format!("Can not lock In mutex:\n{}", err.description()), $rt));
+            }
+        }
+    };
+);
+
+macro_rules! break_(
+    ($x:ident, $for_in_expr:ident, $flow:ident) => {{
+        match $x {
+            Some(label) => {
+                let same =
+                if let Some(ref for_label) = $for_in_expr.label {
+                    &label == for_label
+                } else { false };
+                if !same {
+                    $flow = Flow::Break(Some(label))
+                }
+            }
+            None => {}
+        }
+        break;
+    }};
+);
+
+macro_rules! continue_(
+    ($x:ident, $for_in_expr:ident, $flow:ident) => {
+        match $x {
+            Some(label) => {
+                let same =
+                if let Some(ref for_label) = $for_in_expr.label {
+                    &label == for_label
+                } else { false };
+                if !same {
+                    $flow = Flow::ContinueLoop(Some(label));
+                    break;
+                }
+            }
+            None => {}
+        }
+    };
+);
+
+macro_rules! iter_val_inc(
+    ($iter:ident, $rt:ident, $for_in_expr:ident, $module:ident) => {
+        match $iter.lock() {
+            Ok(x) => match x.try_recv() {
+                Ok(x) => x,
+                Err(_) => break,
+            },
+            Err(err) => {
+                return Err($module.error($for_in_expr.source_range,
+                &format!("Can not lock In mutex:\n{}", err.description()), $rt));
+            }
+        }
+    };
+);
+
 impl Runtime {
     pub(crate) fn for_in_expr(
         &mut self,
@@ -11,29 +94,8 @@ impl Runtime {
         let prev_st = self.stack.len();
         let prev_lc = self.local_stack.len();
 
-        let iter = match try!(self.expression(&for_in_expr.iter, Side::Right, module)) {
-            (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-            (Some(x), Flow::Continue) => x,
-            _ => return Err(module.error(for_in_expr.iter.source_range(),
-                &format!("{}\nExpected in-type from for iter",
-                    self.stack_trace()), self))
-        };
-        let iter = match self.resolve(&iter) {
-            &Variable::In(ref val) => val.clone(),
-            x => return Err(module.error(for_in_expr.iter.source_range(),
-                            &self.expected(x, "in"), self))
-        };
-
-        let iter_val = match iter.lock() {
-            Ok(x) => match x.try_recv() {
-                Ok(x) => x,
-                Err(_) => return Ok((None, Flow::Continue)),
-            },
-            Err(err) => {
-                return Err(module.error(for_in_expr.source_range,
-                &format!("Can not lock In mutex:\n{}", err.description()), self));
-            }
-        };
+        let iter = iter!(self, for_in_expr, module);
+        let iter_val = iter_val!(iter, self, for_in_expr, module);
 
         // Initialize counter.
         self.local_stack.push((for_in_expr.name.clone(), self.stack.len()));
@@ -46,50 +108,11 @@ impl Runtime {
             match try!(self.block(&for_in_expr.block, module)) {
                 (x, Flow::Return) => { return Ok((x, Flow::Return)); }
                 (_, Flow::Continue) => {}
-                (_, Flow::Break(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_in_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::Break(Some(label))
-                            }
-                        }
-                        None => {}
-                    }
-                    break;
-                }
-                (_, Flow::ContinueLoop(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_in_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::ContinueLoop(Some(label));
-                                break;
-                            }
-                        }
-                        None => {}
-                    }
-                }
+                (_, Flow::Break(x)) => break_!(x, for_in_expr, flow),
+                (_, Flow::ContinueLoop(x)) => continue_!(x, for_in_expr, flow),
             }
 
-            let iter_val = match iter.lock() {
-                Ok(x) => match x.try_recv() {
-                    Ok(x) => x,
-                    Err(_) => break,
-                },
-                Err(err) => {
-                    return Err(module.error(for_in_expr.source_range,
-                    &format!("Can not lock In mutex:\n{}", err.description()), self));
-                }
-            };
-            self.stack[st - 1] = iter_val;
-
+            self.stack[st - 1] = iter_val_inc!(iter, self, for_in_expr, module);
             self.stack.truncate(st);
             self.local_stack.truncate(lc);
         };
@@ -108,29 +131,8 @@ impl Runtime {
         let prev_st = self.stack.len();
         let prev_lc = self.local_stack.len();
 
-        let iter = match try!(self.expression(&for_in_expr.iter, Side::Right, module)) {
-            (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-            (Some(x), Flow::Continue) => x,
-            _ => return Err(module.error(for_in_expr.iter.source_range(),
-                &format!("{}\nExpected in-type from for iter",
-                    self.stack_trace()), self))
-        };
-        let iter = match self.resolve(&iter) {
-            &Variable::In(ref val) => val.clone(),
-            x => return Err(module.error(for_in_expr.iter.source_range(),
-                            &self.expected(x, "in"), self))
-        };
-
-        let iter_val = match iter.lock() {
-            Ok(x) => match x.try_recv() {
-                Ok(x) => x,
-                Err(_) => return Ok((Some(Variable::f64(0.0)), Flow::Continue)),
-            },
-            Err(err) => {
-                return Err(module.error(for_in_expr.source_range,
-                &format!("Can not lock In mutex:\n{}", err.description()), self));
-            }
-        };
+        let iter = iter!(self, for_in_expr, module);
+        let iter_val = iter_val!(iter, self, for_in_expr, module);
 
         let mut sum = 0.0;
 
@@ -152,50 +154,11 @@ impl Runtime {
                 }
                 (x, Flow::Return) => { return Ok((x, Flow::Return)); }
                 (_, Flow::Continue) => {}
-                (_, Flow::Break(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_in_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::Break(Some(label))
-                            }
-                        }
-                        None => {}
-                    }
-                    break;
-                }
-                (_, Flow::ContinueLoop(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_in_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::ContinueLoop(Some(label));
-                                break;
-                            }
-                        }
-                        None => {}
-                    }
-                }
+                (_, Flow::Break(x)) => break_!(x, for_in_expr, flow),
+                (_, Flow::ContinueLoop(x)) => continue_!(x, for_in_expr, flow),
             }
 
-            let iter_val = match iter.lock() {
-                Ok(x) => match x.try_recv() {
-                    Ok(x) => x,
-                    Err(_) => break,
-                },
-                Err(err) => {
-                    return Err(module.error(for_in_expr.source_range,
-                    &format!("Can not lock In mutex:\n{}", err.description()), self));
-                }
-            };
-            self.stack[st - 1] = iter_val;
-
+            self.stack[st - 1] = iter_val_inc!(iter, self, for_in_expr, module);
             self.stack.truncate(st);
             self.local_stack.truncate(lc);
         };
@@ -214,29 +177,8 @@ impl Runtime {
         let prev_st = self.stack.len();
         let prev_lc = self.local_stack.len();
 
-        let iter = match try!(self.expression(&for_in_expr.iter, Side::Right, module)) {
-            (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-            (Some(x), Flow::Continue) => x,
-            _ => return Err(module.error(for_in_expr.iter.source_range(),
-                &format!("{}\nExpected in-type from for iter",
-                    self.stack_trace()), self))
-        };
-        let iter = match self.resolve(&iter) {
-            &Variable::In(ref val) => val.clone(),
-            x => return Err(module.error(for_in_expr.iter.source_range(),
-                            &self.expected(x, "in"), self))
-        };
-
-        let iter_val = match iter.lock() {
-            Ok(x) => match x.try_recv() {
-                Ok(x) => x,
-                Err(_) => return Ok((Some(Variable::f64(1.0)), Flow::Continue)),
-            },
-            Err(err) => {
-                return Err(module.error(for_in_expr.source_range,
-                &format!("Can not lock In mutex:\n{}", err.description()), self));
-            }
-        };
+        let iter = iter!(self, for_in_expr, module);
+        let iter_val = iter_val!(iter, self, for_in_expr, module);
 
         let mut prod = 1.0;
 
@@ -258,50 +200,11 @@ impl Runtime {
                 }
                 (x, Flow::Return) => { return Ok((x, Flow::Return)); }
                 (_, Flow::Continue) => {}
-                (_, Flow::Break(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_in_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::Break(Some(label))
-                            }
-                        }
-                        None => {}
-                    }
-                    break;
-                }
-                (_, Flow::ContinueLoop(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_in_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::ContinueLoop(Some(label));
-                                break;
-                            }
-                        }
-                        None => {}
-                    }
-                }
+                (_, Flow::Break(x)) => break_!(x, for_in_expr, flow),
+                (_, Flow::ContinueLoop(x)) => continue_!(x, for_in_expr, flow),
             }
 
-            let iter_val = match iter.lock() {
-                Ok(x) => match x.try_recv() {
-                    Ok(x) => x,
-                    Err(_) => break,
-                },
-                Err(err) => {
-                    return Err(module.error(for_in_expr.source_range,
-                    &format!("Can not lock In mutex:\n{}", err.description()), self));
-                }
-            };
-            self.stack[st - 1] = iter_val;
-
+            self.stack[st - 1] = iter_val_inc!(iter, self, for_in_expr, module);
             self.stack.truncate(st);
             self.local_stack.truncate(lc);
         };
@@ -320,29 +223,8 @@ impl Runtime {
         let prev_st = self.stack.len();
         let prev_lc = self.local_stack.len();
 
-        let iter = match try!(self.expression(&for_in_expr.iter, Side::Right, module)) {
-            (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-            (Some(x), Flow::Continue) => x,
-            _ => return Err(module.error(for_in_expr.iter.source_range(),
-                &format!("{}\nExpected in-type from for iter",
-                    self.stack_trace()), self))
-        };
-        let iter = match self.resolve(&iter) {
-            &Variable::In(ref val) => val.clone(),
-            x => return Err(module.error(for_in_expr.iter.source_range(),
-                            &self.expected(x, "in"), self))
-        };
-
-        let iter_val = match iter.lock() {
-            Ok(x) => match x.try_recv() {
-                Ok(x) => x,
-                Err(_) => return Ok((Some(Variable::f64(::std::f64::NAN)), Flow::Continue)),
-            },
-            Err(err) => {
-                return Err(module.error(for_in_expr.source_range,
-                &format!("Can not lock In mutex:\n{}", err.description()), self));
-            }
-        };
+        let iter = iter!(self, for_in_expr, module);
+        let iter_val = iter_val!(iter, self, for_in_expr, module);
 
         let mut min = ::std::f64::NAN;
         let mut sec = None;
@@ -380,50 +262,11 @@ impl Runtime {
                     return Err(module.error(for_in_expr.block.source_range,
                                 "Expected `number or option`", self))
                 }
-                (_, Flow::Break(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_in_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::Break(Some(label))
-                            }
-                        }
-                        None => {}
-                    }
-                    break;
-                }
-                (_, Flow::ContinueLoop(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_in_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::ContinueLoop(Some(label));
-                                break;
-                            }
-                        }
-                        None => {}
-                    }
-                }
+                (_, Flow::Break(x)) => break_!(x, for_in_expr, flow),
+                (_, Flow::ContinueLoop(x)) => continue_!(x, for_in_expr, flow),
             }
 
-            let iter_val = match iter.lock() {
-                Ok(x) => match x.try_recv() {
-                    Ok(x) => x,
-                    Err(_) => break,
-                },
-                Err(err) => {
-                    return Err(module.error(for_in_expr.source_range,
-                    &format!("Can not lock In mutex:\n{}", err.description()), self));
-                }
-            };
-            self.stack[st - 1] = iter_val;
-
+            self.stack[st - 1] = iter_val_inc!(iter, self, for_in_expr, module);
             self.stack.truncate(st);
             self.local_stack.truncate(lc);
         };
@@ -442,29 +285,8 @@ impl Runtime {
         let prev_st = self.stack.len();
         let prev_lc = self.local_stack.len();
 
-        let iter = match try!(self.expression(&for_in_expr.iter, Side::Right, module)) {
-            (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-            (Some(x), Flow::Continue) => x,
-            _ => return Err(module.error(for_in_expr.iter.source_range(),
-                &format!("{}\nExpected in-type from for iter",
-                    self.stack_trace()), self))
-        };
-        let iter = match self.resolve(&iter) {
-            &Variable::In(ref val) => val.clone(),
-            x => return Err(module.error(for_in_expr.iter.source_range(),
-                            &self.expected(x, "in"), self))
-        };
-
-        let iter_val = match iter.lock() {
-            Ok(x) => match x.try_recv() {
-                Ok(x) => x,
-                Err(_) => return Ok((Some(Variable::f64(::std::f64::NAN)), Flow::Continue)),
-            },
-            Err(err) => {
-                return Err(module.error(for_in_expr.source_range,
-                &format!("Can not lock In mutex:\n{}", err.description()), self));
-            }
-        };
+        let iter = iter!(self, for_in_expr, module);
+        let iter_val = iter_val!(iter, self, for_in_expr, module);
 
         let mut max = ::std::f64::NAN;
         let mut sec = None;
@@ -502,50 +324,11 @@ impl Runtime {
                     return Err(module.error(for_in_expr.block.source_range,
                                 "Expected `number or option`", self))
                 }
-                (_, Flow::Break(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_in_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::Break(Some(label))
-                            }
-                        }
-                        None => {}
-                    }
-                    break;
-                }
-                (_, Flow::ContinueLoop(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_in_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::ContinueLoop(Some(label));
-                                break;
-                            }
-                        }
-                        None => {}
-                    }
-                }
+                (_, Flow::Break(x)) => break_!(x, for_in_expr, flow),
+                (_, Flow::ContinueLoop(x)) => continue_!(x, for_in_expr, flow),
             }
 
-            let iter_val = match iter.lock() {
-                Ok(x) => match x.try_recv() {
-                    Ok(x) => x,
-                    Err(_) => break,
-                },
-                Err(err) => {
-                    return Err(module.error(for_in_expr.source_range,
-                    &format!("Can not lock In mutex:\n{}", err.description()), self));
-                }
-            };
-            self.stack[st - 1] = iter_val;
-
+            self.stack[st - 1] = iter_val_inc!(iter, self, for_in_expr, module);
             self.stack.truncate(st);
             self.local_stack.truncate(lc);
         };
@@ -564,29 +347,8 @@ impl Runtime {
         let prev_st = self.stack.len();
         let prev_lc = self.local_stack.len();
 
-        let iter = match try!(self.expression(&for_in_expr.iter, Side::Right, module)) {
-            (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-            (Some(x), Flow::Continue) => x,
-            _ => return Err(module.error(for_in_expr.iter.source_range(),
-                &format!("{}\nExpected in-type from for iter",
-                    self.stack_trace()), self))
-        };
-        let iter = match self.resolve(&iter) {
-            &Variable::In(ref val) => val.clone(),
-            x => return Err(module.error(for_in_expr.iter.source_range(),
-                            &self.expected(x, "in"), self))
-        };
-
-        let iter_val = match iter.lock() {
-            Ok(x) => match x.try_recv() {
-                Ok(x) => x,
-                Err(_) => return Ok((Some(Variable::bool(false)), Flow::Continue)),
-            },
-            Err(err) => {
-                return Err(module.error(for_in_expr.source_range,
-                &format!("Can not lock In mutex:\n{}", err.description()), self));
-            }
-        };
+        let iter = iter!(self, for_in_expr, module);
+        let iter_val = iter_val!(iter, self, for_in_expr, module);
 
         let mut any = false;
         let mut sec = None;
@@ -626,50 +388,11 @@ impl Runtime {
                     return Err(module.error(for_in_expr.block.source_range,
                                 "Expected `boolean`", self))
                 }
-                (_, Flow::Break(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_in_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::Break(Some(label))
-                            }
-                        }
-                        None => {}
-                    }
-                    break;
-                }
-                (_, Flow::ContinueLoop(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_in_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::ContinueLoop(Some(label));
-                                break;
-                            }
-                        }
-                        None => {}
-                    }
-                }
+                (_, Flow::Break(x)) => break_!(x, for_in_expr, flow),
+                (_, Flow::ContinueLoop(x)) => continue_!(x, for_in_expr, flow),
             }
 
-            let iter_val = match iter.lock() {
-                Ok(x) => match x.try_recv() {
-                    Ok(x) => x,
-                    Err(_) => break,
-                },
-                Err(err) => {
-                    return Err(module.error(for_in_expr.source_range,
-                    &format!("Can not lock In mutex:\n{}", err.description()), self));
-                }
-            };
-            self.stack[st - 1] = iter_val;
-
+            self.stack[st - 1] = iter_val_inc!(iter, self, for_in_expr, module);
             self.stack.truncate(st);
             self.local_stack.truncate(lc);
         };
@@ -688,29 +411,8 @@ impl Runtime {
         let prev_st = self.stack.len();
         let prev_lc = self.local_stack.len();
 
-        let iter = match try!(self.expression(&for_in_expr.iter, Side::Right, module)) {
-            (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-            (Some(x), Flow::Continue) => x,
-            _ => return Err(module.error(for_in_expr.iter.source_range(),
-                &format!("{}\nExpected in-type from for iter",
-                    self.stack_trace()), self))
-        };
-        let iter = match self.resolve(&iter) {
-            &Variable::In(ref val) => val.clone(),
-            x => return Err(module.error(for_in_expr.iter.source_range(),
-                            &self.expected(x, "in"), self))
-        };
-
-        let iter_val = match iter.lock() {
-            Ok(x) => match x.try_recv() {
-                Ok(x) => x,
-                Err(_) => return Ok((Some(Variable::bool(true)), Flow::Continue)),
-            },
-            Err(err) => {
-                return Err(module.error(for_in_expr.source_range,
-                &format!("Can not lock In mutex:\n{}", err.description()), self));
-            }
-        };
+        let iter = iter!(self, for_in_expr, module);
+        let iter_val = iter_val!(iter, self, for_in_expr, module);
 
         let mut all = true;
         let mut sec = None;
@@ -750,50 +452,11 @@ impl Runtime {
                     return Err(module.error(for_in_expr.block.source_range,
                                 "Expected `boolean`", self))
                 }
-                (_, Flow::Break(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_in_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::Break(Some(label))
-                            }
-                        }
-                        None => {}
-                    }
-                    break;
-                }
-                (_, Flow::ContinueLoop(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_in_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::ContinueLoop(Some(label));
-                                break;
-                            }
-                        }
-                        None => {}
-                    }
-                }
+                (_, Flow::Break(x)) => break_!(x, for_in_expr, flow),
+                (_, Flow::ContinueLoop(x)) => continue_!(x, for_in_expr, flow),
             }
 
-            let iter_val = match iter.lock() {
-                Ok(x) => match x.try_recv() {
-                    Ok(x) => x,
-                    Err(_) => break,
-                },
-                Err(err) => {
-                    return Err(module.error(for_in_expr.source_range,
-                    &format!("Can not lock In mutex:\n{}", err.description()), self));
-                }
-            };
-            self.stack[st - 1] = iter_val;
-
+            self.stack[st - 1] = iter_val_inc!(iter, self, for_in_expr, module);
             self.stack.truncate(st);
             self.local_stack.truncate(lc);
         };
@@ -820,29 +483,8 @@ impl Runtime {
             let prev_st = rt.stack.len();
             let prev_lc = rt.local_stack.len();
 
-            let iter = match try!(rt.expression(&for_in_expr.iter, Side::Right, module)) {
-                (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-                (Some(x), Flow::Continue) => x,
-                _ => return Err(module.error(for_in_expr.iter.source_range(),
-                    &format!("{}\nExpected in-type from for iter",
-                        rt.stack_trace()), rt))
-            };
-            let iter = match rt.resolve(&iter) {
-                &Variable::In(ref val) => val.clone(),
-                x => return Err(module.error(for_in_expr.iter.source_range(),
-                                &rt.expected(x, "in"), rt))
-            };
-
-            let iter_val = match iter.lock() {
-                Ok(x) => match x.try_recv() {
-                    Ok(x) => x,
-                    Err(_) => return Ok((Some(Variable::bool(true)), Flow::Continue)),
-                },
-                Err(err) => {
-                    return Err(module.error(for_in_expr.source_range,
-                    &format!("Can not lock In mutex:\n{}", err.description()), rt));
-                }
-            };
+            let iter = iter!(rt, for_in_expr, module);
+            let iter_val = iter_val!(iter, rt, for_in_expr, module);
 
             // Initialize counter.
             rt.local_stack.push((for_in_expr.name.clone(), rt.stack.len()));
@@ -949,18 +591,7 @@ impl Runtime {
                     }
                 }
 
-                let iter_val = match iter.lock() {
-                    Ok(x) => match x.try_recv() {
-                        Ok(x) => x,
-                        Err(_) => break,
-                    },
-                    Err(err) => {
-                        return Err(module.error(for_in_expr.source_range,
-                        &format!("Can not lock In mutex:\n{}", err.description()), rt));
-                    }
-                };
-                rt.stack[st - 1] = iter_val;
-
+                rt.stack[st - 1] = iter_val_inc!(iter, rt, for_in_expr, module);
                 rt.stack.truncate(st);
                 rt.local_stack.truncate(lc);
             };
@@ -988,29 +619,8 @@ impl Runtime {
         let prev_lc = self.local_stack.len();
         let mut res: Vec<Variable> = vec![];
 
-        let iter = match try!(self.expression(&for_in_expr.iter, Side::Right, module)) {
-            (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-            (Some(x), Flow::Continue) => x,
-            _ => return Err(module.error(for_in_expr.iter.source_range(),
-                &format!("{}\nExpected in-type from for iter",
-                    self.stack_trace()), self))
-        };
-        let iter = match self.resolve(&iter) {
-            &Variable::In(ref val) => val.clone(),
-            x => return Err(module.error(for_in_expr.iter.source_range(),
-                            &self.expected(x, "in"), self))
-        };
-
-        let iter_val = match iter.lock() {
-            Ok(x) => match x.try_recv() {
-                Ok(x) => x,
-                Err(_) => return Ok((Some(Variable::Array(Arc::new(vec![]))), Flow::Continue)),
-            },
-            Err(err) => {
-                return Err(module.error(for_in_expr.source_range,
-                &format!("Can not lock In mutex:\n{}", err.description()), self));
-            }
-        };
+        let iter = iter!(self, for_in_expr, module);
+        let iter_val = iter_val!(iter, self, for_in_expr, module);
 
         // Initialize counter.
         self.local_stack.push((for_in_expr.name.clone(), self.stack.len()));
@@ -1027,50 +637,11 @@ impl Runtime {
                     return Err(module.error(for_in_expr.block.source_range,
                                 "Expected variable", self))
                 }
-                (_, Flow::Break(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_in_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::Break(Some(label))
-                            }
-                        }
-                        None => {}
-                    }
-                    break;
-                }
-                (_, Flow::ContinueLoop(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_in_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::ContinueLoop(Some(label));
-                                break;
-                            }
-                        }
-                        None => {}
-                    }
-                }
+                (_, Flow::Break(x)) => break_!(x, for_in_expr, flow),
+                (_, Flow::ContinueLoop(x)) => continue_!(x, for_in_expr, flow),
             }
 
-            let iter_val = match iter.lock() {
-                Ok(x) => match x.try_recv() {
-                    Ok(x) => x,
-                    Err(_) => break,
-                },
-                Err(err) => {
-                    return Err(module.error(for_in_expr.source_range,
-                    &format!("Can not lock In mutex:\n{}", err.description()), self));
-                }
-            };
-            self.stack[st - 1] = iter_val;
-
+            self.stack[st - 1] = iter_val_inc!(iter, self, for_in_expr, module);
             self.stack.truncate(st);
             self.local_stack.truncate(lc);
         };
