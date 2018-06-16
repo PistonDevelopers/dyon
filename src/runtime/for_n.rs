@@ -102,6 +102,19 @@ macro_rules! continue_(
     }};
 );
 
+macro_rules! inc(
+    ($rt:ident, $for_n_expr:ident, $st:ident, $module:ident) => {{
+        let error = if let Variable::F64(ref mut val, _) = $rt.stack[$st - 1] {
+            *val += 1.0;
+            false
+        } else { true };
+        if error {
+            return Err($module.error($for_n_expr.source_range,
+                       &$rt.expected(&$rt.stack[$st - 1], "number"), $rt))
+        }
+    }};
+);
+
 impl Runtime {
     pub(crate) fn for_n_expr(
         &mut self,
@@ -129,14 +142,7 @@ impl Runtime {
                 (_, Flow::Break(x)) => break_!(x, for_n_expr, flow),
                 (_, Flow::ContinueLoop(x)) => continue_!(x, for_n_expr, flow),
             }
-            let error = if let Variable::F64(ref mut val, _) = self.stack[st - 1] {
-                *val += 1.0;
-                false
-            } else { true };
-            if error {
-                return Err(module.error(for_n_expr.source_range,
-                           &self.expected(&self.stack[st - 1], "number"), self))
-            }
+            inc!(self, for_n_expr, st, module);
             self.stack.truncate(st);
             self.local_stack.truncate(lc);
         };
@@ -182,14 +188,7 @@ impl Runtime {
                 (_, Flow::Break(x)) => break_!(x, for_n_expr, flow),
                 (_, Flow::ContinueLoop(x)) => continue_!(x, for_n_expr, flow),
             }
-            let error = if let Variable::F64(ref mut val, _) = self.stack[st - 1] {
-                *val += 1.0;
-                false
-            } else { true };
-            if error {
-                return Err(module.error(for_n_expr.source_range,
-                           &self.expected(&self.stack[st - 1], "number"), self))
-            }
+            inc!(self, for_n_expr, st, module);
             self.stack.truncate(st);
             self.local_stack.truncate(lc);
         };
@@ -235,14 +234,7 @@ impl Runtime {
                 (_, Flow::Break(x)) => break_!(x, for_n_expr, flow),
                 (_, Flow::ContinueLoop(x)) => continue_!(x, for_n_expr, flow),
             }
-            let error = if let Variable::F64(ref mut val, _) = self.stack[st - 1] {
-                *val += 1.0;
-                false
-            } else { true };
-            if error {
-                return Err(module.error(for_n_expr.source_range,
-                           &self.expected(&self.stack[st - 1], "number"), self))
-            }
+            inc!(self, for_n_expr, st, module);
             self.stack.truncate(st);
             self.local_stack.truncate(lc);
         };
@@ -302,14 +294,7 @@ impl Runtime {
                 (_, Flow::Break(x)) => break_!(x, for_n_expr, flow),
                 (_, Flow::ContinueLoop(x)) => continue_!(x, for_n_expr, flow),
             }
-            let error = if let Variable::F64(ref mut val, _) = self.stack[st - 1] {
-                *val += 1.0;
-                false
-            } else { true };
-            if error {
-                return Err(module.error(for_n_expr.source_range,
-                           &self.expected(&self.stack[st - 1], "number"), self))
-            }
+            inc!(self, for_n_expr, st, module);
             self.stack.truncate(st);
             self.local_stack.truncate(lc);
         };
@@ -370,14 +355,7 @@ impl Runtime {
                 (_, Flow::Break(x)) => break_!(x, for_n_expr, flow),
                 (_, Flow::ContinueLoop(x)) => continue_!(x, for_n_expr, flow),
             }
-            let error = if let Variable::F64(ref mut val, _) = self.stack[st - 1] {
-                *val += 1.0;
-                false
-            } else { true };
-            if error {
-                return Err(module.error(for_n_expr.source_range,
-                           &self.expected(&self.stack[st - 1], "number"), self))
-            }
+            inc!(self, for_n_expr, st, module);
             self.stack.truncate(st);
             self.local_stack.truncate(lc);
         };
@@ -439,14 +417,7 @@ impl Runtime {
                 (_, Flow::Break(x)) => break_!(x, for_n_expr, flow),
                 (_, Flow::ContinueLoop(x)) => continue_!(x, for_n_expr, flow),
             }
-            let error = if let Variable::F64(ref mut val, _) = self.stack[st - 1] {
-                *val += 1.0;
-                false
-            } else { true };
-            if error {
-                return Err(module.error(for_n_expr.source_range,
-                           &self.expected(&self.stack[st - 1], "number"), self))
-            }
+            inc!(self, for_n_expr, st, module);
             self.stack.truncate(st);
             self.local_stack.truncate(lc);
         };
@@ -508,14 +479,7 @@ impl Runtime {
                 (_, Flow::Break(x)) => break_!(x, for_n_expr, flow),
                 (_, Flow::ContinueLoop(x)) => continue_!(x, for_n_expr, flow),
             }
-            let error = if let Variable::F64(ref mut val, _) = self.stack[st - 1] {
-                *val += 1.0;
-                false
-            } else { true };
-            if error {
-                return Err(module.error(for_n_expr.source_range,
-                           &self.expected(&self.stack[st - 1], "number"), self))
-            }
+            inc!(self, for_n_expr, st, module);
             self.stack.truncate(st);
             self.local_stack.truncate(lc);
         };
@@ -622,14 +586,7 @@ impl Runtime {
                     }
                 }
 
-                let error = if let Variable::F64(ref mut val, _) = rt.stack[st - 1] {
-                    *val += 1.0;
-                    false
-                } else { true };
-                if error {
-                    return Err(module.error(for_n_expr.source_range,
-                               &rt.expected(&rt.stack[st - 1], "number"), rt))
-                }
+                inc!(rt, for_n_expr, st, module);
                 rt.stack.truncate(st);
                 rt.local_stack.truncate(lc);
             };
@@ -677,14 +634,7 @@ impl Runtime {
                 (_, Flow::Break(x)) => break_!(x, for_n_expr, flow),
                 (_, Flow::ContinueLoop(x)) => continue_!(x, for_n_expr, flow),
             }
-            let error = if let Variable::F64(ref mut val, _) = self.stack[st - 1] {
-                *val += 1.0;
-                false
-            } else { true };
-            if error {
-                return Err(module.error(for_n_expr.source_range,
-                           &self.expected(&self.stack[st - 1], "number"), self))
-            }
+            inc!(self, for_n_expr, st, module);
             self.stack.truncate(st);
             self.local_stack.truncate(lc);
         };
@@ -734,14 +684,7 @@ impl Runtime {
                 (_, Flow::Break(x)) => break_!(x, for_n_expr, flow),
                 (_, Flow::ContinueLoop(x)) => continue_!(x, for_n_expr, flow),
             }
-            let error = if let Variable::F64(ref mut val, _) = self.stack[st - 1] {
-                *val += 1.0;
-                false
-            } else { true };
-            if error {
-                return Err(module.error(for_n_expr.source_range,
-                           &self.expected(&self.stack[st - 1], "number"), self))
-            }
+            inc!(self, for_n_expr, st, module);
             self.stack.truncate(st);
             self.local_stack.truncate(lc);
         };
@@ -791,14 +734,7 @@ impl Runtime {
                 (_, Flow::Break(x)) => break_!(x, for_n_expr, flow),
                 (_, Flow::ContinueLoop(x)) => continue_!(x, for_n_expr, flow),
             }
-            let error = if let Variable::F64(ref mut val, _) = self.stack[st - 1] {
-                *val += 1.0;
-                false
-            } else { true };
-            if error {
-                return Err(module.error(for_n_expr.source_range,
-                           &self.expected(&self.stack[st - 1], "number"), self))
-            }
+            inc!(self, for_n_expr, st, module);
             self.stack.truncate(st);
             self.local_stack.truncate(lc);
         };
