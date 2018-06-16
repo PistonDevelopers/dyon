@@ -1,9 +1,3 @@
-fn log(a: f64) {}
-
 fn main() {
-    log := in log
-    log(1)
-    log(2)
-    log(3)
-    println(link msg in log {msg[0]})
+    println(sum i [2, 3) {i+0})
 }
