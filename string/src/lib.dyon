@@ -20,3 +20,7 @@ fn to_uppercase(text: str) -> str { ... }
 
 /// Returns `true` if all characters are within ASCII range.
 fn is_ascii(text: str) -> bool { ... }
+
+/// Returns lowercase of string.
+/// Only ASCII characters are converted to lowercase.
+fn to_ascii_lowercase(text: str) -> str { ... }
