@@ -1,3 +1,7 @@
+fn log(a: f64) {}
+
 fn main() {
-    println(sum i [2, 3) {i+0})
+    log := in log
+    for i 3 {log(i)}
+    println(sum x in log {x[0]})
 }

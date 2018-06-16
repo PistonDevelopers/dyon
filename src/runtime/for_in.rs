@@ -68,6 +68,21 @@ macro_rules! continue_(
     };
 );
 
+macro_rules! iter_val_inc(
+    ($iter:ident, $rt:ident, $for_in_expr:ident, $module:ident) => {
+        match $iter.lock() {
+            Ok(x) => match x.try_recv() {
+                Ok(x) => x,
+                Err(_) => break,
+            },
+            Err(err) => {
+                return Err($module.error($for_in_expr.source_range,
+                &format!("Can not lock In mutex:\n{}", err.description()), $rt));
+            }
+        }
+    };
+);
+
 impl Runtime {
     pub(crate) fn for_in_expr(
         &mut self,
@@ -97,18 +112,7 @@ impl Runtime {
                 (_, Flow::ContinueLoop(x)) => continue_!(x, for_in_expr, flow),
             }
 
-            let iter_val = match iter.lock() {
-                Ok(x) => match x.try_recv() {
-                    Ok(x) => x,
-                    Err(_) => break,
-                },
-                Err(err) => {
-                    return Err(module.error(for_in_expr.source_range,
-                    &format!("Can not lock In mutex:\n{}", err.description()), self));
-                }
-            };
-            self.stack[st - 1] = iter_val;
-
+            self.stack[st - 1] = iter_val_inc!(iter, self, for_in_expr, module);
             self.stack.truncate(st);
             self.local_stack.truncate(lc);
         };
@@ -154,18 +158,7 @@ impl Runtime {
                 (_, Flow::ContinueLoop(x)) => continue_!(x, for_in_expr, flow),
             }
 
-            let iter_val = match iter.lock() {
-                Ok(x) => match x.try_recv() {
-                    Ok(x) => x,
-                    Err(_) => break,
-                },
-                Err(err) => {
-                    return Err(module.error(for_in_expr.source_range,
-                    &format!("Can not lock In mutex:\n{}", err.description()), self));
-                }
-            };
-            self.stack[st - 1] = iter_val;
-
+            self.stack[st - 1] = iter_val_inc!(iter, self, for_in_expr, module);
             self.stack.truncate(st);
             self.local_stack.truncate(lc);
         };
@@ -211,18 +204,7 @@ impl Runtime {
                 (_, Flow::ContinueLoop(x)) => continue_!(x, for_in_expr, flow),
             }
 
-            let iter_val = match iter.lock() {
-                Ok(x) => match x.try_recv() {
-                    Ok(x) => x,
-                    Err(_) => break,
-                },
-                Err(err) => {
-                    return Err(module.error(for_in_expr.source_range,
-                    &format!("Can not lock In mutex:\n{}", err.description()), self));
-                }
-            };
-            self.stack[st - 1] = iter_val;
-
+            self.stack[st - 1] = iter_val_inc!(iter, self, for_in_expr, module);
             self.stack.truncate(st);
             self.local_stack.truncate(lc);
         };
@@ -284,18 +266,7 @@ impl Runtime {
                 (_, Flow::ContinueLoop(x)) => continue_!(x, for_in_expr, flow),
             }
 
-            let iter_val = match iter.lock() {
-                Ok(x) => match x.try_recv() {
-                    Ok(x) => x,
-                    Err(_) => break,
-                },
-                Err(err) => {
-                    return Err(module.error(for_in_expr.source_range,
-                    &format!("Can not lock In mutex:\n{}", err.description()), self));
-                }
-            };
-            self.stack[st - 1] = iter_val;
-
+            self.stack[st - 1] = iter_val_inc!(iter, self, for_in_expr, module);
             self.stack.truncate(st);
             self.local_stack.truncate(lc);
         };
@@ -357,18 +328,7 @@ impl Runtime {
                 (_, Flow::ContinueLoop(x)) => continue_!(x, for_in_expr, flow),
             }
 
-            let iter_val = match iter.lock() {
-                Ok(x) => match x.try_recv() {
-                    Ok(x) => x,
-                    Err(_) => break,
-                },
-                Err(err) => {
-                    return Err(module.error(for_in_expr.source_range,
-                    &format!("Can not lock In mutex:\n{}", err.description()), self));
-                }
-            };
-            self.stack[st - 1] = iter_val;
-
+            self.stack[st - 1] = iter_val_inc!(iter, self, for_in_expr, module);
             self.stack.truncate(st);
             self.local_stack.truncate(lc);
         };
@@ -432,18 +392,7 @@ impl Runtime {
                 (_, Flow::ContinueLoop(x)) => continue_!(x, for_in_expr, flow),
             }
 
-            let iter_val = match iter.lock() {
-                Ok(x) => match x.try_recv() {
-                    Ok(x) => x,
-                    Err(_) => break,
-                },
-                Err(err) => {
-                    return Err(module.error(for_in_expr.source_range,
-                    &format!("Can not lock In mutex:\n{}", err.description()), self));
-                }
-            };
-            self.stack[st - 1] = iter_val;
-
+            self.stack[st - 1] = iter_val_inc!(iter, self, for_in_expr, module);
             self.stack.truncate(st);
             self.local_stack.truncate(lc);
         };
@@ -507,18 +456,7 @@ impl Runtime {
                 (_, Flow::ContinueLoop(x)) => continue_!(x, for_in_expr, flow),
             }
 
-            let iter_val = match iter.lock() {
-                Ok(x) => match x.try_recv() {
-                    Ok(x) => x,
-                    Err(_) => break,
-                },
-                Err(err) => {
-                    return Err(module.error(for_in_expr.source_range,
-                    &format!("Can not lock In mutex:\n{}", err.description()), self));
-                }
-            };
-            self.stack[st - 1] = iter_val;
-
+            self.stack[st - 1] = iter_val_inc!(iter, self, for_in_expr, module);
             self.stack.truncate(st);
             self.local_stack.truncate(lc);
         };
@@ -653,18 +591,7 @@ impl Runtime {
                     }
                 }
 
-                let iter_val = match iter.lock() {
-                    Ok(x) => match x.try_recv() {
-                        Ok(x) => x,
-                        Err(_) => break,
-                    },
-                    Err(err) => {
-                        return Err(module.error(for_in_expr.source_range,
-                        &format!("Can not lock In mutex:\n{}", err.description()), rt));
-                    }
-                };
-                rt.stack[st - 1] = iter_val;
-
+                rt.stack[st - 1] = iter_val_inc!(iter, rt, for_in_expr, module);
                 rt.stack.truncate(st);
                 rt.local_stack.truncate(lc);
             };
@@ -714,18 +641,7 @@ impl Runtime {
                 (_, Flow::ContinueLoop(x)) => continue_!(x, for_in_expr, flow),
             }
 
-            let iter_val = match iter.lock() {
-                Ok(x) => match x.try_recv() {
-                    Ok(x) => x,
-                    Err(_) => break,
-                },
-                Err(err) => {
-                    return Err(module.error(for_in_expr.source_range,
-                    &format!("Can not lock In mutex:\n{}", err.description()), self));
-                }
-            };
-            self.stack[st - 1] = iter_val;
-
+            self.stack[st - 1] = iter_val_inc!(iter, self, for_in_expr, module);
             self.stack.truncate(st);
             self.local_stack.truncate(lc);
         };
