@@ -9,12 +9,6 @@ use Variable;
 use Type;
 use dyon_std::*;
 
-#[cfg(not(feature = "http"))]
-const HTTP_SUPPORT_DISABLED: &'static str = "Http support is disabled";
-
-#[cfg(not(feature = "file"))]
-const FILE_SUPPORT_DISABLED: &'static str = "File support is disabled";
-
 const X: usize = 0;
 const Y: usize = 1;
 const Z: usize = 2;

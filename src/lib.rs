@@ -695,4 +695,9 @@ mod tests {
     fn bench_push_str(b: &mut Bencher) {
         b.iter(|| run_bench("source/bench/push_str.dyon"));
     }
+
+    #[bench]
+    fn bench_push_in(b: &mut Bencher) {
+        b.iter(|| run_bench("source/bench/push_in.dyon"));
+    }
 }
