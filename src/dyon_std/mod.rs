@@ -8,6 +8,12 @@ mod data;
 mod lifetimechk;
 mod functions;
 
+#[cfg(not(feature = "http"))]
+const HTTP_SUPPORT_DISABLED: &'static str = "Http support is disabled";
+
+#[cfg(not(feature = "file"))]
+const FILE_SUPPORT_DISABLED: &'static str = "File support is disabled";
+
 pub(crate) fn x(
     rt: &mut Runtime,
     call: &ast::Call,

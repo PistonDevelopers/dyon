@@ -1,0 +1,6 @@
+fn main() {
+    log := in x
+    for i 100_000 {x(i)}
+}
+
+fn x(i: f64) {}
