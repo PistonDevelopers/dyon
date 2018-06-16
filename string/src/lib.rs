@@ -15,7 +15,12 @@ pub fn add_functions(module: &mut Module) {
         lts: vec![Lt::Default; 2],
         tys: vec![Type::Text, Type::Array(Box::new(Type::Text))],
         ret: Type::Array(Box::new(Type::Text)),
-    })
+    });
+    module.add(Arc::new("starts_with".into()), starts_with, Dfn {
+        lts: vec![Lt::Default; 2],
+        tys: vec![Type::Text; 2],
+        ret: Type::Bool,
+    });
 }
 
 dyon_fn!{fn lines(text: Arc<String>) -> Variable {
@@ -39,4 +44,8 @@ dyon_fn!{fn split(text: Arc<String>, chs: Variable) -> Variable {
         }
     }
     Variable::Array(Arc::new(arr))
+}}
+
+dyon_fn!{fn starts_with(text: Arc<String>, pat: Arc<String>) -> bool {
+    text.starts_with(&**pat)
 }}
