@@ -2545,18 +2545,18 @@ impl Runtime {
         let prev_st = self.stack.len();
         let prev_lc = self.local_stack.len();
 
-        let start = if let Some(ref start) = for_n_expr.start {
+        let start = if let Some(ref start_expr) = for_n_expr.start {
             // Evaluate start such that it's on the stack.
-            let start = match try!(self.expression(start, Side::Right, module)) {
+            let start = match try!(self.expression(start_expr, Side::Right, module)) {
                 (x, Flow::Return) => { return Ok((x, Flow::Return)); }
                 (Some(x), Flow::Continue) => x,
-                _ => return Err(module.error(for_n_expr.end.source_range(),
+                _ => return Err(module.error(start_expr.source_range(),
                     &format!("{}\nExpected number from for start",
                         self.stack_trace()), self))
             };
             let start = match self.resolve(&start) {
                 &Variable::F64(val, _) => val,
-                x => return Err(module.error(for_n_expr.end.source_range(),
+                x => return Err(module.error(start_expr.source_range(),
                                 &self.expected(x, "number"), self))
             };
             start
@@ -2650,18 +2650,18 @@ impl Runtime {
         let prev_lc = self.local_stack.len();
         let mut sum = 0.0;
 
-        let start = if let Some(ref start) = for_n_expr.start {
+        let start = if let Some(ref start_expr) = for_n_expr.start {
             // Evaluate start such that it's on the stack.
-            let start = match try!(self.expression(start, Side::Right, module)) {
+            let start = match try!(self.expression(start_expr, Side::Right, module)) {
                 (Some(x), Flow::Continue) => x,
                 (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-                _ => return Err(module.error(for_n_expr.end.source_range(),
+                _ => return Err(module.error(start_expr.source_range(),
                     &format!("{}\nExpected number from for start",
                         self.stack_trace()), self))
             };
             let start = match self.resolve(&start) {
                 &Variable::F64(val, _) => val,
-                x => return Err(module.error(for_n_expr.end.source_range(),
+                x => return Err(module.error(start_expr.source_range(),
                                 &self.expected(x, "number"), self))
             };
             start
@@ -2870,18 +2870,18 @@ impl Runtime {
         let prev_lc = self.local_stack.len();
         let mut sum: [f32; 4] = [0.0; 4];
 
-        let start = if let Some(ref start) = for_n_expr.start {
+        let start = if let Some(ref start_expr) = for_n_expr.start {
             // Evaluate start such that it's on the stack.
-            let start = match try!(self.expression(start, Side::Right, module)) {
+            let start = match try!(self.expression(start_expr, Side::Right, module)) {
                 (Some(x), Flow::Continue) => x,
                 (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-                _ => return Err(module.error(for_n_expr.end.source_range(),
+                _ => return Err(module.error(start_expr.source_range(),
                     &format!("{}\nExpected number from for start",
                         self.stack_trace()), self))
             };
             let start = match self.resolve(&start) {
                 &Variable::F64(val, _) => val,
-                x => return Err(module.error(for_n_expr.end.source_range(),
+                x => return Err(module.error(start_expr.source_range(),
                                 &self.expected(x, "number"), self))
             };
             start
@@ -2989,18 +2989,18 @@ impl Runtime {
         let prev_lc = self.local_stack.len();
         let mut prod = 1.0;
 
-        let start = if let Some(ref start) = for_n_expr.start {
+        let start = if let Some(ref start_expr) = for_n_expr.start {
             // Evaluate start such that it's on the stack.
-            let start = match try!(self.expression(start, Side::Right, module)) {
+            let start = match try!(self.expression(start_expr, Side::Right, module)) {
                 (Some(x), Flow::Continue) => x,
                 (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-                _ => return Err(module.error(for_n_expr.end.source_range(),
+                _ => return Err(module.error(start_expr.source_range(),
                     &format!("{}\nExpected number from for start",
                         self.stack_trace()), self))
             };
             let start = match self.resolve(&start) {
                 &Variable::F64(val, _) => val,
-                x => return Err(module.error(for_n_expr.end.source_range(),
+                x => return Err(module.error(start_expr.source_range(),
                                 &self.expected(x, "number"), self))
             };
             start
@@ -3209,18 +3209,18 @@ impl Runtime {
         let prev_lc = self.local_stack.len();
         let mut prod: [f32; 4] = [1.0; 4];
 
-        let start = if let Some(ref start) = for_n_expr.start {
+        let start = if let Some(ref start_expr) = for_n_expr.start {
             // Evaluate start such that it's on the stack.
-            let start = match try!(self.expression(start, Side::Right, module)) {
+            let start = match try!(self.expression(start_expr, Side::Right, module)) {
                 (Some(x), Flow::Continue) => x,
                 (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-                _ => return Err(module.error(for_n_expr.end.source_range(),
+                _ => return Err(module.error(start_expr.source_range(),
                     &format!("{}\nExpected number from for start",
                         self.stack_trace()), self))
             };
             let start = match self.resolve(&start) {
                 &Variable::F64(val, _) => val,
-                x => return Err(module.error(for_n_expr.end.source_range(),
+                x => return Err(module.error(start_expr.source_range(),
                                 &self.expected(x, "number"), self))
             };
             start
@@ -3327,18 +3327,18 @@ impl Runtime {
         let prev_st = self.stack.len();
         let prev_lc = self.local_stack.len();
 
-        let start = if let Some(ref start) = for_n_expr.start {
+        let start = if let Some(ref start_expr) = for_n_expr.start {
             // Evaluate start such that it's on the stack.
-            let start = match try!(self.expression(start, Side::Right, module)) {
+            let start = match try!(self.expression(start_expr, Side::Right, module)) {
                 (Some(x), Flow::Continue) => x,
                 (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-                _ => return Err(module.error(for_n_expr.end.source_range(),
+                _ => return Err(module.error(start_expr.source_range(),
                     &format!("{}\nExpected number from for start",
                         self.stack_trace()), self))
             };
             let start = match self.resolve(&start) {
                 &Variable::F64(val, _) => val,
-                x => return Err(module.error(for_n_expr.end.source_range(),
+                x => return Err(module.error(start_expr.source_range(),
                                 &self.expected(x, "number"), self))
             };
             start
@@ -3578,18 +3578,18 @@ impl Runtime {
         let prev_st = self.stack.len();
         let prev_lc = self.local_stack.len();
 
-        let start = if let Some(ref start) = for_n_expr.start {
+        let start = if let Some(ref start_expr) = for_n_expr.start {
             // Evaluate start such that it's on the stack.
-            let start = match try!(self.expression(start, Side::Right, module)) {
+            let start = match try!(self.expression(start_expr, Side::Right, module)) {
                 (Some(x), Flow::Continue) => x,
                 (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-                _ => return Err(module.error(for_n_expr.end.source_range(),
+                _ => return Err(module.error(start_expr.source_range(),
                     &format!("{}\nExpected number from for start",
                         self.stack_trace()), self))
             };
             let start = match self.resolve(&start) {
                 &Variable::F64(val, _) => val,
-                x => return Err(module.error(for_n_expr.end.source_range(),
+                x => return Err(module.error(start_expr.source_range(),
                                 &self.expected(x, "number"), self))
             };
             start
@@ -3830,18 +3830,18 @@ impl Runtime {
         let prev_st = self.stack.len();
         let prev_lc = self.local_stack.len();
 
-        let start = if let Some(ref start) = for_n_expr.start {
+        let start = if let Some(ref start_expr) = for_n_expr.start {
             // Evaluate start such that it's on the stack.
-            let start = match try!(self.expression(start, Side::Right, module)) {
+            let start = match try!(self.expression(start_expr, Side::Right, module)) {
                 (Some(x), Flow::Continue) => x,
                 (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-                _ => return Err(module.error(for_n_expr.end.source_range(),
+                _ => return Err(module.error(start_expr.source_range(),
                     &format!("{}\nExpected number from for start",
                         self.stack_trace()), self))
             };
             let start = match self.resolve(&start) {
                 &Variable::F64(val, _) => val,
-                x => return Err(module.error(for_n_expr.end.source_range(),
+                x => return Err(module.error(start_expr.source_range(),
                                 &self.expected(x, "number"), self))
             };
             start
@@ -4084,18 +4084,18 @@ impl Runtime {
         let prev_st = self.stack.len();
         let prev_lc = self.local_stack.len();
 
-        let start = if let Some(ref start) = for_n_expr.start {
+        let start = if let Some(ref start_expr) = for_n_expr.start {
             // Evaluate start such that it's on the stack.
-            let start = match try!(self.expression(start, Side::Right, module)) {
+            let start = match try!(self.expression(start_expr, Side::Right, module)) {
                 (Some(x), Flow::Continue) => x,
                 (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-                _ => return Err(module.error(for_n_expr.end.source_range(),
+                _ => return Err(module.error(start_expr.source_range(),
                     &format!("{}\nExpected number from for start",
                         self.stack_trace()), self))
             };
             let start = match self.resolve(&start) {
                 &Variable::F64(val, _) => val,
-                x => return Err(module.error(for_n_expr.end.source_range(),
+                x => return Err(module.error(start_expr.source_range(),
                                 &self.expected(x, "number"), self))
             };
             start
@@ -4346,18 +4346,18 @@ impl Runtime {
             let prev_st = rt.stack.len();
             let prev_lc = rt.local_stack.len();
 
-            let start = if let Some(ref start) = for_n_expr.start {
+            let start = if let Some(ref start_expr) = for_n_expr.start {
                 // Evaluate start such that it's on the stack.
-                let start = match try!(rt.expression(start, Side::Right, module)) {
+                let start = match try!(rt.expression(start_expr, Side::Right, module)) {
                     (Some(x), Flow::Continue) => x,
                     (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-                    _ => return Err(module.error(for_n_expr.end.source_range(),
+                    _ => return Err(module.error(start_expr.source_range(),
                         &format!("{}\nExpected number from for start",
                             rt.stack_trace()), rt))
                 };
                 let start = match rt.resolve(&start) {
                     &Variable::F64(val, _) => val,
-                    x => return Err(module.error(for_n_expr.end.source_range(),
+                    x => return Err(module.error(start_expr.source_range(),
                                     &rt.expected(x, "number"), rt))
                 };
                 start
@@ -4697,18 +4697,18 @@ impl Runtime {
         let prev_lc = self.local_stack.len();
         let mut res: Vec<Variable> = vec![];
 
-        let start = if let Some(ref start) = for_n_expr.start {
+        let start = if let Some(ref start_expr) = for_n_expr.start {
             // Evaluate start such that it's on the stack.
-            let start = match try!(self.expression(start, Side::Right, module)) {
+            let start = match try!(self.expression(start_expr, Side::Right, module)) {
                 (Some(x), Flow::Continue) => x,
                 (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-                _ => return Err(module.error(for_n_expr.end.source_range(),
+                _ => return Err(module.error(start_expr.source_range(),
                     &format!("{}\nExpected number from for start",
                         self.stack_trace()), self))
             };
             let start = match self.resolve(&start) {
                 &Variable::F64(val, _) => val,
-                x => return Err(module.error(for_n_expr.end.source_range(),
+                x => return Err(module.error(start_expr.source_range(),
                                 &self.expected(x, "number"), self))
             };
             start
