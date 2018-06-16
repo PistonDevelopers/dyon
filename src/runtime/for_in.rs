@@ -1,5 +1,22 @@
 use super::*;
 
+macro_rules! iter(
+    ($rt:ident, $for_in_expr:ident, $module:ident) => {{
+        let iter = match try!($rt.expression(&$for_in_expr.iter, Side::Right, $module)) {
+            (x, Flow::Return) => { return Ok((x, Flow::Return)); }
+            (Some(x), Flow::Continue) => x,
+            _ => return Err($module.error($for_in_expr.iter.source_range(),
+                &format!("{}\nExpected in-type from for iter",
+                    $rt.stack_trace()), $rt))
+        };
+        match $rt.resolve(&iter) {
+            &Variable::In(ref val) => val.clone(),
+            x => return Err($module.error($for_in_expr.iter.source_range(),
+                            &$rt.expected(x, "in"), $rt))
+        }
+    }};
+);
+
 impl Runtime {
     pub(crate) fn for_in_expr(
         &mut self,
@@ -11,18 +28,7 @@ impl Runtime {
         let prev_st = self.stack.len();
         let prev_lc = self.local_stack.len();
 
-        let iter = match try!(self.expression(&for_in_expr.iter, Side::Right, module)) {
-            (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-            (Some(x), Flow::Continue) => x,
-            _ => return Err(module.error(for_in_expr.iter.source_range(),
-                &format!("{}\nExpected in-type from for iter",
-                    self.stack_trace()), self))
-        };
-        let iter = match self.resolve(&iter) {
-            &Variable::In(ref val) => val.clone(),
-            x => return Err(module.error(for_in_expr.iter.source_range(),
-                            &self.expected(x, "in"), self))
-        };
+        let iter = iter!(self, for_in_expr, module);
 
         let iter_val = match iter.lock() {
             Ok(x) => match x.try_recv() {
@@ -108,18 +114,7 @@ impl Runtime {
         let prev_st = self.stack.len();
         let prev_lc = self.local_stack.len();
 
-        let iter = match try!(self.expression(&for_in_expr.iter, Side::Right, module)) {
-            (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-            (Some(x), Flow::Continue) => x,
-            _ => return Err(module.error(for_in_expr.iter.source_range(),
-                &format!("{}\nExpected in-type from for iter",
-                    self.stack_trace()), self))
-        };
-        let iter = match self.resolve(&iter) {
-            &Variable::In(ref val) => val.clone(),
-            x => return Err(module.error(for_in_expr.iter.source_range(),
-                            &self.expected(x, "in"), self))
-        };
+        let iter = iter!(self, for_in_expr, module);
 
         let iter_val = match iter.lock() {
             Ok(x) => match x.try_recv() {
@@ -214,18 +209,7 @@ impl Runtime {
         let prev_st = self.stack.len();
         let prev_lc = self.local_stack.len();
 
-        let iter = match try!(self.expression(&for_in_expr.iter, Side::Right, module)) {
-            (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-            (Some(x), Flow::Continue) => x,
-            _ => return Err(module.error(for_in_expr.iter.source_range(),
-                &format!("{}\nExpected in-type from for iter",
-                    self.stack_trace()), self))
-        };
-        let iter = match self.resolve(&iter) {
-            &Variable::In(ref val) => val.clone(),
-            x => return Err(module.error(for_in_expr.iter.source_range(),
-                            &self.expected(x, "in"), self))
-        };
+        let iter = iter!(self, for_in_expr, module);
 
         let iter_val = match iter.lock() {
             Ok(x) => match x.try_recv() {
@@ -320,18 +304,7 @@ impl Runtime {
         let prev_st = self.stack.len();
         let prev_lc = self.local_stack.len();
 
-        let iter = match try!(self.expression(&for_in_expr.iter, Side::Right, module)) {
-            (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-            (Some(x), Flow::Continue) => x,
-            _ => return Err(module.error(for_in_expr.iter.source_range(),
-                &format!("{}\nExpected in-type from for iter",
-                    self.stack_trace()), self))
-        };
-        let iter = match self.resolve(&iter) {
-            &Variable::In(ref val) => val.clone(),
-            x => return Err(module.error(for_in_expr.iter.source_range(),
-                            &self.expected(x, "in"), self))
-        };
+        let iter = iter!(self, for_in_expr, module);
 
         let iter_val = match iter.lock() {
             Ok(x) => match x.try_recv() {
@@ -442,18 +415,7 @@ impl Runtime {
         let prev_st = self.stack.len();
         let prev_lc = self.local_stack.len();
 
-        let iter = match try!(self.expression(&for_in_expr.iter, Side::Right, module)) {
-            (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-            (Some(x), Flow::Continue) => x,
-            _ => return Err(module.error(for_in_expr.iter.source_range(),
-                &format!("{}\nExpected in-type from for iter",
-                    self.stack_trace()), self))
-        };
-        let iter = match self.resolve(&iter) {
-            &Variable::In(ref val) => val.clone(),
-            x => return Err(module.error(for_in_expr.iter.source_range(),
-                            &self.expected(x, "in"), self))
-        };
+        let iter = iter!(self, for_in_expr, module);
 
         let iter_val = match iter.lock() {
             Ok(x) => match x.try_recv() {
@@ -564,18 +526,7 @@ impl Runtime {
         let prev_st = self.stack.len();
         let prev_lc = self.local_stack.len();
 
-        let iter = match try!(self.expression(&for_in_expr.iter, Side::Right, module)) {
-            (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-            (Some(x), Flow::Continue) => x,
-            _ => return Err(module.error(for_in_expr.iter.source_range(),
-                &format!("{}\nExpected in-type from for iter",
-                    self.stack_trace()), self))
-        };
-        let iter = match self.resolve(&iter) {
-            &Variable::In(ref val) => val.clone(),
-            x => return Err(module.error(for_in_expr.iter.source_range(),
-                            &self.expected(x, "in"), self))
-        };
+        let iter = iter!(self, for_in_expr, module);
 
         let iter_val = match iter.lock() {
             Ok(x) => match x.try_recv() {
@@ -688,18 +639,7 @@ impl Runtime {
         let prev_st = self.stack.len();
         let prev_lc = self.local_stack.len();
 
-        let iter = match try!(self.expression(&for_in_expr.iter, Side::Right, module)) {
-            (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-            (Some(x), Flow::Continue) => x,
-            _ => return Err(module.error(for_in_expr.iter.source_range(),
-                &format!("{}\nExpected in-type from for iter",
-                    self.stack_trace()), self))
-        };
-        let iter = match self.resolve(&iter) {
-            &Variable::In(ref val) => val.clone(),
-            x => return Err(module.error(for_in_expr.iter.source_range(),
-                            &self.expected(x, "in"), self))
-        };
+        let iter = iter!(self, for_in_expr, module);
 
         let iter_val = match iter.lock() {
             Ok(x) => match x.try_recv() {
@@ -820,18 +760,7 @@ impl Runtime {
             let prev_st = rt.stack.len();
             let prev_lc = rt.local_stack.len();
 
-            let iter = match try!(rt.expression(&for_in_expr.iter, Side::Right, module)) {
-                (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-                (Some(x), Flow::Continue) => x,
-                _ => return Err(module.error(for_in_expr.iter.source_range(),
-                    &format!("{}\nExpected in-type from for iter",
-                        rt.stack_trace()), rt))
-            };
-            let iter = match rt.resolve(&iter) {
-                &Variable::In(ref val) => val.clone(),
-                x => return Err(module.error(for_in_expr.iter.source_range(),
-                                &rt.expected(x, "in"), rt))
-            };
+            let iter = iter!(rt, for_in_expr, module);
 
             let iter_val = match iter.lock() {
                 Ok(x) => match x.try_recv() {
@@ -988,18 +917,7 @@ impl Runtime {
         let prev_lc = self.local_stack.len();
         let mut res: Vec<Variable> = vec![];
 
-        let iter = match try!(self.expression(&for_in_expr.iter, Side::Right, module)) {
-            (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-            (Some(x), Flow::Continue) => x,
-            _ => return Err(module.error(for_in_expr.iter.source_range(),
-                &format!("{}\nExpected in-type from for iter",
-                    self.stack_trace()), self))
-        };
-        let iter = match self.resolve(&iter) {
-            &Variable::In(ref val) => val.clone(),
-            x => return Err(module.error(for_in_expr.iter.source_range(),
-                            &self.expected(x, "in"), self))
-        };
+        let iter = iter!(self, for_in_expr, module);
 
         let iter_val = match iter.lock() {
             Ok(x) => match x.try_recv() {
