@@ -1,7 +1,9 @@
 fn main() {
-    text := "hello\nhow are you?"
+    text := "Hello\nHow are you?"
+    println(text)
     // println(lines(text))
     // println(split(text, ["\n"]))
     // println(starts_with(text, "hello"))
-    println(ends_with(text, "you?"))
+    // println(ends_with(text, "you?"))
+    println(to_lowercase(text))
 }

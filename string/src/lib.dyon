@@ -9,3 +9,7 @@ fn starts_with(a: str, b: str) -> bool { ... }
 
 /// Returns `true` if `a` ends with `b`.
 fn ends_with(a: str, b: str) -> bool { ... }
+
+/// Returns lowercase of string.
+/// Lowercase is defined according to Unicode Derived Core Property `Lowercase`.
+fn to_lowercase(text: str) -> str { ... }

@@ -26,6 +26,11 @@ pub fn add_functions(module: &mut Module) {
         tys: vec![Type::Text; 2],
         ret: Type::Bool,
     });
+    module.add(Arc::new("to_lowercase".into()), to_lowercase, Dfn {
+        lts: vec![Lt::Default],
+        tys: vec![Type::Text],
+        ret: Type::Text,
+    });
 }
 
 dyon_fn!{fn lines(text: Arc<String>) -> Variable {
@@ -57,4 +62,8 @@ dyon_fn!{fn starts_with(text: Arc<String>, pat: Arc<String>) -> bool {
 
 dyon_fn!{fn ends_with(text: Arc<String>, pat: Arc<String>) -> bool {
     text.ends_with(&**pat)
+}}
+
+dyon_fn!{fn to_lowercase(text: Arc<String>) -> Arc<String> {
+    Arc::new(text.to_lowercase())
 }}
