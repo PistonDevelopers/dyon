@@ -28,3 +28,6 @@ fn to_ascii_lowercase(text: str) -> str { ... }
 /// Returns uppercase of string.
 /// Only ASCII characters are converted to uppercase.
 fn to_ascii_uppercase(text: str) -> str { ... }
+
+/// Compiles a regex pattern.
+fn regex(pat: str) -> res[str] { ... }

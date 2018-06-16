@@ -1,8 +1,10 @@
 #[macro_use]
 extern crate dyon;
+extern crate regex;
 
-use std::sync::Arc;
-use dyon::{Dfn, Lt, Type, Module, Variable};
+use std::error::Error;
+use std::sync::{Arc, Mutex};
+use dyon::{Dfn, Lt, Type, Module, Variable, RustObject};
 
 /// Adds string functions to module.
 pub fn add_functions(module: &mut Module) {
@@ -50,6 +52,11 @@ pub fn add_functions(module: &mut Module) {
         lts: vec![Lt::Default],
         tys: vec![Type::Text],
         ret: Type::Text,
+    });
+    module.add(Arc::new("regex".into()), regex, Dfn {
+        lts: vec![Lt::Default],
+        tys: vec![Type::Text],
+        ret: Type::Any,
     });
 }
 
@@ -102,4 +109,10 @@ dyon_fn!{fn to_ascii_lowercase(text: Arc<String>) -> Arc<String> {
 
 dyon_fn!{fn to_ascii_uppercase(text: Arc<String>) -> Arc<String> {
     Arc::new(text.to_ascii_uppercase())
+}}
+
+dyon_fn!{fn regex(pat: Arc<String>) -> Result<RustObject, String> {
+    regex::Regex::new(&pat)
+        .map(|v| Arc::new(Mutex::new(v)) as RustObject)
+        .map_err(|err| err.description().into())
 }}
