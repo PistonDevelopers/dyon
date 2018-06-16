@@ -17,3 +17,6 @@ fn to_lowercase(text: str) -> str { ... }
 /// Returns uppercase of string.
 /// Uppercase is defined according Unicode Derived Core Property `Uppercase`.
 fn to_uppercase(text: str) -> str { ... }
+
+/// Returns `true` if all characters are within ASCII range.
+fn is_ascii(text: str) -> bool { ... }

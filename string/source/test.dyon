@@ -6,5 +6,6 @@ fn main() {
     // println(starts_with(text, "hello"))
     // println(ends_with(text, "you?"))
     // println(to_lowercase(text))
-    println(to_uppercase(text))
+    // println(to_uppercase(text))
+    println(is_ascii(text))
 }
