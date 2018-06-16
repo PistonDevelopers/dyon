@@ -8,5 +8,6 @@ fn main() {
     // println(to_lowercase(text))
     // println(to_uppercase(text))
     // println(is_ascii(text))
-    println(to_ascii_lowercase(text))
+    // println(to_ascii_lowercase(text))
+    println(to_ascii_uppercase(text))
 }

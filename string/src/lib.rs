@@ -46,6 +46,11 @@ pub fn add_functions(module: &mut Module) {
         tys: vec![Type::Text],
         ret: Type::Text,
     });
+    module.add(Arc::new("to_ascii_uppercase".into()), to_ascii_uppercase, Dfn {
+        lts: vec![Lt::Default],
+        tys: vec![Type::Text],
+        ret: Type::Text,
+    });
 }
 
 dyon_fn!{fn lines(text: Arc<String>) -> Variable {
@@ -93,4 +98,8 @@ dyon_fn!{fn is_ascii(text: Arc<String>) -> bool {
 
 dyon_fn!{fn to_ascii_lowercase(text: Arc<String>) -> Arc<String> {
     Arc::new(text.to_ascii_lowercase())
+}}
+
+dyon_fn!{fn to_ascii_uppercase(text: Arc<String>) -> Arc<String> {
+    Arc::new(text.to_ascii_uppercase())
 }}

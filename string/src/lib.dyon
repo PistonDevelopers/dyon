@@ -24,3 +24,7 @@ fn is_ascii(text: str) -> bool { ... }
 /// Returns lowercase of string.
 /// Only ASCII characters are converted to lowercase.
 fn to_ascii_lowercase(text: str) -> str { ... }
+
+/// Returns uppercase of string.
+/// Only ASCII characters are converted to uppercase.
+fn to_ascii_uppercase(text: str) -> str { ... }
