@@ -37,6 +37,20 @@ macro_rules! end(
     }};
 );
 
+macro_rules! cond(
+    ($rt:ident, $for_n_expr:ident, $st:ident, $end:ident, $module:ident) => {
+        match &$rt.stack[$st - 1] {
+            &Variable::F64(val, _) => {
+                if val < $end {}
+                else { break }
+                val
+            }
+            x => return Err($module.error($for_n_expr.source_range,
+                            &$rt.expected(x, "number"), $rt))
+        }
+    };
+);
+
 impl Runtime {
     pub(crate) fn for_n_expr(
         &mut self,
@@ -57,14 +71,7 @@ impl Runtime {
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
         loop {
-            match &self.stack[st - 1] {
-                &Variable::F64(val, _) => {
-                    if val < end {}
-                    else { break }
-                }
-                x => return Err(module.error(for_n_expr.source_range,
-                                &self.expected(x, "number"), self))
-            };
+            cond!(self, for_n_expr, st, end, module);
             match try!(self.block(&for_n_expr.block, module)) {
                 (x, Flow::Return) => { return Ok((x, Flow::Return)); }
                 (_, Flow::Continue) => {}
@@ -135,14 +142,7 @@ impl Runtime {
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
         loop {
-            match &self.stack[st - 1] {
-                &Variable::F64(val, _) => {
-                    if val < end {}
-                    else { break }
-                }
-                x => return Err(module.error(for_n_expr.source_range,
-                                &self.expected(x, "number"), self))
-            };
+            cond!(self, for_n_expr, st, end, module);
             match try!(self.block(&for_n_expr.block, module)) {
                 (Some(x), Flow::Continue) => {
                     match self.resolve(&x) {
@@ -223,14 +223,7 @@ impl Runtime {
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
         loop {
-            match &self.stack[st - 1] {
-                &Variable::F64(val, _) => {
-                    if val < end {}
-                    else { break }
-                }
-                x => return Err(module.error(for_n_expr.source_range,
-                                &self.expected(x, "number"), self))
-            };
+            cond!(self, for_n_expr, st, end, module);
             match try!(self.block(&for_n_expr.block, module)) {
                 (Some(x), Flow::Continue) => {
                     match self.resolve(&x) {
@@ -311,15 +304,7 @@ impl Runtime {
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
         loop {
-            let ind = match &self.stack[st - 1] {
-                &Variable::F64(val, _) => {
-                    if val < end {}
-                    else { break }
-                    val
-                }
-                x => return Err(module.error(for_n_expr.source_range,
-                                &self.expected(x, "number"), self))
-            };
+            let ind = cond!(self, for_n_expr, st, end, module);
             match try!(self.block(&for_n_expr.block, module)) {
                 (Some(x), Flow::Continue) => {
                     match self.resolve(&x) {
@@ -415,15 +400,7 @@ impl Runtime {
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
         loop {
-            let ind = match &self.stack[st - 1] {
-                &Variable::F64(val, _) => {
-                    if val < end {}
-                    else { break }
-                    val
-                }
-                x => return Err(module.error(for_n_expr.source_range,
-                                &self.expected(x, "number"), self))
-            };
+            let ind = cond!(self, for_n_expr, st, end, module);
             match try!(self.block(&for_n_expr.block, module)) {
                 (Some(x), Flow::Continue) => {
                     match self.resolve(&x) {
@@ -519,14 +496,7 @@ impl Runtime {
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
         loop {
-            let ind = match &self.stack[st - 1] {
-                &Variable::F64(val, _) => {
-                    if val < end { val }
-                    else { break }
-                }
-                x => return Err(module.error(for_n_expr.source_range,
-                                &self.expected(x, "number"), self))
-            };
+            let ind = cond!(self, for_n_expr, st, end, module);
             match try!(self.block(&for_n_expr.block, module)) {
                 (Some(x), Flow::Continue) => {
                     match self.resolve(&x) {
@@ -623,14 +593,7 @@ impl Runtime {
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
         loop {
-            let ind = match &self.stack[st - 1] {
-                &Variable::F64(val, _) => {
-                    if val < end { val }
-                    else { break }
-                }
-                x => return Err(module.error(for_n_expr.source_range,
-                                &self.expected(x, "number"), self))
-            };
+            let ind = cond!(self, for_n_expr, st, end, module);
             match try!(self.block(&for_n_expr.block, module)) {
                 (Some(x), Flow::Continue) => {
                     match self.resolve(&x) {
@@ -734,14 +697,7 @@ impl Runtime {
             let mut flow = Flow::Continue;
 
             'outer: loop {
-                match &rt.stack[st - 1] {
-                    &Variable::F64(val, _) => {
-                        if val < end {}
-                        else { break }
-                    }
-                    x => return Err(module.error(for_n_expr.source_range,
-                                    &rt.expected(x, "number"), rt))
-                };
+                cond!(rt, for_n_expr, st, end, module);
 
                 match for_n_expr.block.expressions[0] {
                     ast::Expression::Link(ref link) => {
@@ -883,14 +839,7 @@ impl Runtime {
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
         loop {
-            match &self.stack[st - 1] {
-                &Variable::F64(val, _) => {
-                    if val < end {}
-                    else { break }
-                }
-                x => return Err(module.error(for_n_expr.source_range,
-                                &self.expected(x, "number"), self))
-            };
+            cond!(self, for_n_expr, st, end, module);
             match try!(self.block(&for_n_expr.block, module)) {
                 (Some(x), Flow::Continue) => res.push(x),
                 (x, Flow::Return) => { return Ok((x, Flow::Return)); }
@@ -965,14 +914,7 @@ impl Runtime {
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
         loop {
-            match &self.stack[st - 1] {
-                &Variable::F64(val, _) => {
-                    if val < end {}
-                    else { break }
-                }
-                x => return Err(module.error(for_n_expr.source_range,
-                                &self.expected(x, "number"), self))
-            };
+            cond!(self, for_n_expr, st, end, module);
             match try!(self.block(&for_n_expr.block, module)) {
                 (Some(x), Flow::Continue) => {
                     match self.resolve(&x) {
@@ -1057,14 +999,7 @@ impl Runtime {
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
         loop {
-            match &self.stack[st - 1] {
-                &Variable::F64(val, _) => {
-                    if val < end {}
-                    else { break }
-                }
-                x => return Err(module.error(for_n_expr.source_range,
-                                &self.expected(x, "number"), self))
-            };
+            cond!(self, for_n_expr, st, end, module);
             match try!(self.block(&for_n_expr.block, module)) {
                 (Some(x), Flow::Continue) => {
                     match self.resolve(&x) {
