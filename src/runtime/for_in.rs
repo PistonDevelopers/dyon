@@ -50,6 +50,24 @@ macro_rules! break_(
     }};
 );
 
+macro_rules! continue_(
+    ($x:ident, $for_in_expr:ident, $flow:ident) => {
+        match $x {
+            Some(label) => {
+                let same =
+                if let Some(ref for_label) = $for_in_expr.label {
+                    &label == for_label
+                } else { false };
+                if !same {
+                    $flow = Flow::ContinueLoop(Some(label));
+                    break;
+                }
+            }
+            None => {}
+        }
+    };
+);
+
 impl Runtime {
     pub(crate) fn for_in_expr(
         &mut self,
@@ -76,21 +94,7 @@ impl Runtime {
                 (x, Flow::Return) => { return Ok((x, Flow::Return)); }
                 (_, Flow::Continue) => {}
                 (_, Flow::Break(x)) => break_!(x, for_in_expr, flow),
-                (_, Flow::ContinueLoop(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_in_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::ContinueLoop(Some(label));
-                                break;
-                            }
-                        }
-                        None => {}
-                    }
-                }
+                (_, Flow::ContinueLoop(x)) => continue_!(x, for_in_expr, flow),
             }
 
             let iter_val = match iter.lock() {
@@ -147,21 +151,7 @@ impl Runtime {
                 (x, Flow::Return) => { return Ok((x, Flow::Return)); }
                 (_, Flow::Continue) => {}
                 (_, Flow::Break(x)) => break_!(x, for_in_expr, flow),
-                (_, Flow::ContinueLoop(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_in_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::ContinueLoop(Some(label));
-                                break;
-                            }
-                        }
-                        None => {}
-                    }
-                }
+                (_, Flow::ContinueLoop(x)) => continue_!(x, for_in_expr, flow),
             }
 
             let iter_val = match iter.lock() {
@@ -218,21 +208,7 @@ impl Runtime {
                 (x, Flow::Return) => { return Ok((x, Flow::Return)); }
                 (_, Flow::Continue) => {}
                 (_, Flow::Break(x)) => break_!(x, for_in_expr, flow),
-                (_, Flow::ContinueLoop(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_in_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::ContinueLoop(Some(label));
-                                break;
-                            }
-                        }
-                        None => {}
-                    }
-                }
+                (_, Flow::ContinueLoop(x)) => continue_!(x, for_in_expr, flow),
             }
 
             let iter_val = match iter.lock() {
@@ -305,21 +281,7 @@ impl Runtime {
                                 "Expected `number or option`", self))
                 }
                 (_, Flow::Break(x)) => break_!(x, for_in_expr, flow),
-                (_, Flow::ContinueLoop(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_in_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::ContinueLoop(Some(label));
-                                break;
-                            }
-                        }
-                        None => {}
-                    }
-                }
+                (_, Flow::ContinueLoop(x)) => continue_!(x, for_in_expr, flow),
             }
 
             let iter_val = match iter.lock() {
@@ -392,21 +354,7 @@ impl Runtime {
                                 "Expected `number or option`", self))
                 }
                 (_, Flow::Break(x)) => break_!(x, for_in_expr, flow),
-                (_, Flow::ContinueLoop(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_in_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::ContinueLoop(Some(label));
-                                break;
-                            }
-                        }
-                        None => {}
-                    }
-                }
+                (_, Flow::ContinueLoop(x)) => continue_!(x, for_in_expr, flow),
             }
 
             let iter_val = match iter.lock() {
@@ -481,21 +429,7 @@ impl Runtime {
                                 "Expected `boolean`", self))
                 }
                 (_, Flow::Break(x)) => break_!(x, for_in_expr, flow),
-                (_, Flow::ContinueLoop(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_in_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::ContinueLoop(Some(label));
-                                break;
-                            }
-                        }
-                        None => {}
-                    }
-                }
+                (_, Flow::ContinueLoop(x)) => continue_!(x, for_in_expr, flow),
             }
 
             let iter_val = match iter.lock() {
@@ -570,21 +504,7 @@ impl Runtime {
                                 "Expected `boolean`", self))
                 }
                 (_, Flow::Break(x)) => break_!(x, for_in_expr, flow),
-                (_, Flow::ContinueLoop(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_in_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::ContinueLoop(Some(label));
-                                break;
-                            }
-                        }
-                        None => {}
-                    }
-                }
+                (_, Flow::ContinueLoop(x)) => continue_!(x, for_in_expr, flow),
             }
 
             let iter_val = match iter.lock() {
@@ -791,21 +711,7 @@ impl Runtime {
                                 "Expected variable", self))
                 }
                 (_, Flow::Break(x)) => break_!(x, for_in_expr, flow),
-                (_, Flow::ContinueLoop(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_in_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::ContinueLoop(Some(label));
-                                break;
-                            }
-                        }
-                        None => {}
-                    }
-                }
+                (_, Flow::ContinueLoop(x)) => continue_!(x, for_in_expr, flow),
             }
 
             let iter_val = match iter.lock() {
