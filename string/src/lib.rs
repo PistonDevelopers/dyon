@@ -21,6 +21,11 @@ pub fn add_functions(module: &mut Module) {
         tys: vec![Type::Text; 2],
         ret: Type::Bool,
     });
+    module.add(Arc::new("ends_with".into()), ends_with, Dfn {
+        lts: vec![Lt::Default; 2],
+        tys: vec![Type::Text; 2],
+        ret: Type::Bool,
+    });
 }
 
 dyon_fn!{fn lines(text: Arc<String>) -> Variable {
@@ -48,4 +53,8 @@ dyon_fn!{fn split(text: Arc<String>, chs: Variable) -> Variable {
 
 dyon_fn!{fn starts_with(text: Arc<String>, pat: Arc<String>) -> bool {
     text.starts_with(&**pat)
+}}
+
+dyon_fn!{fn ends_with(text: Arc<String>, pat: Arc<String>) -> bool {
+    text.ends_with(&**pat)
 }}

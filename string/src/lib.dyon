@@ -3,3 +3,9 @@ fn lines(text: str) -> [str] { ... }
 
 /// Splits text by any of the characters.
 fn split(text: str, chs: [str]) -> [str] { ... }
+
+/// Returns `true` if `a` starts with `b`.
+fn starts_with(a: str, b: str) -> bool { ... }
+
+/// Returns `true` if `a` ends with `b`.
+fn ends_with(a: str, b: str) -> bool { ... }

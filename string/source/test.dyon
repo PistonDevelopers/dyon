@@ -2,5 +2,6 @@ fn main() {
     text := "hello\nhow are you?"
     // println(lines(text))
     // println(split(text, ["\n"]))
-    println(starts_with(text, "hello"))
+    // println(starts_with(text, "hello"))
+    println(ends_with(text, "you?"))
 }
