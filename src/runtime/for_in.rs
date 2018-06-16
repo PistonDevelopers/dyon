@@ -17,6 +17,21 @@ macro_rules! iter(
     }};
 );
 
+macro_rules! iter_val(
+    ($iter:ident, $rt:ident, $for_in_expr:ident, $module:ident) => {
+        match $iter.lock() {
+            Ok(x) => match x.try_recv() {
+                Ok(x) => x,
+                Err(_) => return Ok((None, Flow::Continue)),
+            },
+            Err(err) => {
+                return Err($module.error($for_in_expr.source_range,
+                &format!("Can not lock In mutex:\n{}", err.description()), $rt));
+            }
+        }
+    };
+);
+
 impl Runtime {
     pub(crate) fn for_in_expr(
         &mut self,
@@ -29,17 +44,7 @@ impl Runtime {
         let prev_lc = self.local_stack.len();
 
         let iter = iter!(self, for_in_expr, module);
-
-        let iter_val = match iter.lock() {
-            Ok(x) => match x.try_recv() {
-                Ok(x) => x,
-                Err(_) => return Ok((None, Flow::Continue)),
-            },
-            Err(err) => {
-                return Err(module.error(for_in_expr.source_range,
-                &format!("Can not lock In mutex:\n{}", err.description()), self));
-            }
-        };
+        let iter_val = iter_val!(iter, self, for_in_expr, module);
 
         // Initialize counter.
         self.local_stack.push((for_in_expr.name.clone(), self.stack.len()));
@@ -115,17 +120,7 @@ impl Runtime {
         let prev_lc = self.local_stack.len();
 
         let iter = iter!(self, for_in_expr, module);
-
-        let iter_val = match iter.lock() {
-            Ok(x) => match x.try_recv() {
-                Ok(x) => x,
-                Err(_) => return Ok((Some(Variable::f64(0.0)), Flow::Continue)),
-            },
-            Err(err) => {
-                return Err(module.error(for_in_expr.source_range,
-                &format!("Can not lock In mutex:\n{}", err.description()), self));
-            }
-        };
+        let iter_val = iter_val!(iter, self, for_in_expr, module);
 
         let mut sum = 0.0;
 
@@ -210,17 +205,7 @@ impl Runtime {
         let prev_lc = self.local_stack.len();
 
         let iter = iter!(self, for_in_expr, module);
-
-        let iter_val = match iter.lock() {
-            Ok(x) => match x.try_recv() {
-                Ok(x) => x,
-                Err(_) => return Ok((Some(Variable::f64(1.0)), Flow::Continue)),
-            },
-            Err(err) => {
-                return Err(module.error(for_in_expr.source_range,
-                &format!("Can not lock In mutex:\n{}", err.description()), self));
-            }
-        };
+        let iter_val = iter_val!(iter, self, for_in_expr, module);
 
         let mut prod = 1.0;
 
@@ -305,17 +290,7 @@ impl Runtime {
         let prev_lc = self.local_stack.len();
 
         let iter = iter!(self, for_in_expr, module);
-
-        let iter_val = match iter.lock() {
-            Ok(x) => match x.try_recv() {
-                Ok(x) => x,
-                Err(_) => return Ok((Some(Variable::f64(::std::f64::NAN)), Flow::Continue)),
-            },
-            Err(err) => {
-                return Err(module.error(for_in_expr.source_range,
-                &format!("Can not lock In mutex:\n{}", err.description()), self));
-            }
-        };
+        let iter_val = iter_val!(iter, self, for_in_expr, module);
 
         let mut min = ::std::f64::NAN;
         let mut sec = None;
@@ -416,17 +391,7 @@ impl Runtime {
         let prev_lc = self.local_stack.len();
 
         let iter = iter!(self, for_in_expr, module);
-
-        let iter_val = match iter.lock() {
-            Ok(x) => match x.try_recv() {
-                Ok(x) => x,
-                Err(_) => return Ok((Some(Variable::f64(::std::f64::NAN)), Flow::Continue)),
-            },
-            Err(err) => {
-                return Err(module.error(for_in_expr.source_range,
-                &format!("Can not lock In mutex:\n{}", err.description()), self));
-            }
-        };
+        let iter_val = iter_val!(iter, self, for_in_expr, module);
 
         let mut max = ::std::f64::NAN;
         let mut sec = None;
@@ -527,17 +492,7 @@ impl Runtime {
         let prev_lc = self.local_stack.len();
 
         let iter = iter!(self, for_in_expr, module);
-
-        let iter_val = match iter.lock() {
-            Ok(x) => match x.try_recv() {
-                Ok(x) => x,
-                Err(_) => return Ok((Some(Variable::bool(false)), Flow::Continue)),
-            },
-            Err(err) => {
-                return Err(module.error(for_in_expr.source_range,
-                &format!("Can not lock In mutex:\n{}", err.description()), self));
-            }
-        };
+        let iter_val = iter_val!(iter, self, for_in_expr, module);
 
         let mut any = false;
         let mut sec = None;
@@ -640,17 +595,7 @@ impl Runtime {
         let prev_lc = self.local_stack.len();
 
         let iter = iter!(self, for_in_expr, module);
-
-        let iter_val = match iter.lock() {
-            Ok(x) => match x.try_recv() {
-                Ok(x) => x,
-                Err(_) => return Ok((Some(Variable::bool(true)), Flow::Continue)),
-            },
-            Err(err) => {
-                return Err(module.error(for_in_expr.source_range,
-                &format!("Can not lock In mutex:\n{}", err.description()), self));
-            }
-        };
+        let iter_val = iter_val!(iter, self, for_in_expr, module);
 
         let mut all = true;
         let mut sec = None;
@@ -761,17 +706,7 @@ impl Runtime {
             let prev_lc = rt.local_stack.len();
 
             let iter = iter!(rt, for_in_expr, module);
-
-            let iter_val = match iter.lock() {
-                Ok(x) => match x.try_recv() {
-                    Ok(x) => x,
-                    Err(_) => return Ok((Some(Variable::bool(true)), Flow::Continue)),
-                },
-                Err(err) => {
-                    return Err(module.error(for_in_expr.source_range,
-                    &format!("Can not lock In mutex:\n{}", err.description()), rt));
-                }
-            };
+            let iter_val = iter_val!(iter, rt, for_in_expr, module);
 
             // Initialize counter.
             rt.local_stack.push((for_in_expr.name.clone(), rt.stack.len()));
@@ -918,17 +853,7 @@ impl Runtime {
         let mut res: Vec<Variable> = vec![];
 
         let iter = iter!(self, for_in_expr, module);
-
-        let iter_val = match iter.lock() {
-            Ok(x) => match x.try_recv() {
-                Ok(x) => x,
-                Err(_) => return Ok((Some(Variable::Array(Arc::new(vec![]))), Flow::Continue)),
-            },
-            Err(err) => {
-                return Err(module.error(for_in_expr.source_range,
-                &format!("Can not lock In mutex:\n{}", err.description()), self));
-            }
-        };
+        let iter_val = iter_val!(iter, self, for_in_expr, module);
 
         // Initialize counter.
         self.local_stack.push((for_in_expr.name.clone(), self.stack.len()));
