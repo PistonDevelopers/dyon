@@ -1,0 +1,2 @@
+/// Splits text into lines.
+fn lines(text: str) -> [str] { ... }
