@@ -84,6 +84,24 @@ macro_rules! break_(
     }};
 );
 
+macro_rules! continue_(
+    ($x:ident, $for_n_expr:ident, $flow:ident) => {{
+        match $x {
+            Some(label) => {
+                let same =
+                if let Some(ref for_label) = $for_n_expr.label {
+                    &label == for_label
+                } else { false };
+                if !same {
+                    $flow = Flow::ContinueLoop(Some(label));
+                    break;
+                }
+            }
+            None => {}
+        }
+    }};
+);
+
 impl Runtime {
     pub(crate) fn for_n_expr(
         &mut self,
@@ -109,21 +127,7 @@ impl Runtime {
                 (x, Flow::Return) => { return Ok((x, Flow::Return)); }
                 (_, Flow::Continue) => {}
                 (_, Flow::Break(x)) => break_!(x, for_n_expr, flow),
-                (_, Flow::ContinueLoop(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_n_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::ContinueLoop(Some(label));
-                                break;
-                            }
-                        }
-                        None => {}
-                    }
-                }
+                (_, Flow::ContinueLoop(x)) => continue_!(x, for_n_expr, flow),
             }
             let error = if let Variable::F64(ref mut val, _) = self.stack[st - 1] {
                 *val += 1.0;
@@ -176,21 +180,7 @@ impl Runtime {
                                 "Expected `number`", self))
                 }
                 (_, Flow::Break(x)) => break_!(x, for_n_expr, flow),
-                (_, Flow::ContinueLoop(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_n_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::ContinueLoop(Some(label));
-                                break;
-                            }
-                        }
-                        None => {}
-                    }
-                }
+                (_, Flow::ContinueLoop(x)) => continue_!(x, for_n_expr, flow),
             }
             let error = if let Variable::F64(ref mut val, _) = self.stack[st - 1] {
                 *val += 1.0;
@@ -243,21 +233,7 @@ impl Runtime {
                                 "Expected `number`", self))
                 }
                 (_, Flow::Break(x)) => break_!(x, for_n_expr, flow),
-                (_, Flow::ContinueLoop(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_n_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::ContinueLoop(Some(label));
-                                break;
-                            }
-                        }
-                        None => {}
-                    }
-                }
+                (_, Flow::ContinueLoop(x)) => continue_!(x, for_n_expr, flow),
             }
             let error = if let Variable::F64(ref mut val, _) = self.stack[st - 1] {
                 *val += 1.0;
@@ -324,21 +300,7 @@ impl Runtime {
                                 "Expected `number or option`", self))
                 }
                 (_, Flow::Break(x)) => break_!(x, for_n_expr, flow),
-                (_, Flow::ContinueLoop(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_n_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::ContinueLoop(Some(label));
-                                break;
-                            }
-                        }
-                        None => {}
-                    }
-                }
+                (_, Flow::ContinueLoop(x)) => continue_!(x, for_n_expr, flow),
             }
             let error = if let Variable::F64(ref mut val, _) = self.stack[st - 1] {
                 *val += 1.0;
@@ -406,21 +368,7 @@ impl Runtime {
                                 "Expected `number`", self))
                 }
                 (_, Flow::Break(x)) => break_!(x, for_n_expr, flow),
-                (_, Flow::ContinueLoop(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_n_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::ContinueLoop(Some(label));
-                                break;
-                            }
-                        }
-                        None => {}
-                    }
-                }
+                (_, Flow::ContinueLoop(x)) => continue_!(x, for_n_expr, flow),
             }
             let error = if let Variable::F64(ref mut val, _) = self.stack[st - 1] {
                 *val += 1.0;
@@ -489,21 +437,7 @@ impl Runtime {
                                 "Expected `boolean`", self))
                 }
                 (_, Flow::Break(x)) => break_!(x, for_n_expr, flow),
-                (_, Flow::ContinueLoop(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_n_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::ContinueLoop(Some(label));
-                                break;
-                            }
-                        }
-                        None => {}
-                    }
-                }
+                (_, Flow::ContinueLoop(x)) => continue_!(x, for_n_expr, flow),
             }
             let error = if let Variable::F64(ref mut val, _) = self.stack[st - 1] {
                 *val += 1.0;
@@ -572,21 +506,7 @@ impl Runtime {
                                 "Expected `boolean`", self))
                 }
                 (_, Flow::Break(x)) => break_!(x, for_n_expr, flow),
-                (_, Flow::ContinueLoop(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_n_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::ContinueLoop(Some(label));
-                                break;
-                            }
-                        }
-                        None => {}
-                    }
-                }
+                (_, Flow::ContinueLoop(x)) => continue_!(x, for_n_expr, flow),
             }
             let error = if let Variable::F64(ref mut val, _) = self.stack[st - 1] {
                 *val += 1.0;
@@ -755,21 +675,7 @@ impl Runtime {
                                 "Expected variable", self))
                 }
                 (_, Flow::Break(x)) => break_!(x, for_n_expr, flow),
-                (_, Flow::ContinueLoop(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_n_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::ContinueLoop(Some(label));
-                                break;
-                            }
-                        }
-                        None => {}
-                    }
-                }
+                (_, Flow::ContinueLoop(x)) => continue_!(x, for_n_expr, flow),
             }
             let error = if let Variable::F64(ref mut val, _) = self.stack[st - 1] {
                 *val += 1.0;
@@ -826,21 +732,7 @@ impl Runtime {
                                 "Expected `vec4`", self))
                 }
                 (_, Flow::Break(x)) => break_!(x, for_n_expr, flow),
-                (_, Flow::ContinueLoop(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_n_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::ContinueLoop(Some(label));
-                                break;
-                            }
-                        }
-                        None => {}
-                    }
-                }
+                (_, Flow::ContinueLoop(x)) => continue_!(x, for_n_expr, flow),
             }
             let error = if let Variable::F64(ref mut val, _) = self.stack[st - 1] {
                 *val += 1.0;
@@ -897,21 +789,7 @@ impl Runtime {
                                 "Expected `vec4`", self))
                 }
                 (_, Flow::Break(x)) => break_!(x, for_n_expr, flow),
-                (_, Flow::ContinueLoop(x)) => {
-                    match x {
-                        Some(label) => {
-                            let same =
-                            if let Some(ref for_label) = for_n_expr.label {
-                                &label == for_label
-                            } else { false };
-                            if !same {
-                                flow = Flow::ContinueLoop(Some(label));
-                                break;
-                            }
-                        }
-                        None => {}
-                    }
-                }
+                (_, Flow::ContinueLoop(x)) => continue_!(x, for_n_expr, flow),
             }
             let error = if let Variable::F64(ref mut val, _) = self.stack[st - 1] {
                 *val += 1.0;
