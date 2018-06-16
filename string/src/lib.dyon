@@ -1,2 +1,5 @@
 /// Splits text into lines.
 fn lines(text: str) -> [str] { ... }
+
+/// Splits text by any of the characters.
+fn split(text: str, chs: [str]) -> [str] { ... }
