@@ -31,6 +31,11 @@ pub fn add_functions(module: &mut Module) {
         tys: vec![Type::Text],
         ret: Type::Text,
     });
+    module.add(Arc::new("to_uppercase".into()), to_uppercase, Dfn {
+        lts: vec![Lt::Default],
+        tys: vec![Type::Text],
+        ret: Type::Text,
+    });
 }
 
 dyon_fn!{fn lines(text: Arc<String>) -> Variable {
@@ -66,4 +71,8 @@ dyon_fn!{fn ends_with(text: Arc<String>, pat: Arc<String>) -> bool {
 
 dyon_fn!{fn to_lowercase(text: Arc<String>) -> Arc<String> {
     Arc::new(text.to_lowercase())
+}}
+
+dyon_fn!{fn to_uppercase(text: Arc<String>) -> Arc<String> {
+    Arc::new(text.to_uppercase())
 }}

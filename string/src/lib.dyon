@@ -13,3 +13,7 @@ fn ends_with(a: str, b: str) -> bool { ... }
 /// Returns lowercase of string.
 /// Lowercase is defined according to Unicode Derived Core Property `Lowercase`.
 fn to_lowercase(text: str) -> str { ... }
+
+/// Returns uppercase of string.
+/// Uppercase is defined according Unicode Derived Core Property `Uppercase`.
+fn to_uppercase(text: str) -> str { ... }
