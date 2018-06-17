@@ -1,0 +1,36 @@
+/// Splits text into lines.
+fn lines(text: str) -> [str] { ... }
+
+/// Splits text by any of the characters.
+fn split(text: str, chs: [str]) -> [str] { ... }
+
+/// Returns `true` if `a` starts with `b`.
+fn starts_with(a: str, b: str) -> bool { ... }
+
+/// Returns `true` if `a` ends with `b`.
+fn ends_with(a: str, b: str) -> bool { ... }
+
+/// Returns lowercase of string.
+/// Lowercase is defined according to Unicode Derived Core Property `Lowercase`.
+fn to_lowercase(text: str) -> str { ... }
+
+/// Returns uppercase of string.
+/// Uppercase is defined according Unicode Derived Core Property `Uppercase`.
+fn to_uppercase(text: str) -> str { ... }
+
+/// Returns `true` if all characters are within ASCII range.
+fn is_ascii(text: str) -> bool { ... }
+
+/// Returns lowercase of string.
+/// Only ASCII characters are converted to lowercase.
+fn to_ascii_lowercase(text: str) -> str { ... }
+
+/// Returns uppercase of string.
+/// Only ASCII characters are converted to uppercase.
+fn to_ascii_uppercase(text: str) -> str { ... }
+
+/// Compiles a regex pattern.
+fn regex(pat: str) -> res[str] { ... }
+
+/// Returns `true` if regex pattern matches text.
+fn regex_matches(regex: any, text: str) -> bool { ... }

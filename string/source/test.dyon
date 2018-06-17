@@ -1,0 +1,15 @@
+fn main() {
+    text := "Hello\nHow are you?"
+    println(text)
+    // println(lines(text))
+    // println(split(text, ["\n"]))
+    // println(starts_with(text, "hello"))
+    // println(ends_with(text, "you?"))
+    // println(to_lowercase(text))
+    // println(to_uppercase(text))
+    // println(is_ascii(text))
+    // println(to_ascii_lowercase(text))
+    // println(to_ascii_uppercase(text))
+    reg := unwrap(regex("^\\d{4}-\\d{2}-\\d{2}$"))
+    println(regex_matches(reg, "2000-10-12"))
+}
