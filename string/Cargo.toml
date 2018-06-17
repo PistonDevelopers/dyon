@@ -7,5 +7,5 @@ authors = ["Sven Nilsen <bvssvni@gmail.com>"]
 version = "0.36.0"
 path = ".."
 
-[dependencies]
-regex = "1.0.0"
+[dependencies.regex]
+version = "1.0.0"

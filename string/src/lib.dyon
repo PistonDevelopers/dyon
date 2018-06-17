@@ -31,3 +31,6 @@ fn to_ascii_uppercase(text: str) -> str { ... }
 
 /// Compiles a regex pattern.
 fn regex(pat: str) -> res[str] { ... }
+
+/// Returns `true` if regex pattern matches text.
+fn regex_matches(regex: any, text: str) -> bool { ... }

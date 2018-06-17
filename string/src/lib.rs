@@ -58,6 +58,11 @@ pub fn add_functions(module: &mut Module) {
         tys: vec![Type::Text],
         ret: Type::Any,
     });
+    module.add(Arc::new("regex_matches".into()), regex_matches, Dfn {
+        lts: vec![Lt::Default; 2],
+        tys: vec![Type::Any, Type::Text],
+        ret: Type::Bool,
+    });
 }
 
 dyon_fn!{fn lines(text: Arc<String>) -> Variable {
@@ -115,4 +120,10 @@ dyon_fn!{fn regex(pat: Arc<String>) -> Result<RustObject, String> {
     regex::Regex::new(&pat)
         .map(|v| Arc::new(Mutex::new(v)) as RustObject)
         .map_err(|err| err.description().into())
+}}
+
+dyon_fn!{fn regex_matches(regex: RustObject, text: Arc<String>) -> bool {
+    let regex_guard = regex.lock().unwrap();
+    let regex = regex_guard.downcast_ref::<regex::Regex>().unwrap();
+    regex.is_match(&**text)
 }}

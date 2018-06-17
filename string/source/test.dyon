@@ -11,4 +11,5 @@ fn main() {
     // println(to_ascii_lowercase(text))
     // println(to_ascii_uppercase(text))
     reg := unwrap(regex("^\\d{4}-\\d{2}-\\d{2}$"))
+    println(regex_matches(reg, "2000-10-12"))
 }
