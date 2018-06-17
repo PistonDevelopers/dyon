@@ -95,7 +95,7 @@ impl Prelude {
         let mut prelude = Prelude::new();
         intrinsics::standard(&mut prelude);
         for f in &*module.ext_prelude {
-            prelude.insert(Arc::new(vec![]), f.name.clone(), f.p.clone());
+            prelude.insert(f.namespace.clone(), f.name.clone(), f.p.clone());
         }
         for f in &module.functions {
             prelude.insert(f.namespace.clone(), f.name.clone(), Dfn::new(f));

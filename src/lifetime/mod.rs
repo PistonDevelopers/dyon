@@ -412,7 +412,10 @@ pub fn check(
         let node = &mut nodes[c];
         let name = node.name().expect("Expected name").clone();
         if let Some(ref alias) = node.alias {
-            if let Some(&i) = use_lookup.aliases.get(alias).and_then(|map| map.get(&name)) {
+            use ast::FnAlias;
+
+            // External functions are treated as loaded in prelude.
+            if let Some(&FnAlias::Loaded(i)) = use_lookup.aliases.get(alias).and_then(|map| map.get(&name)) {
                 node.lts = prelude.list[i].lts.clone();
                 continue;
             } else {
@@ -456,7 +459,10 @@ pub fn check(
         let node = &mut nodes[c];
         let name = node.name().expect("Expected name").clone();
         if let Some(ref alias) = node.alias {
-            if let Some(&i) = use_lookup.aliases.get(alias).and_then(|map| map.get(&name)) {
+            use ast::FnAlias;
+
+            // External functions are treated as loaded in prelude.
+            if let Some(&FnAlias::Loaded(i)) = use_lookup.aliases.get(alias).and_then(|map| map.get(&name)) {
                 node.lts = prelude.list[i].lts.clone();
                 continue;
             } else {

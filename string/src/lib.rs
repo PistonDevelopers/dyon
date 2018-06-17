@@ -8,6 +8,7 @@ use dyon::{Dfn, Lt, Type, Module, Variable, RustObject};
 
 /// Adds string functions to module.
 pub fn add_functions(module: &mut Module) {
+    module.ns("string");
     module.add(Arc::new("lines".into()), lines, Dfn {
         lts: vec![Lt::Default],
         tys: vec![Type::Text],

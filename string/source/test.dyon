@@ -1,3 +1,5 @@
+use string::{regex_matches as matches__regex_pat} as string
+
 fn main() {
     text := "Hello\nHow are you?"
     println(text)
@@ -11,5 +13,5 @@ fn main() {
     // println(to_ascii_lowercase(text))
     // println(to_ascii_uppercase(text))
     reg := unwrap(regex("^\\d{4}-\\d{2}-\\d{2}$"))
-    println(regex_matches(reg, "2000-10-12"))
+    println(string::matches(regex: reg, pat: "2000-10-12"))
 }

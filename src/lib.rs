@@ -241,6 +241,7 @@ impl fmt::Debug for FnExternalRef {
 }
 
 pub struct FnExternal {
+    pub namespace: Arc<Vec<Arc<String>>>,
     pub name: Arc<String>,
     pub f: fn(&mut Runtime) -> Result<(), String>,
     pub p: Dfn,
@@ -249,6 +250,7 @@ pub struct FnExternal {
 impl Clone for FnExternal {
     fn clone(&self) -> FnExternal {
         FnExternal {
+            namespace: self.namespace.clone(),
             name: self.name.clone(),
             f: self.f,
             p: self.p.clone(),
@@ -261,6 +263,7 @@ pub struct Module {
     pub functions: Vec<ast::Function>,
     pub ext_prelude: Vec<FnExternal>,
     pub intrinsics: Arc<HashMap<Arc<String>, usize>>,
+    pub register_namespace: Arc<Vec<Arc<String>>>,
 }
 
 impl Module {
@@ -273,7 +276,21 @@ impl Module {
             functions: vec![],
             ext_prelude: vec![],
             intrinsics: intrinsics,
+            register_namespace: Arc::new(vec![]),
         }
+    }
+
+    /// Sets namespace for following added functions.
+    pub fn ns(&mut self, ns: &str) {
+        self.register_namespace = Arc::new(ns
+            .split("::")
+            .map(|s| Arc::new(s.into()))
+            .collect());
+    }
+
+    /// Sets no namespace.
+    pub fn no_ns(&mut self) {
+        self.register_namespace = Arc::new(vec![]);
     }
 
     pub fn register(&mut self, function: ast::Function) {
@@ -323,7 +340,7 @@ impl Module {
         String::from_utf8(w).unwrap()
     }
 
-    /// Adds a new extended prelude function.
+    /// Adds a new external prelude function.
     pub fn add(
         &mut self,
         name: Arc<String>,
@@ -331,6 +348,7 @@ impl Module {
         prelude_function: Dfn
     ) {
         self.ext_prelude.push(FnExternal {
+            namespace: self.register_namespace.clone(),
             name: name.clone(),
             f: f,
             p: prelude_function,
