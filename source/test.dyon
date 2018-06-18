@@ -1,7 +1,11 @@
-fn log(a: f64) {}
+ns loader
 
 fn main() {
-    log := in log
-    for i 3 {log(i)}
-    println(sum x in log {x[0]})
+    math := unwrap(load("source/namespace/math.dyon"))
+    graphics := unwrap(load("source/namespace/graphics.dyon"))
+    main := unwrap(load(
+        source: "source/namespace/main.dyon",
+        imports: [math, graphics]
+    ))
+    call(main, "main", [])
 }

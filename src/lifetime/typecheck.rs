@@ -144,7 +144,10 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
                                     (&None, _) | (_, &None) => {}
                                 }
                             } else if let Some(ref alias) = nodes[parent].alias {
-                                if let Some(&f) = use_lookup.aliases.get(alias)
+                                use ast::FnAlias;
+
+                                // External functions are treated as loaded in prelude.
+                                if let Some(&FnAlias::Loaded(f)) = use_lookup.aliases.get(alias)
                                 .and_then(|map| map.get(nodes[parent].name().unwrap())) {
                                     let f = &prelude.list[f];
                                     if let Some(ref ty) = expr_type {
@@ -180,7 +183,10 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
                             this_ty = Some(ty.clone());
                         }
                     } else if let Some(ref alias) = nodes[i].alias {
-                        if let Some(&f) = use_lookup.aliases.get(alias)
+                        use ast::FnAlias;
+
+                        // External functions are treated as loaded in prelude.
+                        if let Some(&FnAlias::Loaded(f)) = use_lookup.aliases.get(alias)
                         .and_then(|map| map.get(nodes[i].name().unwrap())) {
                             this_ty = Some(prelude.list[f].ret.clone());
                         }

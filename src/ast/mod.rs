@@ -54,9 +54,18 @@ pub fn convert(
     Ok(())
 }
 
+#[derive(Copy, Clone)]
+pub enum FnAlias {
+    Loaded(usize),
+    External(usize),
+}
+
 /// Used to resolve calls to imported functions.
 pub struct UseLookup {
-    pub aliases: HashMap<Arc<String>, HashMap<Arc<String>, usize>>,
+    /// Stores namespace aliases.
+    /// The first key is the alias to namespace.
+    /// The second key is the alias to the function.
+    pub aliases: HashMap<Arc<String>, HashMap<Arc<String>, FnAlias>>,
 }
 
 impl UseLookup {
@@ -66,6 +75,7 @@ impl UseLookup {
         }
     }
 
+    /// This is called when constructing the AST.
     pub fn from_uses_module(uses: &Uses, module: &Module) -> UseLookup {
         let mut aliases = HashMap::new();
         // First, add all glob imports.
@@ -77,7 +87,12 @@ impl UseLookup {
             let fns = aliases.get_mut(&use_import.alias).unwrap();
             for (i, f) in module.functions.iter().enumerate().rev() {
                 if &*f.namespace == &use_import.names {
-                    fns.insert(f.name.clone(), i);
+                    fns.insert(f.name.clone(), FnAlias::Loaded(i));
+                }
+            }
+            for (i, f) in module.ext_prelude.iter().enumerate().rev() {
+                if &*f.namespace == &use_import.names {
+                    fns.insert(f.name.clone(), FnAlias::External(i));
                 }
             }
         }
@@ -92,14 +107,29 @@ impl UseLookup {
                 for (i, f) in module.functions.iter().enumerate().rev() {
                     if &*f.namespace != &use_import.names {continue;}
                     if &f.name == &use_fn.0 {
-                        fns.insert(use_fn.1.as_ref().unwrap_or(&use_fn.0).clone(), i);
+                        fns.insert(use_fn.1.as_ref().unwrap_or(&use_fn.0).clone(),
+                                   FnAlias::Loaded(i));
                     } else if f.name.len() > use_fn.0.len() &&
                               f.name.starts_with(&**use_fn.0) &&
                               f.name.as_bytes()[use_fn.0.len()] == '(' as u8 {
                         // A function with mutable information.
                         let mut name: Arc<String> = use_fn.1.as_ref().unwrap_or(&use_fn.0).clone();
                         Arc::make_mut(&mut name).push_str(&f.name.as_str()[use_fn.0.len()..]);
-                        fns.insert(name, i);
+                        fns.insert(name, FnAlias::Loaded(i));
+                    }
+                }
+                for (i, f) in module.ext_prelude.iter().enumerate().rev() {
+                    if &*f.namespace != &use_import.names {continue;}
+                    if &f.name == &use_fn.0 {
+                        fns.insert(use_fn.1.as_ref().unwrap_or(&use_fn.0).clone(),
+                                   FnAlias::External(i));
+                    } else if f.name.len() > use_fn.0.len() &&
+                              f.name.starts_with(&**use_fn.0) &&
+                              f.name.as_bytes()[use_fn.0.len()] == '(' as u8 {
+                        // A function with mutable information.
+                        let mut name: Arc<String> = use_fn.1.as_ref().unwrap_or(&use_fn.0).clone();
+                        Arc::make_mut(&mut name).push_str(&f.name.as_str()[use_fn.0.len()..]);
+                        fns.insert(f.name.clone(), FnAlias::External(i));
                     }
                 }
             }
@@ -109,6 +139,8 @@ impl UseLookup {
         }
     }
 
+    /// This is called from lifetime/type checker.
+    /// Here, external functions are treated as loaded.
     pub fn from_uses_prelude(uses: &Uses, prelude: &Prelude) -> UseLookup {
         let mut aliases = HashMap::new();
         // First, add all glob imports.
@@ -120,7 +152,7 @@ impl UseLookup {
             let fns = aliases.get_mut(&use_import.alias).unwrap();
             for (i, f) in prelude.namespaces.iter().enumerate().rev() {
                 if &*f.0 == &use_import.names {
-                    fns.insert(f.1.clone(), i);
+                    fns.insert(f.1.clone(), FnAlias::Loaded(i));
                 }
             }
         }
@@ -135,14 +167,15 @@ impl UseLookup {
                 for (i, f) in prelude.namespaces.iter().enumerate().rev() {
                     if &*f.0 != &use_import.names {continue;}
                     if &f.1 == &use_fn.0 {
-                        fns.insert(use_fn.1.as_ref().unwrap_or(&use_fn.0).clone(), i);
+                        fns.insert(use_fn.1.as_ref().unwrap_or(&use_fn.0).clone(),
+                                   FnAlias::Loaded(i));
                     } else if f.1.len() > use_fn.0.len() &&
                               f.1.starts_with(&**use_fn.0) &&
                               f.1.as_bytes()[use_fn.0.len()] == '(' as u8 {
                         // A function with mutable information.
                         let mut name: Arc<String> = use_fn.1.as_ref().unwrap_or(&use_fn.0).clone();
                         Arc::make_mut(&mut name).push_str(&f.1.as_str()[use_fn.0.len()..]);
-                        fns.insert(name, i);
+                        fns.insert(name, FnAlias::Loaded(i));
                     }
                 }
             }
@@ -2319,10 +2352,22 @@ impl Call {
         module: &Module,
         use_lookup: &UseLookup,
     ) {
+        use FnExternalRef;
+
         let st = stack.len();
         let f_index = if let Some(ref alias) = self.alias {
             if let Some(&i) = use_lookup.aliases.get(alias).and_then(|map| map.get(&self.name)) {
-                FnIndex::Loaded(i as isize - relative as isize)
+                match i {
+                    FnAlias::Loaded(i) => FnIndex::Loaded(i as isize - relative as isize),
+                    FnAlias::External(i) => {
+                        let ref f = module.ext_prelude[i];
+                        if let Type::Void = f.p.ret {
+                            FnIndex::ExternalVoid(FnExternalRef(f.f))
+                        } else {
+                            FnIndex::ExternalReturn(FnExternalRef(f.f))
+                        }
+                    }
+                }
             } else {
                 FnIndex::None
             }
@@ -3870,9 +3915,21 @@ impl In {
         module: &Module,
         use_lookup: &UseLookup
     ) {
+        use FnExternalRef;
+
         let f_index = if let Some(ref alias) = self.alias {
             if let Some(&i) = use_lookup.aliases.get(alias).and_then(|map| map.get(&self.name)) {
-                FnIndex::Loaded(i as isize - relative as isize)
+                match i {
+                    FnAlias::Loaded(i) => FnIndex::Loaded(i as isize - relative as isize),
+                    FnAlias::External(i) => {
+                        let ref f = module.ext_prelude[i];
+                        if let Type::Void = f.p.ret {
+                            FnIndex::ExternalVoid(FnExternalRef(f.f))
+                        } else {
+                            FnIndex::ExternalReturn(FnExternalRef(f.f))
+                        }
+                    }
+                }
             } else {
                 FnIndex::None
             }
