@@ -128,7 +128,9 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\\"
     .s?.(, [.._seps!:"word" ?w ":" ?w arg_expr:"call_arg" ?w]) ")"]
 44 go = ["go " ?w {call:"call" named_call:"named_call"}]
 45 assign = [lexpr:"left" ?w assign_op ?w expr:"right"]
-46 assign_op = {":=":":=" "=":"=" "+=":"+=" "-=":"-=" "*=":"*=" "/=":"/=" "%=":"%="}
+46 assign_op = {
+  ":=":":=" "=":"=" "+=":"+=" "-=":"-=" "*=":"*=" "/=":"/=" "%=":"%=" "^=":"^="
+}
 47 compare = [lexpr:"left" ?w compare_op ?w expr:"right"]
 48 compare_op = {"==":"==" "!=":"!=" "¬=":"!=" "<=":"<=" "<":"<" ">=":">=" ">":">"}
 49 grab = ["grab" ?[w "'" .$:"grab_level"] w expr:"expr"]
