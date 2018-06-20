@@ -682,6 +682,13 @@ fn check_fn(
                         if nodes[parent].kind == Kind::Left {
                             if let Some(parent) = nodes[parent].parent {
                                 if nodes[parent].kind == Kind::Assign {
+                                    if let Some(ref ret_ty) = nodes[ch].ty {
+                                        if !ty.goes_with(ret_ty) {
+                                            return Err(nodes[ch].source.wrap(
+                                                format!("Type mismatch (#1250):\nExpected `{}`, found `{}`",
+                                                    ty.description(), ret_ty.description())));
+                                        }
+                                    }
                                     *found_return = true;
                                 }
                             }
