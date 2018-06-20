@@ -2,7 +2,7 @@ fn main() {
     println(foo())
 }
 
-fn foo() -> f64 {
+fn foo() -> [f64] {
     return = [0; 3]
     return[0] = 1
     return[1] = 2

@@ -3,5 +3,5 @@ fn main() {
 }
 
 fn foo() -> f64 {
-    return = 2
+    return = ""
 }
