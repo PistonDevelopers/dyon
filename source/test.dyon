@@ -1,11 +1,5 @@
-ns loader
-
 fn main() {
-    math := unwrap(load("source/namespace/math.dyon"))
-    graphics := unwrap(load("source/namespace/graphics.dyon"))
-    main := unwrap(load(
-        source: "source/namespace/main.dyon",
-        imports: [math, graphics]
-    ))
-    call(main, "main", [])
+    x := 3
+    x ^= 2
+    println(x)
 }
