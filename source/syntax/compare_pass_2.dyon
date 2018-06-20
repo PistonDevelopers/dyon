@@ -1,0 +1,7 @@
+fn main() {
+    println(foo(2))
+}
+
+foo(a: f64) = {
+    a < 3
+}

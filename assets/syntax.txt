@@ -38,7 +38,6 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\\"
     closure:"closure"
     object:"object"
     arr
-    ["return" wn expr:"return"]
     for_in:"for_in"
     for_n:"for_n"
     for:"for"
@@ -49,6 +48,7 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\\"
     block:"block"
     assign:"assign"
     compare:"compare"
+    ["return" wn expr:"return"]
     ["return":"return_void"]
     add:"add"
     in_loops
@@ -95,11 +95,11 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\\"
 25 unop_not = [{"!":"!" "¬":"!"} ?w lexpr:"expr"]
 26 unop_neg = ["-":"-" ?w mul_expr:"expr"]
 27 norm = ["|" ?w expr:"expr" ?w "|"]
-28 item = [?"~":"current" ?w .._seps!:"name" ?[?w "?":"try_item"]
+28 item = [?"~":"current" ?w .._seps!:"name" ?[wn "?":"try_item"]
     ?item_extra:"item_extra"]
 29 item_extra = .r!([{
            [?w "[" ?w {.t?:"id" .$_:"id" expr:"id"} ?w "]"]
-           [?w "." ?w .._seps!:"id"]} ?[?w "?":"try_id"]])
+           [?w "." ?w .._seps!:"id"]} ?[wn "?":"try_id"]])
 30 link = ["link" ?w "{" ?w link_body "}"]
 31 link_body = .s?.(?w expr:"link_item")
 // Generate link block for body.
@@ -117,8 +117,8 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\\"
 36 for_n = [label "for" short_body]
 37 for_in = [label "for" in_body]
 38 loop = [label "loop" .w!  block:"block"]
-39 break = ["break" ?w ?["'" .._seps!:"label"]]
-40 continue = ["continue" ?w ?["'" .._seps!:"label"]]
+39 break = ["break" wn ?["'" .._seps!:"label"]]
+40 continue = ["continue" wn ?["'" .._seps!:"label"]]
 41 if = ["if" .w! expr:"cond" ?w block:"true_block"
          .r?([?w "else" w "if" ?w expr:"else_if_cond" ?w block:"else_if_block"])
          ?[?w "else" ?w block:"else_block"]]
@@ -127,11 +127,11 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\\"
 43 named_call = [?[.._seps!:"alias" "::"] .._seps!:"word" wn "(" ?w
     .s?.(, [.._seps!:"word" ?w ":" ?w arg_expr:"call_arg" ?w]) ")"]
 44 go = ["go " ?w {call:"call" named_call:"named_call"}]
-45 assign = [lexpr:"left" ?w assign_op ?w expr:"right"]
+45 assign = [lexpr:"left" wn assign_op ?w expr:"right"]
 46 assign_op = {
   ":=":":=" "=":"=" "+=":"+=" "-=":"-=" "*=":"*=" "/=":"/=" "%=":"%=" "^=":"^="
 }
-47 compare = [lexpr:"left" ?w compare_op ?w expr:"right"]
+47 compare = [lexpr:"left" wn compare_op ?w expr:"right"]
 48 compare_op = {"==":"==" "!=":"!=" "¬=":"!=" "<=":"<=" "<":"<" ">=":">=" ">":">"}
 49 grab = ["grab" ?[w "'" .$:"grab_level"] w expr:"expr"]
 50 try_expr = ["try" w expr:"expr"]
@@ -144,7 +144,7 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\\"
         [!"{" expr:"end"]
     }]) ?w block:"block"]
 62 in_body = [.w! .._seps!:"name" .w! "in" .w! expr:"iter" ?w block:"block"]
-63 try = ?[?w "?":"try"]
+63 try = ?[wn "?":"try"]
 64 , = [?w "," ?w]
 65 arr = {array:"array" array_fill:"array_fill"}
 66 items = {vec4:"vec4" link:"link" grab:"grab" try_expr:"try_expr"
@@ -211,7 +211,7 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\\"
 101 closure_type = ["\\(" ?w .s?.(, type:"cl_arg") ?w ")"
     ?w "->" ?w type:"cl_ret"]
 
-200 + = [?w {"+":"+" "||":"||" "∨":"+" ["or":"+" w]} ?w]
+200 + = [wn {"+":"+" "||":"||" "∨":"+" ["or":"+" w]} ?w]
 201 - = [wn "-":"-" ?w]
 // Allow whitespace before multiplication sign, but no new line.
 // This prevents `x` on a new line from being interpreted as multiplication sign.
@@ -220,9 +220,9 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\\"
     ["x":"x" w] "⨯":"x"
     "*":"*" "&&":"&&" "∧":"*" ["and":"*" w]
 } ?w]
-203 / = [?w "/":"/" ?w]
-204 % = [?w "%":"%" ?w]
-205 pow = [lexpr:"base" ?w "^" ?w lexpr:"exp"]
+203 / = [wn "/":"/" !"/" ?w]
+204 % = [wn "%":"%" ?w]
+205 pow = [lexpr:"base" wn "^" ?w lexpr:"exp"]
 206 mul = .s!({* / %} {unop_neg:"unop" pow:"pow" lexpr:"val"})
 207 mul_expr = {mul:"mul"}
 208 add = .s!({+ -} mul_expr:"expr")

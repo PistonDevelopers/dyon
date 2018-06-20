@@ -3,6 +3,7 @@ fn main() {
     println(foo(a))
 }
 
-fn foo(a: 'return f64) -> f64 {
-    return a-2
+fn foo(a: f64) -> f64 {
+    return a
+        /2
 }

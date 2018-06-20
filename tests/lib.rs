@@ -39,8 +39,13 @@ fn test_syntax() {
     test_src("source/syntax/array.dyon");
     test_src("source/syntax/prop.dyon");
     test_src("source/syntax/for.dyon");
-    test_src("source/syntax/compare.dyon");
-    test_src("source/syntax/add.dyon");
+    test_src("source/syntax/compare_pass_1.dyon");
+    test_src("source/syntax/compare_pass_2.dyon");
+    test_fail_src("source/syntax/compare_fail_1.dyon");
+    test_src("source/syntax/add_pass_1.dyon");
+    test_src("source/syntax/add_pass_2.dyon");
+    test_src("source/syntax/add_pass_3.dyon");
+    test_fail_src("source/syntax/add_fail_1.dyon");
     test_src("source/syntax/mul.dyon");
     test_src("source/syntax/pow.dyon");
     test_src("source/syntax/add_mul.dyon");
@@ -75,6 +80,7 @@ fn test_syntax() {
     test_src("source/syntax/max_min.dyon");
     test_src("source/syntax/return_void.dyon");
     test_src("source/syntax/return_void_2.dyon");
+    test_fail_src("source/syntax/return_void_3.dyon");
     test_src("source/syntax/typeof.dyon");
     test_src("source/syntax/load_module.dyon");
     test_src("source/syntax/println_colon.dyon");
@@ -119,6 +125,14 @@ fn test_syntax() {
     test_src("source/syntax/start_true.dyon");
     test_fail_src("source/syntax/push_ref.dyon");
     test_src("source/syntax/for_in.dyon");
+    test_src("source/syntax/return_arr.dyon");
+    test_src("source/syntax/return_cmp.dyon");
+    test_src("source/syntax/try_pass_1.dyon");
+    test_src("source/syntax/try_pass_2.dyon");
+    test_fail_src("source/syntax/try_fail_1.dyon");
+    test_fail_src("source/syntax/try_fail_2.dyon");
+    test_src("source/syntax/div_pass_1.dyon");
+    test_fail_src("source/syntax/div_fail_1.dyon");
 }
 
 #[test]

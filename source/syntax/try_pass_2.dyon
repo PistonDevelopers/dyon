@@ -1,0 +1,8 @@
+fn main() {
+    a := ok(1)
+    println(foo(a))
+}
+
+fn foo(a: 'return res[f64]) -> f64 {
+    return a?
+}
