@@ -1,0 +1,12 @@
+fn main() {
+    println(foo())
+}
+
+fn foo() -> f64 {
+    return = [0; 3]
+    if return[0] < 0 {
+        return[0] = 1
+        return[1] = 2
+        return[2] = 3
+    }
+}

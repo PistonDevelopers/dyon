@@ -1,0 +1,9 @@
+fn main() {
+    a := 4
+    println(foo(a))
+}
+
+fn foo(a: f64) -> f64 {
+    return a
+        /2
+}
