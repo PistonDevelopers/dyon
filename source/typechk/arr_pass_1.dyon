@@ -4,6 +4,5 @@ fn main() {
 }
 
 fn foo(a: 'return [f64]) -> f64 {
-    return a
-    [0]
+    return a[0]
 }

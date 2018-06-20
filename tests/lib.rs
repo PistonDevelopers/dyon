@@ -163,7 +163,9 @@ fn test_typechk() {
     test_fail_src("source/typechk/call.dyon");
     test_fail_src("source/typechk/call_2.dyon");
     test_src("source/typechk/call_4.dyon");
-    test_src("source/typechk/obj.dyon");
+    test_src("source/typechk/obj_pass_1.dyon");
+    test_src("source/typechk/arr_pass_1.dyon");
+    test_fail_src("source/typechk/arr_fail_1.dyon");
     test_fail_src("source/typechk/go.dyon");
     test_fail_src("source/typechk/unused_result.dyon");
     test_fail_src("source/typechk/unused_result_2.dyon");

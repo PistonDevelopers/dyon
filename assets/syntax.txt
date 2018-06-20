@@ -98,8 +98,9 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\\"
 28 item = [?"~":"current" ?w .._seps!:"name" ?[wn "?":"try_item"]
     ?item_extra:"item_extra"]
 29 item_extra = .r!([{
-           [?w "[" ?w {.t?:"id" .$_:"id" expr:"id"} ?w "]"]
-           [?w "." ?w .._seps!:"id"]} ?[wn "?":"try_id"]])
+  [wn "[" ?w {.t?:"id" .$_:"id" expr:"id"} ?w "]"]
+  [?w "." ?w .._seps!:"id"]
+} ?[wn "?":"try_id"]])
 30 link = ["link" ?w "{" ?w link_body "}"]
 31 link_body = .s?.(?w expr:"link_item")
 // Generate link block for body.
