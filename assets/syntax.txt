@@ -118,8 +118,8 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\\"
 36 for_n = [label "for" short_body]
 37 for_in = [label "for" in_body]
 38 loop = [label "loop" .w!  block:"block"]
-39 break = ["break" wn ?["'" .._seps!:"label"]]
-40 continue = ["continue" wn ?["'" .._seps!:"label"]]
+39 break = ["break" !.._seps! wn ?["'" .._seps!:"label"]]
+40 continue = ["continue" !.._seps! wn ?["'" .._seps!:"label"]]
 41 if = ["if" .w! expr:"cond" ?w block:"true_block"
          .r?([?w "else" w "if" ?w expr:"else_if_cond" ?w block:"else_if_block"])
          ?[?w "else" ?w block:"else_block"]]

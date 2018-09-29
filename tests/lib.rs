@@ -133,6 +133,7 @@ fn test_syntax() {
     test_fail_src("source/syntax/try_fail_2.dyon");
     test_src("source/syntax/div_pass_1.dyon");
     test_fail_src("source/syntax/div_fail_1.dyon");
+    test_src("source/syntax/continue_call.dyon");
 }
 
 #[test]
