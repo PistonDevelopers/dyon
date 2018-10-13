@@ -1706,6 +1706,9 @@ impl Add {
             } else if let Ok((range, _)) = convert.meta_bool("||") {
                 convert.update(range);
                 ops.push(BinOp::OrElse);
+            } else if let Ok((range, _)) = convert.meta_bool("⊻") {
+                convert.update(range);
+                ops.push(BinOp::Pow);
             } else {
                 let range = convert.ignore();
                 convert.update(range);
@@ -1927,6 +1930,7 @@ impl BinOp {
     }
 
     /// Returns the operator precedence level.
+    /// Used to put parentheses in right places when printing out closures.
     pub fn precedence(self) -> u8 {
         match self {
             BinOp::OrElse | BinOp::AndAlso => 0,
