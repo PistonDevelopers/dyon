@@ -1,8 +1,7 @@
 fn main() {
-    loop {
-        continue_loop()
-        break
-    }
+    f := \(a: bool, b: bool, c: bool) = a ∨ b ⊻ c
+    g := \(a: bool, b: bool, c: bool) = b ⊻ c ∨ a
+    println(f)
+    bs := [false, true]
+    println(all i, j, k {\f(bs[i], bs[j], bs[k]) == \g(bs[i], bs[j], bs[k])})
 }
-
-fn continue_loop() {}
