@@ -818,7 +818,7 @@ pub fn pxl__image_pos_color(rt: &mut Runtime) -> Result<(), String> {
 
 #[allow(non_snake_case)]
 pub fn pxl__image_pos(rt: &mut Runtime) -> Result<(), String> {
-    use image::{GenericImage, RgbaImage};
+    use image::{GenericImageView, RgbaImage};
 
     let images = unsafe { &*Current::<Vec<RgbaImage>>::new() };
     let pos: [f64; 2] = rt.pop_vec4()?;
