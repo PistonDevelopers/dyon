@@ -255,6 +255,14 @@ impl Runtime {
         }
     }
 
+    pub fn pop_mat4<T: embed::ConvertMat4>(&mut self) -> Result<T, String> {
+        let v = self.stack.pop().unwrap_or_else(|| panic!(TINVOTS));
+        match self.resolve(&v) {
+            &Variable::Mat4(ref val) => Ok(T::from(**val)),
+            x => Err(self.expected(x, "mat4"))
+        }
+    }
+
     pub fn var<T: embed::PopVariable>(&self, var: &Variable) -> Result<T, String> {
         T::pop_var(self, self.resolve(&var))
     }
@@ -266,6 +274,13 @@ impl Runtime {
         }
     }
 
+    pub fn var_mat4<T: embed::ConvertMat4>(&self, var: &Variable) -> Result<T, String> {
+        match self.resolve(&var) {
+            &Variable::Mat4(ref val) => Ok(T::from(**val)),
+            x => Err(self.expected(x, "mat4"))
+        }
+    }
+
     /// Push value to stack.
     pub fn push<T: embed::PushVariable>(&mut self, val: T) {
         self.stack.push(val.push_var())
@@ -274,6 +289,11 @@ impl Runtime {
     /// Push Vec4 to stack.
     pub fn push_vec4<T: embed::ConvertVec4>(&mut self, val: T) {
         self.stack.push(Variable::Vec4(val.to()))
+    }
+
+    /// Push Mat4 to stack.
+    pub fn push_mat4<T: embed::ConvertMat4>(&mut self, val: T) {
+        self.stack.push(Variable::Mat4(Box::new(val.to())))
     }
 
     /// Pushes Rust object to stack.

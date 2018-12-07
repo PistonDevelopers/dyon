@@ -28,6 +28,7 @@ pub mod ty;
 pub mod link;
 pub mod macros;
 pub mod vec4;
+pub mod mat4;
 pub mod write;
 
 mod grab;
@@ -38,6 +39,7 @@ pub use prelude::{Lt, Prelude, Dfn};
 pub use ty::Type;
 pub use link::Link;
 pub use vec4::Vec4;
+pub use mat4::Mat4;
 
 /// A common error message when there is no value on the stack.
 pub const TINVOTS: &'static str = "There is no value on the stack";

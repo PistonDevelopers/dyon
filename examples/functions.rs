@@ -2,7 +2,7 @@
 extern crate dyon;
 
 use std::sync::Arc;
-use dyon::{RustObject, Vec4};
+use dyon::{RustObject, Vec4, Mat4};
 
 fn main() {
     use dyon::{error, Runtime};
@@ -43,6 +43,11 @@ fn load_module() -> Option<dyon::Module> {
         lts: vec![],
         tys: vec![],
         ret: Type::Object,
+    });
+    module.add(Arc::new("id".into()), id, Dfn {
+        lts: vec![],
+        tys: vec![],
+        ret: Type::Mat4,
     });
 
     // Register custom Rust object with an ad-hoc type.
@@ -119,4 +124,13 @@ dyon_fn!{fn print_custom_object(obj: RustObject) {
     let a_guard = obj.lock().unwrap();
     let a = a_guard.downcast_ref::<i32>().unwrap();
     println!("Custom value is {}", a);
+}}
+
+dyon_fn!{fn id() -> Mat4 {
+    [
+        [1.0, 0.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0, 0.0],
+        [0.0, 0.0, 1.0, 0.0],
+        [0.0, 0.0, 0.0, 1.0]
+    ].into()
 }}
