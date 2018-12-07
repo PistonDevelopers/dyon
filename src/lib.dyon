@@ -289,6 +289,10 @@ fn rot__axis_angle(axis: vec4, angle: f64) -> mat4 { ... }
 /// and rotating around the z axis.
 fn dir__angle(angle: f64) -> vec4 { ... }
 
+/// Returns the number of radians in a circle.
+/// Use this instead of pi.
+fn tau() -> f64 { ... }
+
 /// Loads meta data from a file, using a meta syntax to parse the document.
 /// The meta language used is [Piston-Meta](https://github.com/PistonDevelopers/meta).
 ///

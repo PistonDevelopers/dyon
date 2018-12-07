@@ -123,6 +123,7 @@ const DET: usize = 110;
 const INV: usize = 111;
 const MOV: usize = 112;
 const ROT__AXIS_ANGLE: usize = 113;
+const TAU: usize = 114;
 
 const TABLE: &'static [(usize, fn(
         &mut Runtime,
@@ -244,6 +245,7 @@ const TABLE: &'static [(usize, fn(
     (INV, inv),
     (MOV, mov),
     (ROT__AXIS_ANGLE, rot__axis_angle),
+    (TAU, tau),
 ];
 
 pub fn standard(f: &mut Prelude) {
@@ -531,6 +533,11 @@ pub fn standard(f: &mut Prelude) {
         lts: vec![Lt::Default; 2],
         tys: vec![Type::Vec4, Type::F64],
         ret: Type::Mat4
+    });
+    f.intrinsic(Arc::new("tau".into()), TAU, Dfn {
+        lts: vec![],
+        tys: vec![],
+        ret: Type::F64
     });
 }
 

@@ -3,5 +3,3 @@ fn main() {
     println(rot(axis: (0, 1, 0), angle: tau() / 2))
     println(rot(axis: (1, 0, 0), angle: tau() / 2))
 }
-
-tau() = 6.283185307179586

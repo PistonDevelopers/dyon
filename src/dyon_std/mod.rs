@@ -720,6 +720,14 @@ pub(crate) fn random(
     Ok(Some(Variable::f64(rt.rng.gen())))
 }
 
+pub(crate) fn tau(
+    _rt: &mut Runtime,
+    _call: &ast::Call,
+    _module: &Arc<Module>,
+) -> Result<Option<Variable>, String> {
+    Ok(Some(Variable::f64(6.283185307179586)))
+}
+
 pub(crate) fn len(
     rt: &mut Runtime,
     call: &ast::Call,
