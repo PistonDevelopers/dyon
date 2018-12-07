@@ -271,6 +271,9 @@ fn cz(m: mat4) -> vec4 { ... }
 /// Returns column vector (transposed basis vector) of 4D matrix by index.
 fn cv(m: mat4) -> vec4 { ... }
 
+/// Returns determinant of 4D matrix.
+fn det(m: mat4) -> f64 { ... }
+
 /// Returns 4D vector with length 1,
 /// pointing in the direction when starting at `(1, 0)`
 /// and rotating around the z axis.

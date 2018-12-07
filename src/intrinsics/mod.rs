@@ -119,6 +119,7 @@ const CY: usize = 106;
 const CZ: usize = 107;
 const CW: usize = 108;
 const CV: usize = 109;
+const DET: usize = 110;
 
 const TABLE: &'static [(usize, fn(
         &mut Runtime,
@@ -236,6 +237,7 @@ const TABLE: &'static [(usize, fn(
     (CZ, cz),
     (CW, cw),
     (CV, cv),
+    (DET, det),
 ];
 
 pub fn standard(f: &mut Prelude) {
@@ -516,6 +518,7 @@ pub fn standard(f: &mut Prelude) {
         tys: vec![Type::Mat4, Type::F64],
         ret: Type::Vec4
     });
+    sarg(f, "det", DET, Type::Mat4, Type::F64);
 }
 
 pub fn call_standard(

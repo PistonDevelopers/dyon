@@ -95,6 +95,21 @@ pub(crate) fn s(
     Ok(Some(Variable::f64(s)))
 }
 
+pub(crate) fn det(
+    rt: &mut Runtime,
+    call: &ast::Call,
+    module: &Arc<Module>,
+) -> Result<Option<Variable>, String> {
+    use vecmath::mat4_det;
+
+    let v = rt.stack.pop().expect(TINVOTS);
+    Ok(Some(match rt.resolve(&v) {
+        &Variable::Mat4(ref m) => Variable::f64(mat4_det(**m) as f64),
+        x => return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(x, "mat4"), rt))
+    }))
+}
+
 pub(crate) fn rx(
     rt: &mut Runtime,
     call: &ast::Call,

@@ -8,6 +8,7 @@ extern crate read_token;
 extern crate reqwest;
 #[macro_use]
 extern crate lazy_static;
+extern crate vecmath;
 
 use std::any::Any;
 use std::fmt;

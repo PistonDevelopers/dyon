@@ -1,10 +1,9 @@
 fn main() {
-    a := mat4 {
+    println(det(mat4 {1,;}))
+    println(det(mat4 {
         1, 0, 0, 0;
-        2, 0, 0, 0;
-        3, 0, 0, 0;
-        4, 0, 0, 0;
-    }
-    b := mat4 {wzyx a;} // Do not allow vector swizzling.
-    println(b)
+        0, 2, 1, 0;
+        0, 1, 1, 0;
+        0, 0, 0, 1;
+    }))
 }
