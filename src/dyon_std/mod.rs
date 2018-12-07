@@ -143,6 +143,51 @@ pub(crate) fn mov(
     }))
 }
 
+pub(crate) fn rot__axis_angle(
+    rt: &mut Runtime,
+    call: &ast::Call,
+    module: &Arc<Module>,
+) -> Result<Option<Variable>, String> {
+    let ang = rt.stack.pop().expect(TINVOTS);
+    let ang = match rt.resolve(&ang) {
+        &Variable::F64(val, _) => val,
+        x => return Err(module.error(call.args[1].source_range(),
+                        &rt.expected(x, "f64"), rt))
+    };
+    let v = rt.stack.pop().expect(TINVOTS);
+    Ok(Some(match rt.resolve(&v) {
+        &Variable::Vec4(axis) => Variable::Mat4(Box::new({
+                let axis = [axis[0] as f64, axis[1] as f64, axis[2] as f64];
+                let cos = ang.cos();
+                let sin = ang.sin();
+                let inv_cos = 1.0 - cos;
+                [
+                    [
+                        (cos + axis[0] * axis[0] * inv_cos) as f32,
+                        (axis[0] * axis[1] * inv_cos - axis[2] * sin) as f32,
+                        (axis[0] * axis[2] * inv_cos + axis[1] * sin) as f32,
+                        0.0
+                    ],
+                    [
+                        (axis[1] * axis[0] * inv_cos + axis[2] * sin) as f32,
+                        (cos + axis[1] * axis[1] * inv_cos) as f32,
+                        (axis[1] * axis[2] * inv_cos - axis[0] * sin) as f32,
+                        0.0
+                    ],
+                    [
+                        (axis[2] * axis[0] * inv_cos - axis[1] * sin) as f32,
+                        (axis[2] * axis[1] * inv_cos + axis[0] * sin) as f32,
+                        (cos + axis[2] * axis[2] * inv_cos) as f32,
+                        0.0
+                    ],
+                    [0.0,0.0,0.0,1.0]
+                ]
+            })),
+        x => return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(x, "vec4"), rt))
+    }))
+}
+
 pub(crate) fn rx(
     rt: &mut Runtime,
     call: &ast::Call,

@@ -122,6 +122,7 @@ const CV: usize = 109;
 const DET: usize = 110;
 const INV: usize = 111;
 const MOV: usize = 112;
+const ROT__AXIS_ANGLE: usize = 113;
 
 const TABLE: &'static [(usize, fn(
         &mut Runtime,
@@ -242,6 +243,7 @@ const TABLE: &'static [(usize, fn(
     (DET, det),
     (INV, inv),
     (MOV, mov),
+    (ROT__AXIS_ANGLE, rot__axis_angle),
 ];
 
 pub fn standard(f: &mut Prelude) {
@@ -525,6 +527,11 @@ pub fn standard(f: &mut Prelude) {
     sarg(f, "det", DET, Type::Mat4, Type::F64);
     sarg(f, "inv", INV, Type::Mat4, Type::Mat4);
     sarg(f, "mov", MOV, Type::Vec4, Type::Mat4);
+    f.intrinsic(Arc::new("rot__axis_angle".into()), ROT__AXIS_ANGLE, Dfn {
+        lts: vec![Lt::Default; 2],
+        tys: vec![Type::Vec4, Type::F64],
+        ret: Type::Mat4
+    });
 }
 
 pub fn call_standard(
