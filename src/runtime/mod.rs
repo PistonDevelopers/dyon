@@ -1223,13 +1223,13 @@ impl Runtime {
             }
             &Variable::Mat4(ref v) => {
                 (
-                    Variable::Vec4(v[sw.sw0]),
-                    Variable::Vec4(v[sw.sw1]),
+                    Variable::Vec4([v[0][sw.sw0], v[1][sw.sw0], v[2][sw.sw0], v[3][sw.sw0]]),
+                    Variable::Vec4([v[0][sw.sw1], v[1][sw.sw1], v[2][sw.sw1], v[3][sw.sw1]]),
                     if let Some(ind) = sw.sw2 {
-                        Some(Variable::Vec4(v[ind]))
+                        Some(Variable::Vec4([v[0][ind], v[1][ind], v[2][ind], v[3][ind]]))
                     } else {None},
                     if let Some(ind) = sw.sw3 {
-                        Some(Variable::Vec4(v[ind]))
+                        Some(Variable::Vec4([v[0][ind], v[1][ind], v[2][ind], v[3][ind]]))
                     } else {None},
                 )
             }
