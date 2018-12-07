@@ -867,6 +867,7 @@ pub enum Expression {
     BinOp(Box<BinOpExpression>),
     Assign(Box<Assign>),
     Vec4(Vec4),
+    Mat4(Mat4),
     For(Box<For>),
     ForN(Box<ForN>),
     ForIn(Box<ForIn>),
@@ -997,6 +998,10 @@ impl Expression {
                     file, source, convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::Vec4(val));
+            } else if let Ok((range, val)) = Mat4::from_meta_data(
+                    file, source, convert, ignored) {
+                convert.update(range);
+                result = Some(Expression::Mat4(val));
             } else if let Ok((range, val)) = Vec4UnLoop::from_meta_data(
                     file, source, convert, ignored) {
                 convert.update(range);
@@ -1208,6 +1213,7 @@ impl Expression {
             BinOp(ref binop) => binop.source_range,
             Assign(ref assign) => assign.source_range,
             Vec4(ref vec4) => vec4.source_range,
+            Mat4(ref mat4) => mat4.source_range,
             For(ref for_expr) => for_expr.source_range,
             ForN(ref for_n_expr) => for_n_expr.source_range,
             ForIn(ref for_in_expr) => for_in_expr.source_range,
@@ -1285,6 +1291,8 @@ impl Expression {
                 assign.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             Vec4(ref vec4) =>
                 vec4.resolve_locals(relative, stack, closure_stack, module, use_lookup),
+            Mat4(ref mat4) =>
+                mat4.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             For(ref for_expr) =>
                 for_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             ForN(ref for_n_expr) =>
@@ -2884,6 +2892,93 @@ impl AssignOp {
             Rem => "%=",
             Pow => "^=",
         }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Mat4 {
+    pub args: Vec<Expression>,
+    pub source_range: Range,
+}
+
+impl Mat4 {
+    pub fn from_meta_data(
+        file: &Arc<String>,
+        source: &Arc<String>,
+        mut convert: Convert,
+        ignored: &mut Vec<Range>)
+    -> Result<(Range, Mat4), ()> {
+        let start = convert.clone();
+        let node = "mat4";
+        let start_range = try!(convert.start_node(node));
+        convert.update(start_range);
+
+        let mut x: Option<Expression> = None;
+        let mut y: Option<Expression> = None;
+        let mut z: Option<Expression> = None;
+        let mut w: Option<Expression> = None;
+        loop {
+            if let Ok(range) = convert.end_node(node) {
+                convert.update(range);
+                break;
+            } else if let Ok((range, val)) = Expression::from_meta_data(
+                file, source, "ex", convert, ignored) {
+                convert.update(range);
+                x = Some(val);
+            } else if let Ok((range, val)) = Expression::from_meta_data(
+                file, source, "ey", convert, ignored) {
+                convert.update(range);
+                y = Some(val);
+            } else if let Ok((range, val)) = Expression::from_meta_data(
+                file, source, "ez", convert, ignored) {
+                convert.update(range);
+                z = Some(val);
+            } else if let Ok((range, val)) = Expression::from_meta_data(
+                file, source, "ew", convert, ignored) {
+                convert.update(range);
+                w = Some(val);
+            } else {
+                let range = convert.ignore();
+                convert.update(range);
+                ignored.push(range);
+            }
+        }
+
+        let x = try!(x.ok_or(()));
+        let y = y.unwrap_or(Expression::Variable(Range::empty(0), Variable::Vec4([0.0, 1.0, 0.0, 0.0])));
+        let z = z.unwrap_or(Expression::Variable(Range::empty(0), Variable::Vec4([0.0, 0.0, 1.0, 0.0])));
+        let w = w.unwrap_or(Expression::Variable(Range::empty(0), Variable::Vec4([0.0, 0.0, 0.0, 1.0])));
+        Ok((convert.subtract(start), Mat4 {
+            args: vec![x, y, z, w],
+            source_range: convert.source(start).unwrap(),
+        }))
+    }
+
+    pub fn resolve_locals(
+        &self,
+        relative: usize,
+        stack: &mut Vec<Option<Arc<String>>>,
+        closure_stack: &mut Vec<usize>,
+        module: &Module,
+        use_lookup: &UseLookup,
+    ) {
+        let st = stack.len();
+        for arg in &self.args {
+            let arg_st = stack.len();
+            arg.resolve_locals(relative, stack, closure_stack, module, use_lookup);
+            stack.truncate(arg_st);
+            match *arg {
+                Expression::Swizzle(ref swizzle) => {
+                    for _ in 0..swizzle.len() {
+                        stack.push(None);
+                    }
+                }
+                _ => {
+                    stack.push(None);
+                }
+            }
+        }
+        stack.truncate(st);
     }
 }
 

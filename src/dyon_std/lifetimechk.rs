@@ -60,6 +60,7 @@ fn min_ref(v: &Variable, min: &mut Option<usize>) {
         &Variable::Bool(_, _) => {}
         &Variable::F64(_, _) => {}
         &Variable::Vec4(_) => {}
+        &Variable::Mat4(_) => {}
         &Variable::Text(_) => {}
         &Variable::Link(_) => {}
         &Variable::UnsafeRef(_) => {}

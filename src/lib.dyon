@@ -244,6 +244,33 @@ fn w(v: vec4) -> f64 { ... }
 /// Returns component scalar of 4D vector by index.
 fn s(v: vec4, ind: f64) -> f64 { ... }
 
+/// Returns row vector x (basis vector) of 4D matrix.
+fn rx(m: mat4) -> vec4 { ... }
+
+/// Returns row vector y (basis vector) of 4D matrix.
+fn ry(m: mat4) -> vec4 { ... }
+
+/// Returns row vector z (basis vector) of 4D matrix.
+fn rz(m: mat4) -> vec4 { ... }
+
+/// Returns row vector w (basis vector) of 4D matrix.
+fn rw(m: mat4) -> vec4 { ... }
+
+/// Returns row vector (basis vector) of 4D matrix by index.
+fn rv(m: mat4, ind: f64) -> vec4 { ... }
+
+/// Returns column vector x (transposed basis vector) of 4D matrix.
+fn cx(m: mat4) -> vec4 { ... }
+
+/// Returns column vector y (transposed basis vector) of 4D matrix.
+fn cy(m: mat4) -> vec4 { ... }
+
+/// Returns column vector z (transposed basis vector) of 4D matrix.
+fn cz(m: mat4) -> vec4 { ... }
+
+/// Returns column vector (transposed basis vector) of 4D matrix by index.
+fn cv(m: mat4) -> vec4 { ... }
+
 /// Returns 4D vector with length 1,
 /// pointing in the direction when starting at `(1, 0)`
 /// and rotating around the z axis.

@@ -95,6 +95,160 @@ pub(crate) fn s(
     Ok(Some(Variable::f64(s)))
 }
 
+pub(crate) fn rx(
+    rt: &mut Runtime,
+    call: &ast::Call,
+    module: &Arc<Module>,
+) -> Result<Option<Variable>, String> {
+    let v = rt.stack.pop().expect(TINVOTS);
+    Ok(Some(match rt.resolve(&v) {
+        &Variable::Mat4(ref m) => Variable::Vec4([m[0][0], m[1][0], m[2][0], m[3][0]]),
+        x => return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(x, "mat4"), rt))
+    }))
+}
+
+pub(crate) fn ry(
+    rt: &mut Runtime,
+    call: &ast::Call,
+    module: &Arc<Module>,
+) -> Result<Option<Variable>, String> {
+    let v = rt.stack.pop().expect(TINVOTS);
+    Ok(Some(match rt.resolve(&v) {
+        &Variable::Mat4(ref m) => Variable::Vec4([m[0][1], m[1][1], m[2][1], m[3][1]]),
+        x => return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(x, "mat4"), rt))
+    }))
+}
+
+pub(crate) fn rz(
+    rt: &mut Runtime,
+    call: &ast::Call,
+    module: &Arc<Module>,
+) -> Result<Option<Variable>, String> {
+    let v = rt.stack.pop().expect(TINVOTS);
+    Ok(Some(match rt.resolve(&v) {
+        &Variable::Mat4(ref m) => Variable::Vec4([m[0][2], m[1][2], m[2][2], m[3][2]]),
+        x => return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(x, "mat4"), rt))
+    }))
+}
+
+pub(crate) fn rw(
+    rt: &mut Runtime,
+    call: &ast::Call,
+    module: &Arc<Module>,
+) -> Result<Option<Variable>, String> {
+    let v = rt.stack.pop().expect(TINVOTS);
+    Ok(Some(match rt.resolve(&v) {
+        &Variable::Mat4(ref m) => Variable::Vec4([m[0][3], m[1][3], m[2][3], m[3][3]]),
+        x => return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(x, "mat4"), rt))
+    }))
+}
+
+pub(crate) fn rv(
+    rt: &mut Runtime,
+    call: &ast::Call,
+    module: &Arc<Module>,
+) -> Result<Option<Variable>, String> {
+    let ind = rt.stack.pop().expect(TINVOTS);
+    let ind = match rt.resolve(&ind) {
+        &Variable::F64(val, _) => val,
+        x => return Err(module.error(call.args[1].source_range(),
+                        &rt.expected(x, "number"), rt))
+    } as usize;
+    if ind >= 4 {
+        return Err(module.error(call.source_range,
+            &format!("{}\nIndex out of bounds `{}`",
+                rt.stack_trace(), ind), rt))
+    }
+    let m = rt.stack.pop().expect(TINVOTS);
+    let v = match rt.resolve(&m) {
+        &Variable::Mat4(ref m) => [m[0][ind], m[1][ind], m[2][ind], m[3][ind]],
+        x => return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(x, "mat4"), rt))
+    };
+    Ok(Some(Variable::Vec4(v)))
+}
+
+pub(crate) fn cx(
+    rt: &mut Runtime,
+    call: &ast::Call,
+    module: &Arc<Module>,
+) -> Result<Option<Variable>, String> {
+    let v = rt.stack.pop().expect(TINVOTS);
+    Ok(Some(match rt.resolve(&v) {
+        &Variable::Mat4(ref m) => Variable::Vec4(m[0]),
+        x => return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(x, "mat4"), rt))
+    }))
+}
+
+pub(crate) fn cy(
+    rt: &mut Runtime,
+    call: &ast::Call,
+    module: &Arc<Module>,
+) -> Result<Option<Variable>, String> {
+    let v = rt.stack.pop().expect(TINVOTS);
+    Ok(Some(match rt.resolve(&v) {
+        &Variable::Mat4(ref m) => Variable::Vec4(m[1]),
+        x => return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(x, "mat4"), rt))
+    }))
+}
+
+pub(crate) fn cz(
+    rt: &mut Runtime,
+    call: &ast::Call,
+    module: &Arc<Module>,
+) -> Result<Option<Variable>, String> {
+    let v = rt.stack.pop().expect(TINVOTS);
+    Ok(Some(match rt.resolve(&v) {
+        &Variable::Mat4(ref m) => Variable::Vec4(m[2]),
+        x => return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(x, "mat4"), rt))
+    }))
+}
+
+pub(crate) fn cw(
+    rt: &mut Runtime,
+    call: &ast::Call,
+    module: &Arc<Module>,
+) -> Result<Option<Variable>, String> {
+    let v = rt.stack.pop().expect(TINVOTS);
+    Ok(Some(match rt.resolve(&v) {
+        &Variable::Mat4(ref m) => Variable::Vec4(m[3]),
+        x => return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(x, "mat4"), rt))
+    }))
+}
+
+pub(crate) fn cv(
+    rt: &mut Runtime,
+    call: &ast::Call,
+    module: &Arc<Module>,
+) -> Result<Option<Variable>, String> {
+    let ind = rt.stack.pop().expect(TINVOTS);
+    let ind = match rt.resolve(&ind) {
+        &Variable::F64(val, _) => val,
+        x => return Err(module.error(call.args[1].source_range(),
+                        &rt.expected(x, "number"), rt))
+    } as usize;
+    if ind >= 4 {
+        return Err(module.error(call.source_range,
+            &format!("{}\nIndex out of bounds `{}`",
+                rt.stack_trace(), ind), rt))
+    }
+    let m = rt.stack.pop().expect(TINVOTS);
+    let v = match rt.resolve(&m) {
+        &Variable::Mat4(ref m) => m[ind],
+        x => return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(x, "mat4"), rt))
+    };
+    Ok(Some(Variable::Vec4(v)))
+}
+
 pub(crate) fn clone(
     rt: &mut Runtime,
     _call: &ast::Call,
@@ -1048,6 +1202,7 @@ pub(crate) fn _typeof(
         &Variable::Text(_) => rt.text_type.clone(),
         &Variable::F64(_, _) => rt.f64_type.clone(),
         &Variable::Vec4(_) => rt.vec4_type.clone(),
+        &Variable::Mat4(_) => rt.mat4_type.clone(),
         &Variable::Return => rt.return_type.clone(),
         &Variable::Bool(_, _) => rt.bool_type.clone(),
         &Variable::Object(_) => rt.object_type.clone(),

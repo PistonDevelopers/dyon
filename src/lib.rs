@@ -126,6 +126,7 @@ pub enum Variable {
     Bool(bool, Option<Box<Vec<Variable>>>),
     F64(f64, Option<Box<Vec<Variable>>>),
     Vec4([f32; 4]),
+    Mat4(Box<[[f32; 4]; 4]>),
     Text(Arc<String>),
     Array(Array),
     Object(Object),
@@ -160,6 +161,7 @@ impl Variable {
         match *self {
             F64(_, _) => self.clone(),
             Vec4(_) => self.clone(),
+            Mat4(_) => self.clone(),
             Return => self.clone(),
             Bool(_, _) => self.clone(),
             Text(_) => self.clone(),

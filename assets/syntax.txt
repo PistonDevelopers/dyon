@@ -90,53 +90,58 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\\"
 21 vec4 = ["(" ?w arg_expr:"x" , ?arg_expr:"y"
            ?[, arg_expr:"z" ?[, arg_expr:"w"]] ?, ?w ")"]
 22 color = ["#" .._seps!:"color"]
-23 text = .t?:"text"
-24 bool = [{"true":"bool" "false":!"bool"} !.._seps!]
-25 unop_not = [{"!":"!" "¬":"!"} ?w lexpr:"expr"]
-26 unop_neg = ["-":"-" ?w mul_expr:"expr"]
-27 norm = ["|" ?w expr:"expr" ?w "|"]
-28 item = [?"~":"current" ?w .._seps!:"name" ?[wn "?":"try_item"]
+23 mat4 = ["mat4" .w! "{" ?w mat4_item:"ex" ?w ";" ?w ?mat4_item:"ey"
+           ?[?w ";" ?w mat4_item:"ez" ?[?w ";" ?w ?w mat4_item:"ew"]] ?[?w ";"] ?w "}"]
+24 mat4_item = {mat4_row:"vec4" arg_expr}
+25 mat4_row = [arg_expr:"x" , ?arg_expr:"y"
+               ?[, arg_expr:"z" ?[, arg_expr:"w"]] ?,]
+26 text = .t?:"text"
+27 bool = [{"true":"bool" "false":!"bool"} !.._seps!]
+28 unop_not = [{"!":"!" "¬":"!"} ?w lexpr:"expr"]
+29 unop_neg = ["-":"-" ?w mul_expr:"expr"]
+30 norm = ["|" ?w expr:"expr" ?w "|"]
+31 item = [?"~":"current" ?w .._seps!:"name" ?[wn "?":"try_item"]
     ?item_extra:"item_extra"]
-29 item_extra = .r!([{
+32 item_extra = .r!([{
   [wn "[" ?w {.t?:"id" .$_:"id" expr:"id"} ?w "]"]
   [?w "." ?w .._seps!:"id"]
 } ?[wn "?":"try_id"]])
-30 link = ["link" ?w "{" ?w link_body "}"]
-31 link_body = .s?.(?w expr:"link_item")
+33 link = ["link" ?w "{" ?w link_body "}"]
+34 link_body = .s?.(?w expr:"link_item")
 // Generate link block for body.
-32 link_for = [label "link" .w! .s!.(, [.._seps!:"name" ?w
+35 link_for = [label "link" .w! .s!.(, [.._seps!:"name" ?w
     ?{
         ["[" ?w expr:"start" , expr:"end" ?w ")"]
         [!"{" expr:"end"]
     }]) ?w "{" ?w link_body_block:"block" "}"]
-33 link_body_block = link_body_expr:"expr"
-34 link_body_expr = link_body:"link"
-35 for = [label "for" .w!
+36 link_body_block = link_body_expr:"expr"
+37 link_body_expr = link_body:"link"
+38 for = [label "for" .w!
     expr:"init" ?w ";" ?w
     expr:"cond" ?w ";" ?w
     expr:"step" ?w block:"block"]
-36 for_n = [label "for" short_body]
-37 for_in = [label "for" in_body]
-38 loop = [label "loop" .w!  block:"block"]
-39 break = ["break" !.._seps! wn ?["'" .._seps!:"label"]]
-40 continue = ["continue" !.._seps! wn ?["'" .._seps!:"label"]]
-41 if = ["if" .w! expr:"cond" ?w block:"true_block"
+39 for_n = [label "for" short_body]
+40 for_in = [label "for" in_body]
+41 loop = [label "loop" .w!  block:"block"]
+42 break = ["break" !.._seps! wn ?["'" .._seps!:"label"]]
+43 continue = ["continue" !.._seps! wn ?["'" .._seps!:"label"]]
+44 if = ["if" .w! expr:"cond" ?w block:"true_block"
          .r?([?w "else" w "if" ?w expr:"else_if_cond" ?w block:"else_if_block"])
          ?[?w "else" ?w block:"else_block"]]
-42 call = [?[.._seps!:"alias" "::"] .._seps!:"name" wn "(" ?w
+45 call = [?[.._seps!:"alias" "::"] .._seps!:"name" wn "(" ?w
     .s?.(, arg_expr:"call_arg") ?w ")"]
-43 named_call = [?[.._seps!:"alias" "::"] .._seps!:"word" wn "(" ?w
+46 named_call = [?[.._seps!:"alias" "::"] .._seps!:"word" wn "(" ?w
     .s?.(, [.._seps!:"word" ?w ":" ?w arg_expr:"call_arg" ?w]) ")"]
-44 go = ["go " ?w {call:"call" named_call:"named_call"}]
-45 assign = [lexpr:"left" wn assign_op ?w expr:"right"]
-46 assign_op = {
+47 go = ["go " ?w {call:"call" named_call:"named_call"}]
+48 assign = [lexpr:"left" wn assign_op ?w expr:"right"]
+49 assign_op = {
   ":=":":=" "=":"=" "+=":"+=" "-=":"-=" "*=":"*=" "/=":"/=" "%=":"%=" "^=":"^="
 }
-47 compare = [lexpr:"left" wn compare_op ?w expr:"right"]
-48 compare_op = {"==":"==" "!=":"!=" "¬=":"!=" "<=":"<=" "<":"<" ">=":">=" ">":">"}
-49 grab = ["grab" ?[w "'" .$:"grab_level"] w expr:"expr"]
-50 try_expr = ["try" w expr:"expr"]
-51 in = ["in" w ?[.._seps!:"alias" "::"] .._seps!:"name"]
+50 compare = [lexpr:"left" wn compare_op ?w expr:"right"]
+51 compare_op = {"==":"==" "!=":"!=" "¬=":"!=" "<=":"<=" "<":"<" ">=":">=" ">":">"}
+52 grab = ["grab" ?[w "'" .$:"grab_level"] w expr:"expr"]
+53 try_expr = ["try" w expr:"expr"]
+54 in = ["in" w ?[.._seps!:"alias" "::"] .._seps!:"name"]
 
 60 label = ?["'" .._seps!:"label" ?w ":" ?w]
 61 short_body = [.w! .s!.(, [.._seps!:"name" ?w
@@ -148,7 +153,7 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\\"
 63 try = ?[wn "?":"try"]
 64 , = [?w "," ?w]
 65 arr = {array:"array" array_fill:"array_fill"}
-66 items = {vec4:"vec4" link:"link" grab:"grab" try_expr:"try_expr"
+66 items = {mat4:"mat4" vec4:"vec4" link:"link" grab:"grab" try_expr:"try_expr"
             ["(" ?w expr ?w ")"] unop_not:"unop" norm:"norm"
             text go:"go"
             call_closure:"call_closure" named_call_closure:"named_call_closure"
@@ -193,6 +198,7 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\\"
     "f64":"f64"
     "str":"str"
     "vec4":"vec4"
+    "mat4":"mat4"
     "link":"link"
     ["opt" ?w "[" ?w type:"opt" ?w "]"]
     "opt":"opt_any"

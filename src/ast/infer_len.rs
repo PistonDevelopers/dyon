@@ -105,6 +105,12 @@ fn infer_expr(
                 if res.is_some() { return res; }
             }
         }
+        Mat4(ref mat4_expr) => {
+            for expr in &mat4_expr.args {
+                let res = infer_expr(expr, name, decls);
+                if res.is_some() { return res; }
+            }
+        }
         For(ref for_expr) => {
             // TODO: Declaring counter with same name probably leads to a bug.
             let res = infer_expr(&for_expr.init, name, decls);

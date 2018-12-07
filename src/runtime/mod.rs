@@ -61,6 +61,7 @@ pub struct Runtime {
     pub text_type: Variable,
     pub f64_type: Variable,
     pub vec4_type: Variable,
+    pub mat4_type: Variable,
     pub return_type: Variable,
     pub bool_type: Variable,
     pub object_type: Variable,
@@ -224,6 +225,7 @@ impl Runtime {
             text_type: Variable::Text(Arc::new("string".into())),
             f64_type: Variable::Text(Arc::new("number".into())),
             vec4_type: Variable::Text(Arc::new("vec4".into())),
+            mat4_type: Variable::Text(Arc::new("mat4".into())),
             return_type: Variable::Text(Arc::new("return".into())),
             bool_type: Variable::Text(Arc::new("boolean".into())),
             object_type: Variable::Text(Arc::new("object".into())),
@@ -378,6 +380,7 @@ impl Runtime {
             BinOp(ref binop) => self.binop(binop, side, module),
             Assign(ref assign) => self.assign(assign.op, &assign.left, &assign.right, module),
             Vec4(ref vec4) => self.vec4(vec4, side, module),
+            Mat4(ref mat4) => self.mat4(mat4, side, module),
             For(ref for_expr) => self.for_expr(for_expr, module),
             ForN(ref for_n_expr) => self.for_n_expr(for_n_expr, module),
             ForIn(ref for_in_expr) => self.for_in_expr(for_in_expr, module),
@@ -743,6 +746,7 @@ impl Runtime {
             return_type: self.return_type.clone(),
             rust_object_type: self.rust_object_type.clone(),
             vec4_type: self.vec4_type.clone(),
+            mat4_type: self.mat4_type.clone(),
             result_type: self.result_type.clone(),
             closure_type: self.closure_type.clone(),
             in_type: self.in_type.clone(),
@@ -1204,18 +1208,41 @@ impl Runtime {
                             &format!("{}\nExpected something",
                                 self.stack_trace()), self))
         };
-        let v = match self.resolve(&v) {
-            &Variable::Vec4(v) => v,
+        let (x, y, z, w) = match self.resolve(&v) {
+            &Variable::Vec4(v) => {
+                (
+                    Variable::f64(v[sw.sw0] as f64),
+                    Variable::f64(v[sw.sw1] as f64),
+                    if let Some(ind) = sw.sw2 {
+                        Some(Variable::f64(v[ind] as f64))
+                    } else {None},
+                    if let Some(ind) = sw.sw3 {
+                        Some(Variable::f64(v[ind] as f64))
+                    } else {None},
+                )
+            }
+            &Variable::Mat4(ref v) => {
+                (
+                    Variable::Vec4(v[sw.sw0]),
+                    Variable::Vec4(v[sw.sw1]),
+                    if let Some(ind) = sw.sw2 {
+                        Some(Variable::Vec4(v[ind]))
+                    } else {None},
+                    if let Some(ind) = sw.sw3 {
+                        Some(Variable::Vec4(v[ind]))
+                    } else {None},
+                )
+            }
             x => return Err(module.error(sw.source_range,
-                    &self.expected(x, "vec4"), self))
+                    &self.expected(x, "vec4/mat4"), self))
         };
-        self.stack.push(Variable::f64(v[sw.sw0] as f64));
-        self.stack.push(Variable::f64(v[sw.sw1] as f64));
-        if let Some(ind) = sw.sw2 {
-            self.stack.push(Variable::f64(v[ind] as f64));
+        self.stack.push(x);
+        self.stack.push(y);
+        if let Some(z) = z {
+            self.stack.push(z);
         }
-        if let Some(ind) = sw.sw3 {
-            self.stack.push(Variable::f64(v[ind] as f64));
+        if let Some(w) = w {
+            self.stack.push(w);
         }
         Ok(Flow::Continue)
     }
@@ -2121,6 +2148,7 @@ impl Runtime {
             &Variable::Text(_) => self.text_type.clone(),
             &Variable::F64(_, _) => self.f64_type.clone(),
             &Variable::Vec4(_) => self.vec4_type.clone(),
+            &Variable::Mat4(_) => self.mat4_type.clone(),
             &Variable::Return => self.return_type.clone(),
             &Variable::Bool(_, _) => self.bool_type.clone(),
             &Variable::Object(_) => self.object_type.clone(),
@@ -2488,6 +2516,56 @@ impl Runtime {
                 &self.expected(x, "number"), self))
         };
         Ok((Some(Variable::Vec4([x as f32, y as f32, z as f32, w as f32])), Flow::Continue))
+    }
+    fn mat4(
+        &mut self,
+        mat4: &ast::Mat4,
+        side: Side,
+        module: &Arc<Module>
+    ) -> Result<(Option<Variable>, Flow), String> {
+        let st = self.stack.len();
+        for expr in &mat4.args {
+            match try!(self.expression(expr, side, module)) {
+                (None, Flow::Continue) => {}
+                (Some(x), Flow::Continue) => self.stack.push(x),
+                (x, Flow::Return) => return Ok((x, Flow::Return)),
+                _ => return Err(module.error(expr.source_range(),
+                    &format!("{}\nExpected something from mat4 argument",
+                        self.stack_trace()), self))
+            };
+            // Skip the rest if swizzling pushes arguments.
+            if self.stack.len() - st > 3 { break; }
+        }
+        let w = self.stack.pop().expect(TINVOTS);
+        let w = match self.resolve(&w) {
+            &Variable::Vec4(val) => val,
+            x => return Err(module.error(mat4.args[3].source_range(),
+                &self.expected(x, "vec4"), self))
+        };
+        let z = self.stack.pop().expect(TINVOTS);
+        let z = match self.resolve(&z) {
+            &Variable::Vec4(val) => val,
+            x => return Err(module.error(mat4.args[2].source_range(),
+                &self.expected(x, "vec4"), self))
+        };
+        let y = self.stack.pop().expect(TINVOTS);
+        let y = match self.resolve(&y) {
+            &Variable::Vec4(val) => val,
+            x => return Err(module.error(mat4.args[1].source_range(),
+                &self.expected(x, "vec4"), self))
+        };
+        let x = self.stack.pop().expect(TINVOTS);
+        let x = match self.resolve(&x) {
+            &Variable::Vec4(val) => val,
+            x => return Err(module.error(mat4.args[0].source_range(),
+                &self.expected(x, "vec4"), self))
+        };
+        Ok((Some(Variable::Mat4(Box::new([
+            [x[0], y[0], z[0], w[0]],
+            [x[1], y[1], z[1], w[1]],
+            [x[2], y[2], z[2], w[2]],
+            [x[3], y[3], z[3], w[3]],
+        ]))), Flow::Continue))
     }
     fn norm(
         &mut self,

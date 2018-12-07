@@ -1,7 +1,54 @@
 fn main() {
-    f := \(a: bool, b: bool, c: bool) = a ∨ b ⊻ c
-    g := \(a: bool, b: bool, c: bool) = b ⊻ c ∨ a
-    println(f)
-    bs := [false, true]
-    println(all i, j, k {\f(bs[i], bs[j], bs[k]) == \g(bs[i], bs[j], bs[k])})
+    x := (1, 2)
+    y := (3, 4)
+    a := mat4 {x;y}
+    println(a)
+    b := mat4 {xz a; yw a}
+    println(b)
+    c := mat4 {(1,0); xyz a}
+    println(c)
+    d := mat4 {xy a;}
+    println(d)
+    e := mat4 {xxxx a;}
+    println(e)
+
+    ang := 1
+    ex := (cos(ang), -sin(ang))
+    ey := (sin(ang), cos(ang))
+    a := mat4 {ex;ey}
+    println(a)
+    b := mat4 {yx a;}
+    println(b)
+
+    println("")
+    a := mat4 {(1, 0, 0, 0);(0, 2, 0, 0);(0, 0, 3, 0);(0, 0, 0, 4)}
+    b := mat4 {(5, 0, 0, 0); yzw a}
+    println(b)
+
+    println("")
+    a := mat4 {1, 0, 0, 0; 0, 2, 0, 0; 0, 0, 3, 0; 0, 0, 0, 4}
+    foo(a)
+
+    println(rx(a))
+    println(ry(a))
+    println(rz(a))
+    println(rw(a))
+    println("")
+    for i 4 {println(rv(a, i))}
+    println("")
+    println(cx(a))
+    println(cy(a))
+    println(cz(a))
+    println(cw(a))
+    println("")
+    for i 4 {println(cv(a, i))}
+
+    rot := \(ang) = mat4 {cos(ang), -sin(ang); sin(ang), cos(ang), 0, 0}
+    println(rot)
+
+    println(mat4 {yx (2, 1),;})
+}
+
+fn foo(a: mat4) {
+    println(a)
 }

@@ -336,6 +336,21 @@ pub fn grab_expr(
                 source_range: vec4.source_range.clone(),
             })), Flow::Continue))
         }
+        &E::Mat4(ref mat4) => {
+            Ok((Grabbed::Expression(E::Mat4(ast::Mat4 {
+                args: {
+                    let mut new_args = vec![];
+                    for arg in &mat4.args {
+                        new_args.push(match grab_expr(level, rt, arg, side, module) {
+                            Ok((Grabbed::Expression(x), Flow::Continue)) => x,
+                            x => return x,
+                        });
+                    }
+                    new_args
+                },
+                source_range: mat4.source_range.clone(),
+            })), Flow::Continue))
+        }
         &E::Link(ref link) => {
             Ok((Grabbed::Expression(E::Link(ast::Link {
                 items: {

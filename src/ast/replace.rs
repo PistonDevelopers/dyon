@@ -24,6 +24,7 @@ use super::{
     Swizzle,
     UnOpExpression,
     Vec4,
+    Mat4,
     TryExpr,
 };
 
@@ -139,6 +140,16 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
             E::Vec4(Vec4 {
                 args: new_args,
                 source_range: vec4_expr.source_range,
+            })
+        }
+        E::Mat4(ref mat4_expr) => {
+            let mut new_args: Vec<Expression> = vec![];
+            for arg in &mat4_expr.args {
+                new_args.push(number(arg, name, val));
+            }
+            E::Mat4(Mat4 {
+                args: new_args,
+                source_range: mat4_expr.source_range,
             })
         }
         E::For(ref for_expr) => {

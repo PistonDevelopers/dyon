@@ -109,6 +109,16 @@ const NEXT: usize = 96;
 const WAIT_NEXT: usize = 97;
 const LOAD_DATA__STRING: usize = 98;
 const ARGS_OS: usize = 99;
+const RX: usize = 100;
+const RY: usize = 101;
+const RZ: usize = 102;
+const RW: usize = 103;
+const RV: usize = 104;
+const CX: usize = 105;
+const CY: usize = 106;
+const CZ: usize = 107;
+const CW: usize = 108;
+const CV: usize = 109;
 
 const TABLE: &'static [(usize, fn(
         &mut Runtime,
@@ -216,6 +226,16 @@ const TABLE: &'static [(usize, fn(
     (WAIT_NEXT, wait_next),
     (LOAD_DATA__STRING, load_data__string),
     (ARGS_OS, args_os),
+    (RX, rx),
+    (RY, ry),
+    (RZ, rz),
+    (RW, rw),
+    (RV, rv),
+    (CX, cx),
+    (CY, cy),
+    (CZ, cz),
+    (CW, cw),
+    (CV, cv),
 ];
 
 pub fn standard(f: &mut Prelude) {
@@ -477,6 +497,24 @@ pub fn standard(f: &mut Prelude) {
         lts: vec![],
         tys: vec![],
         ret: Type::Array(Box::new(Type::Text))
+    });
+    sarg(f, "rx", RX, Type::Mat4, Type::Vec4);
+    sarg(f, "ry", RY, Type::Mat4, Type::Vec4);
+    sarg(f, "rz", RZ, Type::Mat4, Type::Vec4);
+    sarg(f, "rw", RW, Type::Mat4, Type::Vec4);
+    f.intrinsic(Arc::new("rv".into()), RV, Dfn {
+        lts: vec![Lt::Default; 2],
+        tys: vec![Type::Mat4, Type::F64],
+        ret: Type::Vec4
+    });
+    sarg(f, "cx", CX, Type::Mat4, Type::Vec4);
+    sarg(f, "cy", CY, Type::Mat4, Type::Vec4);
+    sarg(f, "cz", CZ, Type::Mat4, Type::Vec4);
+    sarg(f, "cw", CW, Type::Mat4, Type::Vec4);
+    f.intrinsic(Arc::new("cv".into()), CV, Dfn {
+        lts: vec![Lt::Default; 2],
+        tys: vec![Type::Mat4, Type::F64],
+        ret: Type::Vec4
     });
 }
 
