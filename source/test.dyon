@@ -1,3 +1,33 @@
 fn main() {
-    println(mov((1, 2, 3)) * (0, 0, 0, 1))
+    println(rot(axis: (0, 0, 1), angle: 0))
+    b := rot(axis: (0, 0, 1), angle: tau())
+    a := mat4 {1,;}
+    for i 1000 {
+        for j 1000 {
+            a += b
+        }
+        println(a)
+    }
+}
+
+tau() = 6.283185307179586
+
+rot__axis_angle(axis: vec4, angle: f64) = {
+    mat4 {
+        cos(angle) + x(axis)^2 * (1-cos(angle)),
+        x(axis) * y(axis) * (1 - cos(angle)) - z(axis) * sin(angle),
+        0;
+
+        y(axis) * x(axis) * (1 - cos(angle)) + z(axis) * sin(angle),
+        cos(angle) + y(axis)^2 * (1 - cos(angle)),
+        y(axis) * z(axis) * (1 - cos(angle)) - x(axis) * sin(angle),
+        0;
+
+        z(axis) * x(axis) * (1 - cos(angle)) - y(axis) * sin(angle),
+        z(axis) * y(axis) * (1 - cos(angle)) + x(axis) * sin(angle),
+        cos(angle) + z(axis)^2 * (1 - cos(angle)),
+        0;
+
+        0,0,0,1;
+    }
 }

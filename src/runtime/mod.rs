@@ -1480,6 +1480,50 @@ impl Runtime {
                         };
                     }
                 }
+                Variable::Mat4(ref b) => {
+                    unsafe {
+                        match *r.0 {
+                            Variable::Mat4(ref mut n) => {
+                                match op {
+                                    Set => {
+                                        **n = **b;
+                                    }
+                                    Mul => {
+                                        use vecmath::col_mat4_mul;
+
+                                        **n = col_mat4_mul(**n, **b);
+                                    }
+                                    Add => {
+                                        use vecmath::mat4_add;
+
+                                        **n = mat4_add(**n, **b);
+                                    }
+                                    _ => {
+                                        return Err(module.error(
+                                            left.source_range(),
+                                            &format!("{}\nCan not use this assignment \
+                                            operator with `mat4`",
+                                                self.stack_trace()), self));
+                                    }
+                                }
+                            }
+                            Variable::Return => {
+                                if let Set = op {
+                                    *r.0 = Variable::Mat4(b.clone())
+                                } else {
+                                    return Err(module.error(
+                                        left.source_range(),
+                                        &format!("{}\nReturn has no value",
+                                            self.stack_trace()), self))
+                                }
+                            }
+                            _ => return Err(module.error(
+                                    left.source_range(),
+                                    &format!("{}\nExpected assigning to a mat4",
+                                        self.stack_trace()), self))
+                        }
+                    }
+                }
                 Variable::Bool(b, ref sec) => {
                     unsafe {
                         match *r.0 {
