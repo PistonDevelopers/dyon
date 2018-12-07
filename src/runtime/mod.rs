@@ -2725,6 +2725,17 @@ impl Runtime {
                             binop.op.symbol_bool()), self)),
                 }
             }
+            (&Variable::Mat4(ref a), &Variable::Vec4(b)) => {
+                use vecmath::col_mat4_transform;
+
+                match binop.op {
+                    Mul => Variable::Vec4(col_mat4_transform(**a, b)),
+                    _ => return Err(module.error(binop.source_range,
+                        &format!("{}\nUnknown operator `{:?}` for `mat4` and `vec4`",
+                            self.stack_trace(),
+                            binop.op.symbol_bool()), self)),
+                }
+            }
             (&Variable::Bool(a, ref sec), &Variable::Bool(b, _)) => {
                 Variable::Bool(match binop.op {
                     Add | OrElse => a || b,

@@ -326,6 +326,7 @@ impl Type {
             (&Bool, &Secret(ref b)) if **b == Type::Bool => Some(Bool),
             (&F64, &F64) => Some(F64),
             (&Mat4, &Mat4) => Some(Mat4),
+            (&Mat4, &Vec4) => Some(Vec4),
             (&Secret(ref a), &Secret(ref b))
             if **a == Type::F64 && **b == Type::F64 =>
                 Some(Secret(Box::new(F64))),
