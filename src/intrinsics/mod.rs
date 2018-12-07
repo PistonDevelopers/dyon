@@ -121,6 +121,7 @@ const CW: usize = 108;
 const CV: usize = 109;
 const DET: usize = 110;
 const INV: usize = 111;
+const MOV: usize = 112;
 
 const TABLE: &'static [(usize, fn(
         &mut Runtime,
@@ -240,6 +241,7 @@ const TABLE: &'static [(usize, fn(
     (CV, cv),
     (DET, det),
     (INV, inv),
+    (MOV, mov),
 ];
 
 pub fn standard(f: &mut Prelude) {
@@ -522,6 +524,7 @@ pub fn standard(f: &mut Prelude) {
     });
     sarg(f, "det", DET, Type::Mat4, Type::F64);
     sarg(f, "inv", INV, Type::Mat4, Type::Mat4);
+    sarg(f, "mov", MOV, Type::Vec4, Type::Mat4);
 }
 
 pub fn call_standard(

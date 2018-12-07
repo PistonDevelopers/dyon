@@ -125,6 +125,24 @@ pub(crate) fn inv(
     }))
 }
 
+pub(crate) fn mov(
+    rt: &mut Runtime,
+    call: &ast::Call,
+    module: &Arc<Module>,
+) -> Result<Option<Variable>, String> {
+    let v = rt.stack.pop().expect(TINVOTS);
+    Ok(Some(match rt.resolve(&v) {
+        &Variable::Vec4(v) => Variable::Mat4(Box::new([
+                [1.0, 0.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0, 0.0],
+                [0.0, 0.0, 1.0, 0.0],
+                [v[0], v[1], v[2], 1.0],
+            ])),
+        x => return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(x, "vec4"), rt))
+    }))
+}
+
 pub(crate) fn rx(
     rt: &mut Runtime,
     call: &ast::Call,

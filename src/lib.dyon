@@ -277,6 +277,10 @@ fn det(m: mat4) -> f64 { ... }
 /// Returns the inverse of 4D matrix.
 fn inv(m: mat4) -> mat4 { ... }
 
+/// Returns a translation 4D matrix.
+/// Ignores the 4th component.
+fn mov(v: vec4) -> mat4 { ... }
+
 /// Returns 4D vector with length 1,
 /// pointing in the direction when starting at `(1, 0)`
 /// and rotating around the z axis.
