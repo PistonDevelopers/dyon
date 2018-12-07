@@ -1,0 +1,5 @@
+fn main() {
+    a := "hi"
+    b := (xy a,)
+    println(b)
+}

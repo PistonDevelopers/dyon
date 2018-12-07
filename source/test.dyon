@@ -5,6 +5,6 @@ fn main() {
         3, 0, 0, 0;
         4, 0, 0, 0;
     }
-    b := mat4 {wzyx a;} // Basis rows swizzling.
+    b := mat4 {wzyx a;} // Do not allow vector swizzling.
     println(b)
 }

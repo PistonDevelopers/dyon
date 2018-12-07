@@ -2967,16 +2967,7 @@ impl Mat4 {
             let arg_st = stack.len();
             arg.resolve_locals(relative, stack, closure_stack, module, use_lookup);
             stack.truncate(arg_st);
-            match *arg {
-                Expression::Swizzle(ref swizzle) => {
-                    for _ in 0..swizzle.len() {
-                        stack.push(None);
-                    }
-                }
-                _ => {
-                    stack.push(None);
-                }
-            }
+            stack.push(None);
         }
         stack.truncate(st);
     }

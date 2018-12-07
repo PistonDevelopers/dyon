@@ -319,6 +319,7 @@ pub fn convert_meta_data(
                     Kind::Array | Kind::ArrayFill => Some(Type::array()),
                     Kind::Vec4 | Kind::Vec4UnLoop => Some(Type::Vec4),
                     Kind::Mat4 => Some(Type::Mat4),
+                    Kind::EX | Kind::EY | Kind::EZ | Kind::EW => Some(Type::Vec4),
                     Kind::In => Some(Type::In(Box::new(Type::array()))),
                     Kind::Object => Some(Type::object()),
                     Kind::Sift | Kind::SiftIn => Some(Type::array()),

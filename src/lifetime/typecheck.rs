@@ -643,6 +643,18 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
                     }
                 }
             }
+            Kind::Swizzle => {
+                if let Some(ch) = nodes[i].find_child_by_kind(nodes, Kind::Expr) {
+                    let expr_type = nodes[ch].ty.as_ref().map(|ty| nodes[ch].inner_type(&ty));
+                    if let Some(ref ty) = expr_type {
+                        if !ty.goes_with(&Type::Vec4) {
+                            return Err(nodes[ch].source.wrap(
+                                format!("Type mismatch (#1200):\nExpected `vec4`, found `{}`",
+                                    expr_type.as_ref().unwrap().description())));
+                        }
+                    }
+                }
+            }
             _ => {}
         }
     }

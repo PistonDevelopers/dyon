@@ -1208,41 +1208,18 @@ impl Runtime {
                             &format!("{}\nExpected something",
                                 self.stack_trace()), self))
         };
-        let (x, y, z, w) = match self.resolve(&v) {
-            &Variable::Vec4(v) => {
-                (
-                    Variable::f64(v[sw.sw0] as f64),
-                    Variable::f64(v[sw.sw1] as f64),
-                    if let Some(ind) = sw.sw2 {
-                        Some(Variable::f64(v[ind] as f64))
-                    } else {None},
-                    if let Some(ind) = sw.sw3 {
-                        Some(Variable::f64(v[ind] as f64))
-                    } else {None},
-                )
-            }
-            &Variable::Mat4(ref v) => {
-                (
-                    Variable::Vec4([v[0][sw.sw0], v[1][sw.sw0], v[2][sw.sw0], v[3][sw.sw0]]),
-                    Variable::Vec4([v[0][sw.sw1], v[1][sw.sw1], v[2][sw.sw1], v[3][sw.sw1]]),
-                    if let Some(ind) = sw.sw2 {
-                        Some(Variable::Vec4([v[0][ind], v[1][ind], v[2][ind], v[3][ind]]))
-                    } else {None},
-                    if let Some(ind) = sw.sw3 {
-                        Some(Variable::Vec4([v[0][ind], v[1][ind], v[2][ind], v[3][ind]]))
-                    } else {None},
-                )
-            }
+        let v = match self.resolve(&v) {
+            &Variable::Vec4(v) => v,
             x => return Err(module.error(sw.source_range,
-                    &self.expected(x, "vec4/mat4"), self))
+                    &self.expected(x, "vec4"), self))
         };
-        self.stack.push(x);
-        self.stack.push(y);
-        if let Some(z) = z {
-            self.stack.push(z);
+        self.stack.push(Variable::f64(v[sw.sw0] as f64));
+        self.stack.push(Variable::f64(v[sw.sw1] as f64));
+        if let Some(ind) = sw.sw2 {
+            self.stack.push(Variable::f64(v[ind] as f64));
         }
-        if let Some(w) = w {
-            self.stack.push(w);
+        if let Some(ind) = sw.sw3 {
+            self.stack.push(Variable::f64(v[ind] as f64));
         }
         Ok(Flow::Continue)
     }
@@ -2523,7 +2500,6 @@ impl Runtime {
         side: Side,
         module: &Arc<Module>
     ) -> Result<(Option<Variable>, Flow), String> {
-        let st = self.stack.len();
         for expr in &mat4.args {
             match try!(self.expression(expr, side, module)) {
                 (None, Flow::Continue) => {}
@@ -2533,8 +2509,6 @@ impl Runtime {
                     &format!("{}\nExpected something from mat4 argument",
                         self.stack_trace()), self))
             };
-            // Skip the rest if swizzling pushes arguments.
-            if self.stack.len() - st > 3 { break; }
         }
         let w = self.stack.pop().expect(TINVOTS);
         let w = match self.resolve(&w) {
