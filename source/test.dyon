@@ -1,25 +1,4 @@
 fn main() {
     a := mat4 {1, 0, 0, 1; 0, 1}
-    println(a)
-    b := (1, 0)
-    println(a * (xyz b, 1))
-
-    c := mat4 {
-        1,2,3,4;
-        0,0,0,0;
-        0,0,0,0;
-        1,1,1,1;
-    }
-    println(a * c)
-
-    d := mat4 {
-        1,0,0,1;
-        0,1,0,2;
-        0,0,1,0;
-        0,0,0,0;
-    }
-    println(a * d)
-
-    e := mat4 {cx(a); cy(a); cz(a); cw(a)}
-    println(e)
+    println(inv(a))
 }

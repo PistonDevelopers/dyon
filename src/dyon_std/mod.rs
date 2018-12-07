@@ -110,6 +110,21 @@ pub(crate) fn det(
     }))
 }
 
+pub(crate) fn inv(
+    rt: &mut Runtime,
+    call: &ast::Call,
+    module: &Arc<Module>,
+) -> Result<Option<Variable>, String> {
+    use vecmath::mat4_inv;
+
+    let v = rt.stack.pop().expect(TINVOTS);
+    Ok(Some(match rt.resolve(&v) {
+        &Variable::Mat4(ref m) => Variable::Mat4(Box::new(mat4_inv(**m))),
+        x => return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(x, "mat4"), rt))
+    }))
+}
+
 pub(crate) fn rx(
     rt: &mut Runtime,
     call: &ast::Call,
