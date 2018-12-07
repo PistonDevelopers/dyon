@@ -2713,6 +2713,18 @@ impl Runtime {
                             binop.op.symbol_bool()), self)),
                 }
             }
+            (&Variable::Mat4(ref a), &Variable::Mat4(ref b)) => {
+                use vecmath::{mat4_add, col_mat4_mul};
+
+                match binop.op {
+                    Add => Variable::Mat4(Box::new(mat4_add(**a, **b))),
+                    Mul => Variable::Mat4(Box::new(col_mat4_mul(**a, **b))),
+                    _ => return Err(module.error(binop.source_range,
+                        &format!("{}\nUnknown operator `{:?}` for `mat4` and `mat4`",
+                            self.stack_trace(),
+                            binop.op.symbol_bool()), self)),
+                }
+            }
             (&Variable::Bool(a, ref sec), &Variable::Bool(b, _)) => {
                 Variable::Bool(match binop.op {
                     Add | OrElse => a || b,
