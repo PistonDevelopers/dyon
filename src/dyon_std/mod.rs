@@ -293,6 +293,25 @@ pub(crate) fn mvp__model_view_projection(
     Ok(Some(Variable::Mat4(Box::new(mul(mul(proj, view), model)))))
 }
 
+pub(crate) fn scale(
+    rt: &mut Runtime,
+    call: &ast::Call,
+    module: &Arc<Module>,
+) -> Result<Option<Variable>, String> {
+    let v = rt.stack.pop().expect(TINVOTS);
+    let v = match rt.resolve(&v) {
+        &Variable::Vec4(val) => val,
+        x => return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(x, "vec4"), rt))
+    };
+    Ok(Some(Variable::Mat4(Box::new([
+        [v[0], 0.0, 0.0, 0.0],
+        [0.0, v[1], 0.0, 0.0],
+        [0.0, 0.0, v[2], 0.0],
+        [0.0, 0.0, 0.0, 1.0],
+    ]))))
+}
+
 pub(crate) fn rx(
     rt: &mut Runtime,
     call: &ast::Call,

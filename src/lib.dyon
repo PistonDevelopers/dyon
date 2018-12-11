@@ -288,6 +288,18 @@ fn rot__axis_angle(axis: vec4, angle: f64) -> mat4 { ... }
 /// Returns orthogonal view 4D matrix from position and axis vectors.
 fn ortho__pos_right_up_forward(pos: vec4, right: vec4, up: vec4, forward: vec4) -> mat4 { ... }
 
+/// Returns projection 4D matrix from field of view, near clip, far clip and aspect ratio.
+/// The field of view is in fractions, usually 1/4.
+/// The aspect ratio is usually the width of the draw buffer divided by the height.
+fn proj__fov_near_far_ar(fov: f64, near: f64, far: f64, ar: f64) -> mat4 { ... }
+
+/// Returns model view projection 4D matrix.
+fn mvp__model_view_projection(model: mat4, view: mat4, projection: mat4) -> mat4 { ... }
+
+/// Returns a scale 4D matrix from a vector.
+/// Ignores the 4th component.
+fn scale(v: vec4) -> mat4 { ... }
+
 /// Returns 4D vector with length 1,
 /// pointing in the direction when starting at `(1, 0)`
 /// and rotating around the z axis.

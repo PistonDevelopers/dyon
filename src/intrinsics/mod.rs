@@ -127,6 +127,7 @@ const TAU: usize = 114;
 const ORTHO_POS_RIGHT_UP_FORWARD: usize = 115;
 const PROJ__FOV_NEAR_FAR_AR: usize = 116;
 const MVP__MODEL_VIEW_PROJECTION: usize = 117;
+const SCALE: usize = 118;
 
 const TABLE: &'static [(usize, fn(
         &mut Runtime,
@@ -252,6 +253,7 @@ const TABLE: &'static [(usize, fn(
     (ORTHO_POS_RIGHT_UP_FORWARD, ortho__pos_right_up_forward),
     (PROJ__FOV_NEAR_FAR_AR, proj__fov_near_far_ar),
     (MVP__MODEL_VIEW_PROJECTION, mvp__model_view_projection),
+    (SCALE, scale),
 ];
 
 pub fn standard(f: &mut Prelude) {
@@ -560,6 +562,7 @@ pub fn standard(f: &mut Prelude) {
         tys: vec![Type::Mat4; 3],
         ret: Type::Mat4,
     });
+    sarg(f, "scale", SCALE, Type::Vec4, Type::Mat4);
 }
 
 pub fn call_standard(

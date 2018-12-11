@@ -7,4 +7,5 @@ fn main() {
     println(mvp(model: id, view: id, projection: id))
     println(ortho(pos: (0, 0), right: (1, 0), up: (0, 1), forward: (0, 0, 1)))
     println(proj(fov: 1/4, near: 0.1, far: 1000, ar: 1.5))
+    println(scale((1,1,1)))
 }
