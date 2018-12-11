@@ -124,6 +124,7 @@ const INV: usize = 111;
 const MOV: usize = 112;
 const ROT__AXIS_ANGLE: usize = 113;
 const TAU: usize = 114;
+const ORTHO_POS_RIGHT_UP_FORWARD: usize = 115;
 
 const TABLE: &'static [(usize, fn(
         &mut Runtime,
@@ -246,6 +247,7 @@ const TABLE: &'static [(usize, fn(
     (MOV, mov),
     (ROT__AXIS_ANGLE, rot__axis_angle),
     (TAU, tau),
+    (ORTHO_POS_RIGHT_UP_FORWARD, ortho__pos_right_up_forward),
 ];
 
 pub fn standard(f: &mut Prelude) {
@@ -538,6 +540,11 @@ pub fn standard(f: &mut Prelude) {
         lts: vec![],
         tys: vec![],
         ret: Type::F64
+    });
+    f.intrinsic(Arc::new("ortho__pos_right_up_forward".into()), ORTHO_POS_RIGHT_UP_FORWARD, Dfn {
+        lts: vec![Lt::Default; 4],
+        tys: vec![Type::Vec4; 4],
+        ret: Type::Mat4,
     });
 }
 

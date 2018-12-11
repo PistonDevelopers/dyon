@@ -188,6 +188,45 @@ pub(crate) fn rot__axis_angle(
     }))
 }
 
+pub(crate) fn ortho__pos_right_up_forward(
+    rt: &mut Runtime,
+    call: &ast::Call,
+    module: &Arc<Module>,
+) -> Result<Option<Variable>, String> {
+    use vecmath::vec4_dot as dot;
+
+    let forward = rt.stack.pop().expect(TINVOTS);
+    let forward = match rt.resolve(&forward) {
+        &Variable::Vec4(val) => val,
+        x => return Err(module.error(call.args[3].source_range(),
+                        &rt.expected(x, "vec4"), rt))
+    };
+    let up = rt.stack.pop().expect(TINVOTS);
+    let up = match rt.resolve(&up) {
+        &Variable::Vec4(val) => val,
+        x => return Err(module.error(call.args[2].source_range(),
+                        &rt.expected(x, "vec4"), rt))
+    };
+    let right = rt.stack.pop().expect(TINVOTS);
+    let right = match rt.resolve(&right) {
+        &Variable::Vec4(val) => val,
+        x => return Err(module.error(call.args[1].source_range(),
+                        &rt.expected(x, "vec4"), rt))
+    };
+    let pos = rt.stack.pop().expect(TINVOTS);
+    let pos = match rt.resolve(&pos) {
+        &Variable::Vec4(val) => val,
+        x => return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(x, "vec4"), rt))
+    };
+    Ok(Some(Variable::Mat4(Box::new([
+        [right[0], up[0], forward[0], 0.0],
+        [right[1], up[1], forward[1], 0.0],
+        [right[2], up[2], forward[2], 0.0],
+        [-dot(right, pos), -dot(up, pos), -dot(forward, pos), 1.0],
+    ]))))
+}
+
 pub(crate) fn rx(
     rt: &mut Runtime,
     call: &ast::Call,

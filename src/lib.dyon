@@ -282,7 +282,11 @@ fn inv(m: mat4) -> mat4 { ... }
 fn mov(v: vec4) -> mat4 { ... }
 
 /// Returns rotation 4D matrix around an axis and angle.
+/// The angle is in radians.
 fn rot__axis_angle(axis: vec4, angle: f64) -> mat4 { ... }
+
+/// Returns orthogonal view 4D matrix from position and axis vectors.
+fn ortho__pos_right_up_forward(pos: vec4, right: vec4, up: vec4, forward: vec4) -> mat4 { ... }
 
 /// Returns 4D vector with length 1,
 /// pointing in the direction when starting at `(1, 0)`
