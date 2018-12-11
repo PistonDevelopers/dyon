@@ -134,6 +134,7 @@ fn test_syntax() {
     test_src("source/syntax/div_pass_1.dyon");
     test_fail_src("source/syntax/div_fail_1.dyon");
     test_src("source/syntax/continue_call.dyon");
+    test_src("source/syntax/mat4_1.dyon");
 }
 
 #[test]
@@ -213,6 +214,8 @@ fn test_typechk() {
     test_src("source/typechk/dot.dyon");
     test_src("source/typechk/in.dyon");
     test_fail_src("source/typechk/in_2.dyon");
+    test_fail_src("source/typechk/vec4_2.dyon");
+    test_fail_src("source/typechk/mat4_1.dyon");
 }
 
 #[test]

@@ -46,6 +46,14 @@ pub fn write_variable<W>(
                 try!(write!(w, ")"));
             }
         }
+        Variable::Mat4(ref m) => {
+            try!(write!(w, "mat4 {{{},{},{},{}; {},{},{},{}; {},{},{},{}; {},{},{},{}}}",
+                m[0][0], m[1][0], m[2][0], m[3][0],
+                m[0][1], m[1][1], m[2][1], m[3][1],
+                m[0][2], m[1][2], m[2][2], m[3][2],
+                m[0][3], m[1][3], m[2][3], m[3][3]
+            ));
+        }
         Variable::Bool(x, _) => {
             try!(write!(w, "{}", x));
         }
@@ -221,6 +229,7 @@ pub fn write_expr<W: io::Write>(
         }
         &E::Assign(ref assign) => try!(write_assign(w, rt, assign, tabs)),
         &E::Vec4(ref vec4) => try!(write_vec4(w, rt, vec4, tabs)),
+        &E::Mat4(ref mat4) => try!(write_mat4(w, rt, mat4, tabs)),
         &E::For(ref f) => try!(write_for(w, rt, f, tabs)),
         &E::Compare(ref comp) => try!(write_compare(w, rt, comp, tabs)),
         &E::ForN(ref for_n) => {
@@ -603,6 +612,27 @@ pub fn write_vec4<W: io::Write>(
         }
     }
     try!(write!(w, ")"));
+    Ok(())
+}
+
+pub fn write_mat4<W: io::Write>(
+    w: &mut W,
+    rt: &Runtime,
+    mat4: &ast::Mat4,
+    tabs: u32,
+) -> Result<(), io::Error> {
+    let n = mat4.args.len();
+    try!(write!(w, "mat4 {{"));
+    for (i, expr) in mat4.args[0..n].iter().enumerate() {
+        try!(write_expr(w, rt, expr, tabs));
+        if i + 1 < n {
+            try!(write!(w, "; "));
+        }
+        if i + 1 == n && i == 0 {
+            try!(write!(w, ";"));
+        }
+    }
+    try!(write!(w, "}}"));
     Ok(())
 }
 

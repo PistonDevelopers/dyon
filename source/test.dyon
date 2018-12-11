@@ -1,7 +1,11 @@
 fn main() {
-    f := \(a: bool, b: bool, c: bool) = a ∨ b ⊻ c
-    g := \(a: bool, b: bool, c: bool) = b ⊻ c ∨ a
-    println(f)
-    bs := [false, true]
-    println(all i, j, k {\f(bs[i], bs[j], bs[k]) == \g(bs[i], bs[j], bs[k])})
+    println(rot(axis: (0, 0, 1), angle: tau() / 2))
+    println(rot(axis: (0, 1, 0), angle: tau() / 2))
+    println(rot(axis: (1, 0, 0), angle: tau() / 2))
+
+    id := mat4 {1,;}
+    println(mvp(model: id, view: id, projection: id))
+    println(ortho(pos: (0, 0), right: (1, 0), up: (0, 1), forward: (0, 0, 1)))
+    println(proj(fov: 1/4, near: 0.1, far: 1000, ar: 1.5))
+    println(scale((1,1,1)))
 }

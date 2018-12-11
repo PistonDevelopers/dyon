@@ -24,6 +24,8 @@ fn main() {
     // Create a custom Rust object.
     custom_object := custom_object()
     foo(custom_object)
+
+    println(id())
 }
 
 // Use `any` as ad-hoc inner type because it defaults to `{}`.

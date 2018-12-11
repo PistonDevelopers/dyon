@@ -96,7 +96,7 @@ impl Node {
         match self.kind {
             Pow | Sum | SumIn | Prod | ProdIn | SumVec4 | Min | MinIn | Max | MaxIn |
             Any | AnyIn | All | AllIn | LinkIn |
-            Vec4 | Vec4UnLoop | Swizzle |
+            Vec4 | Mat4 | Vec4UnLoop | Swizzle |
             Assign | For | ForN | ForIn | Link | LinkFor |
             Closure | CallClosure | Grab | TryExpr | Norm | In => false,
             Add | Mul | Compare => self.children.len() == 1,
@@ -191,6 +191,7 @@ impl Node {
                 (_, Kind::AllIn) => {}
                 (_, Kind::Vec4UnLoop) => {}
                 (_, Kind::Vec4) => {}
+                (_, Kind::Mat4) => {}
                 (_, Kind::Start) => { continue }
                 (_, Kind::End) => { continue }
                 (_, Kind::Assign) => {}
@@ -317,6 +318,8 @@ pub fn convert_meta_data(
                 let ty = match kind {
                     Kind::Array | Kind::ArrayFill => Some(Type::array()),
                     Kind::Vec4 | Kind::Vec4UnLoop => Some(Type::Vec4),
+                    Kind::Mat4 => Some(Type::Mat4),
+                    Kind::EX | Kind::EY | Kind::EZ | Kind::EW => Some(Type::Vec4),
                     Kind::In => Some(Type::In(Box::new(Type::array()))),
                     Kind::Object => Some(Type::object()),
                     Kind::Sift | Kind::SiftIn => Some(Type::array()),

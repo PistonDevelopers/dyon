@@ -61,6 +61,7 @@ pub struct Runtime {
     pub text_type: Variable,
     pub f64_type: Variable,
     pub vec4_type: Variable,
+    pub mat4_type: Variable,
     pub return_type: Variable,
     pub bool_type: Variable,
     pub object_type: Variable,
@@ -224,6 +225,7 @@ impl Runtime {
             text_type: Variable::Text(Arc::new("string".into())),
             f64_type: Variable::Text(Arc::new("number".into())),
             vec4_type: Variable::Text(Arc::new("vec4".into())),
+            mat4_type: Variable::Text(Arc::new("mat4".into())),
             return_type: Variable::Text(Arc::new("return".into())),
             bool_type: Variable::Text(Arc::new("boolean".into())),
             object_type: Variable::Text(Arc::new("object".into())),
@@ -253,6 +255,14 @@ impl Runtime {
         }
     }
 
+    pub fn pop_mat4<T: embed::ConvertMat4>(&mut self) -> Result<T, String> {
+        let v = self.stack.pop().unwrap_or_else(|| panic!(TINVOTS));
+        match self.resolve(&v) {
+            &Variable::Mat4(ref val) => Ok(T::from(**val)),
+            x => Err(self.expected(x, "mat4"))
+        }
+    }
+
     pub fn var<T: embed::PopVariable>(&self, var: &Variable) -> Result<T, String> {
         T::pop_var(self, self.resolve(&var))
     }
@@ -264,6 +274,13 @@ impl Runtime {
         }
     }
 
+    pub fn var_mat4<T: embed::ConvertMat4>(&self, var: &Variable) -> Result<T, String> {
+        match self.resolve(&var) {
+            &Variable::Mat4(ref val) => Ok(T::from(**val)),
+            x => Err(self.expected(x, "mat4"))
+        }
+    }
+
     /// Push value to stack.
     pub fn push<T: embed::PushVariable>(&mut self, val: T) {
         self.stack.push(val.push_var())
@@ -272,6 +289,11 @@ impl Runtime {
     /// Push Vec4 to stack.
     pub fn push_vec4<T: embed::ConvertVec4>(&mut self, val: T) {
         self.stack.push(Variable::Vec4(val.to()))
+    }
+
+    /// Push Mat4 to stack.
+    pub fn push_mat4<T: embed::ConvertMat4>(&mut self, val: T) {
+        self.stack.push(Variable::Mat4(Box::new(val.to())))
     }
 
     /// Pushes Rust object to stack.
@@ -378,6 +400,7 @@ impl Runtime {
             BinOp(ref binop) => self.binop(binop, side, module),
             Assign(ref assign) => self.assign(assign.op, &assign.left, &assign.right, module),
             Vec4(ref vec4) => self.vec4(vec4, side, module),
+            Mat4(ref mat4) => self.mat4(mat4, side, module),
             For(ref for_expr) => self.for_expr(for_expr, module),
             ForN(ref for_n_expr) => self.for_n_expr(for_n_expr, module),
             ForIn(ref for_in_expr) => self.for_in_expr(for_in_expr, module),
@@ -743,6 +766,7 @@ impl Runtime {
             return_type: self.return_type.clone(),
             rust_object_type: self.rust_object_type.clone(),
             vec4_type: self.vec4_type.clone(),
+            mat4_type: self.mat4_type.clone(),
             result_type: self.result_type.clone(),
             closure_type: self.closure_type.clone(),
             in_type: self.in_type.clone(),
@@ -1456,6 +1480,50 @@ impl Runtime {
                         };
                     }
                 }
+                Variable::Mat4(ref b) => {
+                    unsafe {
+                        match *r.0 {
+                            Variable::Mat4(ref mut n) => {
+                                match op {
+                                    Set => {
+                                        **n = **b;
+                                    }
+                                    Mul => {
+                                        use vecmath::col_mat4_mul;
+
+                                        **n = col_mat4_mul(**n, **b);
+                                    }
+                                    Add => {
+                                        use vecmath::mat4_add;
+
+                                        **n = mat4_add(**n, **b);
+                                    }
+                                    _ => {
+                                        return Err(module.error(
+                                            left.source_range(),
+                                            &format!("{}\nCan not use this assignment \
+                                            operator with `mat4`",
+                                                self.stack_trace()), self));
+                                    }
+                                }
+                            }
+                            Variable::Return => {
+                                if let Set = op {
+                                    *r.0 = Variable::Mat4(b.clone())
+                                } else {
+                                    return Err(module.error(
+                                        left.source_range(),
+                                        &format!("{}\nReturn has no value",
+                                            self.stack_trace()), self))
+                                }
+                            }
+                            _ => return Err(module.error(
+                                    left.source_range(),
+                                    &format!("{}\nExpected assigning to a mat4",
+                                        self.stack_trace()), self))
+                        }
+                    }
+                }
                 Variable::Bool(b, ref sec) => {
                     unsafe {
                         match *r.0 {
@@ -2121,6 +2189,7 @@ impl Runtime {
             &Variable::Text(_) => self.text_type.clone(),
             &Variable::F64(_, _) => self.f64_type.clone(),
             &Variable::Vec4(_) => self.vec4_type.clone(),
+            &Variable::Mat4(_) => self.mat4_type.clone(),
             &Variable::Return => self.return_type.clone(),
             &Variable::Bool(_, _) => self.bool_type.clone(),
             &Variable::Object(_) => self.object_type.clone(),
@@ -2489,6 +2558,53 @@ impl Runtime {
         };
         Ok((Some(Variable::Vec4([x as f32, y as f32, z as f32, w as f32])), Flow::Continue))
     }
+    fn mat4(
+        &mut self,
+        mat4: &ast::Mat4,
+        side: Side,
+        module: &Arc<Module>
+    ) -> Result<(Option<Variable>, Flow), String> {
+        for expr in &mat4.args {
+            match try!(self.expression(expr, side, module)) {
+                (None, Flow::Continue) => {}
+                (Some(x), Flow::Continue) => self.stack.push(x),
+                (x, Flow::Return) => return Ok((x, Flow::Return)),
+                _ => return Err(module.error(expr.source_range(),
+                    &format!("{}\nExpected something from mat4 argument",
+                        self.stack_trace()), self))
+            };
+        }
+        let w = self.stack.pop().expect(TINVOTS);
+        let w = match self.resolve(&w) {
+            &Variable::Vec4(val) => val,
+            x => return Err(module.error(mat4.args[3].source_range(),
+                &self.expected(x, "vec4"), self))
+        };
+        let z = self.stack.pop().expect(TINVOTS);
+        let z = match self.resolve(&z) {
+            &Variable::Vec4(val) => val,
+            x => return Err(module.error(mat4.args[2].source_range(),
+                &self.expected(x, "vec4"), self))
+        };
+        let y = self.stack.pop().expect(TINVOTS);
+        let y = match self.resolve(&y) {
+            &Variable::Vec4(val) => val,
+            x => return Err(module.error(mat4.args[1].source_range(),
+                &self.expected(x, "vec4"), self))
+        };
+        let x = self.stack.pop().expect(TINVOTS);
+        let x = match self.resolve(&x) {
+            &Variable::Vec4(val) => val,
+            x => return Err(module.error(mat4.args[0].source_range(),
+                &self.expected(x, "vec4"), self))
+        };
+        Ok((Some(Variable::Mat4(Box::new([
+            [x[0], y[0], z[0], w[0]],
+            [x[1], y[1], z[1], w[1]],
+            [x[2], y[2], z[2], w[2]],
+            [x[3], y[3], z[3], w[3]],
+        ]))), Flow::Continue))
+    }
     fn norm(
         &mut self,
         norm: &ast::Norm,
@@ -2657,6 +2773,29 @@ impl Runtime {
                             self.stack_trace(), binop.op.symbol()), self)),
                     AndAlso | OrElse => return Err(module.error(binop.source_range,
                         &format!("{}\nUnknown operator `{:?}` for `f64` and `vec4`",
+                            self.stack_trace(),
+                            binop.op.symbol_bool()), self)),
+                }
+            }
+            (&Variable::Mat4(ref a), &Variable::Mat4(ref b)) => {
+                use vecmath::{mat4_add, col_mat4_mul};
+
+                match binop.op {
+                    Add => Variable::Mat4(Box::new(mat4_add(**a, **b))),
+                    Mul => Variable::Mat4(Box::new(col_mat4_mul(**a, **b))),
+                    _ => return Err(module.error(binop.source_range,
+                        &format!("{}\nUnknown operator `{:?}` for `mat4` and `mat4`",
+                            self.stack_trace(),
+                            binop.op.symbol_bool()), self)),
+                }
+            }
+            (&Variable::Mat4(ref a), &Variable::Vec4(b)) => {
+                use vecmath::col_mat4_transform;
+
+                match binop.op {
+                    Mul => Variable::Vec4(col_mat4_transform(**a, b)),
+                    _ => return Err(module.error(binop.source_range,
+                        &format!("{}\nUnknown operator `{:?}` for `mat4` and `vec4`",
                             self.stack_trace(),
                             binop.op.symbol_bool()), self)),
                 }

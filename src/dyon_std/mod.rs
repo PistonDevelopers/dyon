@@ -95,6 +95,377 @@ pub(crate) fn s(
     Ok(Some(Variable::f64(s)))
 }
 
+pub(crate) fn det(
+    rt: &mut Runtime,
+    call: &ast::Call,
+    module: &Arc<Module>,
+) -> Result<Option<Variable>, String> {
+    use vecmath::mat4_det;
+
+    let v = rt.stack.pop().expect(TINVOTS);
+    Ok(Some(match rt.resolve(&v) {
+        &Variable::Mat4(ref m) => Variable::f64(mat4_det(**m) as f64),
+        x => return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(x, "mat4"), rt))
+    }))
+}
+
+pub(crate) fn inv(
+    rt: &mut Runtime,
+    call: &ast::Call,
+    module: &Arc<Module>,
+) -> Result<Option<Variable>, String> {
+    use vecmath::mat4_inv;
+
+    let v = rt.stack.pop().expect(TINVOTS);
+    Ok(Some(match rt.resolve(&v) {
+        &Variable::Mat4(ref m) => Variable::Mat4(Box::new(mat4_inv(**m))),
+        x => return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(x, "mat4"), rt))
+    }))
+}
+
+pub(crate) fn mov(
+    rt: &mut Runtime,
+    call: &ast::Call,
+    module: &Arc<Module>,
+) -> Result<Option<Variable>, String> {
+    let v = rt.stack.pop().expect(TINVOTS);
+    Ok(Some(match rt.resolve(&v) {
+        &Variable::Vec4(v) => Variable::Mat4(Box::new([
+                [1.0, 0.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0, 0.0],
+                [0.0, 0.0, 1.0, 0.0],
+                [v[0], v[1], v[2], 1.0],
+            ])),
+        x => return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(x, "vec4"), rt))
+    }))
+}
+
+pub(crate) fn rot__axis_angle(
+    rt: &mut Runtime,
+    call: &ast::Call,
+    module: &Arc<Module>,
+) -> Result<Option<Variable>, String> {
+    let ang = rt.stack.pop().expect(TINVOTS);
+    let ang = match rt.resolve(&ang) {
+        &Variable::F64(val, _) => val,
+        x => return Err(module.error(call.args[1].source_range(),
+                        &rt.expected(x, "f64"), rt))
+    };
+    let v = rt.stack.pop().expect(TINVOTS);
+    Ok(Some(match rt.resolve(&v) {
+        &Variable::Vec4(axis) => Variable::Mat4(Box::new({
+                let axis = [axis[0] as f64, axis[1] as f64, axis[2] as f64];
+                let cos = ang.cos();
+                let sin = ang.sin();
+                let inv_cos = 1.0 - cos;
+                [
+                    [
+                        (cos + axis[0] * axis[0] * inv_cos) as f32,
+                        (axis[0] * axis[1] * inv_cos - axis[2] * sin) as f32,
+                        (axis[0] * axis[2] * inv_cos + axis[1] * sin) as f32,
+                        0.0
+                    ],
+                    [
+                        (axis[1] * axis[0] * inv_cos + axis[2] * sin) as f32,
+                        (cos + axis[1] * axis[1] * inv_cos) as f32,
+                        (axis[1] * axis[2] * inv_cos - axis[0] * sin) as f32,
+                        0.0
+                    ],
+                    [
+                        (axis[2] * axis[0] * inv_cos - axis[1] * sin) as f32,
+                        (axis[2] * axis[1] * inv_cos + axis[0] * sin) as f32,
+                        (cos + axis[2] * axis[2] * inv_cos) as f32,
+                        0.0
+                    ],
+                    [0.0,0.0,0.0,1.0]
+                ]
+            })),
+        x => return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(x, "vec4"), rt))
+    }))
+}
+
+pub(crate) fn ortho__pos_right_up_forward(
+    rt: &mut Runtime,
+    call: &ast::Call,
+    module: &Arc<Module>,
+) -> Result<Option<Variable>, String> {
+    use vecmath::vec4_dot as dot;
+
+    let forward = rt.stack.pop().expect(TINVOTS);
+    let forward = match rt.resolve(&forward) {
+        &Variable::Vec4(val) => val,
+        x => return Err(module.error(call.args[3].source_range(),
+                        &rt.expected(x, "vec4"), rt))
+    };
+    let up = rt.stack.pop().expect(TINVOTS);
+    let up = match rt.resolve(&up) {
+        &Variable::Vec4(val) => val,
+        x => return Err(module.error(call.args[2].source_range(),
+                        &rt.expected(x, "vec4"), rt))
+    };
+    let right = rt.stack.pop().expect(TINVOTS);
+    let right = match rt.resolve(&right) {
+        &Variable::Vec4(val) => val,
+        x => return Err(module.error(call.args[1].source_range(),
+                        &rt.expected(x, "vec4"), rt))
+    };
+    let pos = rt.stack.pop().expect(TINVOTS);
+    let pos = match rt.resolve(&pos) {
+        &Variable::Vec4(val) => val,
+        x => return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(x, "vec4"), rt))
+    };
+    Ok(Some(Variable::Mat4(Box::new([
+        [right[0], up[0], forward[0], 0.0],
+        [right[1], up[1], forward[1], 0.0],
+        [right[2], up[2], forward[2], 0.0],
+        [-dot(right, pos), -dot(up, pos), -dot(forward, pos), 1.0],
+    ]))))
+}
+
+pub(crate) fn proj__fov_near_far_ar(
+    rt: &mut Runtime,
+    call: &ast::Call,
+    module: &Arc<Module>,
+) -> Result<Option<Variable>, String> {
+    let ar = rt.stack.pop().expect(TINVOTS);
+    let ar = match rt.resolve(&ar) {
+        &Variable::F64(val, _) => val,
+        x => return Err(module.error(call.args[3].source_range(),
+                        &rt.expected(x, "f64"), rt))
+    };
+    let far = rt.stack.pop().expect(TINVOTS);
+    let far = match rt.resolve(&far) {
+        &Variable::F64(val, _) => val,
+        x => return Err(module.error(call.args[2].source_range(),
+                        &rt.expected(x, "f64"), rt))
+    };
+    let near = rt.stack.pop().expect(TINVOTS);
+    let near = match rt.resolve(&near) {
+        &Variable::F64(val, _) => val,
+        x => return Err(module.error(call.args[1].source_range(),
+                        &rt.expected(x, "f64"), rt))
+    };
+    let fov = rt.stack.pop().expect(TINVOTS);
+    let fov = match rt.resolve(&fov) {
+        &Variable::F64(val, _) => val,
+        x => return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(x, "f64"), rt))
+    };
+    let f = 1.0 / (fov * ::std::f64::consts::PI).tan();
+    Ok(Some(Variable::Mat4(Box::new([
+        [(f/ar) as f32, 0.0, 0.0, 0.0],
+        [0.0, f as f32, 0.0, 0.0],
+        [0.0, 0.0, ((far + near) / (near - far)) as f32, -1.0],
+        [0.0, 0.0, ((2.0 * far * near) / (near - far)) as f32, 0.0],
+    ]))))
+}
+
+pub(crate) fn mvp__model_view_projection(
+    rt: &mut Runtime,
+    call: &ast::Call,
+    module: &Arc<Module>,
+) -> Result<Option<Variable>, String> {
+    use vecmath::col_mat4_mul as mul;
+
+    let proj = rt.stack.pop().expect(TINVOTS);
+    let proj = match rt.resolve(&proj) {
+        &Variable::Mat4(ref val) => **val,
+        x => return Err(module.error(call.args[2].source_range(),
+                        &rt.expected(x, "mat4"), rt))
+    };
+    let view = rt.stack.pop().expect(TINVOTS);
+    let view = match rt.resolve(&view) {
+        &Variable::Mat4(ref val) => **val,
+        x => return Err(module.error(call.args[1].source_range(),
+                        &rt.expected(x, "mat4"), rt))
+    };
+    let model = rt.stack.pop().expect(TINVOTS);
+    let model = match rt.resolve(&model) {
+        &Variable::Mat4(ref val) => **val,
+        x => return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(x, "mat4"), rt))
+    };
+    Ok(Some(Variable::Mat4(Box::new(mul(mul(proj, view), model)))))
+}
+
+pub(crate) fn scale(
+    rt: &mut Runtime,
+    call: &ast::Call,
+    module: &Arc<Module>,
+) -> Result<Option<Variable>, String> {
+    let v = rt.stack.pop().expect(TINVOTS);
+    let v = match rt.resolve(&v) {
+        &Variable::Vec4(val) => val,
+        x => return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(x, "vec4"), rt))
+    };
+    Ok(Some(Variable::Mat4(Box::new([
+        [v[0], 0.0, 0.0, 0.0],
+        [0.0, v[1], 0.0, 0.0],
+        [0.0, 0.0, v[2], 0.0],
+        [0.0, 0.0, 0.0, 1.0],
+    ]))))
+}
+
+pub(crate) fn rx(
+    rt: &mut Runtime,
+    call: &ast::Call,
+    module: &Arc<Module>,
+) -> Result<Option<Variable>, String> {
+    let v = rt.stack.pop().expect(TINVOTS);
+    Ok(Some(match rt.resolve(&v) {
+        &Variable::Mat4(ref m) => Variable::Vec4([m[0][0], m[1][0], m[2][0], m[3][0]]),
+        x => return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(x, "mat4"), rt))
+    }))
+}
+
+pub(crate) fn ry(
+    rt: &mut Runtime,
+    call: &ast::Call,
+    module: &Arc<Module>,
+) -> Result<Option<Variable>, String> {
+    let v = rt.stack.pop().expect(TINVOTS);
+    Ok(Some(match rt.resolve(&v) {
+        &Variable::Mat4(ref m) => Variable::Vec4([m[0][1], m[1][1], m[2][1], m[3][1]]),
+        x => return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(x, "mat4"), rt))
+    }))
+}
+
+pub(crate) fn rz(
+    rt: &mut Runtime,
+    call: &ast::Call,
+    module: &Arc<Module>,
+) -> Result<Option<Variable>, String> {
+    let v = rt.stack.pop().expect(TINVOTS);
+    Ok(Some(match rt.resolve(&v) {
+        &Variable::Mat4(ref m) => Variable::Vec4([m[0][2], m[1][2], m[2][2], m[3][2]]),
+        x => return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(x, "mat4"), rt))
+    }))
+}
+
+pub(crate) fn rw(
+    rt: &mut Runtime,
+    call: &ast::Call,
+    module: &Arc<Module>,
+) -> Result<Option<Variable>, String> {
+    let v = rt.stack.pop().expect(TINVOTS);
+    Ok(Some(match rt.resolve(&v) {
+        &Variable::Mat4(ref m) => Variable::Vec4([m[0][3], m[1][3], m[2][3], m[3][3]]),
+        x => return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(x, "mat4"), rt))
+    }))
+}
+
+pub(crate) fn rv(
+    rt: &mut Runtime,
+    call: &ast::Call,
+    module: &Arc<Module>,
+) -> Result<Option<Variable>, String> {
+    let ind = rt.stack.pop().expect(TINVOTS);
+    let ind = match rt.resolve(&ind) {
+        &Variable::F64(val, _) => val,
+        x => return Err(module.error(call.args[1].source_range(),
+                        &rt.expected(x, "number"), rt))
+    } as usize;
+    if ind >= 4 {
+        return Err(module.error(call.source_range,
+            &format!("{}\nIndex out of bounds `{}`",
+                rt.stack_trace(), ind), rt))
+    }
+    let m = rt.stack.pop().expect(TINVOTS);
+    let v = match rt.resolve(&m) {
+        &Variable::Mat4(ref m) => [m[0][ind], m[1][ind], m[2][ind], m[3][ind]],
+        x => return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(x, "mat4"), rt))
+    };
+    Ok(Some(Variable::Vec4(v)))
+}
+
+pub(crate) fn cx(
+    rt: &mut Runtime,
+    call: &ast::Call,
+    module: &Arc<Module>,
+) -> Result<Option<Variable>, String> {
+    let v = rt.stack.pop().expect(TINVOTS);
+    Ok(Some(match rt.resolve(&v) {
+        &Variable::Mat4(ref m) => Variable::Vec4(m[0]),
+        x => return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(x, "mat4"), rt))
+    }))
+}
+
+pub(crate) fn cy(
+    rt: &mut Runtime,
+    call: &ast::Call,
+    module: &Arc<Module>,
+) -> Result<Option<Variable>, String> {
+    let v = rt.stack.pop().expect(TINVOTS);
+    Ok(Some(match rt.resolve(&v) {
+        &Variable::Mat4(ref m) => Variable::Vec4(m[1]),
+        x => return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(x, "mat4"), rt))
+    }))
+}
+
+pub(crate) fn cz(
+    rt: &mut Runtime,
+    call: &ast::Call,
+    module: &Arc<Module>,
+) -> Result<Option<Variable>, String> {
+    let v = rt.stack.pop().expect(TINVOTS);
+    Ok(Some(match rt.resolve(&v) {
+        &Variable::Mat4(ref m) => Variable::Vec4(m[2]),
+        x => return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(x, "mat4"), rt))
+    }))
+}
+
+pub(crate) fn cw(
+    rt: &mut Runtime,
+    call: &ast::Call,
+    module: &Arc<Module>,
+) -> Result<Option<Variable>, String> {
+    let v = rt.stack.pop().expect(TINVOTS);
+    Ok(Some(match rt.resolve(&v) {
+        &Variable::Mat4(ref m) => Variable::Vec4(m[3]),
+        x => return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(x, "mat4"), rt))
+    }))
+}
+
+pub(crate) fn cv(
+    rt: &mut Runtime,
+    call: &ast::Call,
+    module: &Arc<Module>,
+) -> Result<Option<Variable>, String> {
+    let ind = rt.stack.pop().expect(TINVOTS);
+    let ind = match rt.resolve(&ind) {
+        &Variable::F64(val, _) => val,
+        x => return Err(module.error(call.args[1].source_range(),
+                        &rt.expected(x, "number"), rt))
+    } as usize;
+    if ind >= 4 {
+        return Err(module.error(call.source_range,
+            &format!("{}\nIndex out of bounds `{}`",
+                rt.stack_trace(), ind), rt))
+    }
+    let m = rt.stack.pop().expect(TINVOTS);
+    let v = match rt.resolve(&m) {
+        &Variable::Mat4(ref m) => m[ind],
+        x => return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(x, "mat4"), rt))
+    };
+    Ok(Some(Variable::Vec4(v)))
+}
+
 pub(crate) fn clone(
     rt: &mut Runtime,
     _call: &ast::Call,
@@ -471,6 +842,14 @@ pub(crate) fn random(
     use rand::Rng;
 
     Ok(Some(Variable::f64(rt.rng.gen())))
+}
+
+pub(crate) fn tau(
+    _rt: &mut Runtime,
+    _call: &ast::Call,
+    _module: &Arc<Module>,
+) -> Result<Option<Variable>, String> {
+    Ok(Some(Variable::f64(6.283185307179586)))
 }
 
 pub(crate) fn len(
@@ -1048,6 +1427,7 @@ pub(crate) fn _typeof(
         &Variable::Text(_) => rt.text_type.clone(),
         &Variable::F64(_, _) => rt.f64_type.clone(),
         &Variable::Vec4(_) => rt.vec4_type.clone(),
+        &Variable::Mat4(_) => rt.mat4_type.clone(),
         &Variable::Return => rt.return_type.clone(),
         &Variable::Bool(_, _) => rt.bool_type.clone(),
         &Variable::Object(_) => rt.object_type.clone(),

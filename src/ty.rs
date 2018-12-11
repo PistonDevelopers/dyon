@@ -14,6 +14,7 @@ pub enum Type {
     Bool,
     F64,
     Vec4,
+    Mat4,
     Text,
     Link,
     Array(Box<Type>),
@@ -40,6 +41,7 @@ impl Type {
             &Bool => "bool".into(),
             &F64 => "f64".into(),
             &Vec4 => "vec4".into(),
+            &Mat4 => "mat4".into(),
             &Text => "str".into(),
             &Link => "link".into(),
             &Array(ref ty) => {
@@ -279,6 +281,7 @@ impl Type {
             (&Secret(ref a), &Bool) if **a == Type::Bool => Some(Secret(Box::new(Bool))),
             (&Bool, &Secret(ref b)) if **b == Type::Bool => Some(Bool),
             (&F64, &F64) => Some(F64),
+            (&Mat4, &Mat4) => Some(Mat4),
             (&Secret(ref a), &Secret(ref b))
             if **a == Type::F64 && **b == Type::F64 =>
                 Some(Secret(Box::new(F64))),
@@ -322,6 +325,8 @@ impl Type {
             (&Secret(ref a), &Bool) if **a == Type::Bool => Some(Secret(Box::new(Bool))),
             (&Bool, &Secret(ref b)) if **b == Type::Bool => Some(Bool),
             (&F64, &F64) => Some(F64),
+            (&Mat4, &Mat4) => Some(Mat4),
+            (&Mat4, &Vec4) => Some(Vec4),
             (&Secret(ref a), &Secret(ref b))
             if **a == Type::F64 && **b == Type::F64 =>
                 Some(Secret(Box::new(F64))),
@@ -401,6 +406,9 @@ impl Type {
             } else if let Ok((range, _)) = convert.meta_bool("vec4") {
                 convert.update(range);
                 ty = Some(Type::Vec4);
+            } else if let Ok((range, _)) = convert.meta_bool("mat4") {
+                convert.update(range);
+                ty = Some(Type::Mat4);
             } else if let Ok((range, _)) = convert.meta_bool("link") {
                 convert.update(range);
                 ty = Some(Type::Link);

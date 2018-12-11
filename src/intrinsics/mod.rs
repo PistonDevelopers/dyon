@@ -109,6 +109,25 @@ const NEXT: usize = 96;
 const WAIT_NEXT: usize = 97;
 const LOAD_DATA__STRING: usize = 98;
 const ARGS_OS: usize = 99;
+const RX: usize = 100;
+const RY: usize = 101;
+const RZ: usize = 102;
+const RW: usize = 103;
+const RV: usize = 104;
+const CX: usize = 105;
+const CY: usize = 106;
+const CZ: usize = 107;
+const CW: usize = 108;
+const CV: usize = 109;
+const DET: usize = 110;
+const INV: usize = 111;
+const MOV: usize = 112;
+const ROT__AXIS_ANGLE: usize = 113;
+const TAU: usize = 114;
+const ORTHO_POS_RIGHT_UP_FORWARD: usize = 115;
+const PROJ__FOV_NEAR_FAR_AR: usize = 116;
+const MVP__MODEL_VIEW_PROJECTION: usize = 117;
+const SCALE: usize = 118;
 
 const TABLE: &'static [(usize, fn(
         &mut Runtime,
@@ -216,6 +235,25 @@ const TABLE: &'static [(usize, fn(
     (WAIT_NEXT, wait_next),
     (LOAD_DATA__STRING, load_data__string),
     (ARGS_OS, args_os),
+    (RX, rx),
+    (RY, ry),
+    (RZ, rz),
+    (RW, rw),
+    (RV, rv),
+    (CX, cx),
+    (CY, cy),
+    (CZ, cz),
+    (CW, cw),
+    (CV, cv),
+    (DET, det),
+    (INV, inv),
+    (MOV, mov),
+    (ROT__AXIS_ANGLE, rot__axis_angle),
+    (TAU, tau),
+    (ORTHO_POS_RIGHT_UP_FORWARD, ortho__pos_right_up_forward),
+    (PROJ__FOV_NEAR_FAR_AR, proj__fov_near_far_ar),
+    (MVP__MODEL_VIEW_PROJECTION, mvp__model_view_projection),
+    (SCALE, scale),
 ];
 
 pub fn standard(f: &mut Prelude) {
@@ -478,6 +516,53 @@ pub fn standard(f: &mut Prelude) {
         tys: vec![],
         ret: Type::Array(Box::new(Type::Text))
     });
+    sarg(f, "rx", RX, Type::Mat4, Type::Vec4);
+    sarg(f, "ry", RY, Type::Mat4, Type::Vec4);
+    sarg(f, "rz", RZ, Type::Mat4, Type::Vec4);
+    sarg(f, "rw", RW, Type::Mat4, Type::Vec4);
+    f.intrinsic(Arc::new("rv".into()), RV, Dfn {
+        lts: vec![Lt::Default; 2],
+        tys: vec![Type::Mat4, Type::F64],
+        ret: Type::Vec4
+    });
+    sarg(f, "cx", CX, Type::Mat4, Type::Vec4);
+    sarg(f, "cy", CY, Type::Mat4, Type::Vec4);
+    sarg(f, "cz", CZ, Type::Mat4, Type::Vec4);
+    sarg(f, "cw", CW, Type::Mat4, Type::Vec4);
+    f.intrinsic(Arc::new("cv".into()), CV, Dfn {
+        lts: vec![Lt::Default; 2],
+        tys: vec![Type::Mat4, Type::F64],
+        ret: Type::Vec4
+    });
+    sarg(f, "det", DET, Type::Mat4, Type::F64);
+    sarg(f, "inv", INV, Type::Mat4, Type::Mat4);
+    sarg(f, "mov", MOV, Type::Vec4, Type::Mat4);
+    f.intrinsic(Arc::new("rot__axis_angle".into()), ROT__AXIS_ANGLE, Dfn {
+        lts: vec![Lt::Default; 2],
+        tys: vec![Type::Vec4, Type::F64],
+        ret: Type::Mat4
+    });
+    f.intrinsic(Arc::new("tau".into()), TAU, Dfn {
+        lts: vec![],
+        tys: vec![],
+        ret: Type::F64
+    });
+    f.intrinsic(Arc::new("ortho__pos_right_up_forward".into()), ORTHO_POS_RIGHT_UP_FORWARD, Dfn {
+        lts: vec![Lt::Default; 4],
+        tys: vec![Type::Vec4; 4],
+        ret: Type::Mat4,
+    });
+    f.intrinsic(Arc::new("proj__fov_near_far_ar".into()), PROJ__FOV_NEAR_FAR_AR, Dfn {
+        lts: vec![Lt::Default; 4],
+        tys: vec![Type::F64; 4],
+        ret: Type::Mat4,
+    });
+    f.intrinsic(Arc::new("mvp__model_view_projection".into()), MVP__MODEL_VIEW_PROJECTION, Dfn {
+        lts: vec![Lt::Default; 3],
+        tys: vec![Type::Mat4; 3],
+        ret: Type::Mat4,
+    });
+    sarg(f, "scale", SCALE, Type::Vec4, Type::Mat4);
 }
 
 pub fn call_standard(

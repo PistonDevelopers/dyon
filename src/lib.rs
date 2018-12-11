@@ -8,6 +8,7 @@ extern crate read_token;
 extern crate reqwest;
 #[macro_use]
 extern crate lazy_static;
+extern crate vecmath;
 
 use std::any::Any;
 use std::fmt;
@@ -27,6 +28,7 @@ pub mod ty;
 pub mod link;
 pub mod macros;
 pub mod vec4;
+pub mod mat4;
 pub mod write;
 
 mod grab;
@@ -37,6 +39,7 @@ pub use prelude::{Lt, Prelude, Dfn};
 pub use ty::Type;
 pub use link::Link;
 pub use vec4::Vec4;
+pub use mat4::Mat4;
 
 /// A common error message when there is no value on the stack.
 pub const TINVOTS: &'static str = "There is no value on the stack";
@@ -126,6 +129,7 @@ pub enum Variable {
     Bool(bool, Option<Box<Vec<Variable>>>),
     F64(f64, Option<Box<Vec<Variable>>>),
     Vec4([f32; 4]),
+    Mat4(Box<[[f32; 4]; 4]>),
     Text(Arc<String>),
     Array(Array),
     Object(Object),
@@ -160,6 +164,7 @@ impl Variable {
         match *self {
             F64(_, _) => self.clone(),
             Vec4(_) => self.clone(),
+            Mat4(_) => self.clone(),
             Return => self.clone(),
             Bool(_, _) => self.clone(),
             Text(_) => self.clone(),

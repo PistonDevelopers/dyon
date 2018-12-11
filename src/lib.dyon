@@ -244,10 +244,70 @@ fn w(v: vec4) -> f64 { ... }
 /// Returns component scalar of 4D vector by index.
 fn s(v: vec4, ind: f64) -> f64 { ... }
 
+/// Returns row vector x (basis vector) of 4D matrix.
+fn rx(m: mat4) -> vec4 { ... }
+
+/// Returns row vector y (basis vector) of 4D matrix.
+fn ry(m: mat4) -> vec4 { ... }
+
+/// Returns row vector z (basis vector) of 4D matrix.
+fn rz(m: mat4) -> vec4 { ... }
+
+/// Returns row vector w (basis vector) of 4D matrix.
+fn rw(m: mat4) -> vec4 { ... }
+
+/// Returns row vector (basis vector) of 4D matrix by index.
+fn rv(m: mat4, ind: f64) -> vec4 { ... }
+
+/// Returns column vector x (transposed basis vector) of 4D matrix.
+fn cx(m: mat4) -> vec4 { ... }
+
+/// Returns column vector y (transposed basis vector) of 4D matrix.
+fn cy(m: mat4) -> vec4 { ... }
+
+/// Returns column vector z (transposed basis vector) of 4D matrix.
+fn cz(m: mat4) -> vec4 { ... }
+
+/// Returns column vector (transposed basis vector) of 4D matrix by index.
+fn cv(m: mat4) -> vec4 { ... }
+
+/// Returns determinant of 4D matrix.
+fn det(m: mat4) -> f64 { ... }
+
+/// Returns the inverse of 4D matrix.
+fn inv(m: mat4) -> mat4 { ... }
+
+/// Returns a translation 4D matrix.
+/// Ignores the 4th component.
+fn mov(v: vec4) -> mat4 { ... }
+
+/// Returns rotation 4D matrix around an axis and angle.
+/// The angle is in radians.
+fn rot__axis_angle(axis: vec4, angle: f64) -> mat4 { ... }
+
+/// Returns orthogonal view 4D matrix from position and axis vectors.
+fn ortho__pos_right_up_forward(pos: vec4, right: vec4, up: vec4, forward: vec4) -> mat4 { ... }
+
+/// Returns projection 4D matrix from field of view, near clip, far clip and aspect ratio.
+/// The field of view is in fractions, usually 1/4.
+/// The aspect ratio is usually the width of the draw buffer divided by the height.
+fn proj__fov_near_far_ar(fov: f64, near: f64, far: f64, ar: f64) -> mat4 { ... }
+
+/// Returns model view projection 4D matrix.
+fn mvp__model_view_projection(model: mat4, view: mat4, projection: mat4) -> mat4 { ... }
+
+/// Returns a scale 4D matrix from a vector.
+/// Ignores the 4th component.
+fn scale(v: vec4) -> mat4 { ... }
+
 /// Returns 4D vector with length 1,
 /// pointing in the direction when starting at `(1, 0)`
 /// and rotating around the z axis.
 fn dir__angle(angle: f64) -> vec4 { ... }
+
+/// Returns the number of radians in a circle.
+/// Use this instead of pi.
+fn tau() -> f64 { ... }
 
 /// Loads meta data from a file, using a meta syntax to parse the document.
 /// The meta language used is [Piston-Meta](https://github.com/PistonDevelopers/meta).

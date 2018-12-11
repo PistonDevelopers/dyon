@@ -1,0 +1,171 @@
+fn main() {
+    ~ start := now()
+
+    ~ buf := []
+    ~ draw_list := []
+    ~ mvp := mat4 {1,;}
+    ~ screen := mat4 {1,;}
+
+    set_event_loop(ups: 10)
+    set_event_loop(maxfps: 30)
+
+    quit := in quit
+    ready := in ready_for_sorting
+    done_sorting := in done_sorting
+    for i 3 {
+        _ := go sort_offline(ready, quit)
+    }
+
+    ind := 0
+    oud := 0
+    back_buf := []
+    queue := []
+    'game_loop: loop {
+        if !next_event() {break}
+
+        if render() {
+            for i {
+                if queue[i] == oud {
+                    clear(mut draw_list)
+                    clear(color: #ffffff)
+                    for j {push(mut draw_list, back_buf[i][j])}
+                    draw(draw_list)
+                    oud += 1
+                    remove(mut queue, i)
+                    remove(mut back_buf, i)
+                    println(link {"out of order "oud})
+                    continue 'game_loop
+                }
+            }
+            for data in done_sorting {
+                buf := data[0]
+                if data[1] == oud {
+                    clear(mut draw_list)
+                    clear(color: #ffffff)
+                    for i {push(mut draw_list, buf[i])}
+                    draw(draw_list)
+                    oud += 1
+                    continue 'game_loop
+                } else {
+                    push(mut back_buf, buf)
+                    push(mut queue, data[1])
+                }
+            }
+        }
+
+        if update() {
+            clear(mut buf)
+            scene()
+
+            time := now() - start
+
+            a := (0, 0)
+            b := (0, 0)
+
+            up := (0, 1)
+            pos := (cos(time) * 1.5, 0.5, sin(time) * 1.5)
+            target := (0, 0)
+            forward := (pos - target) / |pos - target|
+            right := (up x forward) / |up x forward|
+            up = right x forward
+
+            draw_size := window_draw_size()
+            screen = mov(draw_size * 0.5) * scale((1,1,1) * x(draw_size * 0.5))
+            ~ proj := proj(fov: 1/4, near: 0.1, far: 1000, ar: x(draw_size)/y(draw_size))
+            view := ortho(pos: pos, right: right, up: up, forward: forward)
+            model := rot(axis: (0, 1, 0), angle: 0.1 * time)
+
+            mvp = mvp(model: model, view: view, projection: proj)
+
+            for i {
+                a = mvp * (xyz buf[i][3], 1)
+                b = mvp * (xyz buf[i][4], 1)
+                if (z(a) < 0) || (z(b) < 0) {continue}
+                a = screen * (a/w(a))
+                b = screen * (b/w(b))
+                buf[i][3] = clone(a)
+                buf[i][4] = clone(b)
+            }
+
+            ready_for_sorting(buf, ind)
+            ind += 1
+        }
+    }
+
+    quit()
+    for _ in quit {}
+}
+
+fn ready_for_sorting(buf: [], ind: f64) {}
+fn done_sorting(buf: [], ind: f64) {}
+fn quit() {}
+
+fn sort_offline(ready: in, quit: in) -> str {
+    loop {
+        for _ in quit {break}
+        for data in ready {
+            buf := data[0]
+            insertion_sort(mut buf, \(a, b) = (z(a[3])+z(a[4])) >= (z(b[3])+ z(b[4])))
+            done_sorting(buf, data[1])
+            sleep(0)
+        }
+        sleep(0)
+    }
+    return "done"
+}
+
+fn scene() ~ start: f64 {
+    time := now() - start
+
+    n := 10
+    f := 0
+    for i 10 {
+        f = i/n
+        line3d(color: #0000ff, radius: 3, from: (0, 0, f), to: (0.1, 0, f))
+        line3d(color: #ff0000, radius: 3, from: (f, 0), to: (f, 0.1))
+        line3d(color: #00ff00, radius: 3, from: (0, f), to: (0.1, f))
+    }
+
+    z := 0
+    a := (0, 0)
+    b := (0, 0)
+    mat := rot(axis: (1, 1)/|(1, 1)|, angle: time * 4)
+    for i 2 {
+        center := (0.5 + i, 0.5 + 0.5 * sin(time + 0.3 * tau() * i), 0.5)
+        for i 200 {
+            z = random()
+            a = mat * (xy dir(angle: random() * tau()) * 0.2, z - 0.5) + center
+            b = mat * (xy dir(angle: random() * tau()) * 0.2, z - 0.5) + center
+            line3d(color: (xyz #ffff00 * random(), 1), radius: 4, from: a, to: b)
+        }
+    }
+}
+
+/// Uses insertion sort with closure.
+/// Closure should return `true` when an item is less than another.
+fn insertion_sort(mut a: [any], lt: \(any, any) -> bool) {
+    for i [1, len(a)) {
+        j := i
+        loop {
+            if (j > 0) && \lt(a[j], a[j-1]) {
+                swap(mut a, j, j-1)
+                j -= 1
+            } else { break }
+        }
+    }
+}
+
+fn line3d__color_radius_from_to(
+    color: vec4,
+    radius: f64,
+    from: vec4,
+    to: vec4
+) ~ mut buf: [] {
+    push(mut buf, ["line__color_radius_from_to", color, radius, from, to])
+}
+
+scale(v: vec4) = mat4 {
+    x(v), 0, 0;
+    0, y(v), 0;
+    0, 0, z(v);
+}

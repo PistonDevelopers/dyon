@@ -32,6 +32,12 @@ pub trait ConvertVec4: Sized {
     fn to(&self) -> [f32; 4];
 }
 
+pub trait ConvertMat4: Sized {
+    /// Converts mat4 to self.
+    fn from(val: [[f32; 4]; 4]) -> Self;
+    fn to(&self) -> [[f32; 4]; 4];
+}
+
 impl PopVariable for Variable {
     fn pop_var(rt: &Runtime, var: &Variable) -> Result<Self, String> {
         Ok(var.deep_clone(&rt.stack))
@@ -393,4 +399,9 @@ impl ConvertVec4 for [f64; 3] {
 impl ConvertVec4 for [f64; 4] {
     fn from(val: [f32; 4]) -> Self { [val[0] as f64, val[1] as f64, val[2] as f64, val[3] as f64] }
     fn to(&self) -> [f32; 4] { [self[0] as f32, self[1] as f32, self[2] as f32, self[3] as f32] }
+}
+
+impl ConvertMat4 for [[f32; 4]; 4] {
+    fn from(val: [[f32; 4]; 4]) -> Self {val}
+    fn to(&self) -> [[f32; 4]; 4] {*self}
 }
