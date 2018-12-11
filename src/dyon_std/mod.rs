@@ -227,6 +227,72 @@ pub(crate) fn ortho__pos_right_up_forward(
     ]))))
 }
 
+pub(crate) fn proj__fov_near_far_ar(
+    rt: &mut Runtime,
+    call: &ast::Call,
+    module: &Arc<Module>,
+) -> Result<Option<Variable>, String> {
+    let ar = rt.stack.pop().expect(TINVOTS);
+    let ar = match rt.resolve(&ar) {
+        &Variable::F64(val, _) => val,
+        x => return Err(module.error(call.args[3].source_range(),
+                        &rt.expected(x, "f64"), rt))
+    };
+    let far = rt.stack.pop().expect(TINVOTS);
+    let far = match rt.resolve(&far) {
+        &Variable::F64(val, _) => val,
+        x => return Err(module.error(call.args[2].source_range(),
+                        &rt.expected(x, "f64"), rt))
+    };
+    let near = rt.stack.pop().expect(TINVOTS);
+    let near = match rt.resolve(&near) {
+        &Variable::F64(val, _) => val,
+        x => return Err(module.error(call.args[1].source_range(),
+                        &rt.expected(x, "f64"), rt))
+    };
+    let fov = rt.stack.pop().expect(TINVOTS);
+    let fov = match rt.resolve(&fov) {
+        &Variable::F64(val, _) => val,
+        x => return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(x, "f64"), rt))
+    };
+    let f = 1.0 / (fov * ::std::f64::consts::PI).tan();
+    Ok(Some(Variable::Mat4(Box::new([
+        [(f/ar) as f32, 0.0, 0.0, 0.0],
+        [0.0, f as f32, 0.0, 0.0],
+        [0.0, 0.0, ((far + near) / (near - far)) as f32, -1.0],
+        [0.0, 0.0, ((2.0 * far * near) / (near - far)) as f32, 0.0],
+    ]))))
+}
+
+pub(crate) fn mvp__model_view_projection(
+    rt: &mut Runtime,
+    call: &ast::Call,
+    module: &Arc<Module>,
+) -> Result<Option<Variable>, String> {
+    use vecmath::col_mat4_mul as mul;
+
+    let proj = rt.stack.pop().expect(TINVOTS);
+    let proj = match rt.resolve(&proj) {
+        &Variable::Mat4(ref val) => **val,
+        x => return Err(module.error(call.args[2].source_range(),
+                        &rt.expected(x, "mat4"), rt))
+    };
+    let view = rt.stack.pop().expect(TINVOTS);
+    let view = match rt.resolve(&view) {
+        &Variable::Mat4(ref val) => **val,
+        x => return Err(module.error(call.args[1].source_range(),
+                        &rt.expected(x, "mat4"), rt))
+    };
+    let model = rt.stack.pop().expect(TINVOTS);
+    let model = match rt.resolve(&model) {
+        &Variable::Mat4(ref val) => **val,
+        x => return Err(module.error(call.args[0].source_range(),
+                        &rt.expected(x, "mat4"), rt))
+    };
+    Ok(Some(Variable::Mat4(Box::new(mul(mul(proj, view), model)))))
+}
+
 pub(crate) fn rx(
     rt: &mut Runtime,
     call: &ast::Call,

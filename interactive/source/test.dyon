@@ -169,22 +169,3 @@ scale(v: vec4) = mat4 {
     0, y(v), 0;
     0, 0, z(v);
 }
-
-mvp__model_view_projection(m: mat4, v: mat4, p: mat4) = p * v * m
-
-ortho__pos_right_up_forward(p: vec4, r: vec4, u: vec4, f: vec4) = mat4 {
-    xyz r, -(r *. p);
-    xyz u, -(u *. p);
-    xyz f, -(f *. p);
-    0, 0, 0, 1
-}
-
-proj__fov_near_far_ar(fov: f64, near: f64, far: f64, ar: f64) = {
-    f := 1 / tan(fov * tau() / 2)
-    mat4 {
-        f/ar, 0, 0, 0;
-        0, f, 0, 0;
-        0, 0, (far + near) / (near - far), (2 * far * near) / (near - far);
-        0, 0, -1, 0;
-    }
-}

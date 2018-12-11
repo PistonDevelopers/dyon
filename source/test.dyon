@@ -8,15 +8,3 @@ fn main() {
     println(ortho(pos: (0, 0), right: (1, 0), up: (0, 1), forward: (0, 0, 1)))
     println(proj(fov: 1/4, near: 0.1, far: 1000, ar: 1.5))
 }
-
-mvp__model_view_projection(m: mat4, v: mat4, p: mat4) = p * v * m
-
-proj__fov_near_far_ar(fov: f64, near: f64, far: f64, ar: f64) = {
-    f := 1 / tan(fov * tau() / 2)
-    mat4 {
-        f/ar,;
-        0, f;
-        0, 0, (far + near) / (near - far), (2 * far * near) / (near - far);
-        0, 0, -1;
-    }
-}

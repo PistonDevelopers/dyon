@@ -125,6 +125,8 @@ const MOV: usize = 112;
 const ROT__AXIS_ANGLE: usize = 113;
 const TAU: usize = 114;
 const ORTHO_POS_RIGHT_UP_FORWARD: usize = 115;
+const PROJ__FOV_NEAR_FAR_AR: usize = 116;
+const MVP__MODEL_VIEW_PROJECTION: usize = 117;
 
 const TABLE: &'static [(usize, fn(
         &mut Runtime,
@@ -248,6 +250,8 @@ const TABLE: &'static [(usize, fn(
     (ROT__AXIS_ANGLE, rot__axis_angle),
     (TAU, tau),
     (ORTHO_POS_RIGHT_UP_FORWARD, ortho__pos_right_up_forward),
+    (PROJ__FOV_NEAR_FAR_AR, proj__fov_near_far_ar),
+    (MVP__MODEL_VIEW_PROJECTION, mvp__model_view_projection),
 ];
 
 pub fn standard(f: &mut Prelude) {
@@ -544,6 +548,16 @@ pub fn standard(f: &mut Prelude) {
     f.intrinsic(Arc::new("ortho__pos_right_up_forward".into()), ORTHO_POS_RIGHT_UP_FORWARD, Dfn {
         lts: vec![Lt::Default; 4],
         tys: vec![Type::Vec4; 4],
+        ret: Type::Mat4,
+    });
+    f.intrinsic(Arc::new("proj__fov_near_far_ar".into()), PROJ__FOV_NEAR_FAR_AR, Dfn {
+        lts: vec![Lt::Default; 4],
+        tys: vec![Type::F64; 4],
+        ret: Type::Mat4,
+    });
+    f.intrinsic(Arc::new("mvp__model_view_projection".into()), MVP__MODEL_VIEW_PROJECTION, Dfn {
+        lts: vec![Lt::Default; 3],
+        tys: vec![Type::Mat4; 3],
         ret: Type::Mat4,
     });
 }
