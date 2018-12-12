@@ -76,6 +76,7 @@ dyonrun <file.dyon>
 - [Closures](https://github.com/PistonDevelopers/dyon/issues/314) `\(x) = x + 1`
 - [Grab expressions](https://github.com/PistonDevelopers/dyon/issues/316) `\(x) = (grab a) + x`
 - [4D vectors with `f32` precision `(x, y, z, w)`](https://github.com/PistonDevelopers/dyon/issues/144)
+- [4D matrices with `f32` precision `mat4 {1,2,3,4; 5,6,7,8; 9,10,11,12; 13,14,15,16}`](https://github.com/PistonDevelopers/dyon/issues/557)
 - [Un-loop for 4D vectors](https://github.com/PistonDevelopers/dyon/issues/201) `vec4 i f(i)`
 - [Unpack 4D vectors](https://github.com/PistonDevelopers/dyon/issues/213) `f(xy v)`
 - [Swizzle 4D vectors](https://github.com/PistonDevelopers/dyon/issues/213) `(yxz v, 1)`
