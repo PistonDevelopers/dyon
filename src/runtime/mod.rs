@@ -50,6 +50,26 @@ pub struct Call {
     pub current_len: usize,
 }
 
+lazy_static! {
+    pub(crate) static ref text_type: Arc<String> = Arc::new("string".into());
+    pub(crate) static ref f64_type: Arc<String> = Arc::new("number".into());
+    pub(crate) static ref vec4_type: Arc<String> = Arc::new("vec4".into());
+    pub(crate) static ref mat4_type: Arc<String> = Arc::new("mat4".into());
+    pub(crate) static ref return_type: Arc<String> = Arc::new("return".into());
+    pub(crate) static ref bool_type: Arc<String> = Arc::new("boolean".into());
+    pub(crate) static ref object_type: Arc<String> = Arc::new("object".into());
+    pub(crate) static ref link_type: Arc<String> = Arc::new("link".into());
+    pub(crate) static ref array_type: Arc<String> = Arc::new("array".into());
+    pub(crate) static ref unsafe_ref_type: Arc<String> = Arc::new("unsafe_ref".into());
+    pub(crate) static ref ref_type: Arc<String> = Arc::new("ref".into());
+    pub(crate) static ref rust_object_type: Arc<String> = Arc::new("rust_object".into());
+    pub(crate) static ref option_type: Arc<String> = Arc::new("option".into());
+    pub(crate) static ref result_type: Arc<String> = Arc::new("result".into());
+    pub(crate) static ref thread_type: Arc<String> = Arc::new("thread".into());
+    pub(crate) static ref closure_type: Arc<String> = Arc::new("closure".into());
+    pub(crate) static ref in_type: Arc<String> = Arc::new("in".into());
+}
+
 pub struct Runtime {
     pub stack: Vec<Variable>,
     /// name, file, stack_len, local_len.
@@ -58,23 +78,6 @@ pub struct Runtime {
     pub current_stack: Vec<(Arc<String>, usize)>,
     pub ret: Arc<String>,
     pub rng: rand::rngs::StdRng,
-    pub text_type: Variable,
-    pub f64_type: Variable,
-    pub vec4_type: Variable,
-    pub mat4_type: Variable,
-    pub return_type: Variable,
-    pub bool_type: Variable,
-    pub object_type: Variable,
-    pub array_type: Variable,
-    pub link_type: Variable,
-    pub ref_type: Variable,
-    pub unsafe_ref_type: Variable,
-    pub rust_object_type: Variable,
-    pub option_type: Variable,
-    pub result_type: Variable,
-    pub thread_type: Variable,
-    pub closure_type: Variable,
-    pub in_type: Variable,
 }
 
 #[inline(always)]
@@ -222,23 +225,6 @@ impl Runtime {
             current_stack: vec![],
             ret: Arc::new("return".into()),
             rng: rand::rngs::StdRng::from_entropy(),
-            text_type: Variable::Text(Arc::new("string".into())),
-            f64_type: Variable::Text(Arc::new("number".into())),
-            vec4_type: Variable::Text(Arc::new("vec4".into())),
-            mat4_type: Variable::Text(Arc::new("mat4".into())),
-            return_type: Variable::Text(Arc::new("return".into())),
-            bool_type: Variable::Text(Arc::new("boolean".into())),
-            object_type: Variable::Text(Arc::new("object".into())),
-            link_type: Variable::Text(Arc::new("link".into())),
-            array_type: Variable::Text(Arc::new("array".into())),
-            ref_type: Variable::Text(Arc::new("ref".into())),
-            unsafe_ref_type: Variable::Text(Arc::new("unsafe_ref".into())),
-            rust_object_type: Variable::Text(Arc::new("rust_object".into())),
-            option_type: Variable::Text(Arc::new("option".into())),
-            result_type: Variable::Text(Arc::new("result".into())),
-            thread_type: Variable::Text(Arc::new("thread".into())),
-            closure_type: Variable::Text(Arc::new("closure".into())),
-            in_type: Variable::Text(Arc::new("in".into())),
         }
     }
 
@@ -753,23 +739,6 @@ impl Runtime {
             }],
             rng: self.rng.clone(),
             ret: self.ret.clone(),
-            ref_type: self.ref_type.clone(),
-            option_type: self.option_type.clone(),
-            array_type: self.array_type.clone(),
-            link_type: self.link_type.clone(),
-            bool_type: self.bool_type.clone(),
-            object_type: self.object_type.clone(),
-            text_type: self.text_type.clone(),
-            f64_type: self.f64_type.clone(),
-            thread_type: self.thread_type.clone(),
-            unsafe_ref_type: self.unsafe_ref_type.clone(),
-            return_type: self.return_type.clone(),
-            rust_object_type: self.rust_object_type.clone(),
-            vec4_type: self.vec4_type.clone(),
-            mat4_type: self.mat4_type.clone(),
-            result_type: self.result_type.clone(),
-            closure_type: self.closure_type.clone(),
-            in_type: self.in_type.clone(),
         };
         let new_module = module.clone();
         let handle: JoinHandle<Result<Variable, String>> = thread::spawn(move || {
@@ -2185,28 +2154,24 @@ impl Runtime {
     }
 
     pub fn typeof_var(&self, var: &Variable) -> Arc<String> {
-        let v = match var {
-            &Variable::Text(_) => self.text_type.clone(),
-            &Variable::F64(_, _) => self.f64_type.clone(),
-            &Variable::Vec4(_) => self.vec4_type.clone(),
-            &Variable::Mat4(_) => self.mat4_type.clone(),
-            &Variable::Return => self.return_type.clone(),
-            &Variable::Bool(_, _) => self.bool_type.clone(),
-            &Variable::Object(_) => self.object_type.clone(),
-            &Variable::Array(_) => self.array_type.clone(),
-            &Variable::Link(_) => self.link_type.clone(),
-            &Variable::Ref(_) => self.ref_type.clone(),
-            &Variable::UnsafeRef(_) => self.unsafe_ref_type.clone(),
-            &Variable::RustObject(_) => self.rust_object_type.clone(),
-            &Variable::Option(_) => self.option_type.clone(),
-            &Variable::Result(_) => self.result_type.clone(),
-            &Variable::Thread(_) => self.thread_type.clone(),
-            &Variable::Closure(_, _) => self.closure_type.clone(),
-            &Variable::In(_) => self.in_type.clone(),
-        };
-        match v {
-            Variable::Text(v) => v,
-            _ => panic!("Expected string")
+        match var {
+            &Variable::Text(_) => text_type.clone(),
+            &Variable::F64(_, _) => f64_type.clone(),
+            &Variable::Vec4(_) => vec4_type.clone(),
+            &Variable::Mat4(_) => mat4_type.clone(),
+            &Variable::Return => return_type.clone(),
+            &Variable::Bool(_, _) => bool_type.clone(),
+            &Variable::Object(_) => object_type.clone(),
+            &Variable::Array(_) => array_type.clone(),
+            &Variable::Link(_) => link_type.clone(),
+            &Variable::Ref(_) => ref_type.clone(),
+            &Variable::UnsafeRef(_) => unsafe_ref_type.clone(),
+            &Variable::RustObject(_) => rust_object_type.clone(),
+            &Variable::Option(_) => option_type.clone(),
+            &Variable::Result(_) => result_type.clone(),
+            &Variable::Thread(_) => thread_type.clone(),
+            &Variable::Closure(_, _) => closure_type.clone(),
+            &Variable::In(_) => in_type.clone(),
         }
     }
 
