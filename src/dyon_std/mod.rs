@@ -815,26 +815,28 @@ dyon_fn!{fn linear_to_srgb__color(v: Vec4) -> Vec4 {
 }}
 
 pub(crate) fn _typeof(rt: &mut Runtime) -> Result<(), String> {
+    use crate::runtime::*;
+
     let v = rt.stack.pop().expect(TINVOTS);
-    let t = match rt.resolve(&v) {
-        &Variable::Text(_) => rt.text_type.clone(),
-        &Variable::F64(_, _) => rt.f64_type.clone(),
-        &Variable::Vec4(_) => rt.vec4_type.clone(),
-        &Variable::Mat4(_) => rt.mat4_type.clone(),
-        &Variable::Return => rt.return_type.clone(),
-        &Variable::Bool(_, _) => rt.bool_type.clone(),
-        &Variable::Object(_) => rt.object_type.clone(),
-        &Variable::Array(_) => rt.array_type.clone(),
-        &Variable::Link(_) => rt.link_type.clone(),
-        &Variable::Ref(_) => rt.ref_type.clone(),
-        &Variable::UnsafeRef(_) => rt.unsafe_ref_type.clone(),
-        &Variable::RustObject(_) => rt.rust_object_type.clone(),
-        &Variable::Option(_) => rt.option_type.clone(),
-        &Variable::Result(_) => rt.result_type.clone(),
-        &Variable::Thread(_) => rt.thread_type.clone(),
-        &Variable::Closure(_, _) => rt.closure_type.clone(),
-        &Variable::In(_) => rt.in_type.clone(),
-    };
+    let t = Variable::Text(match rt.resolve(&v) {
+        &Variable::Text(_) => text_type.clone(),
+        &Variable::F64(_, _) => f64_type.clone(),
+        &Variable::Vec4(_) => vec4_type.clone(),
+        &Variable::Mat4(_) => mat4_type.clone(),
+        &Variable::Return => return_type.clone(),
+        &Variable::Bool(_, _) => bool_type.clone(),
+        &Variable::Object(_) => object_type.clone(),
+        &Variable::Array(_) => array_type.clone(),
+        &Variable::Link(_) => link_type.clone(),
+        &Variable::Ref(_) => ref_type.clone(),
+        &Variable::UnsafeRef(_) => unsafe_ref_type.clone(),
+        &Variable::RustObject(_) => rust_object_type.clone(),
+        &Variable::Option(_) => option_type.clone(),
+        &Variable::Result(_) => result_type.clone(),
+        &Variable::Thread(_) => thread_type.clone(),
+        &Variable::Closure(_, _) => closure_type.clone(),
+        &Variable::In(_) => in_type.clone(),
+    });
     rt.stack.push(t);
     Ok(())
 }
