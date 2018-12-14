@@ -272,10 +272,107 @@ pub struct Module {
 }
 
 impl Module {
+    /// Creates a new module with standard library.
     pub fn new() -> Module {
-        Module::new_intrinsics(Arc::new(Prelude::new_intrinsics().functions))
+        use Type::*;
+        use dyon_std::*;
+
+        let mut m = Module::new_intrinsics(Arc::new(Prelude::new_intrinsics().functions));
+        m.add_str("x", x, Dfn::nl(vec![Vec4], F64));
+        m.add_str("y", y, Dfn::nl(vec![Vec4], F64));
+        m.add_str("z", z, Dfn::nl(vec![Vec4], F64));
+        m.add_str("w", w, Dfn::nl(vec![Vec4], F64));
+        m.add_str("det", det, Dfn::nl(vec![Mat4], F64));
+        m.add_str("inv", inv, Dfn::nl(vec![Mat4], Mat4));
+        m.add_str("mov", mov, Dfn::nl(vec![Vec4], Mat4));
+        m.add_str("rot__axis_angle", rot__axis_angle, Dfn::nl(vec![Vec4, F64], Mat4));
+        m.add_str("ortho__pos_right_up_forward", ortho__pos_right_up_forward,
+                  Dfn::nl(vec![Vec4; 4], Mat4));
+        m.add_str("proj__fov_near_far_ar", proj__fov_near_far_ar, Dfn::nl(vec![F64; 4], Mat4));
+        m.add_str("mvp__model_view_projection", mvp__model_view_projection,
+                  Dfn::nl(vec![Mat4; 3], Mat4));
+        m.add_str("scale", scale, Dfn::nl(vec![Vec4], Mat4));
+        m.add_str("rx", rx, Dfn::nl(vec![Mat4], Vec4));
+        m.add_str("ry", ry, Dfn::nl(vec![Mat4], Vec4));
+        m.add_str("rz", rz, Dfn::nl(vec![Mat4], Vec4));
+        m.add_str("rw", rw, Dfn::nl(vec![Mat4], Vec4));
+        m.add_str("cx", cx, Dfn::nl(vec![Mat4], Vec4));
+        m.add_str("cy", cy, Dfn::nl(vec![Mat4], Vec4));
+        m.add_str("cz", cz, Dfn::nl(vec![Mat4], Vec4));
+        m.add_str("cw", cw, Dfn::nl(vec![Mat4], Vec4));
+        m.add_str("cv", cv, Dfn::nl(vec![Mat4, F64], Vec4));
+        m.add_str("clone", clone, Dfn::nl(vec![Any], Any));
+        m.add_str("rv", rv, Dfn::nl(vec![Mat4, Type::F64], Vec4));
+        m.add_str("s", s, Dfn::nl(vec![Vec4, F64], F64));
+        m.add_str("println", println, Dfn::nl(vec![Any], Void));
+        m.add_str("print", print, Dfn::nl(vec![Any], Void));
+        m.add_str("sqrt", sqrt, Dfn::nl(vec![F64], F64));
+        m.add_str("sin", sin, Dfn::nl(vec![F64], F64));
+        m.add_str("asin", asin, Dfn::nl(vec![F64], F64));
+        m.add_str("cos", cos, Dfn::nl(vec![F64], F64));
+        m.add_str("acos", acos, Dfn::nl(vec![F64], F64));
+        m.add_str("tan", tan, Dfn::nl(vec![F64], F64));
+        m.add_str("atan", atan, Dfn::nl(vec![F64], F64));
+        m.add_str("atan2", atan2, Dfn::nl(vec![F64; 2], F64));
+        m.add_str("exp", exp, Dfn::nl(vec![F64], F64));
+        m.add_str("ln", ln, Dfn::nl(vec![F64], F64));
+        m.add_str("log2", log2, Dfn::nl(vec![F64], F64));
+        m.add_str("log10", log10, Dfn::nl(vec![F64], F64));
+        m.add_str("round", round, Dfn::nl(vec![F64], F64));
+        m.add_str("abs", abs, Dfn::nl(vec![F64], F64));
+        m.add_str("floor", floor, Dfn::nl(vec![F64], F64));
+        m.add_str("ceil", ceil, Dfn::nl(vec![F64], F64));
+        m.add_str("sleep", sleep, Dfn::nl(vec![F64], Void));
+        m.add_str("random", random, Dfn::nl(vec![], F64));
+        m.add_str("tau", tau, Dfn::nl(vec![], F64));
+        m.add_str("read_line", read_line, Dfn::nl(vec![], Text));
+        m.add_str("read_number", read_number, Dfn::nl(vec![Text], F64));
+        m.add_str("parse_number", parse_number, Dfn::nl(vec![Text], Option(Box::new(Type::F64))));
+        m.add_str("trim", trim, Dfn::nl(vec![Text], Text));
+        m.add_str("trim_left", trim_left, Dfn::nl(vec![Text], Text));
+        m.add_str("trim_right", trim_right, Dfn::nl(vec![Text], Text));
+        m.add_str("str", _str, Dfn::nl(vec![Any], Text));
+        m.add_str("json_string", json_string, Dfn::nl(vec![Text], Text));
+        m.add_str("str__color", str__color, Dfn::nl(vec![Vec4], Text));
+        m.add_str("srgb_to_linear__color", srgb_to_linear__color, Dfn::nl(vec![Vec4], Vec4));
+        m.add_str("linear_to_srgb__color", linear_to_srgb__color, Dfn::nl(vec![Vec4], Vec4));
+        m.add_str("typeof", _typeof, Dfn::nl(vec![Any], Text));
+        m.add_str("debug", debug, Dfn::nl(vec![], Void));
+        m.add_str("backtrace", backtrace, Dfn::nl(vec![], Void));
+        m.add_str("none", none, Dfn::nl(vec![], Type::option()));
+        m.add_str("some", some, Dfn::nl(vec![Any], Type::option()));
+        m.add_str("ok", ok, Dfn::nl(vec![Any], Type::result()));
+        m.add_str("err", err, Dfn::nl(vec![Any], Type::result()));
+        m.add_str("dir__angle", dir__angle, Dfn::nl(vec![F64], Vec4));
+        m.add_str("load__meta_file", load__meta_file, Dfn::nl(vec![Type::Text; 2],
+            Type::Result(Box::new(Type::Array(Box::new(Type::array()))))
+        ));
+        m.add_str("load__meta_url", load__meta_url, Dfn::nl(vec![Type::Text; 2],
+            Type::Result(Box::new(Type::Array(Box::new(Type::array()))))
+        ));
+        m.add_str("syntax__in_string", syntax__in_string,
+                  Dfn::nl(vec![Type::Text; 2], Type::Result(Box::new(Type::Any))));
+        m.add_str("download__url_file", download__url_file,
+                  Dfn::nl(vec![Type::Text; 2], Type::Result(Box::new(Type::Text))));
+        m.add_str("save__string_file", save__string_file,
+                  Dfn::nl(vec![Type::Text; 2], Type::Result(Box::new(Type::Text))));
+        m.add_str("load_string__file", load_string__file,
+                  Dfn::nl(vec![Text], Type::Result(Box::new(Type::Text))));
+        m.add_str("load_string__url", load_string__url,
+                  Dfn::nl(vec![Text], Type::Result(Box::new(Type::Text))));
+        m.add_str("join__thread", join__thread,
+                  Dfn::nl(vec![Type::thread()], Type::Result(Box::new(Type::Any))));
+        m.add_str("load_data__file", load_data__file,
+                  Dfn::nl(vec![Text], Type::Result(Box::new(Type::Any))));
+        m.add_str("load_data__string", load_data__string,
+                  Dfn::nl(vec![Text], Type::Result(Box::new(Type::Any))));
+        m.add_str("args_os", args_os, Dfn::nl(vec![], Type::Array(Box::new(Type::Text))));
+        m.add_str("now", now, Dfn::nl(vec![], F64));
+        m.add_str("is_nan", is_nan, Dfn::nl(vec![F64], Bool));
+        m
     }
 
+    /// Creates a new module with custom intrinsics.
     pub fn new_intrinsics(intrinsics: Arc<HashMap<Arc<String>, usize>>) -> Module {
         Module {
             functions: vec![],
@@ -378,7 +475,7 @@ impl Module {
 
 /// Runs a program using a source file.
 pub fn run(source: &str) -> Result<(), String> {
-    let mut module = Module::new_intrinsics(Arc::new(Prelude::new_intrinsics().functions));
+    let mut module = Module::new();
     try!(load(source, &mut module));
     let mut runtime = runtime::Runtime::new();
     try!(runtime.run(&Arc::new(module)));
@@ -387,7 +484,7 @@ pub fn run(source: &str) -> Result<(), String> {
 
 /// Runs a program from a string.
 pub fn run_str(source: &str, d: Arc<String>) -> Result<(), String> {
-    let mut module = Module::new_intrinsics(Arc::new(Prelude::new_intrinsics().functions));
+    let mut module = Module::new();
     try!(load_str(source, d, &mut module));
     let mut runtime = runtime::Runtime::new();
     try!(runtime.run(&Arc::new(module)));
