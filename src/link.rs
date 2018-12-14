@@ -18,14 +18,14 @@ pub struct Block {
 }
 
 impl Block {
-    pub fn new() -> Block {
+    fn new() -> Block {
         Block {
             data: [0; BLOCK_SIZE],
             tys: [0; 4],
         }
     }
 
-    pub fn var(&self, ind: u8) -> Variable {
+    pub(crate) fn var(&self, ind: u8) -> Variable {
         use std::mem::transmute;
 
         let k = ind as usize;
@@ -50,7 +50,7 @@ impl Block {
         }
     }
 
-    pub fn push(&mut self, var: &Variable, pos: usize) {
+    fn push(&mut self, var: &Variable, pos: usize) {
         use std::mem::transmute;
 
         let k = pos;
@@ -142,14 +142,14 @@ impl fmt::Debug for Block {
 }
 
 #[derive(Debug, Clone)]
-pub struct Slice {
-    pub block: Arc<Block>,
-    pub start: u8,
-    pub end: u8,
+pub(crate) struct Slice {
+    pub(crate) block: Arc<Block>,
+    pub(crate) start: u8,
+    pub(crate) end: u8,
 }
 
 impl Slice {
-    pub fn new() -> Slice {
+    fn new() -> Slice {
         Slice {
             block: Arc::new(Block::new()),
             start: 0,
@@ -158,18 +158,21 @@ impl Slice {
     }
 }
 
+/// Stores a link structure.
 #[derive(Debug, Clone)]
 pub struct Link {
-    pub slices: Vec<Slice>,
+    pub(crate) slices: Vec<Slice>,
 }
 
 impl Link {
+    /// Creates a new link.
     pub fn new() -> Link {
         Link {
             slices: vec![]
         }
     }
 
+    /// Gets the first item of the link.
     pub fn head(&self) -> Option<Box<Variable>> {
         if self.slices.len() == 0 { None }
         else {
@@ -182,6 +185,7 @@ impl Link {
         }
     }
 
+    /// Gets the last item of the link.
     pub fn tip(&self) -> Option<Box<Variable>> {
         if let Some(last) = self.slices.last() {
             if last.start < last.end {
@@ -192,6 +196,9 @@ impl Link {
         } else { None }
     }
 
+    /// Gets the tail of the link.
+    ///
+    /// The tail is the whole link except the first item.
     pub fn tail(&self) -> Link {
         if self.slices.len() == 0 { Link::new() }
         else {
@@ -209,6 +216,9 @@ impl Link {
         }
     }
 
+    /// Gets the neck of the link.
+    ///
+    /// The neck is the whole link except the last item.
     pub fn neck(&self) -> Link {
         if let Some(last) = self.slices.last() {
             let mut l = Link::new();
@@ -227,8 +237,10 @@ impl Link {
         } else { Link::new() }
     }
 
+    /// Returns `true` if the link is empty.
     pub fn is_empty(&self) -> bool { self.slices.len() == 0 }
 
+    /// Adds another link.
     pub fn add(&self, other: &Link) -> Link {
         let mut slices = Vec::with_capacity(self.slices.len() + other.slices.len());
         slices.extend_from_slice(&self.slices);
@@ -238,6 +250,7 @@ impl Link {
         }
     }
 
+    /// Pushes a variable to the link.
     pub fn push(&mut self, v: &Variable) -> Result<(), String> {
         match v {
             &Variable::Bool(_, _) |

@@ -27,7 +27,6 @@ pub fn debug_src(source: &str) {
     load(source, &mut module).unwrap_or_else(|err| {
         panic!("In `{}`:\n{}", source, err);
     });
-    panic!("{:?}", module.functions);
 }
 
 #[test]

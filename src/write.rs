@@ -5,12 +5,12 @@ use Runtime;
 use Variable;
 
 #[derive(Copy, Clone)]
-pub enum EscapeString {
+pub(crate) enum EscapeString {
     Json,
     None
 }
 
-pub fn write_variable<W>(
+pub(crate) fn write_variable<W>(
     w: &mut W,
     rt: &Runtime,
     v: &Variable,
@@ -150,7 +150,7 @@ pub fn write_variable<W>(
     Ok(())
 }
 
-pub fn print_variable(rt: &Runtime, v: &Variable, escape_string: EscapeString) {
+pub(crate) fn print_variable(rt: &Runtime, v: &Variable, escape_string: EscapeString) {
     write_variable(&mut io::stdout(), rt, v, escape_string, 0).unwrap();
 }
 
@@ -161,7 +161,7 @@ fn write_tabs<W: io::Write>(w: &mut W, tabs: u32) -> Result<(), io::Error> {
     Ok(())
 }
 
-pub fn write_closure<W: io::Write>(
+fn write_closure<W: io::Write>(
     w: &mut W,
     rt: &Runtime,
     closure: &ast::Closure,
@@ -179,14 +179,14 @@ pub fn write_closure<W: io::Write>(
     Ok(())
 }
 
-pub fn write_arg<W: io::Write>(
+fn write_arg<W: io::Write>(
     w: &mut W,
     arg: &ast::Arg
 ) -> Result<(), io::Error> {
     write!(w, "{}: {}", arg.name, arg.ty.description())
 }
 
-pub fn write_expr<W: io::Write>(
+fn write_expr<W: io::Write>(
     w: &mut W,
     rt: &Runtime,
     expr: &ast::Expression,
@@ -332,7 +332,7 @@ pub fn write_expr<W: io::Write>(
     Ok(())
 }
 
-pub fn write_block<W: io::Write>(
+fn write_block<W: io::Write>(
     w: &mut W,
     rt: &Runtime,
     block: &ast::Block,
@@ -379,7 +379,7 @@ fn binop_needs_parens(op: ast::BinOp, expr: &ast::Expression, right: bool) -> bo
     }
 }
 
-pub fn write_binop<W: io::Write>(
+fn write_binop<W: io::Write>(
     w: &mut W,
     rt: &Runtime,
     binop: &ast::BinOpExpression,
@@ -406,7 +406,7 @@ pub fn write_binop<W: io::Write>(
     Ok(())
 }
 
-pub fn write_norm<W: io::Write>(
+fn write_norm<W: io::Write>(
     w: &mut W,
     rt: &Runtime,
     norm: &ast::Norm,
@@ -418,7 +418,7 @@ pub fn write_norm<W: io::Write>(
     Ok(())
 }
 
-pub fn write_unop<W: io::Write>(
+fn write_unop<W: io::Write>(
     w: &mut W,
     rt: &Runtime,
     unop: &ast::UnOpExpression,
@@ -439,7 +439,7 @@ pub fn write_unop<W: io::Write>(
     Ok(())
 }
 
-pub fn write_item<W: io::Write>(
+fn write_item<W: io::Write>(
     w: &mut W,
     rt: &Runtime,
     item: &ast::Item,
@@ -468,7 +468,7 @@ pub fn write_item<W: io::Write>(
     Ok(())
 }
 
-pub fn write_link<W: io::Write>(
+fn write_link<W: io::Write>(
     w: &mut W,
     rt: &Runtime,
     link: &ast::Link,
@@ -483,7 +483,7 @@ pub fn write_link<W: io::Write>(
     Ok(())
 }
 
-pub fn write_obj<W: io::Write>(
+fn write_obj<W: io::Write>(
     w: &mut W,
     rt: &Runtime,
     obj: &ast::Object,
@@ -506,7 +506,7 @@ pub fn write_obj<W: io::Write>(
     Ok(())
 }
 
-pub fn write_call<W: io::Write>(
+fn write_call<W: io::Write>(
     w: &mut W,
     rt: &Runtime,
     call: &ast::Call,
@@ -523,7 +523,7 @@ pub fn write_call<W: io::Write>(
     Ok(())
 }
 
-pub fn write_call_closure<W: io::Write>(
+fn write_call_closure<W: io::Write>(
     w: &mut W,
     rt: &Runtime,
     call: &ast::CallClosure,
@@ -542,7 +542,7 @@ pub fn write_call_closure<W: io::Write>(
     Ok(())
 }
 
-pub fn write_arr<W: io::Write>(
+fn write_arr<W: io::Write>(
     w: &mut W,
     rt: &Runtime,
     arr: &ast::Array,
@@ -559,7 +559,7 @@ pub fn write_arr<W: io::Write>(
     Ok(())
 }
 
-pub fn write_arr_fill<W: io::Write>(
+fn write_arr_fill<W: io::Write>(
     w: &mut W,
     rt: &Runtime,
     arr_fill: &ast::ArrayFill,
@@ -573,7 +573,7 @@ pub fn write_arr_fill<W: io::Write>(
     Ok(())
 }
 
-pub fn write_assign<W: io::Write>(
+fn write_assign<W: io::Write>(
     w: &mut W,
     rt: &Runtime,
     assign: &ast::Assign,
@@ -585,7 +585,7 @@ pub fn write_assign<W: io::Write>(
     Ok(())
 }
 
-pub fn write_vec4<W: io::Write>(
+fn write_vec4<W: io::Write>(
     w: &mut W,
     rt: &Runtime,
     vec4: &ast::Vec4,
@@ -615,7 +615,7 @@ pub fn write_vec4<W: io::Write>(
     Ok(())
 }
 
-pub fn write_mat4<W: io::Write>(
+fn write_mat4<W: io::Write>(
     w: &mut W,
     rt: &Runtime,
     mat4: &ast::Mat4,
@@ -636,7 +636,7 @@ pub fn write_mat4<W: io::Write>(
     Ok(())
 }
 
-pub fn write_swizzle<W: io::Write>(
+fn write_swizzle<W: io::Write>(
     w: &mut W,
     rt: &Runtime,
     swizzle: &ast::Swizzle,
@@ -664,7 +664,7 @@ pub fn write_swizzle<W: io::Write>(
     Ok(())
 }
 
-pub fn write_for<W: io::Write>(
+fn write_for<W: io::Write>(
     w: &mut W,
     rt: &Runtime,
     f: &ast::For,
@@ -706,7 +706,7 @@ fn compare_needs_parent(expr: &ast::Expression) -> bool {
     }
 }
 
-pub fn write_compare<W: io::Write>(
+fn write_compare<W: io::Write>(
     w: &mut W,
     rt: &Runtime,
     comp: &ast::Compare,
@@ -733,7 +733,7 @@ pub fn write_compare<W: io::Write>(
     Ok(())
 }
 
-pub fn write_for_n<W: io::Write>(
+fn write_for_n<W: io::Write>(
     w: &mut W,
     rt: &Runtime,
     for_n: &ast::ForN,
@@ -754,7 +754,7 @@ pub fn write_for_n<W: io::Write>(
     Ok(())
 }
 
-pub fn write_for_in<W: io::Write>(
+fn write_for_in<W: io::Write>(
     w: &mut W,
     rt: &Runtime,
     for_in: &ast::ForIn,
@@ -767,7 +767,7 @@ pub fn write_for_in<W: io::Write>(
     Ok(())
 }
 
-pub fn write_if<W: io::Write>(
+fn write_if<W: io::Write>(
     w: &mut W,
     rt: &Runtime,
     if_expr: &ast::If,
@@ -791,7 +791,7 @@ pub fn write_if<W: io::Write>(
     Ok(())
 }
 
-pub fn write_grab<W: io::Write>(
+fn write_grab<W: io::Write>(
     w: &mut W,
     rt: &Runtime,
     grab: &ast::Grab,
@@ -807,7 +807,7 @@ pub fn write_grab<W: io::Write>(
     Ok(())
 }
 
-pub fn write_try_expr<W: io::Write>(
+fn write_try_expr<W: io::Write>(
     w: &mut W,
     rt: &Runtime,
     try_expr: &ast::TryExpr,

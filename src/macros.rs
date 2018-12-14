@@ -1,3 +1,4 @@
+//! Dyon macros.
 
 #[macro_export]
 macro_rules! dyon_macro_items { ($($x:item)+) => ($($x)+) }
