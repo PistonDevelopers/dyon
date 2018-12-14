@@ -1,3 +1,5 @@
+//! Traits for Dyon interop.
+
 use std::sync::Arc;
 
 use Error;
@@ -6,6 +8,7 @@ use Runtime;
 use Variable;
 use RustObject;
 
+/// Gets value of object field.
 pub fn obj_field<T: PopVariable>(rt: &Runtime, obj: &Object, name: &str) -> Result<T, String> {
     let var = try!(obj.get(&Arc::new(name.into()))
         .ok_or_else(|| format!("Object has no key `{}`", name)));
@@ -29,12 +32,15 @@ pub trait PushVariable {
 pub trait ConvertVec4: Sized {
     /// Converts vec4 to self.
     fn from(val: [f32; 4]) -> Self;
+    /// Converts from self to mat4.
     fn to(&self) -> [f32; 4];
 }
 
+/// Convert from and to mat4.
 pub trait ConvertMat4: Sized {
     /// Converts mat4 to self.
     fn from(val: [[f32; 4]; 4]) -> Self;
+    /// Converts from self to mat4.
     fn to(&self) -> [[f32; 4]; 4];
 }
 

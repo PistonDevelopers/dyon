@@ -20,16 +20,16 @@ use piston_meta::MetaData;
 
 pub mod ast;
 pub mod runtime;
-pub mod lifetime;
-pub mod intrinsics;
-pub mod prelude;
+mod lifetime;
+mod intrinsics;
+mod prelude;
 pub mod embed;
-pub mod ty;
-pub mod link;
+mod ty;
+mod link;
 pub mod macros;
-pub mod vec4;
-pub mod mat4;
-pub mod write;
+mod vec4;
+mod mat4;
+mod write;
 
 mod grab;
 mod dyon_std;
@@ -44,24 +44,32 @@ pub use mat4::Mat4;
 /// A common error message when there is no value on the stack.
 pub const TINVOTS: &'static str = "There is no value on the stack";
 
+/// Type alias for Dyon arrays.
 pub type Array = Arc<Vec<Variable>>;
+/// Type alias for Dyon objects.
 pub type Object = Arc<HashMap<Arc<String>, Variable>>;
+/// Type alias for Rust objects.
 pub type RustObject = Arc<Mutex<Any>>;
 
+/// Stores Dyon errors.
 #[derive(Debug, Clone)]
 pub struct Error {
+    /// The error message.
     pub message: Variable,
-    // Extra information to help debug error.
-    // Stores error messages for all `?` operators.
+    /// Extra information to help debug error.
+    /// Stores error messages for all `?` operators.
     pub trace: Vec<String>,
 }
 
+/// Stores a thread handle.
 #[derive(Clone)]
 pub struct Thread {
+    /// The handle of the thread.
     pub handle: Option<Arc<Mutex<JoinHandle<Result<Variable, String>>>>>,
 }
 
 impl Thread {
+    /// Creates a new thread handle.
     pub fn new(handle: JoinHandle<Result<Variable, String>>) -> Thread {
         Thread {
             handle: Some(Arc::new(Mutex::new(handle)))
@@ -110,9 +118,12 @@ impl fmt::Debug for Thread {
 #[derive(Debug, Clone)]
 pub struct UnsafeRef(*mut Variable);
 
+/// Stores closure environment.
 #[derive(Clone)]
 pub struct ClosureEnvironment {
+    /// The module that the closure was created.
     pub module: Arc<Module>,
+    /// Relative index, used to resolve function indices.
     pub relative: usize,
 }
 
@@ -122,25 +133,44 @@ impl fmt::Debug for ClosureEnvironment {
     }
 }
 
+/// Dyon variable.
 #[derive(Debug, Clone)]
 pub enum Variable {
+    /// Reference.
     Ref(usize),
+    /// Return handle.
     Return,
+    /// Boolean.
     Bool(bool, Option<Box<Vec<Variable>>>),
+    /// F64.
     F64(f64, Option<Box<Vec<Variable>>>),
+    /// 4D vector.
     Vec4([f32; 4]),
+    /// 4D matrix.
     Mat4(Box<[[f32; 4]; 4]>),
+    /// Text.
     Text(Arc<String>),
+    /// Array.
     Array(Array),
+    /// Object.
     Object(Object),
+    /// Link.
     Link(Box<Link>),
+    /// Unsafe reference.
     UnsafeRef(UnsafeRef),
+    /// Rust object.
     RustObject(RustObject),
+    /// Option.
     Option(Option<Box<Variable>>),
+    /// Result.
     Result(Result<Box<Variable>, Box<Error>>),
+    /// Thread handle.
     Thread(Thread),
-    // Stores closure AST, relative function index.
+    /// Stores closure together with a closure environment,
+    /// which makes sure that the closure can be called correctly
+    /// no matter where it goes.
     Closure(Arc<ast::Closure>, Box<ClosureEnvironment>),
+    /// In-type.
     In(Arc<Mutex<::std::sync::mpsc::Receiver<Variable>>>),
 }
 
@@ -150,12 +180,39 @@ pub enum Variable {
 unsafe impl Send for Variable {}
 
 impl Variable {
+    /// Creates a variable of type `f64`.
     pub fn f64(val: f64) -> Variable {
         Variable::F64(val, None)
     }
 
+    /// Creates a variable of type `bool`.
     pub fn bool(val: bool) -> Variable {
         Variable::Bool(val, None)
+    }
+
+    /// Returns type of variable.
+    pub fn typeof_var(&self) -> Arc<String> {
+        use self::runtime::*;
+
+        match self {
+            &Variable::Text(_) => text_type.clone(),
+            &Variable::F64(_, _) => f64_type.clone(),
+            &Variable::Vec4(_) => vec4_type.clone(),
+            &Variable::Mat4(_) => mat4_type.clone(),
+            &Variable::Return => return_type.clone(),
+            &Variable::Bool(_, _) => bool_type.clone(),
+            &Variable::Object(_) => object_type.clone(),
+            &Variable::Array(_) => array_type.clone(),
+            &Variable::Link(_) => link_type.clone(),
+            &Variable::Ref(_) => ref_type.clone(),
+            &Variable::UnsafeRef(_) => unsafe_ref_type.clone(),
+            &Variable::RustObject(_) => rust_object_type.clone(),
+            &Variable::Option(_) => option_type.clone(),
+            &Variable::Result(_) => result_type.clone(),
+            &Variable::Thread(_) => thread_type.clone(),
+            &Variable::Closure(_, _) => closure_type.clone(),
+            &Variable::In(_) => in_type.clone(),
+        }
     }
 
     fn deep_clone(&self, stack: &Vec<Variable>) -> Variable {
@@ -219,13 +276,18 @@ impl PartialEq for Variable {
     }
 }
 
+/// Refers to a function.
 #[derive(Clone, Copy, Debug)]
 pub enum FnIndex {
+    /// No function.
     None,
+    /// An intrinsic function.
     Intrinsic(usize),
     /// Relative to function you call from.
     Loaded(isize),
+    /// External function with no return value.
     ExternalVoid(FnExternalRef),
+    /// Extern function with return value.
     ExternalReturn(FnExternalRef),
 }
 
@@ -245,11 +307,11 @@ impl fmt::Debug for FnExternalRef {
     }
 }
 
-pub struct FnExternal {
-    pub namespace: Arc<Vec<Arc<String>>>,
-    pub name: Arc<String>,
-    pub f: fn(&mut Runtime) -> Result<(), String>,
-    pub p: Dfn,
+struct FnExternal {
+    namespace: Arc<Vec<Arc<String>>>,
+    name: Arc<String>,
+    f: fn(&mut Runtime) -> Result<(), String>,
+    p: Dfn,
 }
 
 impl Clone for FnExternal {
@@ -263,12 +325,13 @@ impl Clone for FnExternal {
     }
 }
 
+/// Stores functions for a Dyon module.
 #[derive(Clone)]
 pub struct Module {
-    pub functions: Vec<ast::Function>,
-    pub ext_prelude: Vec<FnExternal>,
-    pub intrinsics: Arc<HashMap<Arc<String>, usize>>,
-    pub register_namespace: Arc<Vec<Arc<String>>>,
+    functions: Vec<ast::Function>,
+    ext_prelude: Vec<FnExternal>,
+    intrinsics: Arc<HashMap<Arc<String>, usize>>,
+    register_namespace: Arc<Vec<Arc<String>>>,
 }
 
 impl Module {
@@ -395,7 +458,7 @@ impl Module {
         self.register_namespace = Arc::new(vec![]);
     }
 
-    pub fn register(&mut self, function: ast::Function) {
+    fn register(&mut self, function: ast::Function) {
         self.functions.push(function);
     }
 
@@ -421,18 +484,21 @@ impl Module {
         }
     }
 
-    pub fn error(&self, range: Range, msg: &str, rt: &Runtime) -> String {
+    /// Generates an error message.
+    fn error(&self, range: Range, msg: &str, rt: &Runtime) -> String {
         let fnindex = if let Some(x) = rt.call_stack.last() {x.index}
                       else {return msg.into()};
         self.error_fnindex(range, msg, fnindex)
     }
 
-    pub fn error_fnindex(&self, range: Range, msg: &str, fnindex: usize) -> String {
+    /// Generates an error with a function index.
+    fn error_fnindex(&self, range: Range, msg: &str, fnindex: usize) -> String {
         let source = &self.functions[fnindex].source;
         self.error_source(range, msg, source)
     }
 
-    pub fn error_source(&self, range: Range, msg: &str, source: &Arc<String>) -> String {
+    /// Generates an error message with a source.
+    fn error_source(&self, range: Range, msg: &str, source: &Arc<String>) -> String {
         use piston_meta::ParseErrorHandler;
 
         let mut w: Vec<u8> = vec![];

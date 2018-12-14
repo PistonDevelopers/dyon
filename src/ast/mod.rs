@@ -2565,7 +2565,7 @@ impl CallClosure {
         }))
     }
 
-    pub fn resolve_locals(
+    fn resolve_locals(
         &self,
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
@@ -2610,13 +2610,17 @@ impl CallClosure {
     }
 }
 
+/// 4D vector norm.
 #[derive(Debug, Clone)]
 pub struct Norm {
+    /// Expression argument.
     pub expr: Expression,
+    /// The range in source.
     pub source_range: Range,
 }
 
 impl Norm {
+    /// Creates 4D vector norm from meta data.
     pub fn from_meta_data(
         file: &Arc<String>,
         source: &Arc<String>,
@@ -2651,7 +2655,7 @@ impl Norm {
         }))
     }
 
-    pub fn resolve_locals(
+    fn resolve_locals(
         &self,
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
@@ -2665,16 +2669,21 @@ impl Norm {
     }
 }
 
+/// Binary operator expression.
 #[derive(Debug, Clone)]
 pub struct BinOpExpression {
+    /// Binary operator.
     pub op: BinOp,
+    /// Left side expression.
     pub left: Expression,
+    /// Right side expression.
     pub right: Expression,
+    /// The range in source.
     pub source_range: Range,
 }
 
 impl BinOpExpression {
-    pub fn resolve_locals(
+    fn resolve_locals(
         &self,
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
@@ -2690,14 +2699,19 @@ impl BinOpExpression {
     }
 }
 
+/// Unary operator expression.
 #[derive(Debug, Clone)]
 pub struct UnOpExpression {
+    /// Unary operator.
     pub op: UnOp,
+    /// Expression argument.
     pub expr: Expression,
+    /// The range in source.
     pub source_range: Range,
 }
 
 impl UnOpExpression {
+    /// Creates unary operator expression from meta data.
     pub fn from_meta_data(
         file: &Arc<String>,
         source: &Arc<String>,
@@ -2741,7 +2755,7 @@ impl UnOpExpression {
         }))
     }
 
-    pub fn resolve_locals(
+    fn resolve_locals(
         &self,
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
@@ -2755,15 +2769,21 @@ impl UnOpExpression {
     }
 }
 
+/// Assignment expression.
 #[derive(Debug, Clone)]
 pub struct Assign {
+    /// Assignment operator.
     pub op: AssignOp,
+    /// Left side expression.
     pub left: Expression,
+    /// Right side expression.
     pub right: Expression,
+    /// The range in source.
     pub source_range: Range,
 }
 
 impl Assign {
+    /// Creates assignment expression from meta data.
     pub fn from_meta_data(
         file: &Arc<String>,
         source: &Arc<String>,
@@ -2832,7 +2852,7 @@ impl Assign {
         }))
     }
 
-    pub fn resolve_locals(
+    fn resolve_locals(
         &self,
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
@@ -2858,6 +2878,7 @@ impl Assign {
     }
 }
 
+/// Assignment operator.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum AssignOp {
     /// :=
@@ -2879,6 +2900,7 @@ pub enum AssignOp {
 }
 
 impl AssignOp {
+    /// Returns symbol of assignment operator.
     pub fn symbol(&self) -> &'static str {
         use self::AssignOp::*;
 
@@ -2895,13 +2917,17 @@ impl AssignOp {
     }
 }
 
+/// 4D matrix expression.
 #[derive(Debug, Clone)]
 pub struct Mat4 {
+    /// Row vector argument expressions.
     pub args: Vec<Expression>,
+    /// The range in source.
     pub source_range: Range,
 }
 
 impl Mat4 {
+    /// Creates 4D matrix from meta data.
     pub fn from_meta_data(
         file: &Arc<String>,
         source: &Arc<String>,
@@ -2954,7 +2980,7 @@ impl Mat4 {
         }))
     }
 
-    pub fn resolve_locals(
+    fn resolve_locals(
         &self,
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
@@ -2973,13 +2999,17 @@ impl Mat4 {
     }
 }
 
+/// 4D vector expression.
 #[derive(Debug, Clone)]
 pub struct Vec4 {
+    /// Component expressions.
     pub args: Vec<Expression>,
+    /// The range in source.
     pub source_range: Range,
 }
 
 impl Vec4 {
+    /// Creates 4D vector from meta data.
     pub fn from_meta_data(
         file: &Arc<String>,
         source: &Arc<String>,
@@ -3048,7 +3078,7 @@ impl Vec4 {
         Some(Variable::Vec4(v))
     }
 
-    pub fn resolve_locals(
+    fn resolve_locals(
         &self,
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
@@ -3076,15 +3106,21 @@ impl Vec4 {
     }
 }
 
+/// 4D vector unloop expression.
 #[derive(Debug, Clone)]
 pub struct Vec4UnLoop {
+    /// Name of the variable.
     pub name: Arc<String>,
+    /// Expression of the loop.
     pub expr: Expression,
+    /// The length of the loop.
     pub len: u8,
+    /// The range in source.
     pub source_range: Range,
 }
 
 impl Vec4UnLoop {
+    /// Creates 4D vector-unloop from meta data.
     pub fn from_meta_data(
         file: &Arc<String>,
         source: &Arc<String>,
@@ -3136,7 +3172,7 @@ impl Vec4UnLoop {
         }))
     }
 
-    pub fn to_expression(self) -> Expression {
+    fn to_expression(self) -> Expression {
         let source_range = self.source_range;
 
         let zero = || Expression::Variable(source_range, Variable::f64(0.0));
@@ -3161,17 +3197,25 @@ impl Vec4UnLoop {
     }
 }
 
+/// Swizzle expression.
 #[derive(Debug, Clone)]
 pub struct Swizzle {
+    /// First component swizzle.
     pub sw0: usize,
+    /// Second component swizzle.
     pub sw1: usize,
+    /// Third component swizzle.
     pub sw2: Option<usize>,
+    /// Fourth component swizzle.
     pub sw3: Option<usize>,
+    /// 4D vector expression.
     pub expr: Expression,
+    /// The range in source.
     pub source_range: Range,
 }
 
 impl Swizzle {
+    /// Create swizzle from meta data.
     pub fn from_meta_data(
         file: &Arc<String>,
         source: &Arc<String>,
@@ -3232,20 +3276,24 @@ impl Swizzle {
         }))
     }
 
-    pub fn len(&self) -> usize {
+    fn len(&self) -> usize {
         return 2 +
             if self.sw2.is_some() { 1 } else { 0 } +
             if self.sw3.is_some() { 1 } else { 0 }
     }
 }
 
+/// Component swizzle expression.
 #[derive(Debug, Clone)]
 pub struct Sw {
+    /// The component index of the swizzle.
     pub ind: usize,
+    /// The range in source.
     pub source_range: Range,
 }
 
 impl Sw {
+    /// Creates component swizzle from meta data.
     pub fn from_meta_data(
         node: &str,
         mut convert: Convert,
@@ -3287,17 +3335,25 @@ impl Sw {
     }
 }
 
+/// For-expression.
 #[derive(Debug, Clone)]
 pub struct For {
+    /// The initial expression.
     pub init: Expression,
+    /// Expression evaluated for determining whether to continue or not.
     pub cond: Expression,
+    /// Expression evaluated at each step.
     pub step: Expression,
+    /// Block expression.
     pub block: Block,
+    /// Loop label.
     pub label: Option<Arc<String>>,
+    /// The range in source.
     pub source_range: Range,
 }
 
 impl For {
+    /// Creates For-expression from meta data.
     pub fn from_meta_data(
         file: &Arc<String>,
         source: &Arc<String>,
@@ -3358,7 +3414,7 @@ impl For {
         }))
     }
 
-    pub fn resolve_locals(
+    fn resolve_locals(
         &self, relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
@@ -3377,16 +3433,23 @@ impl For {
     }
 }
 
+/// For-In expression.
 #[derive(Debug, Clone)]
 pub struct ForIn {
+    /// Name of the loop variable.
     pub name: Arc<String>,
+    /// The in-type expression to read from.
     pub iter: Expression,
+    /// Block expression.
     pub block: Block,
+    /// Loop label.
     pub label: Option<Arc<String>>,
+    /// The range in source.
     pub source_range: Range,
 }
 
 impl ForIn {
+    /// Creates For-In expression from meta data.
     pub fn from_meta_data(
         file: &Arc<String>,
         source: &Arc<String>,
@@ -3436,7 +3499,7 @@ impl ForIn {
         }))
     }
 
-    pub fn resolve_locals(
+    fn resolve_locals(
         &self, relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
@@ -3452,17 +3515,29 @@ impl ForIn {
     }
 }
 
+/// For-N expression.
 #[derive(Debug, Clone)]
 pub struct ForN {
+    /// Name of index variable.
     pub name: Arc<String>,
+    /// Start expression.
+    ///
+    /// This is evaluated before starting the loop.
     pub start: Option<Expression>,
+    /// End expression.
+    ///
+    /// This is evaluated before starting the loop.
     pub end: Expression,
+    /// Bloc expression.
     pub block: Block,
+    /// Loop label.
     pub label: Option<Arc<String>>,
+    /// The range in source.
     pub source_range: Range,
 }
 
 impl ForN {
+    /// Creates For-N expression from meta data.
     pub fn from_meta_data(
         file: &Arc<String>,
         source: &Arc<String>,
@@ -3580,7 +3655,7 @@ impl ForN {
         }))
     }
 
-    pub fn resolve_locals(
+    fn resolve_locals(
         &self,
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
@@ -3601,14 +3676,19 @@ impl ForN {
     }
 }
 
+/// Loop expression.
 #[derive(Debug, Clone)]
 pub struct Loop {
+    /// Block expression.
     pub block: Block,
+    /// Loop label.
     pub label: Option<Arc<String>>,
+    /// The range in source.
     pub source_range: Range,
 }
 
 impl Loop {
+    /// Creates loop expression from meta data.
     pub fn from_meta_data(
         file: &Arc<String>,
         source: &Arc<String>,
@@ -3648,7 +3728,7 @@ impl Loop {
         }))
     }
 
-    pub fn to_expression(self) -> Expression {
+    fn to_expression(self) -> Expression {
         let source_range = self.source_range;
         Expression::For(Box::new(For {
             block: self.block,
@@ -3667,13 +3747,17 @@ impl Loop {
     }
 }
 
+/// Break expression.
 #[derive(Debug, Clone)]
 pub struct Break {
+    /// Loop label.
     pub label: Option<Arc<String>>,
+    /// The range in source.
     pub source_range: Range,
 }
 
 impl Break {
+    /// Creates break expression from meta data.
     pub fn from_meta_data(
         mut convert: Convert,
         ignored: &mut Vec<Range>)
@@ -3705,13 +3789,17 @@ impl Break {
     }
 }
 
+/// Continue expression.
 #[derive(Debug, Clone)]
 pub struct Continue {
+    /// The loop label.
     pub label: Option<Arc<String>>,
+    /// The range in source.
     pub source_range: Range,
 }
 
 impl Continue {
+    /// Creates continue expression from meta data.
     pub fn from_meta_data(
         mut convert: Convert,
         ignored: &mut Vec<Range>)
@@ -3743,17 +3831,25 @@ impl Continue {
     }
 }
 
+/// If-expression.
 #[derive(Debug, Clone)]
 pub struct If {
+    /// Condition.
     pub cond: Expression,
+    /// True block.
     pub true_block: Block,
+    /// Else-if conditions.
     pub else_if_conds: Vec<Expression>,
+    /// Else-if blocks.
     pub else_if_blocks: Vec<Block>,
+    /// Else block.
     pub else_block: Option<Block>,
+    /// The range in source.
     pub source_range: Range,
 }
 
 impl If {
+    /// Creates if-expression from meta data.
     pub fn from_meta_data(
         file: &Arc<String>,
         source: &Arc<String>,
@@ -3813,7 +3909,7 @@ impl If {
         }))
     }
 
-    pub fn resolve_locals(
+    fn resolve_locals(
         &self,
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
@@ -3843,15 +3939,21 @@ impl If {
     }
 }
 
+/// Compare expression.
 #[derive(Debug, Clone)]
 pub struct Compare {
+    /// Comparison operator.
     pub op: CompareOp,
+    /// Left side of expression.
     pub left: Expression,
+    /// Right side of expression.
     pub right: Expression,
+    /// The range in source.
     pub source_range: Range,
 }
 
 impl Compare {
+    /// Creates compare expression from meta data.
     pub fn from_meta_data(
         file: &Arc<String>,
         source: &Arc<String>,
@@ -3914,7 +4016,7 @@ impl Compare {
         }))
     }
 
-    pub fn resolve_locals(
+    fn resolve_locals(
         &self,
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
@@ -3930,17 +4032,25 @@ impl Compare {
     }
 }
 
+/// Comparison operator.
 #[derive(Debug, Clone, Copy)]
 pub enum CompareOp {
+    /// Less.
     Less,
+    /// Less or equal.
     LessOrEqual,
+    /// Greater.
     Greater,
+    /// Greater or equal.
     GreaterOrEqual,
+    /// Equal.
     Equal,
+    /// Not equal.
     NotEqual,
 }
 
 impl CompareOp {
+    /// Returns symbol for the comparison operator.
     pub fn symbol(self) -> &'static str {
         match self {
             CompareOp::Less => "<",
@@ -3953,15 +4063,21 @@ impl CompareOp {
     }
 }
 
+/// Stores `in <function>` expression.
 #[derive(Debug, Clone)]
 pub struct In {
+    /// Alias, e.g. `in foo::my_function`.
     pub alias: Option<Arc<String>>,
+    /// Name of function.
     pub name: Arc<String>,
+    /// Function index.
     pub f_index: Cell<FnIndex>,
+    /// Range is source file.
     pub source_range: Range,
 }
 
 impl In {
+    /// Creates in expression from meta data.
     pub fn from_meta_data(
         node: &'static str,
         mut convert: Convert,
@@ -3999,7 +4115,7 @@ impl In {
         }))
     }
 
-    pub fn resolve_locals(
+    fn resolve_locals(
         &self,
         relative: usize,
         module: &Module,

@@ -5,32 +5,49 @@ use range::Range;
 use Dfn;
 use ast::BinOp;
 
+/// Stores a Dyon type.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Type {
     /// Whether a statement is never reached.
     Unreachable,
+    /// A no-type.
     Void,
+    /// Any type.
     Any,
+    /// Boolean type.
     Bool,
+    /// F64 type.
     F64,
+    /// 4D vector type.
     Vec4,
+    /// 4D matrix type.
     Mat4,
+    /// String/text type.
     Text,
+    /// Link type.
     Link,
+    /// Array type.
     Array(Box<Type>),
-    // Object(HashMap<Arc<String>, Type>),
+    /// Object type.
     Object,
-    // Rust(Arc<String>),
+    /// Option type.
     Option(Box<Type>),
+    /// Result type.
     Result(Box<Type>),
+    /// Secret type.
     Secret(Box<Type>),
+    /// Thread handle type.
     Thread(Box<Type>),
+    /// In-type.
     In(Box<Type>),
+    /// Ad-hoc type.
     AdHoc(Arc<String>, Box<Type>),
+    /// Closure type.
     Closure(Box<Dfn>),
 }
 
 impl Type {
+    /// Returns description of the type.
     pub fn description(&self) -> String {
         use Type::*;
 
@@ -121,29 +138,23 @@ impl Type {
         }
     }
 
-    pub fn array() -> Type {
-        Type::Array(Box::new(Type::Any))
-    }
+    /// Returns an array type with an `any` as inner type.
+    pub fn array() -> Type {Type::Array(Box::new(Type::Any))}
 
-    pub fn object() -> Type {
-        Type::Object
-    }
+    /// Returns an object type.
+    pub fn object() -> Type {Type::Object}
 
-    pub fn option() -> Type {
-        Type::Option(Box::new(Type::Any))
-    }
+    /// Returns an Option type with an `any` as inner type.
+    pub fn option() -> Type {Type::Option(Box::new(Type::Any))}
 
-    pub fn result() -> Type {
-        Type::Result(Box::new(Type::Any))
-    }
+    /// Returns a Result type with an `any` as inner type.
+    pub fn result() -> Type {Type::Result(Box::new(Type::Any))}
 
-    pub fn thread() -> Type {
-        Type::Thread(Box::new(Type::Any))
-    }
+    /// Returns a thread handle type with an `any` as inner type.
+    pub fn thread() -> Type {Type::Thread(Box::new(Type::Any))}
 
-    pub fn in_ty() -> Type {
-        Type::In(Box::new(Type::Any))
-    }
+    /// Returns an in-type with an `any` as inner type.
+    pub fn in_ty() -> Type {Type::In(Box::new(Type::Any))}
 
     /// Returns `true` if a type goes with another type (directional check).
     ///
@@ -259,6 +270,7 @@ impl Type {
         }
     }
 
+    /// Infers type from the `+` operator.
     pub fn add(&self, other: &Type) -> Option<Type> {
         use self::Type::*;
 
@@ -297,6 +309,7 @@ impl Type {
         }
     }
 
+    /// Infers type from the `+=` operator.
     pub fn add_assign(&self, other: &Type) -> bool {
         use self::Type::*;
 
@@ -312,6 +325,7 @@ impl Type {
         }
     }
 
+    /// Infers type from the `*` binary operator.
     pub fn mul(&self, other: &Type, binop: BinOp) -> Option<Type> {
         use self::Type::*;
 
@@ -347,6 +361,7 @@ impl Type {
         }
     }
 
+    /// Infers type from the `^` binary operator.
     pub fn pow(&self, other: &Type) -> Option<Type> {
         use self::Type::*;
 
@@ -374,6 +389,7 @@ impl Type {
         }
     }
 
+    /// Converts meta data into a type.
     pub fn from_meta_data(node: &str, mut convert: Convert, ignored: &mut Vec<Range>)
     -> Result<(Range, Type), ()> {
         let start = convert.clone();

@@ -1,3 +1,5 @@
+//! Dyon runtime.
+
 use std::sync::Arc;
 use std::collections::HashMap;
 use rand;
@@ -21,9 +23,11 @@ mod for_in;
 pub enum Side {
     /// Whether to insert key in object when missing.
     LeftInsert(bool),
+    /// Evaluating right side of assignment.
     Right
 }
 
+/// Stores return flow, used to continue executing, return, break out of loop or continue loop.
 #[derive(Debug)]
 pub enum Flow {
     /// Continues execution.
@@ -36,18 +40,19 @@ pub enum Flow {
     ContinueLoop(Option<Arc<String>>),
 }
 
+/// Stores function calls.
 #[derive(Debug)]
 pub struct Call {
     // was .0
-    pub fn_name: Arc<String>,
+    fn_name: Arc<String>,
     /// The index of the relative function in module.
-    pub index: usize,
-    pub file: Option<Arc<String>>,
+    pub(crate) index: usize,
+    file: Option<Arc<String>>,
     // was .1
-    pub stack_len: usize,
+    stack_len: usize,
     // was .2
-    pub local_len: usize,
-    pub current_len: usize,
+    local_len: usize,
+    current_len: usize,
 }
 
 lazy_static! {
@@ -70,14 +75,21 @@ lazy_static! {
     pub(crate) static ref in_type: Arc<String> = Arc::new("in".into());
 }
 
+/// Stores data needed for running a Dyon program.
 pub struct Runtime {
+    /// Stores variables on the stack.
     pub stack: Vec<Variable>,
     /// name, file, stack_len, local_len.
     pub call_stack: Vec<Call>,
+    /// Stores stack of locals.
     pub local_stack: Vec<(Arc<String>, usize)>,
+    /// Stores stack of current objects.
+    ///
+    /// When a current object is used, the runtime searches backwards
+    /// until it finds the last current variable with the name.
     pub current_stack: Vec<(Arc<String>, usize)>,
-    pub ret: Arc<String>,
-    pub rng: rand::rngs::StdRng,
+    ret: Arc<String>,
+    pub(crate) rng: rand::rngs::StdRng,
 }
 
 #[inline(always)]
@@ -215,6 +227,7 @@ fn item_lookup(
 }
 
 impl Runtime {
+    /// Creates a new Runtime.
     pub fn new() -> Runtime {
         use rand::FromEntropy;
 
@@ -228,11 +241,13 @@ impl Runtime {
         }
     }
 
+    /// Pops variable from stack.
     pub fn pop<T: embed::PopVariable>(&mut self) -> Result<T, String> {
         let v = self.stack.pop().unwrap_or_else(|| panic!(TINVOTS));
         T::pop_var(self, self.resolve(&v))
     }
 
+    /// Pops 4D vector from stack.
     pub fn pop_vec4<T: embed::ConvertVec4>(&mut self) -> Result<T, String> {
         let v = self.stack.pop().unwrap_or_else(|| panic!(TINVOTS));
         match self.resolve(&v) {
@@ -241,6 +256,7 @@ impl Runtime {
         }
     }
 
+    /// Pops 4D matrix from stack.
     pub fn pop_mat4<T: embed::ConvertMat4>(&mut self) -> Result<T, String> {
         let v = self.stack.pop().unwrap_or_else(|| panic!(TINVOTS));
         match self.resolve(&v) {
@@ -249,10 +265,12 @@ impl Runtime {
         }
     }
 
+    /// Gets variable.
     pub fn var<T: embed::PopVariable>(&self, var: &Variable) -> Result<T, String> {
         T::pop_var(self, self.resolve(&var))
     }
 
+    /// Gets 4D vector.
     pub fn var_vec4<T: embed::ConvertVec4>(&self, var: &Variable) -> Result<T, String> {
         match self.resolve(&var) {
             &Variable::Vec4(val) => Ok(T::from(val)),
@@ -260,6 +278,7 @@ impl Runtime {
         }
     }
 
+    /// Gets 4D matrix.
     pub fn var_mat4<T: embed::ConvertMat4>(&self, var: &Variable) -> Result<T, String> {
         match self.resolve(&var) {
             &Variable::Mat4(ref val) => Ok(T::from(**val)),
@@ -289,34 +308,20 @@ impl Runtime {
         self.stack.push(Variable::RustObject(Arc::new(Mutex::new(val)) as RustObject))
     }
 
+    /// Generates error message that a certain type was expected.
     pub fn expected(&self, var: &Variable, ty: &str) -> String {
-        let found_ty = self.typeof_var(var);
+        let found_ty = var.typeof_var();
         format!("{}\nExpected `{}`, found `{}`", self.stack_trace(), ty, found_ty)
     }
 
+    /// Resolves a variable reference if any, getting a pointer to the variable on the stack.
     #[inline(always)]
     pub fn resolve<'a>(&'a self, var: &'a Variable) -> &'a Variable {
         resolve(&self.stack, var)
     }
 
-    pub fn unary_f64<F: FnOnce(f64) -> f64>(
-        &mut self,
-        call: &ast::Call,
-        module: &Module,
-        f: F
-    ) -> Result<Option<Variable>, String> {
-        let x = self.stack.pop().expect(TINVOTS);
-        Ok(Some(match self.resolve(&x) {
-            &Variable::F64(a, _) => {
-                Variable::f64(f(a))
-            }
-            _ => return Err(module.error(call.args[0].source_range(),
-                    &format!("{}\nExpected number", self.stack_trace()), self))
-        }))
-    }
-
     #[inline(always)]
-    pub fn push_fn(
+    fn push_fn(
         &mut self,
         name: Arc<String>,
         index: usize,
@@ -334,7 +339,7 @@ impl Runtime {
             current_len: cu,
         });
     }
-    pub fn pop_fn(&mut self, name: Arc<String>) {
+    fn pop_fn(&mut self, name: Arc<String>) {
         match self.call_stack.pop() {
             None => panic!("Did not call `{}`", name),
             Some(Call { fn_name, stack_len: st, local_len: lc, current_len: cu, .. }) => {
@@ -348,7 +353,7 @@ impl Runtime {
         }
     }
 
-    pub fn expression(
+    pub(crate) fn expression(
         &mut self,
         expr: &ast::Expression,
         side: Side,
@@ -582,7 +587,7 @@ impl Runtime {
         })
     }
 
-    pub fn try(
+    fn try(
         &mut self,
         expr: &ast::Expression,
         side: Side,
@@ -634,6 +639,7 @@ impl Runtime {
         }
     }
 
+    /// Run `main` function in a module.
     pub fn run(&mut self, module: &Arc<Module>) -> Result<(), String> {
         use std::cell::Cell;
 
@@ -689,6 +695,7 @@ impl Runtime {
         Ok((expect, Flow::Continue))
     }
 
+    /// Start a new thread and return the handle.
     pub fn go(&mut self, go: &ast::Go, module: &Arc<Module>) -> Result<(Option<Variable>, Flow), String> {
         use std::thread::{self, JoinHandle};
         use std::cell::Cell;
@@ -757,6 +764,7 @@ impl Runtime {
         Ok((Some(Variable::Thread(Thread::new(handle))), Flow::Continue))
     }
 
+    /// Call closure.
     pub fn call_closure(
         &mut self,
         call: &ast::CallClosure,
@@ -1363,7 +1371,7 @@ impl Runtime {
                 Variable::Ref(ind) => {
                     UnsafeRef(&mut self.stack[ind] as *mut Variable)
                 }
-                x => panic!("Expected reference, found `{}`", self.typeof_var(&x))
+                x => panic!("Expected reference, found `{}`", x.typeof_var())
             };
 
             match *self.resolve(&b) {
@@ -1803,7 +1811,7 @@ impl Runtime {
                     return Err(module.error(
                         left.source_range(),
                         &format!("{}\nCan not use this assignment operator with `{}`",
-                            self.stack_trace(), self.typeof_var(x)), self));
+                            self.stack_trace(), x.typeof_var()), self));
                 }
             };
             Ok((None, Flow::Continue))
@@ -2153,28 +2161,6 @@ impl Runtime {
         return Ok((Some(v), Flow::Continue));
     }
 
-    pub fn typeof_var(&self, var: &Variable) -> Arc<String> {
-        match var {
-            &Variable::Text(_) => text_type.clone(),
-            &Variable::F64(_, _) => f64_type.clone(),
-            &Variable::Vec4(_) => vec4_type.clone(),
-            &Variable::Mat4(_) => mat4_type.clone(),
-            &Variable::Return => return_type.clone(),
-            &Variable::Bool(_, _) => bool_type.clone(),
-            &Variable::Object(_) => object_type.clone(),
-            &Variable::Array(_) => array_type.clone(),
-            &Variable::Link(_) => link_type.clone(),
-            &Variable::Ref(_) => ref_type.clone(),
-            &Variable::UnsafeRef(_) => unsafe_ref_type.clone(),
-            &Variable::RustObject(_) => rust_object_type.clone(),
-            &Variable::Option(_) => option_type.clone(),
-            &Variable::Result(_) => result_type.clone(),
-            &Variable::Thread(_) => thread_type.clone(),
-            &Variable::Closure(_, _) => closure_type.clone(),
-            &Variable::In(_) => in_type.clone(),
-        }
-    }
-
     fn compare(
         &mut self,
         compare: &ast::Compare,
@@ -2319,8 +2305,8 @@ impl Runtime {
                     "{}\n`{}` can not be used with `{}` and `{}`",
                     rt.stack_trace(),
                     compare.op.symbol(),
-                    rt.typeof_var(a),
-                    rt.typeof_var(b)), rt))
+                    a.typeof_var(),
+                    b.typeof_var()), rt))
             }
         }
 
@@ -2814,7 +2800,7 @@ impl Runtime {
 
         Ok((Some(v), Flow::Continue))
     }
-    pub fn stack_trace(&self) -> String {
+    pub(crate) fn stack_trace(&self) -> String {
         stack_trace(&self.call_stack)
     }
 }

@@ -102,7 +102,7 @@ const TABLE: &'static [(usize, fn(
     (WAIT_NEXT, wait_next),
 ];
 
-pub fn standard(f: &mut Prelude) {
+pub(crate) fn standard(f: &mut Prelude) {
     let sarg = |f: &mut Prelude, name: &str, index: usize, ty: Type, ret: Type| {
         f.intrinsic(Arc::new(name.into()), index, Dfn {
             lts: vec![Lt::Default],
@@ -249,7 +249,7 @@ pub fn standard(f: &mut Prelude) {
     });
 }
 
-pub fn call_standard(
+pub(crate) fn call_standard(
     rt: &mut Runtime,
     index: usize,
     call: &ast::Call,
