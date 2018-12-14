@@ -359,6 +359,21 @@ impl Module {
             p: prelude_function,
         });
     }
+
+    /// Adds a new external prelude function.
+    pub fn add_str(
+        &mut self,
+        name: &str,
+        f: fn(&mut Runtime) -> Result<(), String>,
+        prelude_function: Dfn
+    ) {
+        self.ext_prelude.push(FnExternal {
+            namespace: self.register_namespace.clone(),
+            name: Arc::new(name.into()),
+            f: f,
+            p: prelude_function,
+        });
+    }
 }
 
 /// Runs a program using a source file.

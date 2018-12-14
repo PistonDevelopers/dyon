@@ -16,52 +16,22 @@ fn main() {
 
 fn load_module() -> Option<dyon::Module> {
     use std::sync::Arc;
-    use dyon::*;
+    use dyon::{error, load, Dfn, Module};
+    use dyon::Type::*;
 
     let mut module = Module::new();
-    module.add(Arc::new("say_hello".into()), say_hello, Dfn {
-        lts: vec![],
-        tys: vec![],
-        ret: Type::Void
-    });
-    module.add(Arc::new("homer".into()), homer, Dfn {
-        lts: vec![],
-        tys: vec![],
-        ret: Type::Any
-    });
-    module.add(Arc::new("age".into()), age, Dfn {
-        lts: vec![Lt::Default],
-        tys: vec![Type::Any],
-        ret: Type::Any
-    });
-    module.add(Arc::new("mr".into()), mr, Dfn {
-        lts: vec![Lt::Default; 2],
-        tys: vec![Type::Text; 2],
-        ret: Type::Text
-    });
-    module.add(Arc::new("origo".into()), origo, Dfn {
-        lts: vec![],
-        tys: vec![],
-        ret: Type::Object,
-    });
-    module.add(Arc::new("id".into()), id, Dfn {
-        lts: vec![],
-        tys: vec![],
-        ret: Type::Mat4,
-    });
+    module.add_str("say_hello", say_hello, Dfn::nl(vec![], Void));
+    module.add_str("homer", homer, Dfn::nl(vec![], Any));
+    module.add_str("age", age, Dfn::nl(vec![Any], Any));
+    module.add_str("mr", mr, Dfn::nl(vec![Text; 2], Text));
+    module.add_str("origo", origo, Dfn::nl(vec![], Object));
+    module.add_str("id", id, Dfn::nl(vec![], Mat4));
 
     // Register custom Rust object with an ad-hoc type.
-    let ty_custom_object = Type::AdHoc(Arc::new("CustomObject".into()), Box::new(Type::Any));
-    module.add(Arc::new("custom_object".into()), custom_object, Dfn {
-        lts: vec![],
-        tys: vec![],
-        ret: ty_custom_object.clone(),
-    });
-    module.add(Arc::new("print_custom_object".into()), print_custom_object, Dfn {
-        lts: vec![Lt::Default],
-        tys: vec![ty_custom_object.clone()],
-        ret: Type::Void,
-    });
+    let ty_custom_object = AdHoc(Arc::new("CustomObject".into()), Box::new(Any));
+    module.add_str("custom_object", custom_object, Dfn::nl(vec![], ty_custom_object.clone()));
+    module.add_str("print_custom_object", print_custom_object,
+        Dfn::nl(vec![ty_custom_object.clone()], Void));
     if error(load("source/functions/loader.dyon", &mut module)) {
         None
     } else {

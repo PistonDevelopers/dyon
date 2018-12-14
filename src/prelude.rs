@@ -24,6 +24,15 @@ pub struct Dfn {
 }
 
 impl Dfn {
+    /// Creates a new function signature with no lifetime.
+    pub fn nl(args: Vec<Type>, ret: Type) -> Dfn {
+        Dfn {
+            lts: vec![Lt::Default; args.len()],
+            tys: args,
+            ret
+        }
+    }
+
     pub fn new(f: &ast::Function) -> Dfn {
         let mut lts: Vec<Lt> = vec![];
         let mut tys: Vec<Type> = vec![];
