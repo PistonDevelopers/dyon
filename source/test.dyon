@@ -1,3 +1,3 @@
 fn main() {
-    println(cv(mat4 {1,;}, 0))
+    println(prod_vec4 i 4 {(2, 3)})
 }
