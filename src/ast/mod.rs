@@ -1,5 +1,7 @@
+//! Dyon Abstract Syntax Tree (AST).
+
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::sync::{self, Arc};
 use std::cell::Cell;
 use range::Range;
 use piston_meta::bootstrap::Convert;
@@ -14,6 +16,7 @@ use Variable;
 mod infer_len;
 mod replace;
 
+/// Convert meta data and load it into a module.
 pub fn convert(
     file: Arc<String>,
     source: Arc<String>,
@@ -54,9 +57,12 @@ pub fn convert(
     Ok(())
 }
 
+/// Function alias.
 #[derive(Copy, Clone)]
 pub enum FnAlias {
+    /// An alias to a loaded function.
     Loaded(usize),
+    /// An alias to an external function.
     External(usize),
 }
 
@@ -69,6 +75,7 @@ pub struct UseLookup {
 }
 
 impl UseLookup {
+    /// Creates a new use lookup.
     pub fn new() -> UseLookup {
         UseLookup {
             aliases: HashMap::new(),
@@ -186,12 +193,17 @@ impl UseLookup {
     }
 }
 
+/// Namespace, used to organize code in larger projects.
+///
+/// E.g. `ns math::algebra`.
 #[derive(Debug, Clone)]
 pub struct Namespace {
+    /// Names separated by `::`.
     pub names: Arc<Vec<Arc<String>>>,
 }
 
 impl Namespace {
+    /// Creates namespace from meta data.
     pub fn from_meta_data(
         mut convert: Convert,
         ignored: &mut Vec<Range>
@@ -222,12 +234,15 @@ impl Namespace {
     }
 }
 
+/// Uses, lists use imports.
 #[derive(Debug, Clone)]
 pub struct Uses {
+    /// List of use imports.
     pub use_imports: Vec<UseImport>,
 }
 
 impl Uses {
+    /// Creates uses from meta data.
     pub fn from_meta_data(
         mut convert: Convert,
         ignored: &mut Vec<Range>
@@ -258,14 +273,19 @@ impl Uses {
     }
 }
 
+/// Use import.
 #[derive(Debug, Clone)]
 pub struct UseImport {
+    /// Namespace to import from.
     pub names: Vec<Arc<String>>,
+    /// Function imports.
     pub fns: Vec<(Arc<String>, Option<Arc<String>>)>,
+    /// The shared namespace alias.
     pub alias: Arc<String>,
 }
 
 impl UseImport {
+    /// Create use import from meta data.
     pub fn from_meta_data(
         mut convert: Convert,
         ignored: &mut Vec<Range>
@@ -314,25 +334,38 @@ impl UseImport {
     }
 }
 
+/// Function.
 #[derive(Debug, Clone)]
 pub struct Function {
+    /// The namespace of the function.
     pub namespace: Arc<Vec<Arc<String>>>,
+    /// The name of the function.
     pub name: Arc<String>,
+    /// The file which the function was loaded from.
     pub file: Arc<String>,
+    /// The source code which the function is loaded from.
     pub source: Arc<String>,
+    /// Function arguments.
     pub args: Vec<Arg>,
+    /// Current object references.
     pub currents: Vec<Current>,
+    /// Function block.
     pub block: Block,
+    /// The return type of function.
     pub ret: Type,
-    pub resolved: Arc<::std::sync::atomic::AtomicBool>,
+    /// Whether local variable references has been resolved.
+    pub resolved: Arc<sync::atomic::AtomicBool>,
+    /// The range in source.
     pub source_range: Range,
+    /// List of senders that receive function input by creating an in-type.
     pub senders: Arc<(
-        ::std::sync::atomic::AtomicBool,
-        ::std::sync::Mutex<Vec<::std::sync::mpsc::Sender<Variable>>>
+        sync::atomic::AtomicBool,
+        sync::Mutex<Vec<sync::mpsc::Sender<Variable>>>
     )>,
 }
 
 impl Function {
+    /// Creates function from meta data.
     pub fn from_meta_data(
         namespace: &Arc<Vec<Arc<String>>>,
         file: &Arc<String>,
@@ -432,9 +465,10 @@ impl Function {
         }))
     }
 
+    /// Returns `true` if the function returns something.
     pub fn returns(&self) -> bool { self.ret != Type::Void }
 
-    pub fn resolve_locals(&self, relative: usize, module: &Module, use_lookup: &UseLookup) {
+    fn resolve_locals(&self, relative: usize, module: &Module, use_lookup: &UseLookup) {
         use std::sync::atomic::Ordering;
 
         // Ensure sequential order just to be safe.
@@ -455,18 +489,27 @@ impl Function {
     }
 }
 
+/// Closure.
 #[derive(Debug, Clone)]
 pub struct Closure {
+    /// The file where the closure was declared/created.
     pub file: Arc<String>,
+    /// The source of the closure.
     pub source: Arc<String>,
+    /// Closure arguments.
     pub args: Vec<Arg>,
+    /// Current object references.
     pub currents: Vec<Current>,
+    /// Closure expression.
     pub expr: Expression,
+    /// The return type of the closure.
     pub ret: Type,
+    /// The range in source.
     pub source_range: Range,
 }
 
 impl Closure {
+    /// Create closure from meta data.
     pub fn from_meta_data(
         file: &Arc<String>,
         source: &Arc<String>,
@@ -526,9 +569,10 @@ impl Closure {
         }))
     }
 
+    /// Returns `true` if the closure return something.
     pub fn returns(&self) -> bool { self.ret != Type::Void }
 
-    pub fn resolve_locals(
+    fn resolve_locals(
         &self,
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
@@ -555,14 +599,19 @@ impl Closure {
     }
 }
 
+/// Grab expression.
 #[derive(Debug, Clone)]
 pub struct Grab {
+    /// Grab level.
     pub level: u16,
+    /// The sub-expression to compute.
     pub expr: Expression,
+    /// The range in source.
     pub source_range: Range,
 }
 
 impl Grab {
+    /// Creates grab expression from meta data.
     pub fn from_meta_data(
         file: &Arc<String>,
         source: &Arc<String>,
@@ -607,7 +656,7 @@ impl Grab {
         self.expr.precompute()
     }
 
-    pub fn resolve_locals(
+    fn resolve_locals(
         &self,
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
@@ -633,13 +682,19 @@ impl Grab {
     }
 }
 
+/// Try-expression, catches run-time errors from sub-expression.
+///
+/// E.g. `try foo()`.
 #[derive(Debug, Clone)]
 pub struct TryExpr {
+    /// Sub-expression to catch run-time errors from.
     pub expr: Expression,
+    /// The range in source.
     pub source_range: Range,
 }
 
 impl TryExpr {
+    /// Creates try expression from meta data.
     pub fn from_meta_data(
         file: &Arc<String>,
         source: &Arc<String>,
@@ -674,7 +729,7 @@ impl TryExpr {
         }))
     }
 
-    pub fn resolve_locals(
+    fn resolve_locals(
         &self,
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
@@ -686,16 +741,23 @@ impl TryExpr {
     }
 }
 
+/// Function argument.
 #[derive(Debug, Clone)]
 pub struct Arg {
+    /// The name of the argument.
     pub name: Arc<String>,
+    /// The lifetime of the argument.
     pub lifetime: Option<Arc<String>>,
+    /// The type of the argument.
     pub ty: Type,
+    /// The range in source.
     pub source_range: Range,
+    /// Whether the argument is mutable.
     pub mutable: bool,
 }
 
 impl Arg {
+    /// Creates function argument from meta data.
     pub fn from_meta_data(mut convert: Convert, ignored: &mut Vec<Range>)
     -> Result<(Range, Arg), ()> {
         let start = convert.clone();
@@ -746,14 +808,21 @@ impl Arg {
     }
 }
 
+/// Current object reference.
+///
+/// This puts the current object into scope for a function.
 #[derive(Debug, Clone)]
 pub struct Current {
+    /// The name of the current object.
     pub name: Arc<String>,
+    /// The range in source.
     pub source_range: Range,
+    /// Whether the current object is mutable.
     pub mutable: bool,
 }
 
 impl Current {
+    /// Creates current object reference from meta data.
     pub fn from_meta_data(mut convert: Convert, ignored: &mut Vec<Range>)
     -> Result<(Range, Current), ()> {
         let start = convert.clone();
@@ -793,13 +862,17 @@ impl Current {
     }
 }
 
+/// Block.
 #[derive(Debug, Clone)]
 pub struct Block {
+    /// Sub-expression.
     pub expressions: Vec<Expression>,
+    /// The range in source.
     pub source_range: Range,
 }
 
 impl Block {
+    /// Creates block from meta data.
     pub fn from_meta_data(
         file: &Arc<String>,
         source: &Arc<String>,
@@ -833,7 +906,7 @@ impl Block {
         }))
     }
 
-    pub fn resolve_locals(
+    fn resolve_locals(
         &self,
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
@@ -849,57 +922,109 @@ impl Block {
     }
 }
 
+/// Expression.
 #[derive(Debug, Clone)]
 pub enum Expression {
+    /// Link expression.
     Link(Link),
+    /// Object expression.
     Object(Box<Object>),
+    /// Array expression.
     Array(Box<Array>),
+    /// Array fill expression.
     ArrayFill(Box<ArrayFill>),
+    /// Return expression.
     Return(Box<Expression>),
+    /// Returns with value expression.
     ReturnVoid(Range),
+    /// Break expression.
     Break(Break),
+    /// Continue expression.
     Continue(Continue),
+    /// Block expression.
     Block(Block),
+    /// Go call expression.
     Go(Box<Go>),
     // TODO: Check size, perhaps use `Box<Call>`?
+    /// Call expression.
     Call(Call),
+    /// Item expression.
     Item(Item),
+    /// Binary operator expression.
     BinOp(Box<BinOpExpression>),
+    /// Assignment expression.
     Assign(Box<Assign>),
+    /// 4D vector expression.
     Vec4(Vec4),
+    /// 4D matrix expression.
     Mat4(Mat4),
+    /// For expression, e.g. `for i := 0; i < 10; i += 1 { ... }`.
     For(Box<For>),
+    /// For-n expression.
     ForN(Box<ForN>),
+    /// For-in expression.
     ForIn(Box<ForIn>),
+    /// Sum for-n expression.
     Sum(Box<ForN>),
+    /// Sum-in for-n expression.
     SumIn(Box<ForIn>),
+    /// Component-wise 4D vector sum for-n-loop.
     SumVec4(Box<ForN>),
+    /// Product for-n expression.
     Prod(Box<ForN>),
+    /// Product-in for-n loop.
     ProdIn(Box<ForIn>),
+    /// Component-wise 4D vector product for-n-loop.
     ProdVec4(Box<ForN>),
+    /// Min for-n expression.
     Min(Box<ForN>),
+    /// Min-in for-n expression.
     MinIn(Box<ForIn>),
+    /// Max for-n expression.
     Max(Box<ForN>),
+    /// Max-in for-n expression.
     MaxIn(Box<ForIn>),
+    /// Sift for-n expression.
     Sift(Box<ForN>),
+    /// Sift-in expression.
     SiftIn(Box<ForIn>),
+    /// Any expression.
     Any(Box<ForN>),
+    /// Any-in expression.
     AnyIn(Box<ForIn>),
+    /// All-for expression.
     All(Box<ForN>),
+    /// All-in expression.
     AllIn(Box<ForIn>),
+    /// Link-for expression.
     LinkFor(Box<ForN>),
+    /// Link-in expression.
     LinkIn(Box<ForIn>),
+    /// If-expression.
     If(Box<If>),
+    /// Compare expression.
     Compare(Box<Compare>),
+    /// Unary operator expression.
     UnOp(Box<UnOpExpression>),
+    /// Vector normal, e.g `|v|`.
     Norm(Box<Norm>),
+    /// Variable.
+    ///
+    /// This means it contains no members that depends on other expressions.
     Variable(Range, Variable),
+    /// Try expression using `?`.
     Try(Box<Expression>),
+    /// 4D vector swizzle expression.
     Swizzle(Box<Swizzle>),
+    /// Closure expression.
     Closure(Arc<Closure>),
+    /// Call closure expression.
     CallClosure(Box<CallClosure>),
+    /// Grab expression.
     Grab(Box<Grab>),
+    /// Try expression, e.g. `try x`.
     TryExpr(Box<TryExpr>),
+    /// In-type expression.
     In(Box<In>),
 }
 
@@ -907,6 +1032,7 @@ pub enum Expression {
 unsafe impl Sync for Expression {}
 
 impl Expression {
+    /// Creates expression from meta data.
     pub fn from_meta_data(
         file: &Arc<String>,
         source: &Arc<String>,
@@ -1194,6 +1320,7 @@ impl Expression {
         }
     }
 
+    /// Gets the range in source.
     pub fn source_range(&self) -> Range {
         use self::Expression::*;
 
@@ -1250,7 +1377,7 @@ impl Expression {
         }
     }
 
-    pub fn resolve_locals(
+    fn resolve_locals(
         &self,
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
@@ -1362,13 +1489,17 @@ impl Expression {
     }
 }
 
+/// Link expression, e.g. `link {a b}`.
 #[derive(Debug, Clone)]
 pub struct Link {
+    /// Link item expressions.
     pub items: Vec<Expression>,
+    /// The range in source.
     pub source_range: Range,
 }
 
 impl Link {
+    /// Creates link expression from meta data.
     pub fn from_meta_data(
         file: &Arc<String>,
         source: &Arc<String>,
@@ -1414,7 +1545,7 @@ impl Link {
         Some(Variable::Link(Box::new(link)))
     }
 
-    pub fn resolve_locals(
+    fn resolve_locals(
         &self,
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
@@ -1430,13 +1561,17 @@ impl Link {
     }
 }
 
+/// Object expression.
 #[derive(Debug, Clone)]
 pub struct Object {
+    /// Key-value pair expressions.
     pub key_values: Vec<(Arc<String>, Expression)>,
+    /// The range in source.
     pub source_range: Range,
 }
 
 impl Object {
+    /// Creates object expression from meta data.
     pub fn from_meta_data(
         file: &Arc<String>,
         source: &Arc<String>,
@@ -1482,7 +1617,7 @@ impl Object {
         Some(Variable::Object(Arc::new(object)))
     }
 
-    pub fn key_value_from_meta_data(
+    fn key_value_from_meta_data(
         file: &Arc<String>,
         source: &Arc<String>,
         mut convert: Convert,
@@ -1518,7 +1653,7 @@ impl Object {
         Ok((convert.subtract(start), (key, value)))
     }
 
-    pub fn resolve_locals(
+    fn resolve_locals(
         &self,
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
@@ -1534,13 +1669,17 @@ impl Object {
     }
 }
 
+/// Array expression, e.g. `[a, b, c]`.
 #[derive(Debug, Clone)]
 pub struct Array {
+    /// Array item expressions.
     pub items: Vec<Expression>,
+    /// The range in source.
     pub source_range: Range,
 }
 
 impl Array {
+    /// Creates array expression from meta data.
     pub fn from_meta_data(
         file: &Arc<String>,
         source: &Arc<String>,
@@ -1586,7 +1725,7 @@ impl Array {
         Some(Variable::Array(Arc::new(res)))
     }
 
-    pub fn resolve_locals(
+    fn resolve_locals(
         &self,
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
@@ -1602,14 +1741,19 @@ impl Array {
     }
 }
 
+/// Array fill expression, e.g. `[a; n]`.
 #[derive(Debug, Clone)]
 pub struct ArrayFill {
+    /// The `a` in `[a; n]`.
     pub fill: Expression,
+    /// The `n` in `[a; n]`.
     pub n: Expression,
+    /// The range in source.
     pub source_range: Range,
 }
 
 impl ArrayFill {
+    /// Creates array fill expression from meta data.
     pub fn from_meta_data(
         file: &Arc<String>,
         source: &Arc<String>,
@@ -1660,7 +1804,7 @@ impl ArrayFill {
         None
     }
 
-    pub fn resolve_locals(
+    fn resolve_locals(
         &self,
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
@@ -1676,14 +1820,19 @@ impl ArrayFill {
     }
 }
 
+/// Addition expression.
 #[derive(Debug, Clone)]
 pub struct Add {
+    /// Item expressions.
     pub items: Vec<Expression>,
+    /// Binary operators.
     pub ops: Vec<BinOp>,
+    /// The range in source.
     pub source_range: Range,
 }
 
 impl Add {
+    /// Creates addition expression from meta data.
     pub fn from_meta_data(
         file: &Arc<String>,
         source: &Arc<String>,
@@ -1734,7 +1883,7 @@ impl Add {
         }))
     }
 
-    pub fn to_expression(mut self) -> Expression {
+    fn to_expression(mut self) -> Expression {
         if self.items.len() == 1 {
             self.items[0].clone()
         } else {
@@ -1751,14 +1900,19 @@ impl Add {
     }
 }
 
+/// Multiply expression.
 #[derive(Debug, Clone)]
 pub struct Mul {
+    /// Item expressions.
     pub items: Vec<Expression>,
+    /// Binary operators.
     pub ops: Vec<BinOp>,
+    /// The range in source.
     pub source_range: Range,
 }
 
 impl Mul {
+    /// Creates multiply expression from meta data.
     pub fn from_meta_data(
         file: &Arc<String>,
         source: &Arc<String>,
@@ -1823,7 +1977,7 @@ impl Mul {
         }))
     }
 
-    pub fn to_expression(mut self) -> Expression {
+    fn to_expression(mut self) -> Expression {
         if self.items.len() == 1 {
             self.items[0].clone()
         } else {
@@ -1840,14 +1994,23 @@ impl Mul {
     }
 }
 
+/// Power expression.
 #[derive(Debug, Clone)]
 pub struct Pow {
+    /// Base expression.
+    ///
+    /// This is the `x` in `x^a`.
     pub base: Expression,
+    /// Exponent expression.
+    ///
+    /// This is the `x` in `a^x`.
     pub exp: Expression,
+    /// The range in source.
     pub source_range: Range,
 }
 
 impl Pow {
+    /// Creates power expression from meta data.
     pub fn from_meta_data(
         file: &Arc<String>,
         source: &Arc<String>,
@@ -1889,7 +2052,7 @@ impl Pow {
         }))
     }
 
-    pub fn to_expression(self) -> Expression {
+    fn to_expression(self) -> Expression {
         Expression::BinOp(Box::new(BinOpExpression {
                 op: BinOp::Pow,
                 left: self.base,
@@ -1899,21 +2062,33 @@ impl Pow {
     }
 }
 
+/// Binary operator.
 #[derive(Debug, Copy, Clone)]
 pub enum BinOp {
+    /// Addition operator (`+`).
     Add,
+    /// Subtraction operator (`-`).
     Sub,
+    /// Multiply operator (`*`).
     Mul,
+    /// Dot product operator (`*.`).
     Dot,
+    /// Cross product operator (`x`).
     Cross,
+    /// Division operator (`/`).
     Div,
+    /// Remainder operator (`%`).
     Rem,
+    /// Power operator (`^`).
     Pow,
+    /// Lazy OR operator (`||`).
     OrElse,
+    /// Lazy AND operator (`&&`).
     AndAlso,
 }
 
 impl BinOp {
+    /// Returns symbol of binary operator.
     pub fn symbol(self) -> &'static str {
         match self {
             BinOp::Add => "+",
@@ -1929,6 +2104,7 @@ impl BinOp {
         }
     }
 
+    /// Returns symbol of binary operator in boolean variant.
     pub fn symbol_bool(self) -> &'static str {
         match self {
             BinOp::Add => "or",
@@ -1950,20 +2126,30 @@ impl BinOp {
     }
 }
 
+/// Unary operator.
 #[derive(Debug, Copy, Clone)]
 pub enum UnOp {
+    /// Logical not.
     Not,
+    /// Negation.
     Neg,
 }
 
+/// An item id.
+///
+/// This is the thing that's inside the square brackets, e.g. `foo[i]`.
 #[derive(Debug, Clone)]
 pub enum Id {
+    /// A string.
     String(Range, Arc<String>),
+    /// A number.
     F64(Range, f64),
+    /// An expression.
     Expression(Expression),
 }
 
 impl Id {
+    /// Gets the range in source.
     pub fn source_range(&self) -> Range {
         match *self {
             Id::String(range, _) => range,
@@ -1972,7 +2158,7 @@ impl Id {
         }
     }
 
-    pub fn resolve_locals(
+    fn resolve_locals(
         &self,
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
@@ -1993,20 +2179,34 @@ impl Id {
     }
 }
 
+/// Item.
 #[derive(Debug, Clone)]
 pub struct Item {
+    /// The name of item.
     pub name: Arc<String>,
+    /// Dynamically resolved stack id.
+    ///
+    /// This is checked against the static stack id when
+    /// the Cargo feature "debug_resolve" is enabled.
     pub stack_id: Cell<Option<usize>>,
+    /// Statically resolved stack id.
+    ///
+    /// This is used when the Cargo feature "debug_resolve" is disabled.
     pub static_stack_id: Cell<Option<usize>>,
+    /// Whether the item is a current object.
     pub current: bool,
+    /// Whether there is a `?` after the item.
     pub try: bool,
+    /// Item ids.
     pub ids: Vec<Id>,
-    // Stores indices of ids that should propagate errors.
+    /// Stores indices of ids that should propagate errors.
     pub try_ids: Vec<usize>,
+    /// The range in source.
     pub source_range: Range,
 }
 
 impl Item {
+    /// Creates item from variable.
     pub fn from_variable(name: Arc<String>, source_range: Range) -> Item {
         Item {
             name: name,
@@ -2021,7 +2221,7 @@ impl Item {
     }
 
     /// Truncates item extra to a given length.
-    pub fn trunc(&self, n: usize) -> Item {
+    fn trunc(&self, n: usize) -> Item {
         Item {
             name: self.name.clone(),
             current: self.current,
@@ -2041,6 +2241,7 @@ impl Item {
         }
     }
 
+    /// Creates item from meta data.
     pub fn from_meta_data(
         file: &Arc<String>,
         source: &Arc<String>,
@@ -2111,7 +2312,7 @@ impl Item {
         }))
     }
 
-    pub fn resolve_locals(
+    fn resolve_locals(
         &self,
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
@@ -2139,13 +2340,17 @@ impl Item {
     }
 }
 
+/// Go call.
 #[derive(Debug, Clone)]
 pub struct Go {
+    /// Function call.
     pub call: Call,
+    /// The range in source.
     pub source_range: Range,
 }
 
 impl Go {
+    /// Creates go call from meta data.
     pub fn from_meta_data(
         file: &Arc<String>,
         source: &Arc<String>,
@@ -2184,7 +2389,7 @@ impl Go {
         }))
     }
 
-    pub fn resolve_locals(
+    fn resolve_locals(
         &self,
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
@@ -2202,18 +2407,25 @@ impl Go {
     }
 }
 
+/// Function call.
 #[derive(Debug, Clone)]
 pub struct Call {
+    /// Alias.
     pub alias: Option<Arc<String>>,
+    /// Name of function.
     pub name: Arc<String>,
+    /// Arguments.
     pub args: Vec<Expression>,
+    /// Function index.
     pub f_index: Cell<FnIndex>,
     /// A custom source, such as when calling a function inside a loaded module.
     pub custom_source: Option<Arc<String>>,
+    /// The range in source.
     pub source_range: Range,
 }
 
 impl Call {
+    /// Creates call from meta data.
     pub fn from_meta_data(
         file: &Arc<String>,
         source: &Arc<String>,
@@ -2284,6 +2496,7 @@ impl Call {
         }))
     }
 
+    /// Creates named argument call from meta data.
     pub fn named_from_meta_data(
         file: &Arc<String>,
         source: &Arc<String>,
@@ -2356,7 +2569,7 @@ impl Call {
         }))
     }
 
-    pub fn resolve_locals(
+    fn resolve_locals(
         &self,
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
@@ -2434,14 +2647,19 @@ impl Call {
     }
 }
 
+/// Closure call.
 #[derive(Debug, Clone)]
 pub struct CallClosure {
+    /// The closure.
     pub item: Item,
+    /// Closure argument expressions.
     pub args: Vec<Expression>,
+    /// The range in source.
     pub source_range: Range,
 }
 
 impl CallClosure {
+    /// Creates closure call from meta data.
     pub fn from_meta_data(
         file: &Arc<String>,
         source: &Arc<String>,
@@ -2491,6 +2709,7 @@ impl CallClosure {
         }))
     }
 
+    /// Creates named argument closure call from meta data.
     pub fn named_from_meta_data(
         file: &Arc<String>,
         source: &Arc<String>,

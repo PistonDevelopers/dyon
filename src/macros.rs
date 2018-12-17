@@ -1,8 +1,10 @@
 //! Dyon macros.
 
+/// This macro is used by some other Dyon macros.
 #[macro_export]
 macro_rules! dyon_macro_items { ($($x:item)+) => ($($x)+) }
 
+/// This macro is used by some other Dyon macros.
 #[macro_export]
 macro_rules! dyon_fn_pop {
     ($rt:ident $arg:ident : $t:ty) => {
@@ -14,6 +16,10 @@ macro_rules! dyon_fn_pop {
     };
 }
 
+/// Used to declare an embedded/external function in Rust
+/// which can be called from Dyon.
+///
+/// For example, see "examples/functions.rs".
 #[macro_export]
 macro_rules! dyon_fn {
     (fn $name:ident () -> $rt:ty $b:block) => {
@@ -68,6 +74,9 @@ macro_rules! dyon_fn {
     };
 }
 
+/// Used to implement `embed::PopVariable` and `embed::PushVariable` for some object.
+///
+/// For example, see "examples/functions.rs".
 #[macro_export]
 macro_rules! dyon_obj {
     ($t:tt { $($f:tt),* }) => {
