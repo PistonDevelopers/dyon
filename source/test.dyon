@@ -1,3 +1,5 @@
 fn main() {
-    println(prod_vec4 i 4 {(2, 3)})
+    a := {msg: "hi"}
+    a = a
+    println(a)
 }

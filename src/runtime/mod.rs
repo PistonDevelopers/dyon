@@ -1580,16 +1580,9 @@ impl Runtime {
                 Variable::Object(ref b) => {
                     unsafe {
                         match *r.0 {
-                            Variable::Object(ref mut n) => {
+                            Variable::Object(_) => {
                                 if let Set = op {
-                                    // Check address to avoid unsafe
-                                    // reading and writing to same memory.
-                                    let n_addr = n as *const _ as usize;
-                                    let b_addr = b as *const _ as usize;
-                                    if n_addr != b_addr {
-                                        *r.0 = Variable::Object(b.clone())
-                                    }
-                                    // *n = obj.clone()
+                                    *r.0 = Variable::Object(b.clone())
                                 } else {
                                     unimplemented!()
                                 }
@@ -1614,16 +1607,9 @@ impl Runtime {
                 Variable::Array(ref b) => {
                     unsafe {
                         match *r.0 {
-                            Variable::Array(ref mut n) => {
+                            Variable::Array(_) => {
                                 if let Set = op {
-                                    // Check address to avoid unsafe
-                                    // reading and writing to same memory.
-                                    let n_addr = n as *const _ as usize;
-                                    let b_addr = b as *const _ as usize;
-                                    if n_addr != b_addr {
-                                        *r.0 = Variable::Array(b.clone())
-                                    }
-                                    // *n = arr.clone();
+                                    *r.0 = Variable::Array(b.clone())
                                 } else {
                                     unimplemented!()
                                 }
@@ -1676,15 +1662,9 @@ impl Runtime {
                 Variable::Option(ref b) => {
                     unsafe {
                         match *r.0 {
-                            Variable::Option(ref mut n) => {
+                            Variable::Option(_) => {
                                 if let Set = op {
-                                    // Check address to avoid unsafe
-                                    // reading and writing to same memory.
-                                    let n_addr = n as *const _ as usize;
-                                    let b_addr = b as *const _ as usize;
-                                    if n_addr != b_addr {
-                                        *r.0 = Variable::Option(b.clone())
-                                    }
+                                    *r.0 = Variable::Option(b.clone())
                                 } else {
                                     unimplemented!()
                                 }
@@ -1709,15 +1689,9 @@ impl Runtime {
                 Variable::Result(ref b) => {
                     unsafe {
                         match *r.0 {
-                            Variable::Result(ref mut n) => {
+                            Variable::Result(_) => {
                                 if let Set = op {
-                                    // Check address to avoid unsafe
-                                    // reading and writing to same memory.
-                                    let n_addr = n as *const _ as usize;
-                                    let b_addr = b as *const _ as usize;
-                                    if n_addr != b_addr {
-                                        *r.0 = Variable::Result(b.clone())
-                                    }
+                                    *r.0 = Variable::Result(b.clone())
                                 } else {
                                     unimplemented!()
                                 }
@@ -1742,15 +1716,9 @@ impl Runtime {
                 Variable::RustObject(ref b) => {
                     unsafe {
                         match *r.0 {
-                            Variable::RustObject(ref mut n) => {
+                            Variable::RustObject(_) => {
                                 if let Set = op {
-                                    // Check address to avoid unsafe
-                                    // reading and writing to same memory.
-                                    let n_addr = n as *const _ as usize;
-                                    let b_addr = b as *const _ as usize;
-                                    if n_addr != b_addr {
-                                        *r.0 = Variable::RustObject(b.clone())
-                                    }
+                                    *r.0 = Variable::RustObject(b.clone())
                                 } else {
                                     unimplemented!()
                                 }
@@ -1776,15 +1744,9 @@ impl Runtime {
                 Variable::Closure(ref b, ref env) => {
                     unsafe {
                         match *r.0 {
-                            Variable::Closure(ref mut n, _) => {
+                            Variable::Closure(_, _) => {
                                 if let Set = op {
-                                    // Check address to avoid unsafe
-                                    // reading and writing to same memory.
-                                    let n_addr = n as *const _ as usize;
-                                    let b_addr = b as *const _ as usize;
-                                    if n_addr != b_addr {
-                                        *r.0 = Variable::Closure(b.clone(), env.clone())
-                                    }
+                                    *r.0 = Variable::Closure(b.clone(), env.clone())
                                 } else {
                                     unimplemented!()
                                 }
