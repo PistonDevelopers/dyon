@@ -38,8 +38,8 @@ pub fn grab_expr(
                                     &format!("{}\nExpected something",
                                         rt.stack_trace()), rt))
                 };
-                Ok((Grabbed::Expression(E::Variable(expr.source_range(),
-                    v.deep_clone(&rt.stack))), Flow::Continue))
+                Ok((Grabbed::Expression(E::Variable(Box::new((expr.source_range(),
+                    v.deep_clone(&rt.stack))))), Flow::Continue))
             } else {
                 Ok((Grabbed::Expression(expr.clone()), Flow::Continue))
             }
@@ -75,7 +75,7 @@ pub fn grab_expr(
         &E::ReturnVoid(_) |
         &E::Break(_) |
         &E::Continue(_) |
-        &E::Variable(_, _) =>
+        &E::Variable(_) =>
             Ok((Grabbed::Expression(expr.clone()), Flow::Continue)),
         &E::Closure(ref closure) => {
             Ok((Grabbed::Expression(E::Closure(Arc::new(ast::Closure {
@@ -93,13 +93,13 @@ pub fn grab_expr(
         }
         &E::Item(ref item) => match grab_item(level, rt, item, side, module) {
             Ok((Grabbed::Item(x), Flow::Continue)) => {
-                Ok((Grabbed::Expression(E::Item(x)), Flow::Continue))
+                Ok((Grabbed::Expression(E::Item(Box::new(x))), Flow::Continue))
             }
             x => return x,
         },
         &E::Block(ref block) => match grab_block(level, rt, block, side, module) {
             Ok((Grabbed::Block(x), Flow::Continue)) => {
-                Ok((Grabbed::Expression(E::Block(x)), Flow::Continue))
+                Ok((Grabbed::Expression(E::Block(Box::new(x))), Flow::Continue))
             }
             x => return x,
         },
@@ -199,7 +199,7 @@ pub fn grab_expr(
             }))), Flow::Continue))
         }
         &E::Call(ref call) => {
-            Ok((Grabbed::Expression(E::Call(ast::Call {
+            Ok((Grabbed::Expression(E::Call(Box::new(ast::Call {
                 alias: call.alias.clone(),
                 name: call.name.clone(),
                 args: {
@@ -215,7 +215,7 @@ pub fn grab_expr(
                 source_range: call.source_range.clone(),
                 f_index: call.f_index.clone(),
                 custom_source: call.custom_source.clone(),
-            })), Flow::Continue))
+            }))), Flow::Continue))
         }
         &E::CallClosure(ref call_closure) => {
             Ok((Grabbed::Expression(E::CallClosure(Box::new(ast::CallClosure {
@@ -322,7 +322,7 @@ pub fn grab_expr(
             }))), Flow::Continue))
         }
         &E::Vec4(ref vec4) => {
-            Ok((Grabbed::Expression(E::Vec4(ast::Vec4 {
+            Ok((Grabbed::Expression(E::Vec4(Box::new(ast::Vec4 {
                 args: {
                     let mut new_args = vec![];
                     for arg in &vec4.args {
@@ -334,10 +334,10 @@ pub fn grab_expr(
                     new_args
                 },
                 source_range: vec4.source_range.clone(),
-            })), Flow::Continue))
+            }))), Flow::Continue))
         }
         &E::Mat4(ref mat4) => {
-            Ok((Grabbed::Expression(E::Mat4(ast::Mat4 {
+            Ok((Grabbed::Expression(E::Mat4(Box::new(ast::Mat4 {
                 args: {
                     let mut new_args = vec![];
                     for arg in &mat4.args {
@@ -349,10 +349,10 @@ pub fn grab_expr(
                     new_args
                 },
                 source_range: mat4.source_range.clone(),
-            })), Flow::Continue))
+            }))), Flow::Continue))
         }
         &E::Link(ref link) => {
-            Ok((Grabbed::Expression(E::Link(ast::Link {
+            Ok((Grabbed::Expression(E::Link(Box::new(ast::Link {
                 items: {
                     let mut new_items = vec![];
                     for item in &link.items {
@@ -364,7 +364,7 @@ pub fn grab_expr(
                     new_items
                 },
                 source_range: link.source_range.clone(),
-            })), Flow::Continue))
+            }))), Flow::Continue))
         }
         &E::Object(ref obj) => {
             Ok((Grabbed::Expression(E::Object(Box::new(ast::Object {

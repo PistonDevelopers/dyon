@@ -41,10 +41,10 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
             for item in &link_expr.items {
                 new_items.push(number(item, name, val));
             }
-            E::Link(Link {
+            E::Link(Box::new(Link {
                 items: new_items,
                 source_range: link_expr.source_range,
-            })
+            }))
         }
         E::BinOp(ref bin_op_expr) => {
             E::BinOp(Box::new(BinOpExpression {
@@ -56,7 +56,7 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
         }
         E::Item(ref item) => {
             if &item.name == name {
-                E::Variable(item.source_range, Variable::f64(val))
+                E::Variable(Box::new((item.source_range, Variable::f64(val))))
             } else {
                 let mut new_ids: Vec<Id> = vec![];
                 for id in &item.ids {
@@ -66,7 +66,7 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
                         new_ids.push(id.clone());
                     }
                 }
-                E::Item(Item {
+                E::Item(Box::new(Item {
                     name: item.name.clone(),
                     current: item.current,
                     stack_id: item.stack_id.clone(),
@@ -75,11 +75,11 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
                     ids: new_ids,
                     try_ids: item.try_ids.clone(),
                     source_range: item.source_range,
-                })
+                }))
             }
         }
         E::Block(ref block) => {
-            E::Block(number_block(block, name, val))
+            E::Block(Box::new(number_block(block, name, val)))
         }
         E::Assign(ref assign_expr) => {
             E::Assign(Box::new(Assign {
@@ -101,7 +101,7 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
             }))
         }
         E::Call(ref call_expr) => {
-            E::Call(number_call(call_expr, name, val))
+            E::Call(Box::new(number_call(call_expr, name, val)))
         }
         E::Array(ref array_expr) => {
             let mut new_items: Vec<Expression> = vec![];
@@ -137,20 +137,20 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
             for arg in &vec4_expr.args {
                 new_args.push(number(arg, name, val));
             }
-            E::Vec4(Vec4 {
+            E::Vec4(Box::new(Vec4 {
                 args: new_args,
                 source_range: vec4_expr.source_range,
-            })
+            }))
         }
         E::Mat4(ref mat4_expr) => {
             let mut new_args: Vec<Expression> = vec![];
             for arg in &mat4_expr.args {
                 new_args.push(number(arg, name, val));
             }
-            E::Mat4(Mat4 {
+            E::Mat4(Box::new(Mat4 {
                 args: new_args,
                 source_range: mat4_expr.source_range,
-            })
+            }))
         }
         E::For(ref for_expr) => {
             let mut init: Option<Expression> = None;
@@ -341,7 +341,7 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
                 source_range: unop_expr.source_range,
             }))
         }
-        E::Variable(_, _) => expr.clone(),
+        E::Variable(_) => expr.clone(),
         E::Try(ref expr) => E::Try(Box::new(number(expr, name, val))),
         E::Swizzle(ref swizzle_expr) => {
             E::Swizzle(Box::new(Swizzle {
