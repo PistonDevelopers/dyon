@@ -936,7 +936,7 @@ pub enum Expression {
     /// Return expression.
     Return(Box<Expression>),
     /// Returns with value expression.
-    ReturnVoid(Range),
+    ReturnVoid(Box<Range>),
     /// Break expression.
     Break(Box<Break>),
     /// Continue expression.
@@ -1073,8 +1073,8 @@ impl Expression {
                 result = Some(Expression::Return(Box::new(val)));
             } else if let Ok((range, _)) = convert.meta_bool("return_void") {
                 convert.update(range);
-                result = Some(Expression::ReturnVoid(
-                    convert.source(start).unwrap()));
+                result = Some(Expression::ReturnVoid(Box::new(
+                    convert.source(start).unwrap())));
             } else if let Ok((range, val)) = Break::from_meta_data(
                     convert, ignored) {
                 convert.update(range);
@@ -1329,7 +1329,7 @@ impl Expression {
             Array(ref arr) => arr.source_range,
             ArrayFill(ref arr_fill) => arr_fill.source_range,
             Return(ref expr) => expr.source_range(),
-            ReturnVoid(range) => range,
+            ReturnVoid(ref range) => **range,
             Break(ref br) => br.source_range,
             Continue(ref c) => c.source_range,
             Block(ref bl) => bl.source_range,

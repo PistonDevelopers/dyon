@@ -808,7 +808,7 @@ mod tests {
         use std::mem::size_of;
         use super::*;
 
-        assert_eq!(size_of::<ast::Expression>(), 24);
+        assert_eq!(size_of::<ast::Expression>(), 16);
     }
 
     fn run_bench(source: &str) {
