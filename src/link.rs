@@ -36,12 +36,9 @@ impl Block {
             EMPTY => panic!("Reading beyond end"),
             BOOL => Variable::bool(self.data[k] != 0),
             F64 => {
-                Variable::f64(unsafe {
-                    transmute::<u64, f64>(self.data[k])
-                })
+                Variable::f64(f64::from_bits(self.data[k]))
             }
             STR => {
-
                 Variable::Text(unsafe {
                     transmute::<&u64, &Arc<String>>(&self.data[k])
                 }.clone())
@@ -107,10 +104,7 @@ impl Clone for Block {
                 _ => {}
             }
         }
-        Block {
-            data: data,
-            tys: self.tys,
-        }
+        Block {data, tys: self.tys}
     }
 }
 
@@ -164,6 +158,10 @@ pub struct Link {
     pub(crate) slices: Vec<Slice>,
 }
 
+impl Default for Link {
+    fn default() -> Link {Link::new()}
+}
+
 impl Link {
     /// Creates a new link.
     pub fn new() -> Link {
@@ -174,7 +172,7 @@ impl Link {
 
     /// Gets the first item of the link.
     pub fn head(&self) -> Option<Box<Variable>> {
-        if self.slices.len() == 0 { None }
+        if self.slices.is_empty() { None }
         else {
             let first = &self.slices[0];
             if first.start < first.end {
@@ -200,7 +198,7 @@ impl Link {
     ///
     /// The tail is the whole link except the first item.
     pub fn tail(&self) -> Link {
-        if self.slices.len() == 0 { Link::new() }
+        if self.slices.is_empty() { Link::new() }
         else {
             let first = &self.slices[0];
             let mut l = Link::new();
@@ -245,18 +243,18 @@ impl Link {
         let mut slices = Vec::with_capacity(self.slices.len() + other.slices.len());
         slices.extend_from_slice(&self.slices);
         slices.extend_from_slice(&other.slices);
-        Link {
-            slices: slices
-        }
+        Link {slices}
     }
 
     /// Pushes a variable to the link.
     pub fn push(&mut self, v: &Variable) -> Result<(), String> {
-        match v {
-            &Variable::Bool(_, _) |
-            &Variable::F64(_, _) |
-            &Variable::Text(_) => {
-                if self.slices.len() > 0 {
+        use crate::Variable::*;
+
+        match *v {
+            Bool(_, _) |
+            F64(_, _) |
+            Text(_) => {
+                if !self.slices.is_empty() {
                     let last = self.slices.last_mut().unwrap();
                     if (last.end as usize) < BLOCK_SIZE {
                         Arc::make_mut(&mut last.block).push(v, last.end as usize);
@@ -271,7 +269,7 @@ impl Link {
                 last.end = 1;
                 Ok(())
             }
-            &Variable::Link(ref link) => {
+            Link(ref link) => {
                 for slice in &link.slices {
                     for i in slice.start..slice.end {
                         try!(self.push(&slice.block.var(i)))
@@ -279,7 +277,7 @@ impl Link {
                 }
                 Ok(())
             }
-            _ => return Err("Expected `bool`, `f64` or `str`".into())
+            _ => Err("Expected `bool`, `f64` or `str`".into())
         }
     }
 }

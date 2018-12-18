@@ -26,7 +26,7 @@ pub fn infer(block: &Block, name: &str) -> Option<Expression> {
                 Expression::Item(Box::new(item))
             ],
             custom_source: None,
-            source_range: source_range,
+            source_range,
         }))
     });
     res
@@ -251,15 +251,15 @@ fn infer_item(
     name: &str,
     decls: &mut Vec<Arc<String>>
 ) -> Option<Item> {
-    if item.ids.len() == 0 { return None; }
+    if item.ids.is_empty() { return None; }
     for (i, id) in item.ids.iter().enumerate() {
-        if let &Id::Expression(ref expr) = id {
-            if let &Expression::Item(ref id) = expr {
+        if let Id::Expression(ref expr) = *id {
+            if let Expression::Item(ref id) = *expr {
                 if &**id.name == name {
                     return Some(item.trunc(i));
                 } else {
                     for decl in decls.iter().rev() {
-                        if &**decl == &**id.name {
+                        if **decl == **id.name {
                             // It was declared after the index we look for,
                             // so it is not valid.
                             return None;
@@ -340,7 +340,7 @@ fn infer_block(
 ) -> Option<Item> {
     let f = |decls: &mut Vec<Arc<String>>| -> Option<Item> {
         for expr in &block.expressions {
-            if let &Expression::Assign(ref assign_expr) = expr {
+            if let Expression::Assign(ref assign_expr) = *expr {
                 // Check right expression before left expression.
                 let right = infer_expr(&assign_expr.right, name, decls);
                 if right.is_some() { return right; }
@@ -348,11 +348,9 @@ fn infer_block(
                 if let Expression::Item(ref item) = assign_expr.left {
                     if &**item.name == name {
                         return None;
-                    } else {
-                        if item.ids.len() == 0 &&
-                           assign_expr.op == AssignOp::Assign {
-                            decls.push(item.name.clone());
-                        }
+                    } else if item.ids.is_empty() &&
+                              assign_expr.op == AssignOp::Assign {
+                        decls.push(item.name.clone());
                     }
                 }
                 let left = infer_expr(&assign_expr.left, name, decls);

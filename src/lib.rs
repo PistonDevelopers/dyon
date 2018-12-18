@@ -337,12 +337,16 @@ impl Clone for FnExternal {
 }
 
 /// Stores functions for a Dyon module.
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub struct Module {
     functions: Vec<ast::Function>,
     ext_prelude: Vec<FnExternal>,
     intrinsics: Arc<HashMap<Arc<String>, usize>>,
     register_namespace: Arc<Vec<Arc<String>>>,
+}
+
+impl Default for Module {
+    fn default() -> Module {Module::new()}
 }
 
 impl Module {
@@ -451,7 +455,7 @@ impl Module {
         Module {
             functions: vec![],
             ext_prelude: vec![],
-            intrinsics: intrinsics,
+            intrinsics,
             register_namespace: Arc::new(vec![]),
         }
     }
@@ -529,7 +533,7 @@ impl Module {
         self.ext_prelude.push(FnExternal {
             namespace: self.register_namespace.clone(),
             name: name.clone(),
-            f: f,
+            f,
             p: prelude_function,
         });
     }
@@ -544,7 +548,7 @@ impl Module {
         self.ext_prelude.push(FnExternal {
             namespace: self.register_namespace.clone(),
             name: Arc::new(name.into()),
-            f: f,
+            f,
             p: prelude_function,
         });
     }
@@ -754,7 +758,7 @@ fn check_ignored_meta_data(
 pub fn error(res: Result<(), String>) -> bool {
     match res {
         Err(err) => {
-            println!("");
+            println!();
             println!(" --- ERROR --- ");
             println!("{}", err);
             true

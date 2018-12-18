@@ -15,7 +15,7 @@ impl ConvertMat4 for Mat4 {
 
 impl PopVariable for Mat4 {
     fn pop_var(rt: &Runtime, var: &Variable) -> Result<Self, String> {
-        if let &Variable::Mat4(ref v) = var {
+        if let Variable::Mat4(ref v) = *var {
             Ok(Mat4(**v))
         } else {
             Err(rt.expected(var, "mat4"))

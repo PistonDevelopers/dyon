@@ -57,7 +57,7 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
             match kind {
                 Kind::Go => {
                     // Infer thread type from function.
-                    if nodes[i].children.len() > 0 {
+                    if !nodes[i].children.is_empty() {
                         let ch = nodes[i].children[0];
                         if let Some(ref ty) = nodes[ch].ty {
                             this_ty = Some(Type::Thread(Box::new(ty.clone())))
@@ -76,7 +76,7 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
                     }
                 }
                 Kind::CallArg => {
-                    if nodes[i].children.len() == 0 || nodes[i].item_ids() {
+                    if nodes[i].children.is_empty() || nodes[i].item_ids() {
                         continue 'node;
                     }
                     let ch = nodes[i].children[0];
@@ -199,11 +199,11 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
                         if nodes[item].item_ids() { continue 'node; }
                         if let Some(decl) = nodes[item].declaration {
                             if let Some(ref ty) = nodes[decl].ty {
-                                match ty {
-                                    &Type::Closure(ref ty) => {
+                                match *ty {
+                                    Type::Closure(ref ty) => {
                                         this_ty = Some(ty.ret.clone());
                                     }
-                                    &Type::Any => {
+                                    Type::Any => {
                                         this_ty = Some(Type::Any);
                                     }
                                     _ => return Err(nodes[item].source.wrap(
@@ -285,7 +285,7 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
                 Kind::ElseIfCond | Kind::UnOp | Kind::Grab
                  => {
                      // TODO: Report error for expected unary operator.
-                    if nodes[i].children.len() == 0 { continue 'node; }
+                    if nodes[i].children.is_empty() { continue 'node; }
                     let ch = nodes[i].children[0];
                     if nodes[ch].item_ids() { continue 'node; }
                     let ty = match nodes[ch].ty {
@@ -294,8 +294,8 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
                     };
                     if nodes[i].kind == Kind::Grab && ty == Type::Void {
                         return Err(nodes[i].source.wrap(
-                            format!("Type mismatch (#325):\n\
-                                Expected something, found `void`")));
+                            "Type mismatch (#325):\n\
+                                Expected something, found `void`".to_string()));
                     }
                     if nodes[ch].kind == Kind::Return {
                         // Find function and check return type.
@@ -354,8 +354,8 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
                 Kind::Mul => {
                     if nodes[i].binops.len() + 1 != nodes[i].children.len() {
                         return Err(nodes[i].source.wrap(
-                            format!("Type mismatch (#450):\n\
-                            Missing binary operator for node when converting meta data")
+                            "Type mismatch (#450):\n\
+                            Missing binary operator for node when converting meta data".to_string()
                         ))
                     }
 
@@ -397,8 +397,8 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
                     if nodes[base].item_ids() || nodes[exp].item_ids() {
                         continue 'node;
                     }
-                    match (&nodes[base].ty, &nodes[exp].ty) {
-                        (&Some(ref base_ty), &Some(ref exp_ty)) => {
+                    if let Some(ref base_ty) = nodes[base].ty {
+                        if let Some(ref exp_ty) = nodes[exp].ty {
                             if let Some(ty) = base_ty.pow(exp_ty) {
                                 this_ty = Some(ty);
                             } else {
@@ -409,7 +409,6 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
                                              exp_ty.description())));
                             }
                         }
-                        _ => {}
                     }
                 }
                 Kind::Compare => {
@@ -420,28 +419,27 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
                     if nodes[left].item_ids() {
                         continue 'node;
                     }
-                    match &nodes[left].ty {
-                        &Some(Type::Any) => {
+                    match nodes[left].ty {
+                        Some(Type::Any) => {
                             this_ty = Some(Type::Any);
                         }
-                        &Some(Type::Secret(_)) => {
+                        Some(Type::Secret(_)) => {
                             this_ty = Some(Type::Secret(Box::new(Type::Bool)));
                         }
-                        &Some(_) => {
+                        Some(_) => {
                             this_ty = Some(Type::Bool);
                         }
                         _ => {}
                     }
                 }
                 Kind::Block | Kind::TrueBlock | Kind::ElseIfBlock | Kind::ElseBlock => {
-                    if nodes[i].children.len() == 0 {
+                    if nodes[i].children.is_empty() {
                         this_ty = Some(Type::Void);
                     }
-                    for &ch in nodes[i].children.last() {
+                    if let Some(&ch) = nodes[i].children.last() {
                         if nodes[ch].item_ids() { continue 'node; }
                         if let Some(ref ty) = nodes[ch].ty {
                             this_ty = Some(nodes[i].inner_type(ty));
-                            break;
                         }
                     }
                 }
@@ -457,7 +455,7 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
                     }
                 }
                 Kind::X | Kind::Y | Kind::Z | Kind::W => {
-                    if nodes[i].children.len() == 0 { continue 'node; }
+                    if nodes[i].children.is_empty() { continue 'node; }
                     let ch = nodes[i].children[0];
                     if nodes[ch].item_ids() { continue 'node; }
 
@@ -512,8 +510,8 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
                         use Dfn;
 
                         this_ty = Some(Type::Closure(Box::new(Dfn {
-                            lts: lts,
-                            tys: tys,
+                            lts,
+                            tys,
                             ret: ret.unwrap()
                         })));
                     }
@@ -567,7 +565,7 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
                 }
             }
             Kind::Go => {
-                if nodes[i].children.len() > 0 {
+                if !nodes[i].children.is_empty() {
                     if let Some(decl) = nodes[nodes[i].children[0]].declaration {
                         match nodes[decl].ty {
                             None | Some(Type::Void) => {
@@ -591,8 +589,8 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
                     Some(AssignOp::Add) | Some(AssignOp::Sub) => {
                         let left = nodes[i].find_child_by_kind(nodes, Kind::Left).unwrap();
                         let right = nodes[i].find_child_by_kind(nodes, Kind::Right).unwrap();
-                        match (&nodes[left].ty, &nodes[right].ty) {
-                            (&Some(ref left_ty), &Some(ref right_ty)) => {
+                        if let Some(ref left_ty) = nodes[left].ty {
+                            if let Some(ref right_ty) = nodes[right].ty {
                                 if !left_ty.add_assign(&right_ty) {
                                     return Err(nodes[i].source.wrap(
                                         format!("Type mismatch (#1000):\n\
@@ -601,7 +599,6 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
                                     ))
                                 }
                             }
-                            _ => {}
                         }
                     }
                     _ => {}
@@ -616,9 +613,9 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
                 let children = if let Some(parent) = nodes[i].parent {
                         match nodes[parent].kind {
                             Kind::Fn => {
-                                match &nodes[parent].ty {
-                                    &Some(Type::Void) => &nodes[i].children,
-                                    &None => continue,
+                                match nodes[parent].ty {
+                                    Some(Type::Void) => &nodes[i].children,
+                                    None => continue,
                                     _ => &nodes[i].children[0..n - 1]
                                 }
                             }
@@ -627,12 +624,8 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
                     } else {
                         &nodes[i].children[0..n - 1]
                     };
-                for j in 0..children.len() {
-                    let ch = children[j];
-                    match nodes[ch].kind {
-                        Kind::Return => continue,
-                        _ => {}
-                    };
+                for &ch in children.iter() {
+                    if let Kind::Return = nodes[ch].kind {continue};
                     if let Some(ref ty) = nodes[ch].ty {
                         if ty != &Type::Void && ty != &Type::Unreachable {
                             return Err(nodes[ch].source.wrap(
@@ -664,7 +657,7 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
 /// Checks all returns recursively in function.
 fn check_fn(
     n: usize,
-    nodes: &Vec<Node>,
+    nodes: &[Node],
     ty: &Type,
     found_return: &mut bool
 ) -> Result<(), Range<String>> {
@@ -716,7 +709,7 @@ fn check_fn(
     Ok(())
 }
 
-fn check_if(n: usize, nodes: &Vec<Node>) -> Result<(), Range<String>> {
+fn check_if(n: usize, nodes: &[Node]) -> Result<(), Range<String>> {
     if let Some(ch) = nodes[n].find_child_by_kind(nodes, Kind::Cond) {
         if let Some(ref cond_ty) = nodes[ch].ty {
             if !Type::Bool.goes_with(cond_ty) {

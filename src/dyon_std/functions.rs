@@ -32,12 +32,12 @@ pub fn list_functions(module: &Module) -> Vec<Variable> {
         for (i, lt) in f.lts.iter().enumerate() {
             let mut obj_arg = HashMap::new();
             obj_arg.insert(name.clone(),
-                Variable::Text(Arc::new(format!("arg{}", i).into())));
+                Variable::Text(Arc::new(format!("arg{}", i))));
             obj_arg.insert(lifetime.clone(), match *lt {
                 Lt::Default => Variable::Option(None),
                 Lt::Arg(ind) => Variable::Option(Some(
                         Box::new(Variable::Text(
-                            Arc::new(format!("arg{}", ind).into())
+                            Arc::new(format!("arg{}", ind))
                         ))
                     )),
                 Lt::Return => Variable::Option(Some(
@@ -60,12 +60,12 @@ pub fn list_functions(module: &Module) -> Vec<Variable> {
         for (i, lt) in f.p.lts.iter().enumerate() {
             let mut obj_arg = HashMap::new();
             obj_arg.insert(name.clone(),
-                Variable::Text(Arc::new(format!("arg{}", i).into())));
+                Variable::Text(Arc::new(format!("arg{}", i))));
             obj_arg.insert(lifetime.clone(), match *lt {
                 Lt::Default => Variable::Option(None),
                 Lt::Arg(ind) => Variable::Option(Some(
                         Box::new(Variable::Text(
-                            Arc::new(format!("arg{}", ind).into())
+                            Arc::new(format!("arg{}", ind))
                         ))
                     )),
                 Lt::Return => Variable::Option(Some(

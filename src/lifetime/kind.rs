@@ -215,10 +215,10 @@ impl Kind {
     }
 
     /// A loop can infer range from the body using variable.
-    pub fn is_decl_loop(&self) -> bool {
+    pub fn is_decl_loop(self) -> bool {
         use self::Kind::*;
 
-        match *self {
+        match self {
             ForN | Sum | Prod | SumVec4 | Min | Max | Sift
             | Any | All | LinkFor => true,
             _ => false
@@ -226,10 +226,10 @@ impl Kind {
     }
 
     /// An in-loop receives an object from a receiver channel.
-    pub fn is_in_loop(&self) -> bool {
+    pub fn is_in_loop(self) -> bool {
         use self::Kind::*;
 
-        match *self {
+        match self {
             ForIn | SumIn | ProdIn | MinIn | MaxIn | AnyIn | AllIn |
             SiftIn | LinkIn => true,
             _ => false
@@ -237,17 +237,17 @@ impl Kind {
     }
 
     /// An un-loop has fixed range and replaces variable in body.
-    pub fn is_decl_un_loop(&self) -> bool {
-        match *self {
+    pub fn is_decl_un_loop(self) -> bool {
+        match self {
             Kind::Vec4UnLoop => true,
             _ => false
         }
     }
 
-    pub fn is_block(&self) -> bool {
+    pub fn is_block(self) -> bool {
         use self::Kind::*;
 
-        match *self {
+        match self {
             Block | ElseIfBlock |
             TrueBlock | ElseBlock => true,
             _ => false

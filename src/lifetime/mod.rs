@@ -37,7 +37,7 @@ pub fn check(
                 if let Some(ref word) = word {
                     // Append named syntax to item.
                     let item = nodes[i].find_child_by_kind(&nodes, Kind::Item).unwrap();
-                    if nodes[item].children.len() == 0 {
+                    if nodes[item].children.is_empty() {
                         Arc::make_mut(&mut nodes[item].names[0]).push_str(&format!("__{}", word));
                     }
                     // Ignore when using object property,
@@ -121,8 +121,8 @@ pub fn check(
     let locals: Vec<(usize, usize)> = nodes.iter().enumerate()
         .filter(|&(_, n)| {
             n.op == Some(AssignOp::Assign) &&
-            n.children.len() > 0 &&
-            nodes[n.children[0]].children.len() > 0
+            !n.children.is_empty() &&
+            !nodes[n.children[0]].children.is_empty()
         })
         .map(|(i, n)| {
                 // Left argument.
@@ -140,8 +140,8 @@ pub fn check(
     let assigned_locals: Vec<(usize, usize)> = nodes.iter().enumerate()
         .filter(|&(_, n)| {
             n.op == Some(AssignOp::Assign) &&
-            n.children.len() > 0 &&
-            nodes[n.children[0]].children.len() > 0
+            !n.children.is_empty() &&
+            !nodes[n.children[0]].children.is_empty()
         })
         .map(|(i, n)| {
                 // Left argument.
@@ -220,7 +220,7 @@ pub fn check(
                 .expect("Expected parent to contain child");
             let children = &nodes[parent].children[..me];
             for &j in children.iter().rev() {
-                if nodes[j].children.len() == 0 { continue; }
+                if nodes[j].children.is_empty() { continue; }
                 // Assign is inside an expression.
                 let j = nodes[j].children[0];
                 if nodes[j].op != Some(AssignOp::Assign) { continue; }
@@ -260,7 +260,7 @@ pub fn check(
                                 _ => continue
                             };
                             if Some(true) == arg.name().map(|n|
-                                    &**n == &**nodes[i].name().unwrap()) {
+                                    **n == **nodes[i].name().unwrap()) {
                                 if grab > 0 {
                                     return Err(nodes[i].source.wrap(
                                         format!("Grabbed `{}` has same name as closure argument",
@@ -297,7 +297,7 @@ pub fn check(
                         _ => continue
                     };
                     if Some(true) == arg.name().map(|n|
-                        &**n == &**nodes[i].name().unwrap()) {
+                        **n == **nodes[i].name().unwrap()) {
                         found = Some(j);
                         break;
                     }
@@ -340,7 +340,7 @@ pub fn check(
 
             if !found {
                 return Err(nodes[inf].source.wrap(
-                    format!("Can not infer range from body, use `list[i]` syntax")));
+                    "Can not infer range from body, use `list[i]` syntax".to_string()));
             }
         }
     }
@@ -427,17 +427,14 @@ pub fn check(
             Some(&i) => i,
             None => {
                 // Check whether it is a prelude function.
-                match prelude.functions.get(&name) {
-                    Some(&pf) => {
-                        node.lts = prelude.list[pf].lts.clone();
-                        if node.lts.len() != n {
-                            return Err(node.source.wrap(
-                                format!("{}: Expected {} arguments, found {}",
-                                name, node.lts.len(), n)));
-                        }
-                        continue;
+                if let Some(&pf) = prelude.functions.get(&name) {
+                    node.lts = prelude.list[pf].lts.clone();
+                    if node.lts.len() != n {
+                        return Err(node.source.wrap(
+                            format!("{}: Expected {} arguments, found {}",
+                            name, node.lts.len(), n)));
                     }
-                    None => {}
+                    continue;
                 }
                 let suggestions = suggestions(&**name, &function_lookup, prelude);
                 return Err(node.source.wrap(
@@ -474,10 +471,7 @@ pub fn check(
             Some(&i) => i,
             None => {
                 // Check whether it is a prelude function.
-                match prelude.functions.get(&name) {
-                    Some(_) => continue,
-                    None => {}
-                }
+                if prelude.functions.get(&name).is_some() {continue};
                 let suggestions = suggestions(&**name, &function_lookup, prelude);
                 return Err(node.source.wrap(
                     format!("Could not find function `{}`{}", name, suggestions)));
@@ -515,7 +509,7 @@ pub fn check(
             if let Some(ref lt) = nodes[c].lifetime {
                 if &**lt == "return" { break; }
                 // Reset visit flags.
-                for i in 0..visited.len() { visited[i] = false; }
+                for it in &mut visited { *it = false; }
 
                 let (mut arg, mut ind) = *arg_names.get(&(f, lt.clone()))
                     .expect("Expected argument index");
@@ -546,8 +540,8 @@ pub fn check(
         // Only `=` needs a lifetime check.
         if nodes[a].op != Some(AssignOp::Set) { continue }
         let right = nodes[a].children[1];
-        let ref lifetime_left = nodes[i].lifetime(&nodes, &arg_names);
-        let ref lifetime_right = nodes[right].lifetime(&nodes, &arg_names);
+        let lifetime_left = &nodes[i].lifetime(&nodes, &arg_names);
+        let lifetime_right = &nodes[right].lifetime(&nodes, &arg_names);
         try!(compare_lifetimes(lifetime_left, lifetime_right, &nodes)
                 .map_err(|err| nodes[right].source.wrap(err)));
     }
@@ -555,8 +549,8 @@ pub fn check(
     // Check the lifetime of declared locals.
     for &(a, i) in &locals {
         let right = nodes[a].children[1];
-        let ref lifetime_left = Some(Lifetime::Local(i));
-        let ref lifetime_right = nodes[right].lifetime(&nodes, &arg_names);
+        let lifetime_left = &Some(Lifetime::Local(i));
+        let lifetime_right = &nodes[right].lifetime(&nodes, &arg_names);
         try!(compare_lifetimes(lifetime_left, lifetime_right, &nodes)
                 .map_err(|err| nodes[right].source.wrap(err)));
     }
@@ -565,8 +559,8 @@ pub fn check(
     for &(a, i) in &assigned_locals {
         if let Some(j) = nodes[i].declaration {
             let right = nodes[a].children[1];
-            let ref lifetime_left = Some(Lifetime::Local(j));
-            let ref lifetime_right = nodes[right].lifetime(&nodes, &arg_names);
+            let lifetime_left = &Some(Lifetime::Local(j));
+            let lifetime_right = &nodes[right].lifetime(&nodes, &arg_names);
             try!(compare_lifetimes(lifetime_left, lifetime_right, &nodes)
                     .map_err(|err| nodes[right].source.wrap(err)));
         }
@@ -575,7 +569,7 @@ pub fn check(
     // Check the lifetime of returned values.
     for &i in &returns {
         let right = nodes[i].children[0];
-        let ref lifetime_right = nodes[right].lifetime(&nodes, &arg_names);
+        let lifetime_right = &nodes[right].lifetime(&nodes, &arg_names);
         try!(compare_lifetimes(
             &Some(Lifetime::Return(vec![])), lifetime_right, &nodes)
                 .map_err(|err| nodes[right].source.wrap(err))
@@ -584,7 +578,7 @@ pub fn check(
 
     // Check the lifetime of expressions that are mathematically declared.
     for &i in &math_expr {
-        let ref lifetime_right = nodes[i].lifetime(&nodes, &arg_names);
+        let lifetime_right = &nodes[i].lifetime(&nodes, &arg_names);
         try!(compare_lifetimes(
             &Some(Lifetime::Return(vec![])), lifetime_right, &nodes)
                 .map_err(|err| nodes[i].source.wrap(err))
@@ -595,8 +589,8 @@ pub fn check(
     for &i in &end_of_blocks {
         let parent = nodes[i].parent.unwrap();
         // Fake a local variable.
-        let ref lifetime_left = Some(Lifetime::Local(parent));
-        let ref lifetime_right = nodes[i].lifetime(&nodes, &arg_names);
+        let lifetime_left = &Some(Lifetime::Local(parent));
+        let lifetime_right = &nodes[i].lifetime(&nodes, &arg_names);
         try!(compare_lifetimes(lifetime_left, lifetime_right, &nodes)
                 .map_err(|err| nodes[i].source.wrap(err)));
     }
@@ -605,10 +599,10 @@ pub fn check(
     for &c in &calls {
         let call = &nodes[c];
         // Fake a local variable.
-        let ref lifetime_left = Some(Lifetime::Local(c));
+        let lifetime_left = &Some(Lifetime::Local(c));
         for &a in call.children.iter()
             .filter(|&&i| nodes[i].kind == Kind::CallArg)  {
-            let ref lifetime_right = nodes[a].lifetime(&nodes, &arg_names);
+            let lifetime_right = &nodes[a].lifetime(&nodes, &arg_names);
             try!(compare_lifetimes(lifetime_left, lifetime_right, &nodes)
                     .map_err(|err| nodes[a].source.wrap(err)));
         }
@@ -630,7 +624,8 @@ pub fn check(
                 let arg = &nodes[a];
                 if arg.lifetime.is_some() {
                     return Err(nodes[call.children[i]].source.wrap(
-                        format!("Can not use `go` because this argument has a lifetime constraint")));
+                        "Can not use `go` because this argument has a lifetime constraint"
+                        .to_string()));
                 }
             }
         } else {
@@ -643,7 +638,8 @@ pub fn check(
                     Lt::Default => {}
                     _ => {
                         return Err(nodes[call.children[i]].source.wrap(
-                            format!("Can not use `go` because this argument has a lifetime constraint")));
+                            "Can not use `go` because this argument has a lifetime constraint"
+                            .to_string()));
                     }
                 }
             }
@@ -687,7 +683,7 @@ pub fn check(
                     }
                     _ => {}
                 }
-                if node.children.len() == 0 {
+                if node.children.is_empty() {
                     can_be_item = false;
                     break;
                 }
@@ -714,7 +710,7 @@ pub fn check(
                         Some(Lifetime::Return(_)) | Some(Lifetime::Argument(_)) => {
                             if !is_reference(i) {
                                 return Err(nodes[call.children[i]].source.wrap(
-                                    format!("Requires reference to variable")));
+                                    "Requires reference to variable".to_string()));
                             }
                         }
                         _ => {}
@@ -726,8 +722,8 @@ pub fn check(
                             .expect("Expected argument name");
                         let left = call.children[ind];
                         let right = call.children[i];
-                        let ref lifetime_left = nodes[left].lifetime(&nodes, &arg_names);
-                        let ref lifetime_right = nodes[right].lifetime(&nodes, &arg_names);
+                        let lifetime_left = &nodes[left].lifetime(&nodes, &arg_names);
+                        let lifetime_right = &nodes[right].lifetime(&nodes, &arg_names);
                         try!(compare_lifetimes(
                             lifetime_left, lifetime_right, &nodes)
                                 .map_err(|err| nodes[right].source.wrap(err))
@@ -746,19 +742,19 @@ pub fn check(
                     Lt::Return => {
                         if !is_reference(i) {
                             return Err(arg.source.wrap(
-                                format!("Requires reference to variable")));
+                                "Requires reference to variable".to_string()));
                         }
                     }
                     Lt::Arg(ind) => {
                         if !is_reference(i) {
                             return Err(arg.source.wrap(
-                                format!("Requires reference to variable")));
+                                "Requires reference to variable".to_string()));
                         }
 
                         let left = call.children[ind];
                         let right = call.children[i];
-                        let ref lifetime_left = nodes[left].lifetime(&nodes, &arg_names);
-                        let ref lifetime_right = nodes[right].lifetime(&nodes, &arg_names);
+                        let lifetime_left = &nodes[left].lifetime(&nodes, &arg_names);
+                        let lifetime_right = &nodes[right].lifetime(&nodes, &arg_names);
                         try!(compare_lifetimes(
                             lifetime_left, lifetime_right, &nodes)
                                 .map_err(|err| nodes[right].source.wrap(err))
@@ -772,13 +768,13 @@ pub fn check(
     // Check that mutable locals are not immutable arguments.
     for &(_, i) in &mutated_locals {
         if let Some(decl) = nodes[i].declaration {
-            if nodes[decl].kind == Kind::Arg ||
-               nodes[decl].kind == Kind::Current {
-                if !nodes[decl].mutable {
-                    return Err(nodes[i].source.wrap(
-                        format!("Requires `mut {}`", nodes[i].name().unwrap())
-                    ));
-                }
+            if (nodes[decl].kind == Kind::Arg ||
+               nodes[decl].kind == Kind::Current) &&
+               !nodes[decl].mutable
+            {
+                return Err(nodes[i].source.wrap(
+                    format!("Requires `mut {}`", nodes[i].name().unwrap())
+                ));
             }
         }
     }
@@ -792,7 +788,7 @@ pub fn check(
             for _ in 0..2 {
                 let node: &Node = &nodes[n];
                 if node.kind == Kind::Item { return Some(n); }
-                if node.children.len() == 0 { break; }
+                if node.children.is_empty() { break; }
                 n = node.children[0];
             }
             None

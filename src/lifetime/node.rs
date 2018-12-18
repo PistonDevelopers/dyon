@@ -50,7 +50,7 @@ pub struct Node {
 
 impl Node {
     pub fn name(&self) -> Option<&Arc<String>> {
-        if self.names.len() == 0 { None }
+        if self.names.is_empty() { None }
         else { Some(&self.names[0]) }
     }
 
@@ -70,12 +70,11 @@ impl Node {
         for &ch in &self.children {
             if nodes[ch].kind == kind { return Some(ch); }
         }
-        return None
+        None
     }
 
     pub fn item_ids(&self) -> bool {
-        if self.kind == Kind::Item && self.children.len() > 0 { true }
-        else { false }
+        self.kind == Kind::Item && !self.children.is_empty()
     }
 
     pub fn inner_type(&self, ty: &Type) -> Type {
@@ -123,7 +122,7 @@ impl Node {
             }
         } else {
             // Intrinsic functions copies argument constraints to the call.
-            if self.kind == Kind::Call && self.lts.len() > 0 {
+            if self.kind == Kind::Call && !self.lts.is_empty() {
                 let mut returns_static = true;
                 'args: for lt in self.lts.iter() {
                     let mut lt = *lt;
@@ -291,7 +290,7 @@ pub fn convert_meta_data(
     data: &[Range<MetaData>]
 ) -> Result<(), Range<String>> {
     let mut parents: Vec<usize> = vec![];
-    let ref mut ignored = vec![];
+    let ignored = &mut vec![];
     let mut skip: Option<usize> = None;
     for (i, d) in data.iter().enumerate() {
         if let Some(j) = skip {
@@ -338,15 +337,15 @@ pub fn convert_meta_data(
                 let parent = parents.last().map(|i| *i);
                 parents.push(nodes.len());
                 nodes.push(Node {
-                    kind: kind,
+                    kind,
                     alias: None,
                     names: vec![],
-                    ty: ty,
+                    ty,
                     mutable: false,
                     try: false,
                     grab_level: 0,
                     source: Range::empty(0),
-                    parent: parent,
+                    parent,
                     children: vec![],
                     start: i,
                     end: 0,
@@ -364,11 +363,8 @@ pub fn convert_meta_data(
                     node.source = d.range();
                     node.end = i + 1;
                 }
-                match parents.last() {
-                    Some(&parent) => {
-                        nodes[parent].children.push(ind);
-                    }
-                    None => {}
+                if let Some(&parent) = parents.last() {
+                    nodes[parent].children.push(ind);
                 }
             }
             MetaData::String(ref n, ref val) => {
@@ -384,7 +380,7 @@ pub fn convert_meta_data(
                     "word" => {
                         // Put words together to name.
                         let i = *parents.last().unwrap();
-                        if nodes[i].names.len() == 0 {
+                        if nodes[i].names.is_empty() {
                             let mut name = val.clone();
                             if nodes[i].kind != Kind::CallClosure {
                                 Arc::make_mut(&mut name).push('_');
@@ -509,7 +505,7 @@ pub fn convert_meta_data(
                     "grab_level" => {
                         if val < 1.0 {
                             return Err(d.range()
-                                        .wrap(format!("Grab level must be at least `'1`")));
+                                        .wrap("Grab level must be at least `'1`".to_string()));
                         }
                         let i = *parents.last().unwrap();
                         nodes[i].grab_level = val as u16;
