@@ -926,7 +926,7 @@ impl Block {
 #[derive(Debug, Clone)]
 pub enum Expression {
     /// Link expression.
-    Link(Link),
+    Link(Box<Link>),
     /// Object expression.
     Object(Box<Object>),
     /// Array expression.
@@ -936,28 +936,27 @@ pub enum Expression {
     /// Return expression.
     Return(Box<Expression>),
     /// Returns with value expression.
-    ReturnVoid(Range),
+    ReturnVoid(Box<Range>),
     /// Break expression.
-    Break(Break),
+    Break(Box<Break>),
     /// Continue expression.
-    Continue(Continue),
+    Continue(Box<Continue>),
     /// Block expression.
-    Block(Block),
+    Block(Box<Block>),
     /// Go call expression.
     Go(Box<Go>),
-    // TODO: Check size, perhaps use `Box<Call>`?
     /// Call expression.
-    Call(Call),
+    Call(Box<Call>),
     /// Item expression.
-    Item(Item),
+    Item(Box<Item>),
     /// Binary operator expression.
     BinOp(Box<BinOpExpression>),
     /// Assignment expression.
     Assign(Box<Assign>),
     /// 4D vector expression.
-    Vec4(Vec4),
+    Vec4(Box<Vec4>),
     /// 4D matrix expression.
-    Mat4(Mat4),
+    Mat4(Box<Mat4>),
     /// For expression, e.g. `for i := 0; i < 10; i += 1 { ... }`.
     For(Box<For>),
     /// For-n expression.
@@ -1011,7 +1010,7 @@ pub enum Expression {
     /// Variable.
     ///
     /// This means it contains no members that depends on other expressions.
-    Variable(Range, Variable),
+    Variable(Box<(Range, Variable)>),
     /// Try expression using `?`.
     Try(Box<Expression>),
     /// 4D vector swizzle expression.
@@ -1055,7 +1054,7 @@ impl Expression {
             } else if let Ok((range, val)) = Link::from_meta_data(
                     file, source, convert, ignored) {
                 convert.update(range);
-                result = Some(Expression::Link(val));
+                result = Some(Expression::Link(Box::new(val)));
             } else if let Ok((range, val)) = Object::from_meta_data(
                     file, source, convert, ignored) {
                 convert.update(range);
@@ -1074,20 +1073,20 @@ impl Expression {
                 result = Some(Expression::Return(Box::new(val)));
             } else if let Ok((range, _)) = convert.meta_bool("return_void") {
                 convert.update(range);
-                result = Some(Expression::ReturnVoid(
-                    convert.source(start).unwrap()));
+                result = Some(Expression::ReturnVoid(Box::new(
+                    convert.source(start).unwrap())));
             } else if let Ok((range, val)) = Break::from_meta_data(
                     convert, ignored) {
                 convert.update(range);
-                result = Some(Expression::Break(val));
+                result = Some(Expression::Break(Box::new(val)));
             } else if let Ok((range, val)) = Continue::from_meta_data(
                     convert, ignored) {
                 convert.update(range);
-                result = Some(Expression::Continue(val));
+                result = Some(Expression::Continue(Box::new(val)));
             } else if let Ok((range, val)) = Block::from_meta_data(
                     file, source, "block", convert, ignored) {
                 convert.update(range);
-                result = Some(Expression::Block(val));
+                result = Some(Expression::Block(Box::new(val)));
             } else if let Ok((range, val)) = Add::from_meta_data(
                     file, source, convert, ignored) {
                 convert.update(range);
@@ -1103,40 +1102,40 @@ impl Expression {
             } else if let Ok((range, val)) = Item::from_meta_data(
                     file, source, convert, ignored) {
                 convert.update(range);
-                result = Some(Expression::Item(val));
+                result = Some(Expression::Item(Box::new(val)));
             } else if let Ok((range, val)) = Norm::from_meta_data(
                     file, source, convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::Norm(Box::new(val)));
             } else if let Ok((range, val)) = convert.meta_string("text") {
                 convert.update(range);
-                result = Some(Expression::Variable(
+                result = Some(Expression::Variable(Box::new((
                     convert.source(start).unwrap(),
                     Variable::Text(val)
-                ));
+                ))));
             } else if let Ok((range, val)) = convert.meta_f64("num") {
                 convert.update(range);
-                result = Some(Expression::Variable(
+                result = Some(Expression::Variable(Box::new((
                     convert.source(start).unwrap(),
                     Variable::f64(val)
-                ));
+                ))));
             } else if let Ok((range, val)) = Vec4::from_meta_data(
                     file, source, convert, ignored) {
                 convert.update(range);
-                result = Some(Expression::Vec4(val));
+                result = Some(Expression::Vec4(Box::new(val)));
             } else if let Ok((range, val)) = Mat4::from_meta_data(
                     file, source, convert, ignored) {
                 convert.update(range);
-                result = Some(Expression::Mat4(val));
+                result = Some(Expression::Mat4(Box::new(val)));
             } else if let Ok((range, val)) = Vec4UnLoop::from_meta_data(
                     file, source, convert, ignored) {
                 convert.update(range);
                 result = Some(val.to_expression());
             } else if let Ok((range, val)) = convert.meta_bool("bool") {
                 convert.update(range);
-                result = Some(Expression::Variable(
+                result = Some(Expression::Variable(Box::new((
                     convert.source(start).unwrap(), Variable::bool(val)
-                ));
+                ))));
             } else if let Ok((range, val)) = convert.meta_string("color") {
                 use read_color;
 
@@ -1144,7 +1143,7 @@ impl Expression {
                 if let Some((rgb, a)) = read_color::rgb_maybe_a(&mut val.chars()) {
                     let v = [rgb[0] as f32 / 255.0, rgb[1] as f32 / 255.0, rgb[2] as f32 / 255.0,
                              a.unwrap_or(255) as f32 / 255.0];
-                    result = Some(Expression::Variable(range, Variable::Vec4(v)));
+                    result = Some(Expression::Variable(Box::new((range, Variable::Vec4(v)))));
                 } else {
                     return Err(());
                 }
@@ -1155,11 +1154,11 @@ impl Expression {
             } else if let Ok((range, val)) = Call::from_meta_data(
                     file, source, convert, ignored) {
                 convert.update(range);
-                result = Some(Expression::Call(val));
+                result = Some(Expression::Call(Box::new(val)));
             } else if let Ok((range, val)) = Call::named_from_meta_data(
                     file, source, convert, ignored) {
                 convert.update(range);
-                result = Some(Expression::Call(val));
+                result = Some(Expression::Call(Box::new(val)));
             } else if let Ok((range, val)) = Assign::from_meta_data(
                     file, source, convert, ignored) {
                 convert.update(range);
@@ -1283,7 +1282,7 @@ impl Expression {
                     file, source, convert, ignored) {
                 convert.update(range);
                 if let Some(v) = val.precompute() {
-                    result = Some(Expression::Variable(val.source_range, v));
+                    result = Some(Expression::Variable(Box::new((val.source_range, v))));
                 } else {
                     result = Some(Expression::Grab(Box::new(val)));
                 }
@@ -1315,7 +1314,7 @@ impl Expression {
             Object(ref obj) => obj.precompute(),
             Vec4(ref vec4) => vec4.precompute(),
             Link(ref link) => link.precompute(),
-            Variable(_, ref v) => Some(v.clone()),
+            Variable(ref range_var) => Some(range_var.1.clone()),
             _ => None
         }
     }
@@ -1330,7 +1329,7 @@ impl Expression {
             Array(ref arr) => arr.source_range,
             ArrayFill(ref arr_fill) => arr_fill.source_range,
             Return(ref expr) => expr.source_range(),
-            ReturnVoid(range) => range,
+            ReturnVoid(ref range) => **range,
             Break(ref br) => br.source_range,
             Continue(ref c) => c.source_range,
             Block(ref bl) => bl.source_range,
@@ -1366,7 +1365,7 @@ impl Expression {
             Compare(ref comp) => comp.source_range,
             Norm(ref norm) => norm.source_range,
             UnOp(ref unop) => unop.source_range,
-            Variable(range, _) => range,
+            Variable(ref range_var) => range_var.0,
             Try(ref expr) => expr.source_range(),
             Swizzle(ref swizzle) => swizzle.source_range,
             Closure(ref closure) => closure.source_range,
@@ -1470,7 +1469,7 @@ impl Expression {
                 norm.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             UnOp(ref unop) =>
                 unop.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            Variable(_, _) => {}
+            Variable(_) => {}
             Try(ref expr) =>
                 expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             Swizzle(ref swizzle) =>
@@ -1796,9 +1795,11 @@ impl ArrayFill {
     }
 
     fn precompute(&self) -> Option<Variable> {
-        if let Expression::Variable(_, Variable::F64(n, _)) = self.n {
-            if let Expression::Variable(_, ref x) = self.fill {
-                return Some(Variable::Array(Arc::new(vec![x.clone(); n as usize])));
+        if let Expression::Variable(ref range_var) = self.n {
+            if let (_, Variable::F64(n, _)) = **range_var {
+                if let Expression::Variable(ref x) = self.fill {
+                    return Some(Variable::Array(Arc::new(vec![x.1.clone(); n as usize])));
+                }
             }
         }
         None
@@ -3190,9 +3191,12 @@ impl Mat4 {
         }
 
         let x = try!(x.ok_or(()));
-        let y = y.unwrap_or(Expression::Variable(Range::empty(0), Variable::Vec4([0.0, 1.0, 0.0, 0.0])));
-        let z = z.unwrap_or(Expression::Variable(Range::empty(0), Variable::Vec4([0.0, 0.0, 1.0, 0.0])));
-        let w = w.unwrap_or(Expression::Variable(Range::empty(0), Variable::Vec4([0.0, 0.0, 0.0, 1.0])));
+        let y = y.unwrap_or(Expression::Variable(Box::new((
+            Range::empty(0), Variable::Vec4([0.0, 1.0, 0.0, 0.0])))));
+        let z = z.unwrap_or(Expression::Variable(Box::new((
+            Range::empty(0), Variable::Vec4([0.0, 0.0, 1.0, 0.0])))));
+        let w = w.unwrap_or(Expression::Variable(Box::new((
+            Range::empty(0), Variable::Vec4([0.0, 0.0, 0.0, 1.0])))));
         Ok((convert.subtract(start), Mat4 {
             args: vec![x, y, z, w],
             source_range: convert.source(start).unwrap(),
@@ -3272,9 +3276,9 @@ impl Vec4 {
         }
 
         let x = try!(x.ok_or(()));
-        let y = y.unwrap_or(Expression::Variable(Range::empty(0), Variable::f64(0.0)));
-        let z = z.unwrap_or(Expression::Variable(Range::empty(0), Variable::f64(0.0)));
-        let w = w.unwrap_or(Expression::Variable(Range::empty(0), Variable::f64(0.0)));
+        let y = y.unwrap_or(Expression::Variable(Box::new((Range::empty(0), Variable::f64(0.0)))));
+        let z = z.unwrap_or(Expression::Variable(Box::new((Range::empty(0), Variable::f64(0.0)))));
+        let w = w.unwrap_or(Expression::Variable(Box::new((Range::empty(0), Variable::f64(0.0)))));
         Ok((convert.subtract(start), Vec4 {
             args: vec![x, y, z, w],
             source_range: convert.source(start).unwrap(),
@@ -3394,7 +3398,7 @@ impl Vec4UnLoop {
     fn to_expression(self) -> Expression {
         let source_range = self.source_range;
 
-        let zero = || Expression::Variable(source_range, Variable::f64(0.0));
+        let zero = || Expression::Variable(Box::new((source_range, Variable::f64(0.0))));
 
         let replace_0 = replace::number(&self.expr, &self.name, 0.0);
         let replace_1 = replace::number(&self.expr, &self.name, 1.0);
@@ -3409,10 +3413,10 @@ impl Vec4UnLoop {
                 zero()
             };
 
-        Expression::Vec4(Vec4 {
+        Expression::Vec4(Box::new(Vec4 {
             args: vec![replace_0, replace_1, replace_2, replace_3],
             source_range: source_range,
-        })
+        }))
     }
 }
 
@@ -3952,15 +3956,15 @@ impl Loop {
         Expression::For(Box::new(For {
             block: self.block,
             label: self.label,
-            init: Expression::Block(Block {
+            init: Expression::Block(Box::new(Block {
                 expressions: vec![],
                 source_range: source_range,
-            }),
-            step: Expression::Block(Block {
+            })),
+            step: Expression::Block(Box::new(Block {
                 expressions: vec![],
                 source_range: source_range,
-            }),
-            cond: Expression::Variable(source_range, Variable::bool(true)),
+            })),
+            cond: Expression::Variable(Box::new((source_range, Variable::bool(true)))),
             source_range: source_range,
         }))
     }

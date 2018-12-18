@@ -18,16 +18,16 @@ pub fn infer(block: &Block, name: &str) -> Option<Expression> {
     let list: Option<Item> = infer_block(block, name, &mut decls);
     let res = list.map(|item| {
         let source_range = item.source_range;
-        Expression::Call(Call {
+        Expression::Call(Box::new(Call {
             alias: None,
             name: Arc::new("len".into()),
             f_index: Cell::new(FnIndex::None),
             args: vec![
-                Expression::Item(item)
+                Expression::Item(Box::new(item))
             ],
             custom_source: None,
             source_range: source_range,
-        })
+        }))
     });
     res
 }
@@ -222,7 +222,7 @@ fn infer_expr(
             let res = infer_expr(&unop_expr.expr, name, decls);
             if res.is_some() { return res; }
         }
-        Variable(_, _) => {}
+        Variable(_) => {}
         Try(ref expr) => {
             let res = infer_expr(expr, name, decls);
             if res.is_some() { return res; }

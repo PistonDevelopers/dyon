@@ -741,8 +741,8 @@ pub(crate) fn read_number(rt: &mut Runtime) -> Result<(), String> {
 
 dyon_fn!{fn parse_number(text: Arc<String>) -> Option<f64> {text.trim().parse::<f64>().ok()}}
 dyon_fn!{fn trim(v: Arc<String>) -> Arc<String> {Arc::new(v.trim().into())}}
-dyon_fn!{fn trim_left(v: Arc<String>) -> Arc<String> {Arc::new(v.trim_left().into())}}
-dyon_fn!{fn trim_right(v: Arc<String>) -> Arc<String> {Arc::new(v.trim_right().into())}}
+dyon_fn!{fn trim_left(v: Arc<String>) -> Arc<String> {Arc::new(v.trim_start().into())}}
+dyon_fn!{fn trim_right(v: Arc<String>) -> Arc<String> {Arc::new(v.trim_end().into())}}
 
 pub(crate) fn _str(rt: &mut Runtime) -> Result<(), String> {
     use write::{write_variable, EscapeString};
@@ -1096,8 +1096,8 @@ pub(crate) fn _call(
                 name: fn_name.clone(),
                 f_index: Cell::new(f_index),
                 args: args.iter().map(|arg|
-                    ast::Expression::Variable(
-                        call.source_range, arg.clone())).collect(),
+                    ast::Expression::Variable(Box::new((
+                        call.source_range, arg.clone())))).collect(),
                 custom_source: Some(source),
                 source_range: call.source_range,
             };
@@ -1174,8 +1174,8 @@ pub(crate) fn call_ret(
                 name: fn_name.clone(),
                 f_index: Cell::new(f_index),
                 args: args.iter().map(|arg|
-                    ast::Expression::Variable(
-                        call.source_range, arg.clone())).collect(),
+                    ast::Expression::Variable(Box::new((
+                        call.source_range, arg.clone())))).collect(),
                 custom_source: Some(source),
                 source_range: call.source_range,
             };

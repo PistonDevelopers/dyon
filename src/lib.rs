@@ -803,6 +803,14 @@ mod tests {
         assert_eq!(size_of::<Variable>(), 24);
     }
 
+    #[test]
+    fn expression_size() {
+        use std::mem::size_of;
+        use super::*;
+
+        assert_eq!(size_of::<ast::Expression>(), 16);
+    }
+
     fn run_bench(source: &str) {
         run(source).unwrap_or_else(|err| panic!("{}", err));
     }

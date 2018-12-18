@@ -415,7 +415,7 @@ impl Runtime {
             LinkIn(ref for_in_expr) => self.link_for_in_expr(for_in_expr, module),
             If(ref if_expr) => self.if_expr(if_expr, module),
             Compare(ref compare) => self.compare(compare, module),
-            Variable(_, ref var) => Ok((Some(var.clone()), Flow::Continue)),
+            Variable(ref range_var) => Ok((Some(range_var.1.clone()), Flow::Continue)),
             Try(ref expr) => self.try(expr, side, module),
             Swizzle(ref sw) => {
                 let flow = try!(self.swizzle(sw, module));
@@ -724,8 +724,8 @@ impl Runtime {
                                 self.stack_trace()), self))
             };
             stack.push(v.deep_clone(&self.stack));
-            fake_call.args.push(ast::Expression::Variable(
-                go.call.args[i].source_range(), Variable::Ref(n-i-1)));
+            fake_call.args.push(ast::Expression::Variable(Box::new((
+                go.call.args[i].source_range(), Variable::Ref(n-i-1)))));
         }
         stack.reverse();
 
@@ -1151,7 +1151,8 @@ impl Runtime {
                     name: name.clone(),
                     f_index: Cell::new(FnIndex::Loaded(f_index)),
                     args: args.iter()
-                            .map(|arg| ast::Expression::Variable(Range::empty(0), arg.clone()))
+                            .map(|arg| ast::Expression::Variable(Box::new((
+                                       Range::empty(0), arg.clone()))))
                             .collect(),
                     custom_source: None,
                     source_range: Range::empty(0),
@@ -1180,7 +1181,8 @@ impl Runtime {
                     name: name.clone(),
                     f_index: Cell::new(FnIndex::Loaded(f_index)),
                     args: args.iter()
-                            .map(|arg| ast::Expression::Variable(Range::empty(0), arg.clone()))
+                            .map(|arg| ast::Expression::Variable(Box::new((
+                                       Range::empty(0), arg.clone()))))
                             .collect(),
                     custom_source: None,
                     source_range: Range::empty(0),
