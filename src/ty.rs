@@ -51,17 +51,17 @@ impl Type {
     pub fn description(&self) -> String {
         use Type::*;
 
-        match self {
-            &Unreachable => "unreachable".into(),
-            &Void => "void".into(),
-            &Any => "any".into(),
-            &Bool => "bool".into(),
-            &F64 => "f64".into(),
-            &Vec4 => "vec4".into(),
-            &Mat4 => "mat4".into(),
-            &Text => "str".into(),
-            &Link => "link".into(),
-            &Array(ref ty) => {
+        match *self {
+            Unreachable => "unreachable".into(),
+            Void => "void".into(),
+            Any => "any".into(),
+            Bool => "bool".into(),
+            F64 => "f64".into(),
+            Vec4 => "vec4".into(),
+            Mat4 => "mat4".into(),
+            Text => "str".into(),
+            Link => "link".into(),
+            Array(ref ty) => {
                 if let Any = **ty {
                     "[]".into()
                 } else {
@@ -71,8 +71,8 @@ impl Type {
                     res
                 }
             }
-            &Object => "{}".into(),
-            &Option(ref ty) => {
+            Object => "{}".into(),
+            Option(ref ty) => {
                 if let Any = **ty {
                     "opt".into()
                 } else {
@@ -82,7 +82,7 @@ impl Type {
                     res
                 }
             }
-            &Result(ref ty) => {
+            Result(ref ty) => {
                 if let Any = **ty {
                     "res".into()
                 } else {
@@ -92,14 +92,14 @@ impl Type {
                     res
                 }
             }
-            &Secret(ref ty) => {
+            Secret(ref ty) => {
                 match **ty {
                     Bool => "sec[bool]".into(),
                     F64 => "sec[f64]".into(),
                     _ => panic!("Secret only supports `bool` and `f64`")
                 }
             }
-            &Thread(ref ty) => {
+            Thread(ref ty) => {
                 if let Any = **ty {
                     "thr".into()
                 } else {
@@ -109,7 +109,7 @@ impl Type {
                     res
                 }
             }
-            &In(ref ty) => {
+            In(ref ty) => {
                 if let Any = **ty {
                     "in".into()
                 } else {
@@ -119,10 +119,10 @@ impl Type {
                     res
                 }
             }
-            &AdHoc(ref ad, ref ty) => {
+            AdHoc(ref ad, ref ty) => {
                 (&**ad).clone() + " " + &ty.description()
             }
-            &Closure(ref closure) => {
+            Closure(ref closure) => {
                 let mut s = String::new();
                 s.push_str("\\(");
                 for (i, ty) in closure.tys.iter().enumerate() {
@@ -166,14 +166,14 @@ impl Type {
         use self::Type::*;
 
         // Invert the order because of complex ad-hoc logic.
-        if let &AdHoc(_, _) = other {
-            if let &AdHoc(_, _) = self {}
+        if let AdHoc(_, _) = *other {
+            if let AdHoc(_, _) = *self {}
             else {
                 return other.goes_with(self)
             }
         }
-        if let &Secret(ref other_ty) = other {
-            return if let &Secret(ref this_ty) = self {
+        if let Secret(ref other_ty) = *other {
+            return if let Secret(ref this_ty) = *self {
                     this_ty.goes_with(other_ty)
                 } else {
                     self.goes_with(other_ty)
@@ -187,77 +187,77 @@ impl Type {
             // Void only goes with void.
             &Void => *other == Void,
             &Array(ref arr) => {
-                if let &Array(ref other_arr) = other {
+                if let Array(ref other_arr) = *other {
                     arr.goes_with(other_arr)
-                } else if let &Any = other {
+                } else if let Any = *other {
                     true
                 } else {
                     false
                 }
             }
             &Object => {
-                if let &Object = other {
+                if let Object = *other {
                     true
-                } else if let &Any = other {
+                } else if let Any = *other {
                     true
                 } else {
                     false
                 }
             }
             &Option(ref opt) => {
-                if let &Option(ref other_opt) = other {
+                if let Option(ref other_opt) = *other {
                     opt.goes_with(other_opt)
-                } else if let &Any = other {
+                } else if let Any = *other {
                     true
                 } else {
                     false
                 }
             }
             &Result(ref res) => {
-                if let &Result(ref other_res) = other {
+                if let Result(ref other_res) = *other {
                     res.goes_with(other_res)
-                } else if let &Any = other {
+                } else if let Any = *other {
                     true
                 } else {
                     false
                 }
             }
             &Thread(ref thr) => {
-                if let &Thread(ref other_thr) = other {
+                if let Thread(ref other_thr) = *other {
                     thr.goes_with(other_thr)
-                } else if let &Any = other {
+                } else if let Any = *other {
                     true
                 } else {
                     false
                 }
             }
             &In(ref in_ty) => {
-                if let &In(ref other_ty) = other {
+                if let In(ref other_ty) = *other {
                     in_ty.goes_with(other_ty)
-                } else if let &Any = other {
+                } else if let Any = *other {
                     true
                 } else {
                     false
                 }
             }
             &Closure(ref cl) => {
-                if let &Closure(ref other_cl) = other {
+                if let Closure(ref other_cl) = *other {
                     if cl.tys.len() != other_cl.tys.len() { return false; }
                     if !cl.tys.iter().zip(other_cl.tys.iter()).all(|(a, b)| a.goes_with(b)) {
                         return false;
                     }
                     if !cl.ret.goes_with(&other_cl.ret) { return false; }
                     true
-                } else if let &Any = other {
+                } else if let Any = *other {
                     true
                 } else {
                     false
                 }
             }
             &AdHoc(ref name, ref ty) => {
-                if let &AdHoc(ref other_name, ref other_ty) = other {
+                if let AdHoc(ref other_name, ref other_ty) = *other {
                     name == other_name && ty.goes_with(other_ty)
-                } else if let &Void = other {
+                } else if let Void = *other {
                     false
                 } else {
                     ty.goes_with(other)
@@ -392,7 +392,7 @@ impl Type {
     /// Converts meta data into a type.
     pub fn from_meta_data(node: &str, mut convert: Convert, ignored: &mut Vec<Range>)
     -> Result<(Range, Type), ()> {
-        let start = convert.clone();
+        let start = convert;
         let start_range = try!(convert.start_node(node));
         convert.update(start_range);
 
@@ -492,7 +492,7 @@ impl Type {
                 convert.update(range);
                 let range = try!(convert.end_node("closure_type"));
                 convert.update(range);
-                ty = Some(Type::Closure(Box::new(Dfn { lts: lts, tys: tys, ret: ret })));
+                ty = Some(Type::Closure(Box::new(Dfn { lts, tys, ret })));
             } else {
                 let range = convert.ignore();
                 convert.update(range);

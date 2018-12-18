@@ -60,7 +60,7 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
             } else {
                 let mut new_ids: Vec<Id> = vec![];
                 for id in &item.ids {
-                    if let &Id::Expression(ref expr) = id {
+                    if let Id::Expression(ref expr) = *id {
                         new_ids.push(Id::Expression(number(expr, name, val)));
                     } else {
                         new_ids.push(id.clone());
@@ -71,7 +71,7 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
                     current: item.current,
                     stack_id: item.stack_id.clone(),
                     static_stack_id: item.static_stack_id.clone(),
-                    try: item.try.clone(),
+                    try: item.try,
                     ids: new_ids,
                     try_ids: item.try_ids.clone(),
                     source_range: item.source_range,
@@ -83,7 +83,7 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
         }
         E::Assign(ref assign_expr) => {
             E::Assign(Box::new(Assign {
-                op: assign_expr.op.clone(),
+                op: assign_expr.op,
                 left: number(&assign_expr.left, name, val),
                 right: number(&assign_expr.right, name, val),
                 source_range: assign_expr.source_range,
@@ -159,7 +159,7 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
                 if let Expression::Item(ref item) = assign_expr.left {
                     if &item.name == name {
                         init = Some(Expression::Assign(Box::new(Assign {
-                            op: assign_expr.op.clone(),
+                            op: assign_expr.op,
                             left: assign_expr.left.clone(),
                             right: number(&assign_expr.right, name, val),
                             source_range: assign_expr.source_range,
@@ -170,7 +170,7 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
             if let Some(init) = init {
                 E::For(Box::new(For {
                     label: for_expr.label.clone(),
-                    init: init,
+                    init,
                     cond: for_expr.cond.clone(),
                     step: for_expr.step.clone(),
                     block: for_expr.block.clone(),
@@ -322,7 +322,7 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
         }
         E::Compare(ref cmp_expr) => {
             E::Compare(Box::new(Compare {
-                op: cmp_expr.op.clone(),
+                op: cmp_expr.op,
                 left: number(&cmp_expr.left, name, val),
                 right: number(&cmp_expr.right, name, val),
                 source_range: cmp_expr.source_range,
@@ -336,7 +336,7 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
         }
         E::UnOp(ref unop_expr) => {
             E::UnOp(Box::new(UnOpExpression {
-                op: unop_expr.op.clone(),
+                op: unop_expr.op,
                 expr: number(&unop_expr.expr, name, val),
                 source_range: unop_expr.source_range,
             }))
@@ -345,10 +345,10 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
         E::Try(ref expr) => E::Try(Box::new(number(expr, name, val))),
         E::Swizzle(ref swizzle_expr) => {
             E::Swizzle(Box::new(Swizzle {
-                sw0: swizzle_expr.sw0.clone(),
-                sw1: swizzle_expr.sw1.clone(),
-                sw2: swizzle_expr.sw2.clone(),
-                sw3: swizzle_expr.sw3.clone(),
+                sw0: swizzle_expr.sw0,
+                sw1: swizzle_expr.sw1,
+                sw2: swizzle_expr.sw2,
+                sw3: swizzle_expr.sw3,
                 expr: number(&swizzle_expr.expr, name, val),
                 source_range: swizzle_expr.source_range,
             }))
@@ -400,12 +400,12 @@ fn number_block(block: &Block, name: &Arc<String>, val: f64) -> Block {
         if just_clone {
             new_expressions.push(expr.clone());
         } else {
-            if let &Expression::Assign(ref assign_expr) = expr {
+            if let Expression::Assign(ref assign_expr) = *expr {
                 // Check for declaration of same name.
                 if let Expression::Item(ref item) = assign_expr.left {
                     if &item.name == name {
                         new_expressions.push(Expression::Assign(Box::new(Assign {
-                            op: assign_expr.op.clone(),
+                            op: assign_expr.op,
                             left: assign_expr.left.clone(),
                             right: number(&assign_expr.right, name, val),
                             source_range: assign_expr.source_range,

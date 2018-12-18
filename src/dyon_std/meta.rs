@@ -25,27 +25,27 @@ pub fn parse_syntax_data(rules: &Syntax, file: &str, d: &str) -> Result<Vec<Vari
         let mut data = vec![];
         data.push(Variable::f64(range_token.offset as f64));
         data.push(Variable::f64(range_token.length as f64));
-        match &range_token.data {
-            &MetaData::Bool(ref name, val) => {
+        match range_token.data {
+            MetaData::Bool(ref name, val) => {
                 data.push(Variable::Text(b.clone()));
                 data.push(Variable::Text(name.clone()));
                 data.push(Variable::bool(val));
             }
-            &MetaData::String(ref name, ref val) => {
+            MetaData::String(ref name, ref val) => {
                 data.push(Variable::Text(s.clone()));
                 data.push(Variable::Text(name.clone()));
                 data.push(Variable::Text(val.clone()));
             }
-            &MetaData::F64(ref name, val) => {
+            MetaData::F64(ref name, val) => {
                 data.push(Variable::Text(n.clone()));
                 data.push(Variable::Text(name.clone()));
                 data.push(Variable::f64(val));
             }
-            &MetaData::StartNode(ref name) => {
+            MetaData::StartNode(ref name) => {
                 data.push(Variable::Text(start.clone()));
                 data.push(Variable::Text(name.clone()));
             }
-            &MetaData::EndNode(ref name) => {
+            MetaData::EndNode(ref name) => {
                 data.push(Variable::Text(end.clone()));
                 data.push(Variable::Text(name.clone()));
             }
@@ -161,10 +161,10 @@ pub fn download_url_to_file(_url: &str, _file: &str) -> Result<String, String> {
     Err(super::HTTP_SUPPORT_DISABLED.into())
 }
 
-pub fn json_from_meta_data(data: &Vec<Variable>) -> Result<String, io::Error> {
+pub fn json_from_meta_data(data: &[Variable]) -> Result<String, io::Error> {
     fn is_start_node(v: &Variable) -> bool {
-        if let &Variable::Array(ref arr) = v {
-            if let &Variable::Text(ref t) = &arr[2] {
+        if let Variable::Array(ref arr) = *v {
+            if let Variable::Text(ref t) = arr[2] {
                 &**t == "start"
             } else {
                 false
@@ -175,8 +175,8 @@ pub fn json_from_meta_data(data: &Vec<Variable>) -> Result<String, io::Error> {
     }
 
     fn is_end_node(v: &Variable) -> bool {
-        if let &Variable::Array(ref arr) = v {
-            if let &Variable::Text(ref t) = &arr[2] {
+        if let Variable::Array(ref arr) = *v {
+            if let Variable::Text(ref t) = arr[2] {
                 &**t == "end"
             } else {
                 false
@@ -217,13 +217,13 @@ pub fn json_from_meta_data(data: &Vec<Variable>) -> Result<String, io::Error> {
         for _ in 0 .. indent_offset + indent {
             try!(write!(w, " "));
         }
-        if let &Variable::Array(ref arr) = d {
-            let name = if let &Variable::Text(ref t) = &arr[3] {
+        if let Variable::Array(ref arr) = *d {
+            let name = if let Variable::Text(ref t) = arr[3] {
                 t
             } else {
                 ""
             };
-            if let &Variable::Text(ref t) = &arr[2] {
+            if let Variable::Text(ref t) = arr[2] {
                 match &***t {
                     "start" => {
                         first = true;
@@ -235,19 +235,19 @@ pub fn json_from_meta_data(data: &Vec<Variable>) -> Result<String, io::Error> {
                         try!(write!(w, "{}", "}"));
                     }
                     "bool" => {
-                        if let &Variable::Bool(val, _) = &arr[4] {
+                        if let Variable::Bool(val, _) = arr[4] {
                             try!(write_string(&mut w, name));
                             try!(write!(w, ":{}", val));
                         }
                     }
                     "f64" => {
-                        if let &Variable::F64(val, _) = &arr[4] {
+                        if let Variable::F64(val, _) = arr[4] {
                             try!(write_string(&mut w, name));
                             try!(write!(w, ":{}", val));
                         }
                     }
                     "str" => {
-                        if let &Variable::Text(ref val) = &arr[4] {
+                        if let Variable::Text(ref val) = arr[4] {
                             try!(write_string(&mut w, name));
                             try!(write!(w, ":"));
                             try!(write_string(&mut w, val));

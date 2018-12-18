@@ -14,21 +14,21 @@ const HTTP_SUPPORT_DISABLED: &'static str = "Http support is disabled";
 #[cfg(not(feature = "file"))]
 const FILE_SUPPORT_DISABLED: &'static str = "File support is disabled";
 
-dyon_fn!{fn x(v: Vec4) -> f64 {v.0[0] as f64}}
-dyon_fn!{fn y(v: Vec4) -> f64 {v.0[1] as f64}}
-dyon_fn!{fn z(v: Vec4) -> f64 {v.0[2] as f64}}
-dyon_fn!{fn w(v: Vec4) -> f64 {v.0[3] as f64}}
+dyon_fn!{fn x(v: Vec4) -> f64 {f64::from(v.0[0])}}
+dyon_fn!{fn y(v: Vec4) -> f64 {f64::from(v.0[1])}}
+dyon_fn!{fn z(v: Vec4) -> f64 {f64::from(v.0[2])}}
+dyon_fn!{fn w(v: Vec4) -> f64 {f64::from(v.0[3])}}
 
 pub(crate) fn s(rt: &mut Runtime) -> Result<(), String> {
     let ind: f64 = rt.pop().expect(TINVOTS);
     let ind = ind as usize;
     if ind >= 4 {return Err(format!("Index out of bounds `{}`", ind))};
     let v: [f32; 4] = rt.pop_vec4().expect(TINVOTS);
-    rt.push(v[ind] as f64);
+    rt.push(f64::from(v[ind]));
     Ok(())
 }
 
-dyon_fn!{fn det(m: Mat4) -> f64 {vecmath::mat4_det(m.0) as f64}}
+dyon_fn!{fn det(m: Mat4) -> f64 {f64::from(vecmath::mat4_det(m.0))}}
 dyon_fn!{fn inv(m: Mat4) -> Mat4 {Mat4(vecmath::mat4_inv(m.0))}}
 dyon_fn!{fn mov(v: Vec4) -> Mat4 {Mat4([
     [1.0, 0.0, 0.0, 0.0],
@@ -37,7 +37,7 @@ dyon_fn!{fn mov(v: Vec4) -> Mat4 {Mat4([
     [v.0[0], v.0[1], v.0[2], 1.0],
 ])}}
 dyon_fn!{fn rot__axis_angle(axis: Vec4, ang: f64) -> Mat4 {
-    let axis = [axis.0[0] as f64, axis.0[1] as f64, axis.0[2] as f64];
+    let axis = [f64::from(axis.0[0]), f64::from(axis.0[1]), f64::from(axis.0[2])];
     let cos = ang.cos();
     let sin = ang.sin();
     let inv_cos = 1.0 - cos;
@@ -196,9 +196,9 @@ pub(crate) fn explain_why(
     let val = rt.stack.pop().expect(TINVOTS);
     let (val, why) = match rt.resolve(&val) {
         &Variable::Bool(val, ref sec) => (val,
-            match sec {
-                &None => Box::new(vec![why.deep_clone(&rt.stack)]),
-                &Some(ref sec) => {
+            match *sec {
+                None => Box::new(vec![why.deep_clone(&rt.stack)]),
+                Some(ref sec) => {
                     let mut sec = sec.clone();
                     sec.push(why.deep_clone(&rt.stack));
                     sec
@@ -221,9 +221,9 @@ pub(crate) fn explain_where(
     let val = rt.stack.pop().expect(TINVOTS);
     let (val, wh) = match rt.resolve(&val) {
         &Variable::F64(val, ref sec) => (val,
-            match sec {
-                &None => Box::new(vec![wh.deep_clone(&rt.stack)]),
-                &Some(ref sec) => {
+            match *sec {
+                None => Box::new(vec![wh.deep_clone(&rt.stack)]),
+                Some(ref sec) => {
                     let mut sec = sec.clone();
                     sec.push(wh.deep_clone(&rt.stack));
                     sec
@@ -241,7 +241,7 @@ pub(crate) fn println(rt: &mut Runtime) -> Result<(), String> {
 
     let x = rt.stack.pop().expect(TINVOTS);
     print_variable(rt, &x, EscapeString::None);
-    println!("");
+    println!();
     Ok(())
 }
 
@@ -360,7 +360,7 @@ pub(crate) fn random(rt: &mut Runtime) -> Result<(), String> {
     Ok(())
 }
 
-dyon_fn!{fn tau() -> f64 {6.283185307179586}}
+dyon_fn!{fn tau() -> f64 {6.283_185_307_179_586}}
 
 // TODO: Can't be rewritten as external function because it reports error on arguments.
 pub(crate) fn len(
@@ -780,7 +780,7 @@ dyon_fn!{fn str__color(v: Vec4) -> Arc<String> {
     let (g1, g2) = (g >> 4, g & 0xf);
     let (b1, b2) = (b >> 4, b & 0xf);
     let (a1, a2) = (a >> 4, a & 0xf);
-    buf.push('#' as u8);
+    buf.push(b'#');
     buf.push(map[r1] as u8); buf.push(map[r2] as u8);
     buf.push(map[g1] as u8); buf.push(map[g2] as u8);
     buf.push(map[b1] as u8); buf.push(map[b2] as u8);
@@ -805,7 +805,7 @@ dyon_fn!{fn srgb_to_linear__color(v: Vec4) -> Vec4 {
 dyon_fn!{fn linear_to_srgb__color(v: Vec4) -> Vec4 {
     let v = v.0;
     let to_srgb = |f: f32| {
-        if f <= 0.0031308 {
+        if f <= 0.003_130_8 {
             f * 12.92
         } else {
             1.055 * f.powf(1.0 / 2.4) - 0.055
@@ -816,26 +816,27 @@ dyon_fn!{fn linear_to_srgb__color(v: Vec4) -> Vec4 {
 
 pub(crate) fn _typeof(rt: &mut Runtime) -> Result<(), String> {
     use crate::runtime::*;
+    use crate::Variable::*;
 
     let v = rt.stack.pop().expect(TINVOTS);
-    let t = Variable::Text(match rt.resolve(&v) {
-        &Variable::Text(_) => text_type.clone(),
-        &Variable::F64(_, _) => f64_type.clone(),
-        &Variable::Vec4(_) => vec4_type.clone(),
-        &Variable::Mat4(_) => mat4_type.clone(),
-        &Variable::Return => return_type.clone(),
-        &Variable::Bool(_, _) => bool_type.clone(),
-        &Variable::Object(_) => object_type.clone(),
-        &Variable::Array(_) => array_type.clone(),
-        &Variable::Link(_) => link_type.clone(),
-        &Variable::Ref(_) => ref_type.clone(),
-        &Variable::UnsafeRef(_) => unsafe_ref_type.clone(),
-        &Variable::RustObject(_) => rust_object_type.clone(),
-        &Variable::Option(_) => option_type.clone(),
-        &Variable::Result(_) => result_type.clone(),
-        &Variable::Thread(_) => thread_type.clone(),
-        &Variable::Closure(_, _) => closure_type.clone(),
-        &Variable::In(_) => in_type.clone(),
+    let t = Variable::Text(match *rt.resolve(&v) {
+        Text(_) => text_type.clone(),
+        F64(_, _) => f64_type.clone(),
+        Vec4(_) => vec4_type.clone(),
+        Mat4(_) => mat4_type.clone(),
+        Return => return_type.clone(),
+        Bool(_, _) => bool_type.clone(),
+        Object(_) => object_type.clone(),
+        Array(_) => array_type.clone(),
+        Link(_) => link_type.clone(),
+        Ref(_) => ref_type.clone(),
+        UnsafeRef(_) => unsafe_ref_type.clone(),
+        RustObject(_) => rust_object_type.clone(),
+        Option(_) => option_type.clone(),
+        Result(_) => result_type.clone(),
+        Thread(_) => thread_type.clone(),
+        Closure(_, _) => closure_type.clone(),
+        In(_) => in_type.clone(),
     });
     rt.stack.push(t);
     Ok(())
@@ -1301,7 +1302,7 @@ pub(crate) fn min(
         &Variable::Array(ref arr) => {
             let mut min: f64 = ::std::f64::NAN;
             for v in &**arr {
-                if let &Variable::F64(val, _) = rt.resolve(v) {
+                if let Variable::F64(val, _) = *rt.resolve(v) {
                     if val < min || min.is_nan() { min = val }
                 }
             }
@@ -1326,7 +1327,7 @@ pub(crate) fn max(
         &Variable::Array(ref arr) => {
             let mut max: f64 = ::std::f64::NAN;
             for v in &**arr {
-                if let &Variable::F64(val, _) = rt.resolve(v) {
+                if let Variable::F64(val, _) = *rt.resolve(v) {
                     if val > max || max.is_nan() { max = val }
                 }
             }
@@ -1845,11 +1846,11 @@ dyon_fn!{fn now() -> f64 {
 
     match SystemTime::now().duration_since(UNIX_EPOCH) {
         Ok(val) => val.as_secs() as f64 +
-                   val.subsec_nanos() as f64 / 1.0e9,
+                   f64::from(val.subsec_nanos()) / 1.0e9,
         Err(err) => -{
             let val = err.duration();
             val.as_secs() as f64 +
-            val.subsec_nanos() as f64 / 1.0e9
+            f64::from(val.subsec_nanos()) / 1.0e9
         }
     }
 }}

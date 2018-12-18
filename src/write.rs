@@ -113,11 +113,11 @@ pub(crate) fn write_variable<W>(
             try!(write!(w, "]"));
         }
         Variable::Option(ref opt) => {
-            match opt {
-                &None => {
+            match *opt {
+                None => {
                     try!(write!(w, "none()"))
                 }
-                &Some(ref v) => {
+                Some(ref v) => {
                     try!(write!(w, "some("));
                     try!(write_variable(w, rt, v, EscapeString::Json, tabs));
                     try!(write!(w, ")"));
@@ -125,14 +125,14 @@ pub(crate) fn write_variable<W>(
             }
         }
         Variable::Result(ref res) => {
-            match res {
-                &Err(ref err) => {
+            match *res {
+                Err(ref err) => {
                     try!(write!(w, "err("));
                     try!(write_variable(w, rt, &err.message,
                                         EscapeString::Json, tabs));
                     try!(write!(w, ")"));
                 }
-                &Ok(ref ok) => {
+                Ok(ref ok) => {
                     try!(write!(w, "ok("));
                     try!(write_variable(w, rt, ok, EscapeString::Json, tabs));
                     try!(write!(w, ")"));
@@ -194,138 +194,138 @@ fn write_expr<W: io::Write>(
 ) -> Result<(), io::Error> {
     use ast::Expression as E;
 
-    match expr {
-        &E::BinOp(ref binop) => try!(write_binop(w, rt, binop, tabs)),
-        &E::Item(ref item) => try!(write_item(w, rt, item, tabs)),
-        &E::Variable(ref range_var) =>
+    match *expr {
+        E::BinOp(ref binop) => try!(write_binop(w, rt, binop, tabs)),
+        E::Item(ref item) => try!(write_item(w, rt, item, tabs)),
+        E::Variable(ref range_var) =>
             try!(write_variable(w, rt, &range_var.1, EscapeString::Json, tabs)),
-        &E::Link(ref link) => try!(write_link(w, rt, link, tabs)),
-        &E::Object(ref obj) => try!(write_obj(w, rt, obj, tabs)),
-        &E::Array(ref arr) => try!(write_arr(w, rt, arr, tabs)),
-        &E::ArrayFill(ref arr_fill) => try!(write_arr_fill(w, rt, arr_fill, tabs)),
-        &E::Call(ref call) => try!(write_call(w, rt, call, tabs)),
-        &E::Return(ref expr) => {
+        E::Link(ref link) => try!(write_link(w, rt, link, tabs)),
+        E::Object(ref obj) => try!(write_obj(w, rt, obj, tabs)),
+        E::Array(ref arr) => try!(write_arr(w, rt, arr, tabs)),
+        E::ArrayFill(ref arr_fill) => try!(write_arr_fill(w, rt, arr_fill, tabs)),
+        E::Call(ref call) => try!(write_call(w, rt, call, tabs)),
+        E::Return(ref expr) => {
             try!(write!(w, "return "));
             try!(write_expr(w, rt, expr, tabs));
         }
-        &E::ReturnVoid(_) => try!(write!(w, "return")),
-        &E::Break(ref br) => {
+        E::ReturnVoid(_) => try!(write!(w, "return")),
+        E::Break(ref br) => {
             if let Some(ref label) = br.label {
                 try!(write!(w, "break '{}", label));
             } else {
                 try!(write!(w, "break"));
             }
         }
-        &E::Continue(ref c) => {
+        E::Continue(ref c) => {
             if let Some(ref label) = c.label {
                 try!(write!(w, "continue '{}", label));
             } else {
                 try!(write!(w, "continue"));
             }
         }
-        &E::Block(ref b) => try!(write_block(w, rt, b, tabs)),
-        &E::Go(ref go) => {
+        E::Block(ref b) => try!(write_block(w, rt, b, tabs)),
+        E::Go(ref go) => {
             try!(write!(w, "go "));
             try!(write_call(w, rt, &go.call, tabs));
         }
-        &E::Assign(ref assign) => try!(write_assign(w, rt, assign, tabs)),
-        &E::Vec4(ref vec4) => try!(write_vec4(w, rt, vec4, tabs)),
-        &E::Mat4(ref mat4) => try!(write_mat4(w, rt, mat4, tabs)),
-        &E::For(ref f) => try!(write_for(w, rt, f, tabs)),
-        &E::Compare(ref comp) => try!(write_compare(w, rt, comp, tabs)),
-        &E::ForN(ref for_n) => {
+        E::Assign(ref assign) => try!(write_assign(w, rt, assign, tabs)),
+        E::Vec4(ref vec4) => try!(write_vec4(w, rt, vec4, tabs)),
+        E::Mat4(ref mat4) => try!(write_mat4(w, rt, mat4, tabs)),
+        E::For(ref f) => try!(write_for(w, rt, f, tabs)),
+        E::Compare(ref comp) => try!(write_compare(w, rt, comp, tabs)),
+        E::ForN(ref for_n) => {
             try!(write!(w, "for "));
             try!(write_for_n(w, rt, for_n, tabs));
         }
-        &E::ForIn(ref for_in) => {
+        E::ForIn(ref for_in) => {
             try!(write!(w, "for "));
             try!(write_for_in(w, rt, for_in, tabs));
         }
-        &E::Sum(ref for_n) => {
+        E::Sum(ref for_n) => {
             try!(write!(w, "sum "));
             try!(write_for_n(w, rt, for_n, tabs));
         }
-        &E::SumIn(ref for_in) => {
+        E::SumIn(ref for_in) => {
             try!(write!(w, "sum "));
             try!(write_for_in(w, rt, for_in, tabs));
         }
-        &E::SumVec4(ref for_n) => {
+        E::SumVec4(ref for_n) => {
             try!(write!(w, "sum_vec4 "));
             try!(write_for_n(w, rt, for_n, tabs));
         }
-        &E::Prod(ref for_n) => {
+        E::Prod(ref for_n) => {
             try!(write!(w, "prod "));
             try!(write_for_n(w, rt, for_n, tabs));
         }
-        &E::ProdIn(ref for_in) => {
+        E::ProdIn(ref for_in) => {
             try!(write!(w, "prod "));
             try!(write_for_in(w, rt, for_in, tabs));
         }
-        &E::ProdVec4(ref for_n) => {
+        E::ProdVec4(ref for_n) => {
             try!(write!(w, "prod_vec4 "));
             try!(write_for_n(w, rt, for_n, tabs));
         }
-        &E::Min(ref for_n) => {
+        E::Min(ref for_n) => {
             try!(write!(w, "min "));
             try!(write_for_n(w, rt, for_n, tabs));
         }
-        &E::MinIn(ref for_in) => {
+        E::MinIn(ref for_in) => {
             try!(write!(w, "min "));
             try!(write_for_in(w, rt, for_in, tabs));
         }
-        &E::Max(ref for_n) => {
+        E::Max(ref for_n) => {
             try!(write!(w, "max "));
             try!(write_for_n(w, rt, for_n, tabs));
         }
-        &E::MaxIn(ref for_in) => {
+        E::MaxIn(ref for_in) => {
             try!(write!(w, "max "));
             try!(write_for_in(w, rt, for_in, tabs));
         }
-        &E::Sift(ref for_n) => {
+        E::Sift(ref for_n) => {
             try!(write!(w, "sift "));
             try!(write_for_n(w, rt, for_n, tabs));
         }
-        &E::SiftIn(ref for_in) => {
+        E::SiftIn(ref for_in) => {
             try!(write!(w, "sift "));
             try!(write_for_in(w, rt, for_in, tabs));
         }
-        &E::Any(ref for_n) => {
+        E::Any(ref for_n) => {
             try!(write!(w, "any "));
             try!(write_for_n(w, rt, for_n, tabs));
         }
-        &E::AnyIn(ref for_in) => {
+        E::AnyIn(ref for_in) => {
             try!(write!(w, "any "));
             try!(write_for_in(w, rt, for_in, tabs));
         }
-        &E::All(ref for_n) => {
+        E::All(ref for_n) => {
             try!(write!(w, "all "));
             try!(write_for_n(w, rt, for_n, tabs));
         }
-        &E::AllIn(ref for_in) => {
+        E::AllIn(ref for_in) => {
             try!(write!(w, "all "));
             try!(write_for_in(w, rt, for_in, tabs));
         }
-        &E::LinkFor(ref for_n) => {
+        E::LinkFor(ref for_n) => {
             try!(write!(w, "link "));
             try!(write_for_n(w, rt, for_n, tabs));
         }
-        &E::LinkIn(ref for_in) => {
+        E::LinkIn(ref for_in) => {
             try!(write!(w, "link "));
             try!(write_for_in(w, rt, for_in, tabs));
         }
-        &E::If(ref if_expr) => try!(write_if(w, rt, if_expr, tabs)),
-        &E::Norm(ref norm) => try!(write_norm(w, rt, norm, tabs)),
-        &E::UnOp(ref unop) => try!(write_unop(w, rt, unop, tabs)),
-        &E::Try(ref expr) => {
+        E::If(ref if_expr) => try!(write_if(w, rt, if_expr, tabs)),
+        E::Norm(ref norm) => try!(write_norm(w, rt, norm, tabs)),
+        E::UnOp(ref unop) => try!(write_unop(w, rt, unop, tabs)),
+        E::Try(ref expr) => {
             try!(write_expr(w, rt, expr, tabs));
             try!(write!(w, "?"));
         }
-        &E::Swizzle(ref swizzle) => try!(write_swizzle(w, rt, swizzle, tabs)),
-        &E::Closure(ref closure) => try!(write_closure(w, rt, closure, tabs)),
-        &E::Grab(ref grab) => try!(write_grab(w, rt, grab, tabs)),
-        &E::TryExpr(ref try_expr) => try!(write_try_expr(w, rt, try_expr, tabs)),
-        &E::CallClosure(ref call) => try!(write_call_closure(w, rt, call, tabs)),
-        &E::In(ref in_expr) => {
+        E::Swizzle(ref swizzle) => try!(write_swizzle(w, rt, swizzle, tabs)),
+        E::Closure(ref closure) => try!(write_closure(w, rt, closure, tabs)),
+        E::Grab(ref grab) => try!(write_grab(w, rt, grab, tabs)),
+        E::TryExpr(ref try_expr) => try!(write_try_expr(w, rt, try_expr, tabs)),
+        E::CallClosure(ref call) => try!(write_call_closure(w, rt, call, tabs)),
+        E::In(ref in_expr) => {
             try!(write!(w, "in {}", in_expr.name));
         }
         // x => panic!("Unimplemented `{:#?}`", x),
@@ -453,10 +453,10 @@ fn write_item<W: io::Write>(
     }
     try!(write!(w, "{}", item.name));
     for (i, id) in item.ids.iter().enumerate() {
-        match id {
-            &Id::String(_, ref prop) => try!(write!(w, ".{}", prop)),
-            &Id::F64(_, ind) => try!(write!(w, "[{}]", ind)),
-            &Id::Expression(ref expr) => {
+        match *id {
+            Id::String(_, ref prop) => try!(write!(w, ".{}", prop)),
+            Id::F64(_, ind) => try!(write!(w, "[{}]", ind)),
+            Id::Expression(ref expr) => {
                 try!(write!(w, "["));
                 try!(write_expr(w, rt, expr, tabs));
                 try!(write!(w, "]"));
@@ -594,7 +594,7 @@ fn write_vec4<W: io::Write>(
 ) -> Result<(), io::Error> {
     let mut n = vec4.args.len();
     for expr in vec4.args.iter().rev() {
-        if let &ast::Expression::Variable(ref range_var) = expr {
+        if let ast::Expression::Variable(ref range_var) = *expr {
             if let (_, Variable::F64(num, _)) = **range_var {
                 if num == 0.0 {
                     n -= 1;
@@ -674,12 +674,12 @@ fn write_for<W: io::Write>(
     tabs: u32,
 ) -> Result<(), io::Error> {
     if let ast::Expression::Block(ref b) = f.init {
-        if b.expressions.len() == 0 {
+        if b.expressions.is_empty() {
             if let ast::Expression::Variable(ref range_var) = f.cond {
                 if let (_, Variable::Bool(b, _)) = **range_var {
                     if b {
                         if let ast::Expression::Block(ref b) = f.step {
-                            if b.expressions.len() == 0 {
+                            if b.expressions.is_empty() {
                                 try!(write!(w, "loop "));
                                 try!(write_block(w, rt, &f.block, tabs + 1));
                                 return Ok(());

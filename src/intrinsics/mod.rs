@@ -52,7 +52,7 @@ const REMOVE: usize = 39;
 const NEXT: usize = 40;
 const WAIT_NEXT: usize = 41;
 
-const TABLE: &'static [(usize, fn(
+const TABLE: &[(usize, fn(
         &mut Runtime,
         &ast::Call,
         &Arc<Module>,
@@ -107,7 +107,7 @@ pub(crate) fn standard(f: &mut Prelude) {
         f.intrinsic(Arc::new(name.into()), index, Dfn {
             lts: vec![Lt::Default],
             tys: vec![ty],
-            ret: ret
+            ret
         });
     };
 

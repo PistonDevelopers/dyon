@@ -52,7 +52,7 @@ impl PopVariable for Variable {
 
 impl PopVariable for RustObject {
     fn pop_var(rt: &Runtime, var: &Variable) -> Result<Self, String> {
-        if let &Variable::RustObject(ref robj) = var {
+        if let Variable::RustObject(ref robj) = *var {
             Ok(robj.clone())
         } else {
             Err(rt.expected(var, "rust_object"))
@@ -62,7 +62,7 @@ impl PopVariable for RustObject {
 
 impl PopVariable for bool {
     fn pop_var(rt: &Runtime, var: &Variable) -> Result<Self, String> {
-        if let &Variable::Bool(b, _) = var {
+        if let Variable::Bool(b, _) = *var {
             Ok(b)
         } else {
             Err(rt.expected(var, "bool"))
@@ -72,7 +72,7 @@ impl PopVariable for bool {
 
 impl PopVariable for String {
     fn pop_var(rt: &Runtime, var: &Variable) -> Result<Self, String> {
-        if let &Variable::Text(ref s) = var {
+        if let Variable::Text(ref s) = *var {
             Ok((&**s).clone())
         } else {
             Err(rt.expected(var, "string"))
@@ -82,7 +82,7 @@ impl PopVariable for String {
 
 impl PopVariable for Arc<String> {
     fn pop_var(rt: &Runtime, var: &Variable) -> Result<Self, String> {
-        if let &Variable::Text(ref s) = var {
+        if let Variable::Text(ref s) = *var {
             Ok(s.clone())
         } else {
             Err(rt.expected(var, "string"))
@@ -92,7 +92,7 @@ impl PopVariable for Arc<String> {
 
 impl PopVariable for u32 {
     fn pop_var(rt: &Runtime, var: &Variable) -> Result<Self, String> {
-        if let &Variable::F64(n, _) = var {
+        if let Variable::F64(n, _) = *var {
             Ok(n as u32)
         } else {
             Err(rt.expected(var, "number"))
@@ -102,7 +102,7 @@ impl PopVariable for u32 {
 
 impl PopVariable for usize {
     fn pop_var(rt: &Runtime, var: &Variable) -> Result<Self, String> {
-        if let &Variable::F64(n, _) = var {
+        if let Variable::F64(n, _) = *var {
             Ok(n as usize)
         } else {
             Err(rt.expected(var, "number"))
@@ -112,7 +112,7 @@ impl PopVariable for usize {
 
 impl PopVariable for f32 {
     fn pop_var(rt: &Runtime, var: &Variable) -> Result<Self, String> {
-        if let &Variable::F64(n, _) = var {
+        if let Variable::F64(n, _) = *var {
             Ok(n as f32)
         } else {
             Err(rt.expected(var, "number"))
@@ -122,7 +122,7 @@ impl PopVariable for f32 {
 
 impl PopVariable for f64 {
     fn pop_var(rt: &Runtime, var: &Variable) -> Result<Self, String> {
-        if let &Variable::F64(n, _) = var {
+        if let Variable::F64(n, _) = *var {
             Ok(n)
         } else {
             Err(rt.expected(var, "number"))
@@ -132,7 +132,7 @@ impl PopVariable for f64 {
 
 impl<T: PopVariable> PopVariable for Option<T> {
     fn pop_var(rt: &Runtime, var: &Variable) -> Result<Self, String> {
-        if let &Variable::Option(ref s) = var {
+        if let Variable::Option(ref s) = *var {
             Ok(match *s {
                 Some(ref s) => Some(try!(PopVariable::pop_var(rt, rt.resolve(s)))),
                 None => None
@@ -145,7 +145,7 @@ impl<T: PopVariable> PopVariable for Option<T> {
 
 impl<T: PopVariable, U: PopVariable> PopVariable for Result<T, U> {
     fn pop_var(rt: &Runtime, var: &Variable) -> Result<Self, String> {
-        if let &Variable::Result(ref s) = var {
+        if let Variable::Result(ref s) = *var {
             Ok(match *s {
                 Ok(ref s) => Ok(try!(PopVariable::pop_var(rt, rt.resolve(s)))),
                 Err(ref err) => Err(try!(PopVariable::pop_var(rt, rt.resolve(&err.message))))
@@ -158,7 +158,7 @@ impl<T: PopVariable, U: PopVariable> PopVariable for Result<T, U> {
 
 impl<T: PopVariable> PopVariable for [T; 2] {
     fn pop_var(rt: &Runtime, var: &Variable) -> Result<Self, String> {
-        if let &Variable::Array(ref arr) = var {
+        if let Variable::Array(ref arr) = *var {
             Ok([
                 try!(PopVariable::pop_var(rt, rt.resolve(&arr[0]))),
                 try!(PopVariable::pop_var(rt, rt.resolve(&arr[1])))
@@ -171,7 +171,7 @@ impl<T: PopVariable> PopVariable for [T; 2] {
 
 impl<T: PopVariable> PopVariable for [T; 3] {
     fn pop_var(rt: &Runtime, var: &Variable) -> Result<Self, String> {
-        if let &Variable::Array(ref arr) = var {
+        if let Variable::Array(ref arr) = *var {
             Ok([
                 try!(PopVariable::pop_var(rt, rt.resolve(&arr[0]))),
                 try!(PopVariable::pop_var(rt, rt.resolve(&arr[1]))),
@@ -185,7 +185,7 @@ impl<T: PopVariable> PopVariable for [T; 3] {
 
 impl<T: PopVariable> PopVariable for [T; 4] {
     fn pop_var(rt: &Runtime, var: &Variable) -> Result<Self, String> {
-        if let &Variable::Array(ref arr) = var {
+        if let Variable::Array(ref arr) = *var {
             Ok([
                 try!(PopVariable::pop_var(rt, rt.resolve(&arr[0]))),
                 try!(PopVariable::pop_var(rt, rt.resolve(&arr[1]))),
@@ -200,7 +200,7 @@ impl<T: PopVariable> PopVariable for [T; 4] {
 
 impl<T: PopVariable, U: PopVariable> PopVariable for (T, U) {
     fn pop_var(rt: &Runtime, var: &Variable) -> Result<Self, String> {
-        if let &Variable::Array(ref arr) = var {
+        if let Variable::Array(ref arr) = *var {
             Ok((
                 try!(PopVariable::pop_var(rt, rt.resolve(&arr[0]))),
                 try!(PopVariable::pop_var(rt, rt.resolve(&arr[1])))
@@ -213,7 +213,7 @@ impl<T: PopVariable, U: PopVariable> PopVariable for (T, U) {
 
 impl<T: PopVariable, U: PopVariable, V: PopVariable> PopVariable for (T, U, V) {
     fn pop_var(rt: &Runtime, var: &Variable) -> Result<Self, String> {
-        if let &Variable::Array(ref arr) = var {
+        if let Variable::Array(ref arr) = *var {
             Ok((
                 try!(PopVariable::pop_var(rt, rt.resolve(&arr[0]))),
                 try!(PopVariable::pop_var(rt, rt.resolve(&arr[1]))),
@@ -227,7 +227,7 @@ impl<T: PopVariable, U: PopVariable, V: PopVariable> PopVariable for (T, U, V) {
 
 impl<T: PopVariable, U: PopVariable, V: PopVariable, W: PopVariable> PopVariable for (T, U, V, W) {
     fn pop_var(rt: &Runtime, var: &Variable) -> Result<Self, String> {
-        if let &Variable::Array(ref arr) = var {
+        if let Variable::Array(ref arr) = *var {
             Ok((
                 try!(PopVariable::pop_var(rt, rt.resolve(&arr[0]))),
                 try!(PopVariable::pop_var(rt, rt.resolve(&arr[1]))),
@@ -242,7 +242,7 @@ impl<T: PopVariable, U: PopVariable, V: PopVariable, W: PopVariable> PopVariable
 
 impl<T: PopVariable> PopVariable for Vec<T> {
     fn pop_var(rt: &Runtime, var: &Variable) -> Result<Self, String> {
-        if let &Variable::Array(ref arr) = var {
+        if let Variable::Array(ref arr) = *var {
             let mut res = Vec::with_capacity(arr.len());
             for it in &**arr {
                 res.push(try!(PopVariable::pop_var(rt, rt.resolve(it))))
@@ -269,7 +269,7 @@ impl PushVariable for bool {
 }
 
 impl PushVariable for u32 {
-    fn push_var(&self) -> Variable { Variable::f64(*self as f64) }
+    fn push_var(&self) -> Variable { Variable::f64(f64::from(*self)) }
 }
 
 impl PushVariable for usize {
@@ -277,7 +277,7 @@ impl PushVariable for usize {
 }
 
 impl PushVariable for f32 {
-    fn push_var(&self) -> Variable { Variable::f64(*self as f64) }
+    fn push_var(&self) -> Variable { Variable::f64(f64::from(*self)) }
 }
 
 impl PushVariable for f64 {
@@ -393,17 +393,21 @@ impl ConvertVec4 for [f32; 4] {
 }
 
 impl ConvertVec4 for [f64; 2] {
-    fn from(val: [f32; 4]) -> Self { [val[0] as f64, val[1] as f64] }
+    fn from(val: [f32; 4]) -> Self { [f64::from(val[0]), f64::from(val[1])] }
     fn to(&self) -> [f32; 4] { [self[0] as f32, self[1] as f32, 0.0, 0.0] }
 }
 
 impl ConvertVec4 for [f64; 3] {
-    fn from(val: [f32; 4]) -> Self { [val[0] as f64, val[1] as f64, val[2] as f64] }
+    fn from(val: [f32; 4]) -> Self {
+        [f64::from(val[0]), f64::from(val[1]), f64::from(val[2])]
+    }
     fn to(&self) -> [f32; 4] { [self[0] as f32, self[1] as f32, self[2] as f32, 0.0] }
 }
 
 impl ConvertVec4 for [f64; 4] {
-    fn from(val: [f32; 4]) -> Self { [val[0] as f64, val[1] as f64, val[2] as f64, val[3] as f64] }
+    fn from(val: [f32; 4]) -> Self {
+        [f64::from(val[0]), f64::from(val[1]), f64::from(val[2]), f64::from(val[3])]
+    }
     fn to(&self) -> [f32; 4] { [self[0] as f32, self[1] as f32, self[2] as f32, self[3] as f32] }
 }
 

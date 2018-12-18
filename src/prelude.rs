@@ -68,8 +68,8 @@ impl Dfn {
             }
         }
         Dfn {
-            lts: lts,
-            tys: tys,
+            lts,
+            tys,
             ret: f.ret.clone(),
         }
     }
@@ -83,6 +83,10 @@ pub struct Prelude {
     pub(crate) functions: HashMap<Arc<String>, usize>,
     pub(crate) list: Vec<Dfn>,
     pub(crate) namespaces: Vec<(Arc<Vec<Arc<String>>>, Arc<String>)>,
+}
+
+impl Default for Prelude {
+    fn default() -> Prelude {Prelude::new()}
 }
 
 impl Prelude {

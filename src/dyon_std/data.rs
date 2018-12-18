@@ -38,7 +38,7 @@ static NUMBER_SETTINGS: NumberSettings = NumberSettings {
     allow_underscore: true,
 };
 
-const SEPS: &'static str = &"(){}[],.:;\n\"\\";
+const SEPS: &str = &"(){}[],.:;\n\"\\";
 
 fn expr(
     read: &mut ReadToken,
@@ -68,8 +68,12 @@ fn expr(
         let (range, _) = read.until_any_or_whitespace(SEPS);
         let val = read.raw_string(range.length);
         if let Some((rgb, a)) = rgb_maybe_a(&mut val.chars()) {
-            let v = [rgb[0] as f32 / 255.0, rgb[1] as f32 / 255.0, rgb[2] as f32 / 255.0,
-                     a.unwrap_or(255) as f32 / 255.0];
+            let v = [
+                        f32::from(rgb[0]) / 255.0,
+                        f32::from(rgb[1]) / 255.0,
+                        f32::from(rgb[2]) / 255.0,
+                        f32::from(a.unwrap_or(255)) / 255.0
+                    ];
             return Ok(Variable::Vec4(v));
         } else {
             return Err(error(range, "Expected hex color in format `FFFFFF`or `FFFFFFFF`", data));
@@ -155,7 +159,7 @@ fn object(
             break;
         }
 
-        if res.len() > 0 && !was_comma {
+        if !res.is_empty() && !was_comma {
             return Err(error(read.start(), "Expected `,`", data));
         }
 
@@ -226,7 +230,7 @@ fn array(
             break;
         }
 
-        if res.len() > 0 && !was_comma {
+        if !res.is_empty() && !was_comma {
             return Err(error(read.start(), "Expected `,`", data));
         }
 
@@ -327,7 +331,7 @@ fn vec4(read: &mut ReadToken, data: &str) -> Result<Variable, String> {
 /// Reads optional whitespace including comments.
 fn opt_w(read: &mut ReadToken) {
     loop {
-        let start = read.clone();
+        let start = *read;
         let range = read.whitespace();
         *read = read.consume(range.length);
 
@@ -351,7 +355,7 @@ fn multi_line_comment(read: &mut ReadToken) {
         let (range, _) = read.until_any("*/");
         *read = read.consume(range.length);
         loop {
-            let start = read.clone();
+            let start = *read;
 
             if read.tag("*/").is_none() {
                 if let Some(range) = read.tag("*") {
@@ -361,7 +365,7 @@ fn multi_line_comment(read: &mut ReadToken) {
                 }
             }
 
-            let start_multi_line = read.clone();
+            let start_multi_line = *read;
             multi_line_comment(read);
             if read.subtract(&start_multi_line).length > 0 {
                 let (range, _) = read.until_any("*/");

@@ -34,17 +34,14 @@ macro_rules! iter_val(
 
 macro_rules! break_(
     ($x:ident, $for_in_expr:ident, $flow:ident) => {{
-        match $x {
-            Some(label) => {
-                let same =
-                if let Some(ref for_label) = $for_in_expr.label {
-                    &label == for_label
-                } else { false };
-                if !same {
-                    $flow = Flow::Break(Some(label))
-                }
+        if let Some(label) = $x {
+            let same =
+            if let Some(ref for_label) = $for_in_expr.label {
+                &label == for_label
+            } else { false };
+            if !same {
+                $flow = Flow::Break(Some(label))
             }
-            None => {}
         }
         break;
     }};
@@ -52,18 +49,15 @@ macro_rules! break_(
 
 macro_rules! continue_(
     ($x:ident, $for_in_expr:ident, $flow:ident) => {
-        match $x {
-            Some(label) => {
-                let same =
-                if let Some(ref for_label) = $for_in_expr.label {
-                    &label == for_label
-                } else { false };
-                if !same {
-                    $flow = Flow::ContinueLoop(Some(label));
-                    break;
-                }
+        if let Some(label) = $x {
+            let same =
+            if let Some(ref for_label) = $for_in_expr.label {
+                &label == for_label
+            } else { false };
+            if !same {
+                $flow = Flow::ContinueLoop(Some(label));
+                break;
             }
-            None => {}
         }
     };
 );
@@ -241,11 +235,11 @@ impl Runtime {
                         &Variable::F64(val, ref val_sec) => {
                             if min.is_nan() || min > val {
                                 min = val;
-                                sec = match val_sec {
-                                    &None => {
+                                sec = match *val_sec {
+                                    None => {
                                         Some(Box::new(vec![self.stack[st - 1].clone()]))
                                     }
-                                    &Some(ref arr) => {
+                                    Some(ref arr) => {
                                         let mut arr = arr.clone();
                                         arr.push(self.stack[st - 1].clone());
                                         Some(arr)
@@ -303,11 +297,11 @@ impl Runtime {
                         &Variable::F64(val, ref val_sec) => {
                             if max.is_nan() || max < val {
                                 max = val;
-                                sec = match val_sec {
-                                    &None => {
+                                sec = match *val_sec {
+                                    None => {
                                         Some(Box::new(vec![self.stack[st - 1].clone()]))
                                     }
-                                    &Some(ref arr) => {
+                                    Some(ref arr) => {
                                         let mut arr = arr.clone();
                                         arr.push(self.stack[st - 1].clone());
                                         Some(arr)
@@ -366,11 +360,11 @@ impl Runtime {
                         &Variable::Bool(val, ref val_sec) => {
                             if val {
                                 any = true;
-                                sec = match val_sec {
-                                    &None => {
+                                sec = match *val_sec {
+                                    None => {
                                         Some(Box::new(vec![self.stack[st - 1].clone()]))
                                     }
-                                    &Some(ref arr) => {
+                                    Some(ref arr) => {
                                         let mut arr = arr.clone();
                                         arr.push(self.stack[st - 1].clone());
                                         Some(arr)
@@ -430,11 +424,11 @@ impl Runtime {
                         &Variable::Bool(val, ref val_sec) => {
                             if !val {
                                 all = false;
-                                sec = match val_sec {
-                                    &None => {
+                                sec = match *val_sec {
+                                    None => {
                                         Some(Box::new(vec![self.stack[st - 1].clone()]))
                                     }
-                                    &Some(ref arr) => {
+                                    Some(ref arr) => {
                                         let mut arr = arr.clone();
                                         arr.push(self.stack[st - 1].clone());
                                         Some(arr)
@@ -513,17 +507,14 @@ impl Runtime {
                                 (x, Flow::Return) => { return Ok((x, Flow::Return)); }
                                 (None, Flow::Continue) => {}
                                 (_, Flow::Break(x)) => {
-                                    match x {
-                                        Some(label) => {
-                                            let same =
-                                            if let Some(ref for_label) = for_in_expr.label {
-                                                &label == for_label
-                                            } else { false };
-                                            if !same {
-                                                flow = Flow::Break(Some(label))
-                                            }
+                                    if let Some(label) = x {
+                                        let same =
+                                        if let Some(ref for_label) = for_in_expr.label {
+                                            &label == for_label
+                                        } else { false };
+                                        if !same {
+                                            flow = Flow::Break(Some(label))
                                         }
-                                        None => {}
                                     }
                                     break 'outer;
                                 }
@@ -554,33 +545,27 @@ impl Runtime {
                         match sub_link_for_in_expr(res, rt, for_in, module) {
                             Ok((None, Flow::Continue)) => {}
                             Ok((_, Flow::Break(x))) => {
-                                match x {
-                                    Some(label) => {
-                                        let same =
-                                        if let Some(ref for_label) = for_in_expr.label {
-                                            &label == for_label
-                                        } else { false };
-                                        if !same {
-                                            flow = Flow::Break(Some(label))
-                                        }
+                                if let Some(label) = x {
+                                    let same =
+                                    if let Some(ref for_label) = for_in_expr.label {
+                                        &label == for_label
+                                    } else { false };
+                                    if !same {
+                                        flow = Flow::Break(Some(label))
                                     }
-                                    None => {}
                                 }
                                 break 'outer;
                             }
                             Ok((_, Flow::ContinueLoop(x))) => {
-                                match x {
-                                    Some(label) => {
-                                        let same =
-                                        if let Some(ref for_label) = for_in_expr.label {
-                                            &label == for_label
-                                        } else { false };
-                                        if !same {
-                                            flow = Flow::ContinueLoop(Some(label));
-                                            break 'outer;
-                                        }
+                                if let Some(label) = x {
+                                    let same =
+                                    if let Some(ref for_label) = for_in_expr.label {
+                                        &label == for_label
+                                    } else { false };
+                                    if !same {
+                                        flow = Flow::ContinueLoop(Some(label));
+                                        break 'outer;
                                     }
-                                    None => {}
                                 }
                             }
                             x => return x

@@ -50,35 +50,37 @@ pub fn check(f: &ast::Function, args: &Array) -> Result<(), String> {
 }
 
 fn min_ref(v: &Variable, min: &mut Option<usize>) {
-    match v {
-        &Variable::Ref(ind) => {
+    use crate::Variable::*;
+
+    match *v {
+        Ref(ind) => {
             if min.is_none() || min.unwrap() > ind {
                 *min = Some(ind);
             }
         }
-        &Variable::Return => {}
-        &Variable::Bool(_, _) => {}
-        &Variable::F64(_, _) => {}
-        &Variable::Vec4(_) => {}
-        &Variable::Mat4(_) => {}
-        &Variable::Text(_) => {}
-        &Variable::Link(_) => {}
-        &Variable::UnsafeRef(_) => {}
-        &Variable::RustObject(_) => {}
-        &Variable::Option(_) => {}
-        &Variable::Result(_) => {}
-        &Variable::Thread(_) => {}
-        &Variable::Array(ref arr) => {
+        Return => {}
+        Bool(_, _) => {}
+        F64(_, _) => {}
+        Vec4(_) => {}
+        Mat4(_) => {}
+        Text(_) => {}
+        Link(_) => {}
+        UnsafeRef(_) => {}
+        RustObject(_) => {}
+        Option(_) => {}
+        Result(_) => {}
+        Thread(_) => {}
+        Array(ref arr) => {
             for v in arr.iter() {
                 min_ref(v, min);
             }
         }
-        &Variable::Object(ref obj) => {
+        Object(ref obj) => {
             for v in obj.values() {
                 min_ref(v, min);
             }
         }
-        &Variable::Closure(_, _) => {}
-        &Variable::In(_) => {}
+        Closure(_, _) => {}
+        In(_) => {}
     }
 }
