@@ -52,7 +52,7 @@ pub use vec4::Vec4;
 pub use mat4::Mat4;
 
 /// A common error message when there is no value on the stack.
-pub const TINVOTS: &'static str = "There is no value on the stack";
+pub const TINVOTS: &str = "There is no value on the stack";
 
 /// Type alias for Dyon arrays.
 pub type Array = Arc<Vec<Variable>>;
@@ -203,29 +203,30 @@ impl Variable {
     /// Returns type of variable.
     pub fn typeof_var(&self) -> Arc<String> {
         use self::runtime::*;
+        use Variable::*;
 
-        match self {
-            &Variable::Text(_) => text_type.clone(),
-            &Variable::F64(_, _) => f64_type.clone(),
-            &Variable::Vec4(_) => vec4_type.clone(),
-            &Variable::Mat4(_) => mat4_type.clone(),
-            &Variable::Return => return_type.clone(),
-            &Variable::Bool(_, _) => bool_type.clone(),
-            &Variable::Object(_) => object_type.clone(),
-            &Variable::Array(_) => array_type.clone(),
-            &Variable::Link(_) => link_type.clone(),
-            &Variable::Ref(_) => ref_type.clone(),
-            &Variable::UnsafeRef(_) => unsafe_ref_type.clone(),
-            &Variable::RustObject(_) => rust_object_type.clone(),
-            &Variable::Option(_) => option_type.clone(),
-            &Variable::Result(_) => result_type.clone(),
-            &Variable::Thread(_) => thread_type.clone(),
-            &Variable::Closure(_, _) => closure_type.clone(),
-            &Variable::In(_) => in_type.clone(),
+        match *self {
+            Text(_) => text_type.clone(),
+            F64(_, _) => f64_type.clone(),
+            Vec4(_) => vec4_type.clone(),
+            Mat4(_) => mat4_type.clone(),
+            Return => return_type.clone(),
+            Bool(_, _) => bool_type.clone(),
+            Object(_) => object_type.clone(),
+            Array(_) => array_type.clone(),
+            Link(_) => link_type.clone(),
+            Ref(_) => ref_type.clone(),
+            UnsafeRef(_) => unsafe_ref_type.clone(),
+            RustObject(_) => rust_object_type.clone(),
+            Option(_) => option_type.clone(),
+            Result(_) => result_type.clone(),
+            Thread(_) => thread_type.clone(),
+            Closure(_, _) => closure_type.clone(),
+            In(_) => in_type.clone(),
         }
     }
 
-    fn deep_clone(&self, stack: &Vec<Variable>) -> Variable {
+    fn deep_clone(&self, stack: &[Variable]) -> Variable {
         use Variable::*;
 
         match *self {
@@ -237,7 +238,7 @@ impl Variable {
             Text(_) => self.clone(),
             Object(ref obj) => {
                 let mut res = obj.clone();
-                for (_, val) in Arc::make_mut(&mut res) {
+                for val in Arc::make_mut(&mut res).values_mut() {
                     *val = val.deep_clone(stack);
                 }
                 Object(res)
@@ -336,7 +337,7 @@ impl Clone for FnExternal {
 }
 
 /// Stores functions for a Dyon module.
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct Module {
     functions: Vec<ast::Function>,
     ext_prelude: Vec<FnExternal>,
@@ -513,7 +514,7 @@ impl Module {
 
         let mut w: Vec<u8> = vec![];
         ParseErrorHandler::new(source)
-            .write_msg(&mut w, range, &format!("{}", msg))
+            .write_msg(&mut w, range, msg)
             .unwrap();
         String::from_utf8(w).unwrap()
     }
@@ -695,7 +696,7 @@ pub fn load_str(source: &str, d: Arc<String>, module: &mut Module) -> Result<(),
         }
     }
 
-    check_ignored_meta_data(&conv_res, source, &d, &data, &ignored)
+    check_ignored_meta_data(conv_res, source, &d, &data, &ignored)
 }
 
 /// Loads a source from meta data.
@@ -710,11 +711,11 @@ pub fn load_meta(
     let mut ignored = vec![];
     let conv_res = ast::convert(Arc::new(source.into()), d.clone(), &data, &mut ignored, module);
 
-    check_ignored_meta_data(&conv_res, source, &d, data, &ignored)
+    check_ignored_meta_data(conv_res, source, &d, data, &ignored)
 }
 
 fn check_ignored_meta_data(
-    conv_res: &Result<(), ()>,
+    conv_res: Result<(), ()>,
     source: &str,
     d: &Arc<String>,
     data: &[Range<MetaData>],
@@ -722,12 +723,12 @@ fn check_ignored_meta_data(
 ) -> Result<(), String> {
     use piston_meta::json;
 
-    if ignored.len() > 0 || conv_res.is_err() {
+    if !ignored.is_empty() || conv_res.is_err() {
         use std::io::Write;
         use piston_meta::ParseErrorHandler;
 
         let mut buf: Vec<u8> = vec![];
-        if ignored.len() > 0 {
+        if ignored.is_empty() {
             writeln!(&mut buf, "Some meta data was ignored in the syntax").unwrap();
             writeln!(&mut buf, "START IGNORED").unwrap();
             json::write(&mut buf, &data[ignored[0].iter()]).unwrap();
@@ -740,7 +741,7 @@ fn check_ignored_meta_data(
                            "Could not understand this")
                 .unwrap();
         }
-        if let &Err(()) = conv_res {
+        if let Err(()) = conv_res {
             writeln!(&mut buf, "Conversion error").unwrap();
         }
         return Err(String::from_utf8(buf).unwrap());
