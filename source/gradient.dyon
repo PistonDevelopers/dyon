@@ -1,7 +1,7 @@
 // Dirac delta function,
 // see https://en.wikipedia.org/wiki/Dirac_delta_function
 δ(x: f64) = if x==0 {1} else {0}
-// Nugde a vector in a direction `j` with value `eps`.
+// Nudge a vector in a direction `j` with value `eps`.
 eps(v: vec4, j: f64, eps: f64) = vec4 i s(v,i)+δ(i-j)*eps
 
 // The function to evaluate.
