@@ -123,8 +123,8 @@ pub fn compare_lifetimes(
                             /*
                             fn main() {
                                 a := [[]]
-                                b := [3]    // <--- declared after 'a'
-                                a[0] = b    // <--- attempting to put 'b' inside 'a'
+                                b := [3]    // <--- declared after 'a'.
+                                a[0] = b    // <--- attempting to put 'b' inside 'a'.
                             }
                             */
                             return Err(format!("`{}` does not live long enough",
@@ -135,7 +135,7 @@ pub fn compare_lifetimes(
                             /*
                             fn main() {}
                             fn foo(mut a: 'b, b) {
-                                a = b       // <--- attempting to overwrite 'a' with 'b'
+                                a = b       // <--- attempting to overwrite 'a' with 'b'.
                             }
                             */
                             // It is known that `a` outlives `b`, so it is an error
@@ -161,7 +161,23 @@ pub fn compare_lifetimes(
                             return Err(format!("`{}` does not live long enough",
                                 nodes[r].name().expect("Expected name")));
                         }
-                        _ => unimplemented!()
+                        Lifetime::Return(ref r) => {
+                            // This gets triggered in cases like these:
+                            /*
+                            fn main() {}
+                            fn foo(mut a: 'b, b: 'return) {
+                                a = b       // <--- attempting to overwrite 'a' with 'b'.
+                            }
+                            */
+                            // It is known that `a` outlives `b`, so it is an error
+                            // to attempt overwrite `a` with `b`.
+                            // Notice that `b: 'b` is required to trigger the case,
+                            // since `a` and `b` must have some lifetime in common to get an order.
+                            // In addition they both need `'return` lifetime.
+                            // `a` has an implicit `'return` lifetime through `b`.
+                            return Err(format!("`{}` does not live long enough",
+                                nodes[r[0]].name().expect("Expected name")));
+                        }
                     }
                 }
                 None => {
