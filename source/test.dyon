@@ -1,4 +1,4 @@
 fn main() {}
-fn foo(mut a: 'b, b) {
-    a = b
+fn foo() ~ a {
+    a = a
 }
