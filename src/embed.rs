@@ -10,8 +10,8 @@ use RustObject;
 
 /// Gets value of object field.
 pub fn obj_field<T: PopVariable>(rt: &Runtime, obj: &Object, name: &str) -> Result<T, String> {
-    let var = try!(obj.get(&Arc::new(name.into()))
-        .ok_or_else(|| format!("Object has no key `{}`", name)));
+    let var = obj.get(&Arc::new(name.into()))
+        .ok_or_else(|| format!("Object has no key `{}`", name))?;
     PopVariable::pop_var(rt, var)
 }
 
@@ -134,7 +134,7 @@ impl<T: PopVariable> PopVariable for Option<T> {
     fn pop_var(rt: &Runtime, var: &Variable) -> Result<Self, String> {
         if let Variable::Option(ref s) = *var {
             Ok(match *s {
-                Some(ref s) => Some(try!(PopVariable::pop_var(rt, rt.resolve(s)))),
+                Some(ref s) => Some(PopVariable::pop_var(rt, rt.resolve(s))?),
                 None => None
             })
         } else {
@@ -147,8 +147,8 @@ impl<T: PopVariable, U: PopVariable> PopVariable for Result<T, U> {
     fn pop_var(rt: &Runtime, var: &Variable) -> Result<Self, String> {
         if let Variable::Result(ref s) = *var {
             Ok(match *s {
-                Ok(ref s) => Ok(try!(PopVariable::pop_var(rt, rt.resolve(s)))),
-                Err(ref err) => Err(try!(PopVariable::pop_var(rt, rt.resolve(&err.message))))
+                Ok(ref s) => Ok(PopVariable::pop_var(rt, rt.resolve(s))?),
+                Err(ref err) => Err(PopVariable::pop_var(rt, rt.resolve(&err.message))?)
             })
         } else {
             Err(rt.expected(var, "result"))
@@ -160,8 +160,8 @@ impl<T: PopVariable> PopVariable for [T; 2] {
     fn pop_var(rt: &Runtime, var: &Variable) -> Result<Self, String> {
         if let Variable::Array(ref arr) = *var {
             Ok([
-                try!(PopVariable::pop_var(rt, rt.resolve(&arr[0]))),
-                try!(PopVariable::pop_var(rt, rt.resolve(&arr[1])))
+                PopVariable::pop_var(rt, rt.resolve(&arr[0]))?,
+                PopVariable::pop_var(rt, rt.resolve(&arr[1]))?
             ])
         } else {
             Err(rt.expected(var, "[_; 2]"))
@@ -173,9 +173,9 @@ impl<T: PopVariable> PopVariable for [T; 3] {
     fn pop_var(rt: &Runtime, var: &Variable) -> Result<Self, String> {
         if let Variable::Array(ref arr) = *var {
             Ok([
-                try!(PopVariable::pop_var(rt, rt.resolve(&arr[0]))),
-                try!(PopVariable::pop_var(rt, rt.resolve(&arr[1]))),
-                try!(PopVariable::pop_var(rt, rt.resolve(&arr[2])))
+                PopVariable::pop_var(rt, rt.resolve(&arr[0]))?,
+                PopVariable::pop_var(rt, rt.resolve(&arr[1]))?,
+                PopVariable::pop_var(rt, rt.resolve(&arr[2]))?
             ])
         } else {
             Err(rt.expected(var, "[_; 3]"))
@@ -187,10 +187,10 @@ impl<T: PopVariable> PopVariable for [T; 4] {
     fn pop_var(rt: &Runtime, var: &Variable) -> Result<Self, String> {
         if let Variable::Array(ref arr) = *var {
             Ok([
-                try!(PopVariable::pop_var(rt, rt.resolve(&arr[0]))),
-                try!(PopVariable::pop_var(rt, rt.resolve(&arr[1]))),
-                try!(PopVariable::pop_var(rt, rt.resolve(&arr[2]))),
-                try!(PopVariable::pop_var(rt, rt.resolve(&arr[3])))
+                PopVariable::pop_var(rt, rt.resolve(&arr[0]))?,
+                PopVariable::pop_var(rt, rt.resolve(&arr[1]))?,
+                PopVariable::pop_var(rt, rt.resolve(&arr[2]))?,
+                PopVariable::pop_var(rt, rt.resolve(&arr[3]))?
             ])
         } else {
             Err(rt.expected(var, "[_; 4]"))
@@ -202,8 +202,8 @@ impl<T: PopVariable, U: PopVariable> PopVariable for (T, U) {
     fn pop_var(rt: &Runtime, var: &Variable) -> Result<Self, String> {
         if let Variable::Array(ref arr) = *var {
             Ok((
-                try!(PopVariable::pop_var(rt, rt.resolve(&arr[0]))),
-                try!(PopVariable::pop_var(rt, rt.resolve(&arr[1])))
+                PopVariable::pop_var(rt, rt.resolve(&arr[0]))?,
+                PopVariable::pop_var(rt, rt.resolve(&arr[1]))?
             ))
         } else {
             Err(rt.expected(var, "[_; 2]"))
@@ -215,9 +215,9 @@ impl<T: PopVariable, U: PopVariable, V: PopVariable> PopVariable for (T, U, V) {
     fn pop_var(rt: &Runtime, var: &Variable) -> Result<Self, String> {
         if let Variable::Array(ref arr) = *var {
             Ok((
-                try!(PopVariable::pop_var(rt, rt.resolve(&arr[0]))),
-                try!(PopVariable::pop_var(rt, rt.resolve(&arr[1]))),
-                try!(PopVariable::pop_var(rt, rt.resolve(&arr[2])))
+                PopVariable::pop_var(rt, rt.resolve(&arr[0]))?,
+                PopVariable::pop_var(rt, rt.resolve(&arr[1]))?,
+                PopVariable::pop_var(rt, rt.resolve(&arr[2]))?
             ))
         } else {
             Err(rt.expected(var, "[_; 3]"))
@@ -229,10 +229,10 @@ impl<T: PopVariable, U: PopVariable, V: PopVariable, W: PopVariable> PopVariable
     fn pop_var(rt: &Runtime, var: &Variable) -> Result<Self, String> {
         if let Variable::Array(ref arr) = *var {
             Ok((
-                try!(PopVariable::pop_var(rt, rt.resolve(&arr[0]))),
-                try!(PopVariable::pop_var(rt, rt.resolve(&arr[1]))),
-                try!(PopVariable::pop_var(rt, rt.resolve(&arr[2]))),
-                try!(PopVariable::pop_var(rt, rt.resolve(&arr[3])))
+                PopVariable::pop_var(rt, rt.resolve(&arr[0]))?,
+                PopVariable::pop_var(rt, rt.resolve(&arr[1]))?,
+                PopVariable::pop_var(rt, rt.resolve(&arr[2]))?,
+                PopVariable::pop_var(rt, rt.resolve(&arr[3]))?
             ))
         } else {
             Err(rt.expected(var, "[_; 4]"))
@@ -245,7 +245,7 @@ impl<T: PopVariable> PopVariable for Vec<T> {
         if let Variable::Array(ref arr) = *var {
             let mut res = Vec::with_capacity(arr.len());
             for it in &**arr {
-                res.push(try!(PopVariable::pop_var(rt, rt.resolve(it))))
+                res.push(PopVariable::pop_var(rt, rt.resolve(it))?)
             }
             Ok(res)
         } else {

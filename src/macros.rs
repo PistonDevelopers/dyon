@@ -8,11 +8,11 @@ macro_rules! dyon_macro_items { ($($x:item)+) => ($($x)+) }
 #[macro_export]
 macro_rules! dyon_fn_pop {
     ($rt:ident $arg:ident : $t:ty) => {
-        let $arg: $t = try!($rt.pop());
+        let $arg: $t = $rt.pop()?;
     };
     ($rt:ident $arg:ident : $t:ty, $($args:tt : $ts:ty),+) => {
         dyon_fn_pop!($rt $($args: $ts),+);
-        let $arg: $t = try!($rt.pop());
+        let $arg: $t = $rt.pop()?;
     };
 }
 
@@ -88,7 +88,7 @@ macro_rules! dyon_obj {
                     if let &$crate::Variable::Object(ref obj) = var {
                         Ok($t {
                             $(
-                                $f: try!(obj_field(rt, obj, stringify!($f)))
+                                $f: obj_field(rt, obj, stringify!($f))?
                             ),*
                         })
                     } else {

@@ -393,7 +393,7 @@ impl Type {
     pub fn from_meta_data(node: &str, mut convert: Convert, ignored: &mut Vec<Range>)
     -> Result<(Range, Type), ()> {
         let start = convert;
-        let start_range = try!(convert.start_node(node));
+        let start_range = convert.start_node(node)?;
         convert.update(start_range);
 
         let mut ty: Option<Type> = None;
@@ -488,9 +488,9 @@ impl Type {
                     lts.push(Lt::Default);
                     tys.push(val);
                 }
-                let (range, ret) = try!(Type::from_meta_data("cl_ret", convert, ignored));
+                let (range, ret) = Type::from_meta_data("cl_ret", convert, ignored)?;
                 convert.update(range);
-                let range = try!(convert.end_node("closure_type"));
+                let range = convert.end_node("closure_type")?;
                 convert.update(range);
                 ty = Some(Type::Closure(Box::new(Dfn { lts, tys, ret })));
             } else {
@@ -500,6 +500,6 @@ impl Type {
             }
         }
 
-        Ok((convert.subtract(start), try!(ty.ok_or(()))))
+        Ok((convert.subtract(start), ty.ok_or(())?))
     }
 }

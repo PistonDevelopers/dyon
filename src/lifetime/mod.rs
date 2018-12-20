@@ -26,7 +26,7 @@ pub fn check(
     prelude: &Prelude
 ) -> Result<HashMap<Arc<String>, Type>, Range<String>> {
     let mut nodes: Vec<Node> = vec![];
-    try!(convert_meta_data(&mut nodes, data));
+    convert_meta_data(&mut nodes, data)?;
 
     // Add mutability information to function names.
     for i in 0..nodes.len() {
@@ -542,8 +542,8 @@ pub fn check(
         let right = nodes[a].children[1];
         let lifetime_left = &nodes[i].lifetime(&nodes, &arg_names);
         let lifetime_right = &nodes[right].lifetime(&nodes, &arg_names);
-        try!(compare_lifetimes(lifetime_left, lifetime_right, &nodes)
-                .map_err(|err| nodes[right].source.wrap(err)));
+        compare_lifetimes(lifetime_left, lifetime_right, &nodes)
+                .map_err(|err| nodes[right].source.wrap(err))?;
     }
 
     // Check the lifetime of declared locals.
@@ -551,8 +551,8 @@ pub fn check(
         let right = nodes[a].children[1];
         let lifetime_left = &Some(Lifetime::Local(i));
         let lifetime_right = &nodes[right].lifetime(&nodes, &arg_names);
-        try!(compare_lifetimes(lifetime_left, lifetime_right, &nodes)
-                .map_err(|err| nodes[right].source.wrap(err)));
+        compare_lifetimes(lifetime_left, lifetime_right, &nodes)
+                .map_err(|err| nodes[right].source.wrap(err))?;
     }
 
     // Check the lifetime of assigned locals.
@@ -561,8 +561,8 @@ pub fn check(
             let right = nodes[a].children[1];
             let lifetime_left = &Some(Lifetime::Local(j));
             let lifetime_right = &nodes[right].lifetime(&nodes, &arg_names);
-            try!(compare_lifetimes(lifetime_left, lifetime_right, &nodes)
-                    .map_err(|err| nodes[right].source.wrap(err)));
+            compare_lifetimes(lifetime_left, lifetime_right, &nodes)
+                    .map_err(|err| nodes[right].source.wrap(err))?;
         }
     }
 
@@ -570,19 +570,17 @@ pub fn check(
     for &i in &returns {
         let right = nodes[i].children[0];
         let lifetime_right = &nodes[right].lifetime(&nodes, &arg_names);
-        try!(compare_lifetimes(
+        compare_lifetimes(
             &Some(Lifetime::Return(vec![])), lifetime_right, &nodes)
-                .map_err(|err| nodes[right].source.wrap(err))
-        );
+                .map_err(|err| nodes[right].source.wrap(err))?;
     }
 
     // Check the lifetime of expressions that are mathematically declared.
     for &i in &math_expr {
         let lifetime_right = &nodes[i].lifetime(&nodes, &arg_names);
-        try!(compare_lifetimes(
+        compare_lifetimes(
             &Some(Lifetime::Return(vec![])), lifetime_right, &nodes)
-                .map_err(|err| nodes[i].source.wrap(err))
-        );
+                .map_err(|err| nodes[i].source.wrap(err))?;
     }
 
     // Check the lifetime of expressions at end of blocks.
@@ -591,8 +589,8 @@ pub fn check(
         // Fake a local variable.
         let lifetime_left = &Some(Lifetime::Local(parent));
         let lifetime_right = &nodes[i].lifetime(&nodes, &arg_names);
-        try!(compare_lifetimes(lifetime_left, lifetime_right, &nodes)
-                .map_err(|err| nodes[i].source.wrap(err)));
+        compare_lifetimes(lifetime_left, lifetime_right, &nodes)
+                .map_err(|err| nodes[i].source.wrap(err))?;
     }
 
     // Check that calls do not have arguments with shorter lifetime than the call.
@@ -603,8 +601,8 @@ pub fn check(
         for &a in call.children.iter()
             .filter(|&&i| nodes[i].kind == Kind::CallArg)  {
             let lifetime_right = &nodes[a].lifetime(&nodes, &arg_names);
-            try!(compare_lifetimes(lifetime_left, lifetime_right, &nodes)
-                    .map_err(|err| nodes[a].source.wrap(err)));
+            compare_lifetimes(lifetime_left, lifetime_right, &nodes)
+                    .map_err(|err| nodes[a].source.wrap(err))?;
         }
     }
 
@@ -724,10 +722,9 @@ pub fn check(
                         let right = call.children[i];
                         let lifetime_left = &nodes[left].lifetime(&nodes, &arg_names);
                         let lifetime_right = &nodes[right].lifetime(&nodes, &arg_names);
-                        try!(compare_lifetimes(
+                        compare_lifetimes(
                             lifetime_left, lifetime_right, &nodes)
-                                .map_err(|err| nodes[right].source.wrap(err))
-                        );
+                                .map_err(|err| nodes[right].source.wrap(err))?;
                     }
                 }
             }
@@ -755,10 +752,9 @@ pub fn check(
                         let right = call.children[i];
                         let lifetime_left = &nodes[left].lifetime(&nodes, &arg_names);
                         let lifetime_right = &nodes[right].lifetime(&nodes, &arg_names);
-                        try!(compare_lifetimes(
+                        compare_lifetimes(
                             lifetime_left, lifetime_right, &nodes)
-                                .map_err(|err| nodes[right].source.wrap(err))
-                        );
+                                .map_err(|err| nodes[right].source.wrap(err))?;
                     }
                 }
             }
@@ -812,7 +808,7 @@ pub fn check(
         }
     }
 
-    try!(typecheck::run(&mut nodes, prelude, &use_lookup));
+    typecheck::run(&mut nodes, prelude, &use_lookup)?;
 
     // Copy refined return types to use in AST.
     let mut refined_rets: HashMap<Arc<String>, Type> = HashMap::new();

@@ -661,7 +661,7 @@ pub fn set_window__title<W: Any + AdvancedWindow>(rt: &mut Runtime) -> Result<()
     use std::sync::Arc;
 
     let window = unsafe { &mut *Current::<W>::new() };
-    let title: Arc<String> = try!(rt.pop());
+    let title: Arc<String> = rt.pop()?;
     window.set_title((*title).clone());
     Ok(())
 }
@@ -862,16 +862,16 @@ pub fn draw_2d<C: CharacterCache<Texture = G::Texture>, G: Graphics>(
         for it in &**arr {
             let it = rt.resolve(it);
             if let &Variable::Array(ref it) = it {
-                let ty: Arc<String> = try!(rt.var(&it[0]));
+                let ty: Arc<String> = rt.var(&it[0])?;
                 match &**ty {
                     "clear" => {
-                        let color: [f32; 4] = try!(rt.var_vec4(&it[1]));
+                        let color: [f32; 4] = rt.var_vec4(&it[1])?;
                         clear(color, g);
                     }
                     "transform__rx_ry" => {
                         // Changes transform matrix.
-                        let rx: [f32; 4] = try!(rt.var_vec4(&it[1]));
-                        let ry: [f32; 4] = try!(rt.var_vec4(&it[2]));
+                        let rx: [f32; 4] = rt.var_vec4(&it[1])?;
+                        let ry: [f32; 4] = rt.var_vec4(&it[2])?;
                         let t: Matrix2d = [
                             [rx[0] as f64, rx[1] as f64, rx[2] as f64],
                             [ry[0] as f64, ry[1] as f64, ry[2] as f64]
@@ -879,33 +879,33 @@ pub fn draw_2d<C: CharacterCache<Texture = G::Texture>, G: Graphics>(
                         transform = math::multiply(c.transform, t);
                     }
                     "line__color_radius_from_to" => {
-                        let color: [f32; 4] = try!(rt.var_vec4(&it[1]));
-                        let radius: f64 = try!(rt.var(&it[2]));
-                        let from: [f64; 2] = try!(rt.var_vec4(&it[3]));
-                        let to: [f64; 2] = try!(rt.var_vec4(&it[4]));
+                        let color: [f32; 4] = rt.var_vec4(&it[1])?;
+                        let radius: f64 = rt.var(&it[2])?;
+                        let from: [f64; 2] = rt.var_vec4(&it[3])?;
+                        let to: [f64; 2] = rt.var_vec4(&it[4])?;
                         line(color, radius, [from[0], from[1], to[0], to[1]], transform, g);
                     }
                     "rectangle__color_corner_size" => {
-                        let color: [f32; 4] = try!(rt.var_vec4(&it[1]));
-                        let corner: [f64; 2] = try!(rt.var_vec4(&it[2]));
-                        let size: [f64; 2] = try!(rt.var_vec4(&it[3]));
+                        let color: [f32; 4] = rt.var_vec4(&it[1])?;
+                        let corner: [f64; 2] = rt.var_vec4(&it[2])?;
+                        let size: [f64; 2] = rt.var_vec4(&it[3])?;
                         rectangle(color, [corner[0], corner[1], size[0], size[1]], transform, g);
                     }
                     "ellipse__color_corner_size_resolution" => {
-                        let color: [f32; 4] = try!(rt.var_vec4(&it[1]));
-                        let corner: [f64; 2] = try!(rt.var_vec4(&it[2]));
-                        let size: [f64; 2] = try!(rt.var_vec4(&it[3]));
-                        let resolution: u32 = try!(rt.var(&it[4]));
+                        let color: [f32; 4] = rt.var_vec4(&it[1])?;
+                        let corner: [f64; 2] = rt.var_vec4(&it[2])?;
+                        let size: [f64; 2] = rt.var_vec4(&it[3])?;
+                        let resolution: u32 = rt.var(&it[4])?;
                         Ellipse::new(color)
                         .resolution(resolution as u32)
                         .draw([corner[0], corner[1], size[0], size[1]], &c.draw_state, transform, g);
                     }
                     "ellipse__border_color_corner_size_resolution" => {
-                        let border: f64 = try!(rt.var(&it[1]));
-                        let color: [f32; 4] = try!(rt.var_vec4(&it[2]));
-                        let corner: [f64; 2] = try!(rt.var_vec4(&it[3]));
-                        let size: [f64; 2] = try!(rt.var_vec4(&it[4]));
-                        let resolution: u32 = try!(rt.var(&it[5]));
+                        let border: f64 = rt.var(&it[1])?;
+                        let color: [f32; 4] = rt.var_vec4(&it[2])?;
+                        let corner: [f64; 2] = rt.var_vec4(&it[3])?;
+                        let size: [f64; 2] = rt.var_vec4(&it[4])?;
+                        let resolution: u32 = rt.var(&it[5])?;
                         Ellipse::new_border(color, border)
                         .resolution(resolution as u32)
                         .draw([corner[0], corner[1], size[0], size[1]], &c.draw_state, transform, g);

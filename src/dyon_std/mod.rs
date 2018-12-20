@@ -1079,9 +1079,9 @@ pub(crate) fn _call(
                                 rt.stack_trace(),
                                 f.args.len(), args.len()), rt))
                     }
-                    try!(lifetimechk::check(f, &args).map_err(|err|
+                    lifetimechk::check(f, &args).map_err(|err|
                         module.error(call.args[2].source_range(),
-                        &format!("{}\n{}", err, rt.stack_trace()), rt)));
+                        &format!("{}\n{}", err, rt.stack_trace()), rt))?;
                 }
                 FnIndex::Intrinsic(_) | FnIndex::None |
                 FnIndex::ExternalVoid(_) | FnIndex::ExternalReturn(_) =>
@@ -1103,7 +1103,7 @@ pub(crate) fn _call(
                 source_range: call.source_range,
             };
 
-            try!(rt.call(&call, &m));
+            rt.call(&call, &m)?;
         }
         None => return Err(module.error(call.args[0].source_range(),
                     &format!("{}\nExpected `Module`",
@@ -1157,9 +1157,9 @@ pub(crate) fn call_ret(
                                 rt.stack_trace(),
                                 f.args.len(), args.len()), rt))
                     }
-                    try!(lifetimechk::check(f, &args).map_err(|err|
+                    lifetimechk::check(f, &args).map_err(|err|
                         module.error(call.args[2].source_range(),
-                        &format!("{}\n{}", err, rt.stack_trace()), rt)));
+                        &format!("{}\n{}", err, rt.stack_trace()), rt))?;
                 }
                 FnIndex::Intrinsic(_) | FnIndex::None |
                 FnIndex::ExternalVoid(_) | FnIndex::ExternalReturn(_) =>
@@ -1181,7 +1181,7 @@ pub(crate) fn call_ret(
                 source_range: call.source_range,
             };
 
-            try!(rt.call(&call, &m)).0
+            rt.call(&call, &m)?.0
         }
         None => return Err(module.error(call.args[0].source_range(),
             &format!("{}\nExpected `Module`", rt.stack_trace()), rt))
@@ -1728,11 +1728,11 @@ pub(crate) fn json_from_meta_data(
     let meta_data = rt.stack.pop().expect(TINVOTS);
     let json = match rt.resolve(&meta_data) {
         &Variable::Array(ref arr) => {
-            try!(meta::json_from_meta_data(arr).map_err(|err| {
+            meta::json_from_meta_data(arr).map_err(|err| {
                 format!("{}\nError when generating JSON:\n{}",
                         rt.stack_trace(),
                         err.description())
-            }))
+            })?
         }
         x => return Err(module.error(call.args[0].source_range(),
                         &rt.expected(x, "array"), rt))
