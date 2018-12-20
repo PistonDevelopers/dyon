@@ -131,6 +131,17 @@ pub fn compare_lifetimes(
                                 nodes[r].name().expect("Expected name")));
                         }
                         Lifetime::Argument(ref r) => {
+                            // This gets triggered in cases like these:
+                            /*
+                            fn main() {}
+                            fn foo(mut a: 'b, b) {
+                                a = b       // <--- attempting to overwrite 'a' with 'b'
+                            }
+                            */
+                            // It is known that `a` outlives `b`, so it is an error
+                            // to attempt overwrite `a` with `b`.
+                            // Notice that `b: 'b` is required to trigger the case,
+                            // since `a` and `b` must have some lifetime in common to get an order.
                             return Err(format!("`{}` does not live long enough",
                                 nodes[r[0]].name().expect("Expected name")));
                         }

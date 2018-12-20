@@ -1,5 +1,4 @@
-fn main() {
-    a := [[]]
-    b := [3]
-    a[0] = b
+fn main() {}
+fn foo(mut a: 'b, b) {
+    a = b
 }
