@@ -168,7 +168,8 @@ pub fn compare_lifetimes(
                                 return Err(format!("Requires `{}: 'return`",
                                     nodes[last].name().expect("Expected name")));
                             } else {
-                                unimplemented!();
+                                return Err(format!("`{}` does not live long enough",
+                                    nodes[r[0]].name().expect("Expected name")));
                             }
                         }
                         (&Lifetime::Current(n), _) => {

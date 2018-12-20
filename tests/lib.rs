@@ -155,6 +155,7 @@ fn test_typechk() {
     test_src("source/typechk/return_14.dyon");
     test_fail_src("source/typechk/return_15.dyon");
     test_fail_src("source/typechk/return_16.dyon");
+    test_fail_src("source/typechk/return_17.dyon");
     test_src("source/typechk/add.dyon");
     test_src("source/typechk/mat_expr.dyon");
     test_src("source/typechk/or.dyon");
