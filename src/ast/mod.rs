@@ -210,7 +210,7 @@ impl Namespace {
     ) -> Result<(Range, Namespace), ()> {
         let start = convert;
         let node = "ns";
-        let start_range = try!(convert.start_node(node));
+        let start_range = convert.start_node(node)?;
         convert.update(start_range);
 
         let mut names: Vec<Arc<String>> = vec![];
@@ -249,7 +249,7 @@ impl Uses {
     ) -> Result<(Range, Uses), ()> {
         let start = convert;
         let node = "uses";
-        let start_range = try!(convert.start_node(node));
+        let start_range = convert.start_node(node)?;
         convert.update(start_range);
 
         let mut use_imports = vec![];
@@ -290,7 +290,7 @@ impl UseImport {
     ) -> Result<(Range, UseImport), ()> {
         let start = convert;
         let node = "use";
-        let start_range = try!(convert.start_node(node));
+        let start_range = convert.start_node(node)?;
         convert.update(start_range);
 
         let mut names: Vec<Arc<String>> = vec![];
@@ -376,7 +376,7 @@ impl Function {
         use std::sync::atomic::AtomicBool;
 
         let start = convert;
-        let start_range = try!(convert.start_node(node));
+        let start_range = convert.start_node(node)?;
         convert.update(start_range);
 
         let mut name: Option<Arc<String>> = None;
@@ -423,9 +423,9 @@ impl Function {
             }
         }
 
-        let mut name = try!(name.ok_or(()));
+        let mut name = name.ok_or(())?;
         let block = match expr {
-            None => try!(block.ok_or(())),
+            None => block.ok_or(())?,
             Some(expr) => {
                 let source_range = expr.source_range();
                 Block {
@@ -447,7 +447,7 @@ impl Function {
             name_plus_args.push(')');
             name = Arc::new(name_plus_args);
         }
-        let ret = try!(ret.ok_or(()));
+        let ret = ret.ok_or(())?;
         Ok((convert.subtract(start), Function {
             namespace: namespace.clone(),
             resolved: Arc::new(AtomicBool::new(false)),
@@ -516,7 +516,7 @@ impl Closure {
         ignored: &mut Vec<Range>
     ) -> Result<(Range, Closure), ()> {
         let start = convert;
-        let start_range = try!(convert.start_node(node));
+        let start_range = convert.start_node(node)?;
         convert.update(start_range);
 
         let mut args: Vec<Arg> = vec![];
@@ -554,8 +554,8 @@ impl Closure {
             }
         }
 
-        let ret = try!(ret.ok_or(()));
-        let expr = try!(expr.ok_or(()));
+        let ret = ret.ok_or(())?;
+        let expr = expr.ok_or(())?;
         Ok((convert.subtract(start), Closure {
             file: file.clone(),
             source: source.clone(),
@@ -618,7 +618,7 @@ impl Grab {
     ) -> Result<(Range, Grab), ()> {
         let start = convert;
         let node = "grab";
-        let start_range = try!(convert.start_node(node));
+        let start_range = convert.start_node(node)?;
         convert.update(start_range);
 
         let mut level: Option<u16> = None;
@@ -642,7 +642,7 @@ impl Grab {
         }
 
         let level = level.unwrap_or(1);
-        let expr = try!(expr.ok_or(()));
+        let expr = expr.ok_or(())?;
         Ok((convert.subtract(start), Grab {
             level,
             expr,
@@ -701,7 +701,7 @@ impl TryExpr {
     ) -> Result<(Range, TryExpr), ()> {
         let start = convert;
         let node = "try_expr";
-        let start_range = try!(convert.start_node(node));
+        let start_range = convert.start_node(node)?;
         convert.update(start_range);
 
         let mut expr: Option<Expression> = None;
@@ -720,7 +720,7 @@ impl TryExpr {
             }
         }
 
-        let expr = try!(expr.ok_or(()));
+        let expr = expr.ok_or(())?;
         Ok((convert.subtract(start), TryExpr {
             expr,
             source_range: convert.source(start).unwrap(),
@@ -760,7 +760,7 @@ impl Arg {
     -> Result<(Range, Arg), ()> {
         let start = convert;
         let node = "arg";
-        let start_range = try!(convert.start_node(node));
+        let start_range = convert.start_node(node)?;
         convert.update(start_range);
 
         let mut name: Option<Arc<String>> = None;
@@ -791,7 +791,7 @@ impl Arg {
             }
         }
 
-        let name = try!(name.ok_or(()));
+        let name = name.ok_or(())?;
         let ty = match ty {
             None => Type::Any,
             Some(ty) => ty
@@ -825,7 +825,7 @@ impl Current {
     -> Result<(Range, Current), ()> {
         let start = convert;
         let node = "current";
-        let start_range = try!(convert.start_node(node));
+        let start_range = convert.start_node(node)?;
         convert.update(start_range);
 
         let mut name: Option<Arc<String>> = None;
@@ -851,7 +851,7 @@ impl Current {
             }
         }
 
-        let name = try!(name.ok_or(()));
+        let name = name.ok_or(())?;
         Ok((convert.subtract(start), Current {
             name,
             source_range: convert.source(start).unwrap(),
@@ -879,7 +879,7 @@ impl Block {
         ignored: &mut Vec<Range>
     ) -> Result<(Range, Block), ()> {
         let start = convert;
-        let start_range = try!(convert.start_node(node));
+        let start_range = convert.start_node(node)?;
         convert.update(start_range);
 
         let mut expressions = vec![];
@@ -1038,7 +1038,7 @@ impl Expression {
         ignored: &mut Vec<Range>)
     -> Result<(Range, Expression), ()> {
         let start = convert;
-        let start_range = try!(convert.start_node(node));
+        let start_range = convert.start_node(node)?;
         convert.update(start_range);
 
         let mut result: Option<Expression> = None;
@@ -1303,7 +1303,7 @@ impl Expression {
             }
         }
 
-        let result = try!(result.ok_or(()));
+        let result = result.ok_or(())?;
         Ok((convert.subtract(start), result))
     }
 
@@ -1509,7 +1509,7 @@ impl Link {
     -> Result<(Range, Link), ()> {
         let start = convert;
         let node = "link";
-        let start_range = try!(convert.start_node(node));
+        let start_range = convert.start_node(node)?;
         convert.update(start_range);
 
         let mut items: Vec<Expression> = vec![];
@@ -1581,7 +1581,7 @@ impl Object {
     -> Result<(Range, Object), ()> {
         let start = convert;
         let node = "object";
-        let start_range = try!(convert.start_node(node));
+        let start_range = convert.start_node(node)?;
         convert.update(start_range);
 
         let mut key_values = vec![];
@@ -1626,7 +1626,7 @@ impl Object {
     -> Result<(Range, (Arc<String>, Expression)), ()> {
         let start = convert;
         let node = "key_value";
-        let start_range = try!(convert.start_node(node));
+        let start_range = convert.start_node(node)?;
         convert.update(start_range);
 
         let mut key: Option<Arc<String>> = None;
@@ -1649,8 +1649,8 @@ impl Object {
             }
         }
 
-        let key = try!(key.ok_or(()));
-        let value = try!(value.ok_or(()));
+        let key = key.ok_or(())?;
+        let value = value.ok_or(())?;
         Ok((convert.subtract(start), (key, value)))
     }
 
@@ -1689,7 +1689,7 @@ impl Array {
     -> Result<(Range, Array), ()> {
         let start = convert;
         let node = "array";
-        let start_range = try!(convert.start_node(node));
+        let start_range = convert.start_node(node)?;
         convert.update(start_range);
 
         let mut items = vec![];
@@ -1763,7 +1763,7 @@ impl ArrayFill {
     -> Result<(Range, ArrayFill), ()> {
         let start = convert;
         let node = "array_fill";
-        let start_range = try!(convert.start_node(node));
+        let start_range = convert.start_node(node)?;
         convert.update(start_range);
 
         let mut fill: Option<Expression> = None;
@@ -1787,8 +1787,8 @@ impl ArrayFill {
             }
         }
 
-        let fill = try!(fill.ok_or(()));
-        let n = try!(n.ok_or(()));
+        let fill = fill.ok_or(())?;
+        let n = n.ok_or(())?;
         Ok((convert.subtract(start), ArrayFill {
             fill,
             n,
@@ -1844,7 +1844,7 @@ impl Add {
     -> Result<(Range, Add), ()> {
         let start = convert;
         let node = "add";
-        let start_range = try!(convert.start_node(node));
+        let start_range = convert.start_node(node)?;
         convert.update(start_range);
 
         let mut items = vec![];
@@ -1924,7 +1924,7 @@ impl Mul {
     -> Result<(Range, Mul), ()> {
         let start = convert;
         let node = "mul";
-        let start_range = try!(convert.start_node(node));
+        let start_range = convert.start_node(node)?;
         convert.update(start_range);
 
         let mut items = vec![];
@@ -2022,7 +2022,7 @@ impl Pow {
     -> Result<(Range, Pow), ()> {
         let start = convert;
         let node = "pow";
-        let start_range = try!(convert.start_node(node));
+        let start_range = convert.start_node(node)?;
         convert.update(start_range);
 
         let mut base: Option<Expression> = None;
@@ -2046,8 +2046,8 @@ impl Pow {
             }
         }
 
-        let base = try!(base.ok_or(()));
-        let exp = try!(exp.ok_or(()));
+        let base = base.ok_or(())?;
+        let exp = exp.ok_or(())?;
         Ok((convert.subtract(start), Pow {
             base,
             exp,
@@ -2253,7 +2253,7 @@ impl Item {
     -> Result<(Range, Item), ()> {
         let start = convert;
         let node = "item";
-        let start_range = try!(convert.start_node(node));
+        let start_range = convert.start_node(node)?;
         convert.update(start_range);
 
         let mut name: Option<Arc<String>> = None;
@@ -2302,7 +2302,7 @@ impl Item {
             }
         }
 
-        let name = try!(name.ok_or(()));
+        let name = name.ok_or(())?;
         Ok((convert.subtract(start), Item {
             name,
             stack_id: Cell::new(None),
@@ -2362,7 +2362,7 @@ impl Go {
     ) -> Result<(Range, Go), ()> {
         let start = convert;
         let node = "go";
-        let start_range = try!(convert.start_node(node));
+        let start_range = convert.start_node(node)?;
         convert.update(start_range);
 
         let mut call: Option<Call> = None;
@@ -2385,7 +2385,7 @@ impl Go {
             }
         }
 
-        let call = try!(call.ok_or(()));
+        let call = call.ok_or(())?;
         Ok((convert.subtract(start), Go {
             call,
             source_range: convert.source(start).unwrap(),
@@ -2437,7 +2437,7 @@ impl Call {
     -> Result<(Range, Call), ()> {
         let start = convert;
         let node = "call";
-        let start_range = try!(convert.start_node(node));
+        let start_range = convert.start_node(node)?;
         convert.update(start_range);
 
         let mut alias: Option<Arc<String>> = None;
@@ -2473,7 +2473,7 @@ impl Call {
             }
         }
 
-        let mut name = try!(name.ok_or(()));
+        let mut name = name.ok_or(())?;
 
         // Append mutability information to function name.
         if mutable.iter().any(|&arg| arg) {
@@ -2508,7 +2508,7 @@ impl Call {
     -> Result<(Range, Call), ()> {
         let start = convert;
         let node = "named_call";
-        let start_range = try!(convert.start_node(node));
+        let start_range = convert.start_node(node)?;
         convert.update(start_range);
 
         let mut alias: Option<Arc<String>> = None;
@@ -2671,7 +2671,7 @@ impl CallClosure {
     -> Result<(Range, CallClosure), ()> {
         let start = convert;
         let node = "call_closure";
-        let start_range = try!(convert.start_node(node));
+        let start_range = convert.start_node(node)?;
         convert.update(start_range);
 
         let mut item: Option<Item> = None;
@@ -2704,7 +2704,7 @@ impl CallClosure {
             }
         }
 
-        let item = try!(item.ok_or(()));
+        let item = item.ok_or(())?;
         Ok((convert.subtract(start), CallClosure {
             item,
             args,
@@ -2721,7 +2721,7 @@ impl CallClosure {
     -> Result<(Range, CallClosure), ()> {
         let start = convert;
         let node = "named_call_closure";
-        let start_range = try!(convert.start_node(node));
+        let start_range = convert.start_node(node)?;
         convert.update(start_range);
 
         let mut item: Option<Item> = None;
@@ -2763,7 +2763,7 @@ impl CallClosure {
             }
         }
 
-        let mut item = try!(item.ok_or(()));
+        let mut item = item.ok_or(())?;
         {
             if item.ids.is_empty() {
                 // Append name to item.
@@ -2851,7 +2851,7 @@ impl Norm {
     -> Result<(Range, Norm), ()> {
         let start = convert;
         let node = "norm";
-        let start_range = try!(convert.start_node(node));
+        let start_range = convert.start_node(node)?;
         convert.update(start_range);
 
         let mut expr: Option<Expression> = None;
@@ -2870,7 +2870,7 @@ impl Norm {
             }
         }
 
-        let expr = try!(expr.ok_or(()));
+        let expr = expr.ok_or(())?;
         Ok((convert.subtract(start), Norm {
             expr,
             source_range: convert.source(start).unwrap()
@@ -2942,7 +2942,7 @@ impl UnOpExpression {
     -> Result<(Range, UnOpExpression), ()> {
         let start = convert;
         let node = "unop";
-        let start_range = try!(convert.start_node(node));
+        let start_range = convert.start_node(node)?;
         convert.update(start_range);
 
         let mut unop: Option<UnOp> = None;
@@ -2968,8 +2968,8 @@ impl UnOpExpression {
             }
         }
 
-        let unop = try!(unop.ok_or(()));
-        let expr = try!(expr.ok_or(()));
+        let unop = unop.ok_or(())?;
+        let expr = expr.ok_or(())?;
         Ok((convert.subtract(start), UnOpExpression {
             op: unop,
             expr,
@@ -3014,7 +3014,7 @@ impl Assign {
     -> Result<(Range, Assign), ()> {
         let start = convert;
         let node = "assign";
-        let start_range = try!(convert.start_node(node));
+        let start_range = convert.start_node(node)?;
         convert.update(start_range);
 
         let mut op: Option<AssignOp> = None;
@@ -3063,9 +3063,9 @@ impl Assign {
             }
         }
 
-        let op = try!(op.ok_or(()));
-        let left = try!(left.ok_or(()));
-        let right = try!(right.ok_or(()));
+        let op = op.ok_or(())?;
+        let left = left.ok_or(())?;
+        let right = right.ok_or(())?;
         Ok((convert.subtract(start), Assign {
             op,
             left,
@@ -3158,7 +3158,7 @@ impl Mat4 {
     -> Result<(Range, Mat4), ()> {
         let start = convert;
         let node = "mat4";
-        let start_range = try!(convert.start_node(node));
+        let start_range = convert.start_node(node)?;
         convert.update(start_range);
 
         let mut x: Option<Expression> = None;
@@ -3192,7 +3192,7 @@ impl Mat4 {
             }
         }
 
-        let x = try!(x.ok_or(()));
+        let x = x.ok_or(())?;
         let y = y.unwrap_or_else(|| Expression::Variable(Box::new((
             Range::empty(0), Variable::Vec4([0.0, 1.0, 0.0, 0.0])))));
         let z = z.unwrap_or_else(|| Expression::Variable(Box::new((
@@ -3243,7 +3243,7 @@ impl Vec4 {
     -> Result<(Range, Vec4), ()> {
         let start = convert;
         let node = "vec4";
-        let start_range = try!(convert.start_node(node));
+        let start_range = convert.start_node(node)?;
         convert.update(start_range);
 
         let mut x: Option<Expression> = None;
@@ -3277,7 +3277,7 @@ impl Vec4 {
             }
         }
 
-        let x = try!(x.ok_or(()));
+        let x = x.ok_or(())?;
         let y = y.unwrap_or_else(||
             Expression::Variable(Box::new((Range::empty(0), Variable::f64(0.0)))));
         let z = z.unwrap_or_else(||
@@ -3357,7 +3357,7 @@ impl Vec4UnLoop {
     -> Result<(Range, Vec4UnLoop), ()> {
         let start = convert;
         let node = "vec4_un_loop";
-        let start_range = try!(convert.start_node(node));
+        let start_range = convert.start_node(node)?;
         convert.update(start_range);
 
         let mut name: Option<Arc<String>> = None;
@@ -3390,8 +3390,8 @@ impl Vec4UnLoop {
             }
         }
 
-        let name = try!(name.ok_or(()));
-        let expr = try!(expr.ok_or(()));
+        let name = name.ok_or(())?;
+        let expr = expr.ok_or(())?;
         Ok((convert.subtract(start), Vec4UnLoop {
             name,
             expr,
@@ -3452,7 +3452,7 @@ impl Swizzle {
     -> Result<(Range, Swizzle), ()> {
         let start = convert;
         let node = "swizzle";
-        let start_range = try!(convert.start_node(node));
+        let start_range = convert.start_node(node)?;
         convert.update(start_range);
 
         let mut sw0: Option<usize> = None;
@@ -3491,9 +3491,9 @@ impl Swizzle {
             }
         }
 
-        let sw0 = try!(sw0.ok_or(()));
-        let sw1 = try!(sw1.ok_or(()));
-        let expr = try!(expr.ok_or(()));
+        let sw0 = sw0.ok_or(())?;
+        let sw1 = sw1.ok_or(())?;
+        let expr = expr.ok_or(())?;
         Ok((convert.subtract(start), Swizzle {
             sw0,
             sw1,
@@ -3527,7 +3527,7 @@ impl Sw {
         ignored: &mut Vec<Range>)
     -> Result<(Range, Sw), ()> {
         let start = convert;
-        let start_range = try!(convert.start_node(node));
+        let start_range = convert.start_node(node)?;
         convert.update(start_range);
 
         let mut ind: Option<usize> = None;
@@ -3554,7 +3554,7 @@ impl Sw {
             }
         }
 
-        let ind = try!(ind.ok_or(()));
+        let ind = ind.ok_or(())?;
         Ok((convert.subtract(start), Sw {
             ind,
             source_range: convert.source(start).unwrap(),
@@ -3589,7 +3589,7 @@ impl For {
     -> Result<(Range, For), ()> {
         let start = convert;
         let node = "for";
-        let start_range = try!(convert.start_node(node));
+        let start_range = convert.start_node(node)?;
         convert.update(start_range);
 
         let mut init: Option<Expression> = None;
@@ -3627,10 +3627,10 @@ impl For {
             }
         }
 
-        let init = try!(init.ok_or(()));
-        let cond = try!(cond.ok_or(()));
-        let step = try!(step.ok_or(()));
-        let block = try!(block.ok_or(()));
+        let init = init.ok_or(())?;
+        let cond = cond.ok_or(())?;
+        let step = step.ok_or(())?;
+        let block = block.ok_or(())?;
         Ok((convert.subtract(start), For {
             init,
             cond,
@@ -3685,7 +3685,7 @@ impl ForIn {
         ignored: &mut Vec<Range>)
     -> Result<(Range, ForIn), ()> {
         let start = convert;
-        let start_range = try!(convert.start_node(node));
+        let start_range = convert.start_node(node)?;
         convert.update(start_range);
 
         let mut name: Option<Arc<String>> = None;
@@ -3717,9 +3717,9 @@ impl ForIn {
             }
         }
 
-        let name = try!(name.ok_or(()));
-        let iter = try!(iter.ok_or(()));
-        let block = try!(block.ok_or(()));
+        let name = name.ok_or(())?;
+        let iter = iter.ok_or(())?;
+        let block = block.ok_or(())?;
         Ok((convert.subtract(start), ForIn {
             name, iter, block, label,
             source_range: convert.source(start).unwrap(),
@@ -3773,7 +3773,7 @@ impl ForN {
         ignored: &mut Vec<Range>)
     -> Result<(Range, ForN), ()> {
         let start = convert;
-        let start_range = try!(convert.start_node(node));
+        let start_range = convert.start_node(node)?;
         convert.update(start_range);
 
         let mut indices: Vec<(Arc<String>, Option<Expression>, Option<Expression>)> = vec![];
@@ -3837,14 +3837,14 @@ impl ForN {
         let mut end_expr = indices[0].2.clone();
 
         if indices.len() > 1 {
-            let (_, new_for_n) = try!(ForN::create(
+            let (_, new_for_n) = ForN::create(
                 node,
                 range,
                 source_range,
                 None,
                 &indices[1..],
                 block
-            ));
+            )?;
             block = Some(Block {
                 source_range,
                 expressions: vec![match node {
@@ -3864,14 +3864,14 @@ impl ForN {
             });
         }
 
-        let block = try!(block.ok_or(()));
+        let block = block.ok_or(())?;
 
         // Infer list length from index.
         if end_expr.is_none() {
             end_expr = infer_len::infer(&block, &name);
         }
 
-        let end_expr = try!(end_expr.ok_or(()));
+        let end_expr = end_expr.ok_or(())?;
         Ok((range, ForN {
             name,
             start: start_expr,
@@ -3924,7 +3924,7 @@ impl Loop {
     -> Result<(Range, Loop), ()> {
         let start = convert;
         let node = "loop";
-        let start_range = try!(convert.start_node(node));
+        let start_range = convert.start_node(node)?;
         convert.update(start_range);
 
         let mut block: Option<Block> = None;
@@ -3947,7 +3947,7 @@ impl Loop {
             }
         }
 
-        let block = try!(block.ok_or(()));
+        let block = block.ok_or(())?;
         Ok((convert.subtract(start), Loop {
             block,
             label,
@@ -3991,7 +3991,7 @@ impl Break {
     -> Result<(Range, Break), ()> {
         let start = convert;
         let node = "break";
-        let start_range = try!(convert.start_node(node));
+        let start_range = convert.start_node(node)?;
         convert.update(start_range);
 
         let mut label: Option<Arc<String>> = None;
@@ -4033,7 +4033,7 @@ impl Continue {
     -> Result<(Range, Continue), ()> {
         let start = convert;
         let node = "continue";
-        let start_range = try!(convert.start_node(node));
+        let start_range = convert.start_node(node)?;
         convert.update(start_range);
 
         let mut label: Option<Arc<String>> = None;
@@ -4085,7 +4085,7 @@ impl If {
     -> Result<(Range, If), ()> {
         let start = convert;
         let node = "if";
-        let start_range = try!(convert.start_node(node));
+        let start_range = convert.start_node(node)?;
         convert.update(start_range);
 
         let mut cond: Option<Expression> = None;
@@ -4124,8 +4124,8 @@ impl If {
             }
         }
 
-        let cond = try!(cond.ok_or(()));
-        let true_block = try!(true_block.ok_or(()));
+        let cond = cond.ok_or(())?;
+        let true_block = true_block.ok_or(())?;
         Ok((convert.subtract(start), If {
             cond,
             true_block,
@@ -4189,7 +4189,7 @@ impl Compare {
     -> Result<(Range, Compare), ()> {
         let start = convert;
         let node = "compare";
-        let start_range = try!(convert.start_node(node));
+        let start_range = convert.start_node(node)?;
         convert.update(start_range);
 
         let mut op: Option<CompareOp> = None;
@@ -4232,9 +4232,9 @@ impl Compare {
             }
         }
 
-        let op = try!(op.ok_or(()));
-        let left = try!(left.ok_or(()));
-        let right = try!(right.ok_or(()));
+        let op = op.ok_or(())?;
+        let left = left.ok_or(())?;
+        let right = right.ok_or(())?;
         Ok((convert.subtract(start), Compare {
             op,
             left,
@@ -4311,7 +4311,7 @@ impl In {
         ignored: &mut Vec<Range>)
     -> Result<(Range, In), ()> {
         let start = convert;
-        let start_range = try!(convert.start_node(node));
+        let start_range = convert.start_node(node)?;
         convert.update(start_range);
 
         let mut name: Option<Arc<String>> = None;
@@ -4333,7 +4333,7 @@ impl In {
             }
         }
 
-        let name = try!(name.ok_or(()));
+        let name = name.ok_or(())?;
         Ok((convert.subtract(start), In {
             alias,
             name,

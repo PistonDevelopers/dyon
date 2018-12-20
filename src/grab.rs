@@ -31,7 +31,7 @@ pub fn grab_expr(
         E::Grab(ref grab) => {
             if grab.level == level {
                 // Evaluate the expression and insert it into new AST as constant.
-                let v = match try!(rt.expression(&grab.expr, side, module)) {
+                let v = match rt.expression(&grab.expr, side, module)? {
                     (Some(x), Flow::Continue) => x,
                     (x, Flow::Return) => { return Ok((Grabbed::Variable(x), Flow::Return)); }
                     _ => return Err(module.error(expr.source_range(),

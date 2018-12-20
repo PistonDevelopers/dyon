@@ -3,7 +3,7 @@ use super::*;
 macro_rules! start(
     ($rt:ident, $for_n_expr:ident, $module:ident) => {
         if let Some(ref start_expr) = $for_n_expr.start {
-            let start = match try!($rt.expression(start_expr, Side::Right, $module)) {
+            let start = match $rt.expression(start_expr, Side::Right, $module)? {
                 (x, Flow::Return) => { return Ok((x, Flow::Return)); }
                 (Some(x), Flow::Continue) => x,
                 _ => return Err($module.error(start_expr.source_range(),
@@ -22,7 +22,7 @@ macro_rules! start(
 
 macro_rules! end(
     ($rt:ident, $for_n_expr:ident, $module:ident) => {{
-        let end = match try!($rt.expression(&$for_n_expr.end, Side::Right, $module)) {
+        let end = match $rt.expression(&$for_n_expr.end, Side::Right, $module)? {
             (x, Flow::Return) => { return Ok((x, Flow::Return)); }
             (Some(x), Flow::Continue) => x,
             _ => return Err($module.error($for_n_expr.end.source_range(),
@@ -127,7 +127,7 @@ impl Runtime {
         let mut flow = Flow::Continue;
         loop {
             cond!(self, for_n_expr, st, end, module);
-            match try!(self.block(&for_n_expr.block, module)) {
+            match self.block(&for_n_expr.block, module)? {
                 (x, Flow::Return) => { return Ok((x, Flow::Return)); }
                 (_, Flow::Continue) => {}
                 (_, Flow::Break(x)) => break_!(x, for_n_expr, flow),
@@ -163,7 +163,7 @@ impl Runtime {
         let mut flow = Flow::Continue;
         loop {
             cond!(self, for_n_expr, st, end, module);
-            match try!(self.block(&for_n_expr.block, module)) {
+            match self.block(&for_n_expr.block, module)? {
                 (Some(x), Flow::Continue) => {
                     match self.resolve(&x) {
                         &Variable::F64(val, _) => sum += val,
@@ -209,7 +209,7 @@ impl Runtime {
         let mut flow = Flow::Continue;
         loop {
             cond!(self, for_n_expr, st, end, module);
-            match try!(self.block(&for_n_expr.block, module)) {
+            match self.block(&for_n_expr.block, module)? {
                 (Some(x), Flow::Continue) => {
                     match self.resolve(&x) {
                         &Variable::F64(val, _) => prod *= val,
@@ -255,7 +255,7 @@ impl Runtime {
         let mut flow = Flow::Continue;
         loop {
             let ind = cond!(self, for_n_expr, st, end, module);
-            match try!(self.block(&for_n_expr.block, module)) {
+            match self.block(&for_n_expr.block, module)? {
                 (Some(x), Flow::Continue) => {
                     match self.resolve(&x) {
                         &Variable::F64(val, ref val_sec) => {
@@ -316,7 +316,7 @@ impl Runtime {
         let mut flow = Flow::Continue;
         loop {
             let ind = cond!(self, for_n_expr, st, end, module);
-            match try!(self.block(&for_n_expr.block, module)) {
+            match self.block(&for_n_expr.block, module)? {
                 (Some(x), Flow::Continue) => {
                     match self.resolve(&x) {
                         &Variable::F64(val, ref val_sec) => {
@@ -377,7 +377,7 @@ impl Runtime {
         let mut flow = Flow::Continue;
         loop {
             let ind = cond!(self, for_n_expr, st, end, module);
-            match try!(self.block(&for_n_expr.block, module)) {
+            match self.block(&for_n_expr.block, module)? {
                 (Some(x), Flow::Continue) => {
                     match self.resolve(&x) {
                         &Variable::Bool(val, ref val_sec) => {
@@ -439,7 +439,7 @@ impl Runtime {
         let mut flow = Flow::Continue;
         loop {
             let ind = cond!(self, for_n_expr, st, end, module);
-            match try!(self.block(&for_n_expr.block, module)) {
+            match self.block(&for_n_expr.block, module)? {
                 (Some(x), Flow::Continue) => {
                     match self.resolve(&x) {
                         &Variable::Bool(val, ref val_sec) => {
@@ -513,7 +513,7 @@ impl Runtime {
                     ast::Expression::Link(ref link) => {
                         // Evaluate link items directly.
                         'inner: for item in &link.items {
-                            match try!(rt.expression(item, Side::Right, module)) {
+                            match rt.expression(item, Side::Right, module)? {
                                 (Some(ref x), Flow::Continue) => {
                                     match res.push(rt.resolve(x)) {
                                         Err(err) => {
@@ -612,7 +612,7 @@ impl Runtime {
         let mut flow = Flow::Continue;
         loop {
             cond!(self, for_n_expr, st, end, module);
-            match try!(self.block(&for_n_expr.block, module)) {
+            match self.block(&for_n_expr.block, module)? {
                 (Some(x), Flow::Continue) => res.push(x),
                 (x, Flow::Return) => { return Ok((x, Flow::Return)); }
                 (None, Flow::Continue) => {
@@ -652,7 +652,7 @@ impl Runtime {
         let mut flow = Flow::Continue;
         loop {
             cond!(self, for_n_expr, st, end, module);
-            match try!(self.block(&for_n_expr.block, module)) {
+            match self.block(&for_n_expr.block, module)? {
                 (Some(x), Flow::Continue) => {
                     match self.resolve(&x) {
                         &Variable::Vec4(val) => {
@@ -702,7 +702,7 @@ impl Runtime {
         let mut flow = Flow::Continue;
         loop {
             cond!(self, for_n_expr, st, end, module);
-            match try!(self.block(&for_n_expr.block, module)) {
+            match self.block(&for_n_expr.block, module)? {
                 (Some(x), Flow::Continue) => {
                     match self.resolve(&x) {
                         &Variable::Vec4(val) => {

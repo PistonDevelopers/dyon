@@ -15,9 +15,9 @@ type Strings = HashSet<Arc<String>>;
 /// Loads data from a file.
 #[cfg(feature = "file")]
 pub fn load_file(file: &str) -> Result<Variable, String> {
-    let mut data_file = try!(File::open(file).map_err(|err| io_error("open", file, &err)));
+    let mut data_file = File::open(file).map_err(|err| io_error("open", file, &err))?;
     let mut d = String::new();
-    try!(data_file.read_to_string(&mut d).map_err(|err| io_error("read", file, &err)));
+    data_file.read_to_string(&mut d).map_err(|err| io_error("read", file, &err))?;
     load_data(&d)
 }
 
@@ -130,7 +130,7 @@ fn expr(
     if let Some(range) = read.tag("some(") {
         *read = read.consume(range.length);
         opt_w(read);
-        let res = try!(expr(read, strings, data));
+        let res = expr(read, strings, data)?;
         opt_w(read);
         return if let Some(range) = read.tag(")") {
             *read = read.consume(range.length);
@@ -206,7 +206,7 @@ fn object(
 
         opt_w(read);
 
-        res.insert(key, try!(expr(read, strings, data)));
+        res.insert(key, expr(read, strings, data)?);
 
         was_comma = comma(read);
     }
@@ -234,7 +234,7 @@ fn array(
             return Err(error(read.start(), "Expected `,`", data));
         }
 
-        res.push(try!(expr(read, strings, data)));
+        res.push(expr(read, strings, data)?);
         was_comma = comma(read);
     }
     Ok(Variable::Array(Arc::new(res)))
@@ -267,7 +267,7 @@ fn link(
             break;
         }
 
-        match link.push(&try!(expr(read, strings, data))) {
+        match link.push(&expr(read, strings, data)?) {
             Ok(()) => {}
             Err(err) => return Err(err),
         };

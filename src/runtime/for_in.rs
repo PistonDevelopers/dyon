@@ -2,7 +2,7 @@ use super::*;
 
 macro_rules! iter(
     ($rt:ident, $for_in_expr:ident, $module:ident) => {{
-        let iter = match try!($rt.expression(&$for_in_expr.iter, Side::Right, $module)) {
+        let iter = match $rt.expression(&$for_in_expr.iter, Side::Right, $module)? {
             (x, Flow::Return) => { return Ok((x, Flow::Return)); }
             (Some(x), Flow::Continue) => x,
             _ => return Err($module.error($for_in_expr.iter.source_range(),
@@ -99,7 +99,7 @@ impl Runtime {
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
         loop {
-            match try!(self.block(&for_in_expr.block, module)) {
+            match self.block(&for_in_expr.block, module)? {
                 (x, Flow::Return) => { return Ok((x, Flow::Return)); }
                 (_, Flow::Continue) => {}
                 (_, Flow::Break(x)) => break_!(x, for_in_expr, flow),
@@ -138,7 +138,7 @@ impl Runtime {
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
         loop {
-            match try!(self.block(&for_in_expr.block, module)) {
+            match self.block(&for_in_expr.block, module)? {
                 (Some(x), Flow::Continue) => {
                     match self.resolve(&x) {
                         &Variable::F64(val, _) => sum += val,
@@ -184,7 +184,7 @@ impl Runtime {
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
         loop {
-            match try!(self.block(&for_in_expr.block, module)) {
+            match self.block(&for_in_expr.block, module)? {
                 (Some(x), Flow::Continue) => {
                     match self.resolve(&x) {
                         &Variable::F64(val, _) => prod *= val,
@@ -229,7 +229,7 @@ impl Runtime {
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
         loop {
-            match try!(self.block(&for_in_expr.block, module)) {
+            match self.block(&for_in_expr.block, module)? {
                 (Some(x), Flow::Continue) => {
                     match self.resolve(&x) {
                         &Variable::F64(val, ref val_sec) => {
@@ -291,7 +291,7 @@ impl Runtime {
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
         loop {
-            match try!(self.block(&for_in_expr.block, module)) {
+            match self.block(&for_in_expr.block, module)? {
                 (Some(x), Flow::Continue) => {
                     match self.resolve(&x) {
                         &Variable::F64(val, ref val_sec) => {
@@ -354,7 +354,7 @@ impl Runtime {
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
         loop {
-            match try!(self.block(&for_in_expr.block, module)) {
+            match self.block(&for_in_expr.block, module)? {
                 (Some(x), Flow::Continue) => {
                     match self.resolve(&x) {
                         &Variable::Bool(val, ref val_sec) => {
@@ -418,7 +418,7 @@ impl Runtime {
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
         loop {
-            match try!(self.block(&for_in_expr.block, module)) {
+            match self.block(&for_in_expr.block, module)? {
                 (Some(x), Flow::Continue) => {
                     match self.resolve(&x) {
                         &Variable::Bool(val, ref val_sec) => {
@@ -493,7 +493,7 @@ impl Runtime {
                     ast::Expression::Link(ref link) => {
                         // Evaluate link items directly.
                         'inner: for item in &link.items {
-                            match try!(rt.expression(item, Side::Right, module)) {
+                            match rt.expression(item, Side::Right, module)? {
                                 (Some(ref x), Flow::Continue) => {
                                     match res.push(rt.resolve(x)) {
                                         Err(err) => {
@@ -615,7 +615,7 @@ impl Runtime {
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
         loop {
-            match try!(self.block(&for_in_expr.block, module)) {
+            match self.block(&for_in_expr.block, module)? {
                 (Some(x), Flow::Continue) => res.push(x),
                 (x, Flow::Return) => { return Ok((x, Flow::Return)); }
                 (None, Flow::Continue) => {

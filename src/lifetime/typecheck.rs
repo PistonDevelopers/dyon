@@ -547,7 +547,7 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
 
                     // Check all return statements.
                     let mut found_return = false;
-                    try!(check_fn(i, nodes, ty, &mut found_return));
+                    check_fn(i, nodes, ty, &mut found_return)?;
                     // Report if there is no return statement.
                     if !found_return &&
                        ty != &Type::Void &&
@@ -580,7 +580,7 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
                 }
             }
             Kind::If => {
-                try!(check_if(i, nodes))
+                check_if(i, nodes)?
             }
             Kind::Assign => {
                 use ast::AssignOp;
@@ -704,7 +704,7 @@ fn check_fn(
             Kind::Closure => { continue; }
             _ => {}
         }
-        try!(check_fn(ch, nodes, ty, found_return));
+        check_fn(ch, nodes, ty, found_return)?;
     }
     Ok(())
 }

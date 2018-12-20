@@ -272,7 +272,7 @@ impl Link {
             Link(ref link) => {
                 for slice in &link.slices {
                     for i in slice.start..slice.end {
-                        try!(self.push(&slice.block.var(i)))
+                        self.push(&slice.block.var(i))?
                     }
                 }
                 Ok(())

@@ -110,9 +110,9 @@ impl Thread {
             None => return Err("The Thread has already been invalidated".into()),
             Some(thread) => thread
         };
-        let mutex = try!(Arc::try_unwrap(handle).map_err(|_|
+        let mutex = Arc::try_unwrap(handle).map_err(|_|
             format!("{}\nCan not access Thread because there is \
-            more than one reference to it", rt.stack_trace())));
+            more than one reference to it", rt.stack_trace()))?;
         mutex.into_inner().map_err(|err|
             format!("{}\nCan not lock Thread mutex:\n{}", rt.stack_trace(), err.description()))
     }
@@ -557,18 +557,18 @@ impl Module {
 /// Runs a program using a source file.
 pub fn run(source: &str) -> Result<(), String> {
     let mut module = Module::new();
-    try!(load(source, &mut module));
+    load(source, &mut module)?;
     let mut runtime = runtime::Runtime::new();
-    try!(runtime.run(&Arc::new(module)));
+    runtime.run(&Arc::new(module))?;
     Ok(())
 }
 
 /// Runs a program from a string.
 pub fn run_str(source: &str, d: Arc<String>) -> Result<(), String> {
     let mut module = Module::new();
-    try!(load_str(source, d, &mut module));
+    load_str(source, d, &mut module)?;
     let mut runtime = runtime::Runtime::new();
-    try!(runtime.run(&Arc::new(module)));
+    runtime.run(&Arc::new(module))?;
     Ok(())
 }
 
@@ -631,8 +631,8 @@ pub fn load(source: &str, module: &mut Module) -> Result<(), String> {
     use std::fs::File;
     use std::io::Read;
 
-    let mut data_file = try!(File::open(source).map_err(|err|
-        format!("Could not open `{}`, {}", source, err)));
+    let mut data_file = File::open(source).map_err(|err|
+        format!("Could not open `{}`, {}", source, err))?;
     let mut data = Arc::new(String::new());
     data_file.read_to_string(Arc::make_mut(&mut data)).unwrap();
     load_str(source, data, module)
@@ -654,13 +654,12 @@ pub fn load_str(source: &str, d: Arc<String>, module: &mut Module) -> Result<(),
         };
     }
 
-    let syntax_rules = try!(SYNTAX_RULES.as_ref()
-        .map_err(|err| err.clone()));
+    let syntax_rules = SYNTAX_RULES.as_ref().map_err(|err| err.clone())?;
 
     let mut data = vec![];
-    try!(parse_errstr(syntax_rules, &d, &mut data).map_err(
+    parse_errstr(syntax_rules, &d, &mut data).map_err(
         |err| format!("In `{}:`\n{}", source, err)
-    ));
+    )?;
 
     let check_data = data.clone();
     let prelude = Arc::new(Prelude::from_module(module));

@@ -13,8 +13,8 @@ use Variable;
 
 pub fn parse_syntax_data(rules: &Syntax, file: &str, d: &str) -> Result<Vec<Variable>, String> {
     let mut tokens = vec![];
-    try!(parse_errstr(&rules, &d, &mut tokens).map_err(|err|
-        format!("When parsing data in `{}`:\n{}", file, err)));
+    parse_errstr(&rules, &d, &mut tokens).map_err(|err|
+        format!("When parsing data in `{}`:\n{}", file, err))?;
     let mut res = vec![];
     let b: Arc<String> = Arc::new("bool".into());
     let s: Arc<String> = Arc::new("str".into());
@@ -56,20 +56,20 @@ pub fn parse_syntax_data(rules: &Syntax, file: &str, d: &str) -> Result<Vec<Vari
 }
 
 fn load_metarules_data(meta: &str, s: &str, file: &str, d: &str) -> Result<Vec<Variable>, String> {
-    let rules = try!(syntax_errstr(&s).map_err(|err|
-        format!("When parsing meta syntax in `{}`:\n{}", meta, err)));
+    let rules = syntax_errstr(&s).map_err(|err|
+        format!("When parsing meta syntax in `{}`:\n{}", meta, err))?;
     parse_syntax_data(&rules, file, d)
 }
 
 /// Loads a file using a meta file as syntax.
 #[cfg(feature = "file")]
 pub fn load_meta_file(meta: &str, file: &str) -> Result<Vec<Variable>, String> {
-    let mut syntax_file = try!(File::open(meta).map_err(|err| io_error("open", meta, &err)));
+    let mut syntax_file = File::open(meta).map_err(|err| io_error("open", meta, &err))?;
     let mut s = String::new();
-    try!(syntax_file.read_to_string(&mut s).map_err(|err| io_error("read", meta, &err)));
-    let mut data_file = try!(File::open(file).map_err(|err| io_error("open", file, &err)));
+    syntax_file.read_to_string(&mut s).map_err(|err| io_error("read", meta, &err))?;
+    let mut data_file = File::open(file).map_err(|err| io_error("open", file, &err))?;
     let mut d = String::new();
-    try!(data_file.read_to_string(&mut d).map_err(|err| io_error("read", file, &err)));
+    data_file.read_to_string(&mut d).map_err(|err| io_error("read", file, &err))?;
     load_metarules_data(meta, &s, file, &d)
 }
 
@@ -84,20 +84,20 @@ pub fn load_text_file_from_url(url: &str) -> Result<String, String> {
     use reqwest::{Client, Url, StatusCode};
     use std::io::Read;
 
-    let url_address = try!(Url::parse(url)
-        .map_err(|e| format!("Error parsing url:\n`{}`\n", e)));
-    let client = try!(Client::new()
+    let url_address = Url::parse(url)
+        .map_err(|e| format!("Error parsing url:\n`{}`\n", e))?;
+    let client = Client::new()
         .map_err(|e| format!("Error creating http client `{}`:\n{}\n",
-                             url, e.to_string())));
+                             url, e.to_string()))?;
     let request = client.get(url_address);
-    let mut response = try!(request.send()
+    let mut response = request.send()
         .map_err(|e| format!("Error fetching file over http `{}`:\n{}\n",
-                             url, e.to_string())));
+                             url, e.to_string()))?;
     if *response.status() == StatusCode::Ok {
         let mut data = String::new();
-        try!(response.read_to_string(&mut data)
+        response.read_to_string(&mut data)
             .map_err(|e| format!("Error fetching file over http `{}`:\n{}\n",
-                                 url, e.to_string())));
+                                 url, e.to_string()))?;
         Ok(data)
     } else {
         Err(format!("Error fetching file over http `{}:\n{}\n",
@@ -113,10 +113,10 @@ pub fn load_text_file_from_url(_url: &str) -> Result<String, String> {
 /// Loads an url using a meta file as syntax.
 #[cfg(feature = "http")]
 pub fn load_meta_url(meta: &str, url: &str) -> Result<Vec<Variable>, String> {
-    let mut syntax_file = try!(File::open(meta).map_err(|err| io_error("open", meta, &err)));
+    let mut syntax_file = File::open(meta).map_err(|err| io_error("open", meta, &err))?;
     let mut s = String::new();
-    try!(syntax_file.read_to_string(&mut s).map_err(|err| io_error("read", meta, &err)));
-    let d = try!(load_text_file_from_url(url));
+    syntax_file.read_to_string(&mut s).map_err(|err| io_error("read", meta, &err))?;
+    let d = load_text_file_from_url(url)?;
     load_metarules_data(meta, &s, url, &d)
 }
 
@@ -133,22 +133,22 @@ pub fn download_url_to_file(url: &str, file: &str) -> Result<String, String> {
     use std::fs::File;
     use std::error::Error;
 
-    let url_address = try!(Url::parse(url)
-        .map_err(|e| format!("Error parsing url:\n`{}`\n", e)));
-    let client = try!(Client::new()
+    let url_address = Url::parse(url)
+        .map_err(|e| format!("Error parsing url:\n`{}`\n", e))?;
+    let client = Client::new()
         .map_err(|e| format!("Error creating http client `{}`:\n{}\n",
-                             url, e.to_string())));
+                             url, e.to_string()))?;
     let request = client.get(url_address);
-    let mut response = try!(request.send()
+    let mut response = request.send()
         .map_err(|e| format!("Error fetching file over http `{}`:\n{}\n",
-                             url, e.to_string())));
+                             url, e.to_string()))?;
     if *response.status() == StatusCode::Ok {
-        let mut f = try!(File::create(file).map_err(|err| {
+        let mut f = File::create(file).map_err(|err| {
             format!("Could not create file `{}`:\n{}", file, err.description())
-        }));
-        try!(copy(&mut response, &mut f)
+        })?;
+        copy(&mut response, &mut f)
             .map_err(|e| format!("Error fetching file over http `{}`:\n{}\n",
-                                 url, e.to_string())));
+                                 url, e.to_string()))?;
         Ok(file.into())
     } else {
         Err(format!("Error fetching file over http `{}:\n{}\n",
@@ -209,13 +209,13 @@ pub fn json_from_meta_data(data: &[Variable]) -> Result<String, io::Error> {
         } else { false };
         let print_comma = !first && !is_end;
         if print_comma {
-            try!(writeln!(w, ","));
+            writeln!(w, ",")?;
         } else if i != 0 {
-            try!(writeln!(w, ""));
+            writeln!(w, "")?;
         }
         first = false;
         for _ in 0 .. indent_offset + indent {
-            try!(write!(w, " "));
+            write!(w, " ")?;
         }
         if let Variable::Array(ref arr) = *d {
             let name = if let Variable::Text(ref t) = arr[3] {
@@ -227,30 +227,30 @@ pub fn json_from_meta_data(data: &[Variable]) -> Result<String, io::Error> {
                 match &***t {
                     "start" => {
                         first = true;
-                        try!(write_string(&mut w, name));
-                        try!(write!(w, ":{}", "{"));
+                        write_string(&mut w, name)?;
+                        write!(w, ":{}", "{")?;
                         indent += 1;
                     }
                     "end" => {
-                        try!(write!(w, "{}", "}"));
+                        write!(w, "{}", "}")?;
                     }
                     "bool" => {
                         if let Variable::Bool(val, _) = arr[4] {
-                            try!(write_string(&mut w, name));
-                            try!(write!(w, ":{}", val));
+                            write_string(&mut w, name)?;
+                            write!(w, ":{}", val)?;
                         }
                     }
                     "f64" => {
                         if let Variable::F64(val, _) = arr[4] {
-                            try!(write_string(&mut w, name));
-                            try!(write!(w, ":{}", val));
+                            write_string(&mut w, name)?;
+                            write!(w, ":{}", val)?;
                         }
                     }
                     "str" => {
                         if let Variable::Text(ref val) = arr[4] {
-                            try!(write_string(&mut w, name));
-                            try!(write!(w, ":"));
-                            try!(write_string(&mut w, val));
+                            write_string(&mut w, name)?;
+                            write!(w, ":")?;
+                            write_string(&mut w, val)?;
                         }
                     }
                     _ => {}
@@ -258,6 +258,6 @@ pub fn json_from_meta_data(data: &[Variable]) -> Result<String, io::Error> {
             }
         }
     }
-    try!(writeln!(w, ""));
+    writeln!(w, "")?;
     Ok(String::from_utf8(w).unwrap())
 }

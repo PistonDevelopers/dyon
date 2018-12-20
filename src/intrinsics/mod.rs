@@ -256,7 +256,7 @@ pub(crate) fn call_standard(
     module: &Arc<Module>
 ) -> Result<(Option<Variable>, Flow), String> {
     for arg in &call.args {
-        match try!(rt.expression(arg, Side::Right, module)) {
+        match rt.expression(arg, Side::Right, module)? {
             (x, Flow::Return) => { return Ok((x, Flow::Return)); }
             (Some(v), Flow::Continue) => rt.stack.push(v),
             _ => return Err(module.error(arg.source_range(),
@@ -267,6 +267,6 @@ pub(crate) fn call_standard(
     }
     let (ind, f) = TABLE[index];
     debug_assert!(ind == index);
-    let expect = try!((f)(rt, call, module));
+    let expect = (f)(rt, call, module)?;
     Ok((expect, Flow::Continue))
 }
