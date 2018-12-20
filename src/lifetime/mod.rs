@@ -583,6 +583,22 @@ pub fn check(
                 .map_err(|err| nodes[i].source.wrap(err))?;
     }
 
+    // Check that no function argument has lifetime "'return"
+    // while the function does not return anything.
+    for &f in &functions {
+        if let Some(Type::Void) = nodes[f].ty {
+            for &j in nodes[f].children.iter().filter(|&&i| nodes[i].kind == Kind::Arg) {
+                if let Some(ref lt) = nodes[j].lifetime {
+                    if &**lt == "return" {
+                        let name = nodes[j].name().expect("Expected name");
+                        return Err(nodes[j].source
+                            .wrap(format!("`{}: 'return` , but function does not return", name)));
+                    }
+                }
+            }
+        }
+    }
+
     // Check the lifetime of expressions at end of blocks.
     for &i in &end_of_blocks {
         let parent = nodes[i].parent.unwrap();
