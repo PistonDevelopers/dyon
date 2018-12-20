@@ -146,6 +146,18 @@ pub fn compare_lifetimes(
                                 nodes[r[0]].name().expect("Expected name")));
                         }
                         Lifetime::Current(r) => {
+                            // This gets triggered in cases like these:
+                            /*
+                            fn main() {}
+                            fn foo() ~ a {
+                                a = a       // <--- attempting to overwrite 'a' with itself.
+                            }
+                            */
+                            // Since current objects are not permitted to have lifetimes,
+                            // this is the only case where there is an order,
+                            // so this can only happen when attempting to overwrite
+                            // the same current object with itself.
+                            // For this reason, this case is rarely seen in practice.
                             return Err(format!("`{}` does not live long enough",
                                 nodes[r].name().expect("Expected name")));
                         }
