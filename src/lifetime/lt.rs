@@ -119,6 +119,14 @@ pub fn compare_lifetimes(
                 Some(Ordering::Greater) | Some(Ordering::Equal) => {
                     match *r {
                         Lifetime::Local(r) => {
+                            // This gets triggered in cases like these:
+                            /*
+                            fn main() {
+                                a := [[]]
+                                b := [3]    // <--- declared after 'a'
+                                a[0] = b    // <--- attempting to put 'b' inside 'a'
+                            }
+                            */
                             return Err(format!("`{}` does not live long enough",
                                 nodes[r].name().expect("Expected name")));
                         }

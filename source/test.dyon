@@ -1,10 +1,5 @@
 fn main() {
-    b := 3
-    a := 2
-    _ := foo(mut a, b)
-}
-
-fn foo(mut a: 'return, b) -> f64 {
-    a = b
-    return 3
+    a := [[]]
+    b := [3]
+    a[0] = b
 }
