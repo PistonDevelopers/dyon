@@ -1178,28 +1178,30 @@ impl Runtime {
         use std::cell::Cell;
 
         let name: Arc<String> = Arc::new(function.into());
-        match module.find_function(&name, 0) {
-            FnIndex::Loaded(f_index) => {
-                let call = ast::Call {
-                    alias: None,
-                    name: name.clone(),
-                    f_index: Cell::new(FnIndex::Loaded(f_index)),
-                    args: args.iter()
-                            .map(|arg| ast::Expression::Variable(Box::new((
-                                       Range::empty(0), arg.clone()))))
-                            .collect(),
-                    custom_source: None,
-                    source_range: Range::empty(0),
-                };
-                match self.call(&call, &module) {
-                    Ok((Some(val), Flow::Continue)) => Ok(val),
-                    Err(err) => Err(err),
-                    _ => Err(module.error(call.source_range,
-                                    &format!("{}\nExpected something",
-                                        self.stack_trace()), self))
-                }
-            }
-            _ => Err(format!("Could not find function `{}`",function))
+        let fn_index = module.find_function(&name, 0);
+        if let FnIndex::None = fn_index {
+            return Err(format!("Could not find function `{}`", function));
+        }
+
+        let call = ast::Call {
+            alias: None,
+            name: name.clone(),
+            f_index: Cell::new(fn_index),
+            args: args
+                .iter()
+                .map(|arg| ast::Expression::Variable(Box::new((Range::empty(0), arg.clone()))))
+                .collect(),
+            custom_source: None,
+            source_range: Range::empty(0),
+        };
+        match self.call(&call, &module) {
+            Ok((Some(val), Flow::Continue)) => Ok(val),
+            Err(err) => Err(err),
+            _ => Err(module.error(
+                call.source_range,
+                &format!("{}\nExpected something", self.stack_trace()),
+                self,
+            )),
         }
     }
 
