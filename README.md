@@ -6,7 +6,7 @@ A rusty dynamically typed scripting language
 [Dyon Snippets](https://github.com/PistonDevelopers/dyon_snippets)  
 [/r/dyon](https://www.reddit.com/r/dyon/)
 
-Dyon script files ends with ".dyon".
+Dyon script files end with `.dyon`.
 
 To run Dyon script files from command line, type:
 
@@ -86,7 +86,7 @@ dyonrun <file.dyon>
 
 ### Why the name Dyon?
 
-Dyon is a hypothetical particle predicted by several grand unified theories in physics with both electrical and magnetic charge. See [wikipedia article](https://en.wikipedia.org/wiki/Dyon) for more information.
+Dyon is a hypothetical particle predicted by several grand unified theories in physics with both electrical and magnetic charge. See this [Wikipedia article](https://en.wikipedia.org/wiki/Dyon) for more information.
 
 The name Dyon fits because, just like the particle, there are things that are yet to be discovered about language design.
 However, this language was not born out of a grand new vision,
@@ -103,7 +103,7 @@ The idea was to make a simple, but convenient scripting language that integrated
 - To test the design of the language, created a demo for interactive coding
 - Mutability check to improve readability
 - Short For loop to improve readability and performance
-- Mathematical loops and unicode symbols to improve readability
+- Mathematical loops and Unicode symbols to improve readability
 - Go-like coroutines to add multi-thread support
 - 4D vectors with unpack and swizzle to make 2D and 3D programming easier
 - Html hex colors to make copying colors from image editors possible
