@@ -1,6 +1,6 @@
 [package]
 name = "piston-dyon_interactive"
-version = "0.26.0"
+version = "0.27.0"
 authors = ["Sven Nilsen <bvssvni@gmail.com>"]
 description = "A library for interactive coding with the Piston game engine"
 keywords = ["script", "scripting", "game", "language", "piston"]
@@ -16,16 +16,16 @@ version = "0.40.0"
 path = ".."
 
 [dependencies]
-piston = "0.40.0"
+piston = "0.41.0"
 current = "0.1.2"
 piston-texture = "0.6.0"
 image = "0.21.0"
 
 [dependencies.piston2d-graphics]
-version = "0.29.0"
+version = "0.30.0"
 features = ["glyph_cache_rusttype"]
 
 [dev-dependencies]
-pistoncore-sdl2_window = "0.53.0"
-piston2d-opengl_graphics = "0.58.0"
+pistoncore-sdl2_window = "0.54.0"
+piston2d-opengl_graphics = "0.59.0"
 piston-music = "0.25.0"
