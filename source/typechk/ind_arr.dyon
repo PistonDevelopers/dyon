@@ -6,6 +6,4 @@ fn main() {
     println(list[x])
     list[x] = 4
     println(list)
-
-    // for i, j {println(list[[i, j]])}
 }
