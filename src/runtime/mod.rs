@@ -194,6 +194,16 @@ fn item_lookup(
                             }
                             Variable::Array(ref indices) => {
                                 // Use indices in array.
+                                //
+                                // This uses an unsafe pointer safely, because an array lookup
+                                // will always point to some object on the heap or earlier stack.
+                                // The safety rule of references is enforced by the runtime,
+                                // guarded by the lifetime checker, but can not be checked
+                                // at compile time.
+                                //
+                                // `[0, 1]` are indices to look up `b` in `[[a, b], [c, d]]`.
+                                //   ^  ^---- to `b` in `[a, b]`.
+                                //   \---- points to first array `[a, b]`.
                                 let mut arr: *mut Vec<Variable> = Arc::make_mut(arr);
                                 let n = indices.len();
                                 for (i, ind) in indices.iter().enumerate() {
