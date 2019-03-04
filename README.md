@@ -29,7 +29,7 @@ dyonrun <file.dyon>
 
 ### List of features
 
-- Array `arr := [a, b, c]` with lookup `arr[0]` and lookup with array of indices `arr[[0, 0]]`
+- Array `arr := [a, b, c]` with lookup `arr[0]` and [lookup with array of indices](https://github.com/PistonDevelopers/dyon/issues/590) `arr[[0, 0]]`
 - Object `obj := {x: a, y: b}`
 - Number (f64) `n := 5.3`
 - Boolean `t := true`
