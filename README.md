@@ -29,14 +29,13 @@ dyonrun <file.dyon>
 
 ### List of features
 
-- Array `arr := [a, b, c]`
+- Array `arr := [a, b, c]` with lookup `arr[0]` and lookup with array of indices `arr[[0, 0]]`
 - Object `obj := {x: a, y: b}`
 - Number (f64) `n := 5.3`
 - Boolean `t := true`
 - [Link](https://github.com/PistonDevelopers/dyon/issues/227) `link { 1 2 "hi" false }`
 - Custom Rust objects using `Arc<Mutex<Any>>`
-- Functions without return `fn foo() { ... }`
-- Functions with return `fn foo() -> { ... return x }`
+- Functions without return `fn foo() { ... }` and with return `fn foo() -> { ... return x }`
 - Functions as mathematical expresisons `f(x) = x / (x - 1)`
 - [Optional namespaces with shared aliases](https://github.com/PistonDevelopers/dyon/issues/434) `ns program::example::test`
 - [Lifetime checker](https://github.com/PistonDevelopers/dyon/issues/173) (no garbage collector is needed) `fn foo(mut a, b: 'a) { a.x = b }`
