@@ -69,7 +69,7 @@ dyonrun <file.dyon>
 - [Ad-hoc types](https://github.com/PistonDevelopers/dyon/issues/236) `fn players() -> [Player str] { ... }`
 - [Current objects](https://github.com/PistonDevelopers/dyon/issues/224) `fn render() ~ world { ... }`
 - [Go-like coroutines with `go`](https://github.com/PistonDevelopers/dyon/issues/163) `thread := go foo()`
-- [In-types concurrency](https://github.com/PistonDevelopers/dyon/issues/495) `receiver := in foo`
+- [In-types concurrency](https://github.com/PistonDevelopers/dyon/issues/495) `receiver := in foo` with [for-in loops](https://github.com/PistonDevelopers/dyon/issues/520) `for x in a {print(x[0]}`
 - [Closures](https://github.com/PistonDevelopers/dyon/issues/314) `\(x) = x + 1`
 - [Grab expressions](https://github.com/PistonDevelopers/dyon/issues/316) `\(x) = (grab a) + x`
 - [4D vectors with `f32` precision `(x, y, z, w)`](https://github.com/PistonDevelopers/dyon/issues/144)
