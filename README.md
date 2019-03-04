@@ -54,10 +54,8 @@ dyonrun <file.dyon>
 - [Secrets derived from loops](https://github.com/PistonDevelopers/dyon/issues/266) `why(any i { list[i] > 3 })`
 - [Link loop](https://github.com/PistonDevelopers/dyon/issues/418)
 - Infinite loop `loop { ... }`
-- Unlabeled break `loop { break }`
-- Unlabeled continue `loop { continue }`
-- Labeled break `'a: loop { break 'a }`
-- Labeled continue `'a: loop { continue 'a }`
+- Unlabeled break `loop { break }` and unlabeled continue `loop { continue }`
+- Labeled break `'a: loop { break 'a }` and labeled continue `'a: loop { continue 'a }`
 - [Use `return` as a variable without exiting `return = 8`](https://github.com/PistonDevelopers/dyon/issues/169)
 - [Dynamic modules](https://github.com/PistonDevelopers/dyon/issues/170) `m := unwrap(load("script.dyon"))` then `call(m, "main", [])`
 - [Import to module prelude](https://github.com/PistonDevelopers/dyon/issues/170) `m := unwrap(load(source: "script.dyon", imports: [window, graphics]))`
