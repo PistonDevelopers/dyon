@@ -731,7 +731,7 @@ fn check_ignored_meta_data(
         use piston_meta::ParseErrorHandler;
 
         let mut buf: Vec<u8> = vec![];
-        if ignored.is_empty() {
+        if !ignored.is_empty() {
             writeln!(&mut buf, "Some meta data was ignored in the syntax").unwrap();
             writeln!(&mut buf, "START IGNORED").unwrap();
             json::write(&mut buf, &data[ignored[0].iter()]).unwrap();

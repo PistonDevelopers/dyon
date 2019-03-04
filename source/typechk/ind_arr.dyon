@@ -1,0 +1,9 @@
+fn main() {
+    a := [1, 2]
+    list := [a]
+    x := where(min i, j {list[i][j]})
+    println(x)
+    println(list[x])
+    list[x] = 4
+    println(list)
+}

@@ -325,14 +325,16 @@ pub fn check(
                 if nodes[i].name() != Some(name) { continue 'item; }
                 let mut ch = i;
                 while let Some(parent) = nodes[ch].parent {
-                    if nodes[parent].kind == Kind::Pow { continue 'item; }
-                    if nodes[parent].kind == Kind::Mul &&
-                       nodes[parent].children.len() > 1 { continue 'item; }
-                    if nodes[parent].kind == Kind::Add &&
-                       nodes[parent].children.len() > 1 { continue 'item; }
-                    if nodes[parent].kind == Kind::Id {
-                        found = true;
-                        break 'item;
+                    match nodes[parent].kind {
+                        Kind::Id => {
+                            found = true;
+                            break 'item;
+                        }
+                        Kind::Val | Kind::Expr => {}
+                        Kind::Mul | Kind::Add => {
+                            if nodes[parent].children.len() > 1 { continue 'item; }
+                        }
+                        _ => continue 'item,
                     }
                     ch = parent;
                 }

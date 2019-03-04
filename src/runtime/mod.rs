@@ -186,10 +186,72 @@ fn item_lookup(
                             } else {
                                 id
                             };
-                        match stack[id] {
+                        let (prev_stack, stack) = stack.split_at_mut(id);
+                        match stack[0] {
                             Variable::F64(id, _) => {
                                 *expr_j += 1;
                                 id
+                            }
+                            Variable::Array(ref indices) => {
+                                // Use indices in array.
+                                //
+                                // This uses an unsafe pointer safely, because an array lookup
+                                // will always point to some object on the heap or earlier stack.
+                                // The safety rule of references is enforced by the runtime,
+                                // guarded by the lifetime checker, but can not be checked
+                                // at compile time.
+                                //
+                                // `[0, 1]` are indices to look up `b` in `[[a, b], [c, d]]`.
+                                //   ^  ^---- to `b` in `[a, b]`.
+                                //   \---- points to first array `[a, b]`.
+                                let mut arr: *mut Vec<Variable> = Arc::make_mut(arr);
+                                let n = indices.len();
+                                for (i, ind) in indices.iter().enumerate() {
+                                    let id = match ind {
+                                        &Variable::F64(id, _) => id,
+                                        &Variable::Ref(x) =>
+                                            if let &Variable::F64(id, _) = &prev_stack[x] {id}
+                                            else {break}
+                                        _ => {break}
+                                    };
+                                    let v = match (*arr).get_mut(id as usize) {
+                                        None => return Err(module.error_fnindex(prop.source_range(),
+                                                           &format!("{}\nOut of bounds `{}`",
+                                                                    stack_trace(call_stack), id),
+                                                                    call_stack.last().unwrap().index)),
+                                        Some(x) => x
+                                    };
+                                    if i + 1 == n {
+                                        // Resolve reference.
+                                        return if let Variable::Ref(id) = *v {
+                                            // Do not resolve if last, because references should be
+                                            // copy-on-write.
+                                            if last {
+                                                Ok(v)
+                                            } else {
+                                                Ok(&mut prev_stack[id])
+                                            }
+                                        } else {
+                                            Ok(v)
+                                        };
+                                    }
+                                    match *v {
+                                        Variable::Array(ref mut new_arr) => {
+                                            arr = Arc::make_mut(new_arr);
+                                        }
+                                        Variable::Ref(x) =>
+                                            if let Variable::Array(ref mut new_arr) = prev_stack[x] {
+                                                arr = Arc::make_mut(new_arr);
+                                            } else {
+                                                break;
+                                            }
+                                        _ => break,
+                                    }
+                                }
+                                return Err(module.error_fnindex(prop.source_range(),
+                                            &format!("{}\nArray of indices did not match lookup array",
+                                            stack_trace(call_stack)),
+                                            call_stack.last().unwrap().index))
                             }
                             _ => return Err(module.error_fnindex(prop.source_range(),
                                             &format!("{}\nExpected number",

@@ -110,6 +110,7 @@ fn test_syntax() {
     test_fail_src("source/syntax/infer_fail_3.dyon");
     test_fail_src("source/syntax/infer_fail_4.dyon");
     test_fail_src("source/syntax/infer_fail_5.dyon");
+    test_fail_src("source/syntax/infer_fail_6.dyon");
     test_src("source/syntax/space_before_function.dyon");
     test_src("source/syntax/current.dyon");
     test_fail_src("source/syntax/mut.dyon");
@@ -217,6 +218,7 @@ fn test_typechk() {
     test_fail_src("source/typechk/in_2.dyon");
     test_fail_src("source/typechk/vec4_2.dyon");
     test_fail_src("source/typechk/mat4_1.dyon");
+    test_src("source/typechk/ind_arr.dyon");
 }
 
 #[test]
