@@ -1461,6 +1461,27 @@ impl Runtime {
                                 };
                                 *n_sec = sec.clone()
                             }
+                            Variable::Vec4(ref mut n) => {
+                                let b = b as f32;
+                                match op {
+                                    Add => *n = [n[0] + b, n[1] + b,
+                                                 n[2] + b, n[3] + b],
+                                    Sub => *n = [n[0] - b, n[1] - b,
+                                                 n[2] - b, n[3] - b],
+                                    Mul => *n = [n[0] * b, n[1] * b,
+                                                 n[2] * b, n[3] * b],
+                                    Div => *n = [n[0] / b, n[1] / b,
+                                                 n[2] / b, n[3] / b],
+                                    Rem => *n = [n[0] % b, n[1] % b,
+                                                 n[2] % b, n[3] % b],
+                                    Pow => *n = [n[0].powf(b), n[1].powf(b),
+                                                 n[2].powf(b), n[3].powf(b)],
+                                    _ => return Err(module.error(
+                                            left.source_range(),
+                                            &format!("{}\nExpected assigning to a number",
+                                                self.stack_trace()), self))
+                                }
+                            }
                             Variable::Return => {
                                 if let Set = op {
                                     *r.0 = Variable::F64(b, sec.clone())
