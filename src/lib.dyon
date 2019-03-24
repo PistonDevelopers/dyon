@@ -394,7 +394,7 @@ fn keys(obj: {}) -> [str] { ... }
 fn chars(text: str) -> [str] { ... }
 
 /// Returns seconds since last Unix Epoch.
-/// Returns `err(_)` if system clock is adjusted before Unix Epoch.
+/// Returns a negative number if system clock is adjusted before Unix Epoch.
 fn now() -> f64 { ... }
 
 /// Returns `true` if number is NaN.
