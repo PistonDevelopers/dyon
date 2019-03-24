@@ -1566,6 +1566,11 @@ impl Runtime {
 
                                         **n = mat4_add(**n, **b);
                                     }
+                                    Sub => {
+                                        use vecmath::mat4_sub;
+
+                                        **n = mat4_sub(**n, **b);
+                                    }
                                     _ => {
                                         return Err(module.error(
                                             left.source_range(),
