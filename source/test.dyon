@@ -1,4 +1,4 @@
 fn main() {
-    x := -(2, 0)
+    x := mat4 {2,;} - mat4 {1,;}
     println(x)
 }
