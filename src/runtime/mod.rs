@@ -2662,8 +2662,21 @@ impl Runtime {
                                              self.stack_trace()), self))
                 })
             }
+            Variable::Mat4(ref m) => {
+                match unop.op {
+                    ast::UnOp::Neg => Variable::Mat4(Box::new([
+                            [-m[0][0], -m[0][1], -m[0][2], -m[0][3]],
+                            [-m[1][0], -m[1][1], -m[1][2], -m[1][3]],
+                            [-m[2][0], -m[2][1], -m[2][2], -m[2][3]],
+                            [-m[3][0], -m[3][1], -m[3][2], -m[3][3]],
+                        ])),
+                    _ => return Err(module.error(unop.source_range,
+                                    &format!("{}\nUnknown mat4 unary operator",
+                                             self.stack_trace()), self))
+                }
+            }
             _ => return Err(module.error(unop.source_range,
-                &format!("{}\nInvalid type, expected bool, f64 or vec4", self.stack_trace()), self))
+                &format!("{}\nInvalid type for unary operator, expected bool, f64, vec4 or mat4", self.stack_trace()), self))
         };
         Ok((Some(v), Flow::Continue))
     }
