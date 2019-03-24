@@ -56,23 +56,23 @@ pub struct Call {
 }
 
 lazy_static! {
-    pub(crate) static ref text_type: Arc<String> = Arc::new("string".into());
-    pub(crate) static ref f64_type: Arc<String> = Arc::new("number".into());
-    pub(crate) static ref vec4_type: Arc<String> = Arc::new("vec4".into());
-    pub(crate) static ref mat4_type: Arc<String> = Arc::new("mat4".into());
-    pub(crate) static ref return_type: Arc<String> = Arc::new("return".into());
-    pub(crate) static ref bool_type: Arc<String> = Arc::new("boolean".into());
-    pub(crate) static ref object_type: Arc<String> = Arc::new("object".into());
-    pub(crate) static ref link_type: Arc<String> = Arc::new("link".into());
-    pub(crate) static ref array_type: Arc<String> = Arc::new("array".into());
-    pub(crate) static ref unsafe_ref_type: Arc<String> = Arc::new("unsafe_ref".into());
-    pub(crate) static ref ref_type: Arc<String> = Arc::new("ref".into());
-    pub(crate) static ref rust_object_type: Arc<String> = Arc::new("rust_object".into());
-    pub(crate) static ref option_type: Arc<String> = Arc::new("option".into());
-    pub(crate) static ref result_type: Arc<String> = Arc::new("result".into());
-    pub(crate) static ref thread_type: Arc<String> = Arc::new("thread".into());
-    pub(crate) static ref closure_type: Arc<String> = Arc::new("closure".into());
-    pub(crate) static ref in_type: Arc<String> = Arc::new("in".into());
+    pub(crate) static ref TEXT_TYPE: Arc<String> = Arc::new("string".into());
+    pub(crate) static ref F64_TYPE: Arc<String> = Arc::new("number".into());
+    pub(crate) static ref VEC4_TYPE: Arc<String> = Arc::new("vec4".into());
+    pub(crate) static ref MAT4_TYPE: Arc<String> = Arc::new("mat4".into());
+    pub(crate) static ref RETURN_TYPE: Arc<String> = Arc::new("return".into());
+    pub(crate) static ref BOOL_TYPE: Arc<String> = Arc::new("boolean".into());
+    pub(crate) static ref OBJECT_TYPE: Arc<String> = Arc::new("object".into());
+    pub(crate) static ref LINK_TYPE: Arc<String> = Arc::new("link".into());
+    pub(crate) static ref ARRAY_TYPE: Arc<String> = Arc::new("array".into());
+    pub(crate) static ref UNSAFE_REF_TYPE: Arc<String> = Arc::new("unsafe_ref".into());
+    pub(crate) static ref REF_TYPE: Arc<String> = Arc::new("ref".into());
+    pub(crate) static ref RUST_OBJECT_TYPE: Arc<String> = Arc::new("rust_object".into());
+    pub(crate) static ref OPTION_TYPE: Arc<String> = Arc::new("option".into());
+    pub(crate) static ref RESULT_TYPE: Arc<String> = Arc::new("result".into());
+    pub(crate) static ref THREAD_TYPE: Arc<String> = Arc::new("thread".into());
+    pub(crate) static ref CLOSURE_TYPE: Arc<String> = Arc::new("closure".into());
+    pub(crate) static ref IN_TYPE: Arc<String> = Arc::new("in".into());
 }
 
 /// Stores data needed for running a Dyon program.
