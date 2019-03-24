@@ -2654,8 +2654,16 @@ impl Runtime {
                                              self.stack_trace()), self))
                 }, sec.clone())
             }
+            Variable::Vec4(v) => {
+                Variable::Vec4(match unop.op {
+                    ast::UnOp::Neg => [-v[0], -v[1], -v[2], -v[3]],
+                    _ => return Err(module.error(unop.source_range,
+                                    &format!("{}\nUnknown vec4 unary operator",
+                                             self.stack_trace()), self))
+                })
+            }
             _ => return Err(module.error(unop.source_range,
-                &format!("{}\nInvalid type, expected bool", self.stack_trace()), self))
+                &format!("{}\nInvalid type, expected bool, f64 or vec4", self.stack_trace()), self))
         };
         Ok((Some(v), Flow::Continue))
     }
