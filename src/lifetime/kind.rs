@@ -219,7 +219,7 @@ impl Kind {
         use self::Kind::*;
 
         match self {
-            ForN | Sum | Prod | SumVec4 | Min | Max | Sift
+            ForN | Sum | Prod | SumVec4 | ProdVec4 | Min | Max | Sift
             | Any | All | LinkFor => true,
             _ => false
         }
