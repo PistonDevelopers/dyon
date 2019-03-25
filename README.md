@@ -47,8 +47,7 @@ dyonrun <file.dyon>
 - [Named argument syntax](https://github.com/PistonDevelopers/dyon/issues/26) based on snake case `foo(bar: b)` is equal to `foo__bar(b)`
 - If expression `a := if b < c { 0 } else { 1 }`
 - For loop `for i := 0; i < 10; i += 1 { ... }`
-- [Short For loop](https://github.com/PistonDevelopers/dyon/issues/116) `for i 10 { ... }`
-- [Short For loop](https://github.com/PistonDevelopers/dyon/issues/116) with offset `for i [2, 10) { ... }`
+- [Short For loop](https://github.com/PistonDevelopers/dyon/issues/116) `for i 10 { ... }` and with offset `for i [2, 10) { ... }`
 - [Infer range from loop body](https://github.com/PistonDevelopers/dyon/issues/116) `for i { println(list[i]) }`
 - [Packed loop](https://github.com/PistonDevelopers/dyon/issues/116) `for i, j { println(list[i][j]) }`
 - [`∑`/`sum`, `∏`/`prod`, `min`, `max`, `sift`, `∃`/`any`, `∀`/`all` loops](https://github.com/PistonDevelopers/dyon/issues/119)
