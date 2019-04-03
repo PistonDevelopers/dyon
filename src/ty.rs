@@ -294,6 +294,7 @@ impl Type {
             (&Bool, &Secret(ref b)) if **b == Type::Bool => Some(Bool),
             (&F64, &F64) => Some(F64),
             (&Mat4, &Mat4) => Some(Mat4),
+            (&F64, &Mat4) | (&Mat4, &F64) => Some(Mat4),
             (&Secret(ref a), &Secret(ref b))
             if **a == Type::F64 && **b == Type::F64 =>
                 Some(Secret(Box::new(F64))),
@@ -340,6 +341,7 @@ impl Type {
             (&Bool, &Secret(ref b)) if **b == Type::Bool => Some(Bool),
             (&F64, &F64) => Some(F64),
             (&Mat4, &Mat4) => Some(Mat4),
+            (&F64, &Mat4) | (&Mat4, &F64) => Some(Mat4),
             (&Mat4, &Vec4) => Some(Vec4),
             (&Secret(ref a), &Secret(ref b))
             if **a == Type::F64 && **b == Type::F64 =>
@@ -380,8 +382,7 @@ impl Type {
                 Some(Secret(Box::new(F64))),
             (&Secret(ref a), &F64) if **a == Type::F64 => Some(Secret(Box::new(F64))),
             (&F64, &Secret(ref b)) if **b == Type::F64 => Some(F64),
-            (&Vec4, &F64) => Some(Vec4),
-            (&F64, &Vec4) => Some(Vec4),
+            (&Vec4, &F64) | (&F64, &Vec4) => Some(Vec4),
             (&Vec4, &Vec4) => Some(Vec4),
             (&Any, x) if x != &Type::Void => Some(Any),
             (x, &Any) if x != &Type::Void => Some(Any),

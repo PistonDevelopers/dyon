@@ -218,6 +218,7 @@ fn test_typechk() {
     test_fail_src("source/typechk/in_2.dyon");
     test_fail_src("source/typechk/vec4_2.dyon");
     test_fail_src("source/typechk/mat4_1.dyon");
+    test_src("source/typechk/mat4_2.dyon");
     test_src("source/typechk/ind_arr.dyon");
 }
 
