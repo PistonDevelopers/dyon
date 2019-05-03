@@ -336,6 +336,38 @@ impl Runtime {
         T::pop_var(self, self.resolve(&var))
     }
 
+    /// Gets Current Object variable from the stack for Current Objects
+    /// by finding the corresponding entry in the normal stack.
+    /// If the Current Object can't be found in the stack of current objects,
+    /// the error ("Dyon can't find a current object with the name {}!", name) is thrown.
+    ///
+    /// ##Examples
+    ///
+    /// Dyon code:
+    /// ```
+    /// ~ entity := 42
+    /// teleport()
+    /// ```
+    /// Rust code:
+    /// ```
+    /// fn teleport(rt: &mut Runtime) -> Result<(), String> {
+    ///     let current_entity_id = rt.current_object::<u32>("entity")?;
+    ///     assert_eq!(current_entity_id, 42);//this goes at compile time so it won't work but...
+    ///     //...
+    /// }
+    /// ```
+    pub fn current_object<T: embed::PopVariable>(&self, name: &str) -> Result<T, String> {
+        let current_object_index = self.current_stack
+            .iter()
+            .rev()
+            .find(|(name_found, _)| **name_found == name)
+            .map(|x| x.1)
+            .ok_or(format!("Dyon can't find a current object with the name {}!", name))
+            ?;
+
+        T::pop_var(self, self.resolve(&self.stack[current_object_index]))
+    }
+
     /// Gets 4D vector.
     pub fn var_vec4<T: embed::ConvertVec4>(&self, var: &Variable) -> Result<T, String> {
         match self.resolve(&var) {
