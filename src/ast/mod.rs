@@ -819,6 +819,12 @@ pub struct Current {
     pub mutable: bool,
 }
 
+impl PartialEq for Current {
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name && self.mutable == other.mutable
+    }
+}
+
 impl Current {
     /// Creates current object reference from meta data.
     pub fn from_meta_data(mut convert: Convert, ignored: &mut Vec<Range>)

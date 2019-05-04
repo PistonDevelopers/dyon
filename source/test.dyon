@@ -1,2 +1,55 @@
 fn main() {
+    /*
+    a := \(x: f64, y: f64) = sin(x + y)
+    b := \(x: f64, y: f64) = cos(x + y + tau()/4)
+    c := a + b
+    println(all i 10, j 10 {
+        abs(\c(i, j)) < 0.0001
+    })
+    println(c)
+    */
+
+    // m := unwrap(load("source/hooo/main.dyon"))
+    // call(m, "main", [])
+
+    /*
+    ~ x := 3
+    ~ y := 2
+    a := \() ~ x = clone(x)
+    b := \() ~ y = y + 1
+    c := a + b
+    println(\c())
+    println(c)
+    d := a + a
+    println(\d())
+    println(d)
+    */
+
+    /*
+    a := \(x, y) = (x^2 + y^2) < 1
+    b := \(x, y) = (x^2 + y^2) < 2
+    c := b - a
+    println(c)
+    println(\c(0, 0.9))
+    println(\c(0, 1))
+    */
+
+    /*
+    f := \(a, w) = \(f) = sin((f + grab w) * tau()) * grab a
+    s := \f(1, 0.25) + \f(2, 0)
+    n := 10
+    for i n {
+        println(\s(i/n))
+    }
+    */
+
+    f := \(eps) = \(x) = sin(x+grab eps)
+    diff := \(eps, f) = (\f(eps) - \f(-eps)) / \(x) = grab 2*eps
+    g := \diff(0.1, f)
+    println(g)
+    loop {
+        x := random()
+        println(\g(x) - cos(x))
+        sleep(1)
+    }
 }

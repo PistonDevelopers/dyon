@@ -2950,6 +2950,15 @@ impl Runtime {
                             self.stack_trace()), self))
                 }
             }
+            (&Variable::Closure(ref a, ref a_env), &Variable::Closure(ref b, ref b_env)) => {
+                use hooo;
+
+                match hooo::binop(module.function(self).unwrap(), binop, a, a_env, b, b_env) {
+                    Ok((c, c_env)) => Variable::Closure(c, c_env),
+                    Err(err) => return Err(module.error(binop.source_range,
+                        &format!("{}\n{}", self.stack_trace(), err), self))
+                }
+            }
             _ => return Err(module.error(binop.source_range, &format!(
                 "{}\nInvalid type for binary operator `{:?}`, \
                 expected numbers, vec4s, bools or strings",

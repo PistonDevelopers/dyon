@@ -306,6 +306,17 @@ impl Type {
             (&Vec4, &Vec4) => Some(Vec4),
             (&Any, x) if x != &Type::Void => Some(Any),
             (x, &Any) if x != &Type::Void => Some(Any),
+            (&Closure(ref a), &Closure(ref b)) => {
+                use hooo;
+
+                if hooo::same_input_type(a, b) {
+                    a.ret.add(&b.ret).map(|ret| {
+                        Closure(Box::new(Dfn {lts: vec![], tys: a.tys.clone(), ret}))
+                    })
+                } else {
+                    None
+                }
+            }
             _ => None
         }
     }
@@ -359,6 +370,17 @@ impl Type {
             }
             (&Any, x) if x != &Type::Void => Some(Any),
             (x, &Any) if x != &Type::Void => Some(Any),
+            (&Closure(ref a), &Closure(ref b)) => {
+                use hooo;
+
+                if hooo::same_input_type(a, b) {
+                    a.ret.mul(&b.ret, binop).map(|ret| {
+                        Closure(Box::new(Dfn {lts: vec![], tys: a.tys.clone(), ret}))
+                    })
+                } else {
+                    None
+                }
+            }
             _ => None
         }
     }
@@ -386,6 +408,17 @@ impl Type {
             (&Vec4, &Vec4) => Some(Vec4),
             (&Any, x) if x != &Type::Void => Some(Any),
             (x, &Any) if x != &Type::Void => Some(Any),
+            (&Closure(ref a), &Closure(ref b)) => {
+                use hooo;
+
+                if hooo::same_input_type(a, b) {
+                    a.ret.pow(&b.ret).map(|ret| {
+                        Closure(Box::new(Dfn {lts: vec![], tys: a.tys.clone(), ret}))
+                    })
+                } else {
+                    None
+                }
+            }
             _ => None
         }
     }

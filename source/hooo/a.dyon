@@ -1,0 +1,8 @@
+foo2(x, y) = x+0
+bar2() = \(x, y) = foo2(x, y)
+
+foo1(x) = x+0
+bar1() = \(x) = foo1(x)
+
+foo0() = 0
+bar0() = \() = foo0()

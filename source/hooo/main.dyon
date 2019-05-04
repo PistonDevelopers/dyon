@@ -1,0 +1,41 @@
+/*
+This example loads closures from two different environments.
+The runtime should detect this and avoid inlining.
+*/
+
+fn main() {
+    am := unwrap(load("source/hooo/a.dyon"))
+    bm := unwrap(load("source/hooo/b.dyon"))
+
+    a := call_ret(am, "bar2", [])
+    b := call_ret(bm, "bar2", [])
+    c := \(x, y) = y-x*2
+    d := a + c
+    println(d)
+    println(\d(1, 100))
+    d := b + c
+    println(d)
+    println(\d(1, 100))
+    println("")
+
+    a := call_ret(am, "bar1", [])
+    b := call_ret(bm, "bar1", [])
+    c := \(x) = 100-x*2
+    d := a + c
+    println(d)
+    println(\d(1))
+    d := b + c
+    println(d)
+    println(\d(1))
+    println("")
+
+    a := call_ret(am, "bar0", [])
+    b := call_ret(bm, "bar0", [])
+    c := \() = 100
+    d := a + c
+    println(d)
+    println(\d())
+    d := b + c
+    println(d)
+    println(\d())
+}

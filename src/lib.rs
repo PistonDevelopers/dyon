@@ -43,6 +43,7 @@ mod write;
 
 mod grab;
 mod dyon_std;
+mod hooo;
 
 pub use runtime::Runtime;
 pub use prelude::{Lt, Prelude, Dfn};
@@ -497,6 +498,13 @@ impl Module {
             None => FnIndex::None,
             Some(&ind) => FnIndex::Intrinsic(ind)
         }
+    }
+
+    /// Gets the current called function.
+    fn function(&self, rt: &Runtime) -> Option<&ast::Function> {
+        let fnindex = if let Some(x) = rt.call_stack.last() {x.index}
+                      else {return None};
+        Some(&self.functions[fnindex])
     }
 
     /// Generates an error message.
