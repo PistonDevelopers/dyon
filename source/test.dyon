@@ -43,6 +43,7 @@ fn main() {
     }
     */
 
+    /*
     f := \(eps) = \(x) = sin(x+grab eps)
     diff := \(eps, f) = (\f(eps) - \f(-eps)) / \(x) = grab 2*eps
     g := \diff(0.1, f)
@@ -52,4 +53,22 @@ fn main() {
         println(\g(x) - cos(x))
         sleep(1)
     }
+    */
+
+    /*
+    a := \(a, b, t) = clone(a)
+    b := \(a, b, t) = clone(b)
+    t := \(a, b, t) = clone(t)
+    one := \(a, b, t) = 1
+    line := a * t + b * (one - t)
+    println(line)
+    */
+
+    f := \(x, y) = (x^2+y^2) < 1
+    g := !f
+    println(g)
+    println(\g(0, 0))
+    g := !g
+    println(g)
+    println(\g(0, 0))
 }

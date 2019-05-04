@@ -2714,6 +2714,14 @@ impl Runtime {
                                              self.stack_trace()), self))
                 }
             }
+            Variable::Closure(ref a, ref a_env) => {
+                use hooo;
+
+                Variable::Closure(
+                    hooo::unop(module.function(self).unwrap(), unop, a),
+                    a_env.clone()
+                )
+            }
             _ => return Err(module.error(unop.source_range,
                 &format!("{}\nInvalid type for unary operator, expected bool, f64, vec4 or mat4", self.stack_trace()), self))
         };

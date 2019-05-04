@@ -13,7 +13,28 @@ pub fn same_input_type(a: &Dfn, b: &Dfn) -> bool {
     true
 }
 
-/// Adds two closures.
+/// Performs unary operation with closure.
+pub fn unop(
+    function: &ast::Function,
+    unop: &ast::UnOpExpression,
+    a: &Arc<ast::Closure>,
+) -> Arc<ast::Closure> {
+    Arc::new(ast::Closure {
+        args: a.args.clone(),
+        currents: a.currents.clone(),
+        file: function.file.clone(),
+        ret: a.ret.clone(),
+        source: function.source.clone(),
+        source_range: unop.source_range,
+        expr: ast::Expression::UnOp(Box::new(ast::UnOpExpression {
+            op: unop.op,
+            expr: a.expr.clone(),
+            source_range: unop.source_range,
+        }))
+    })
+}
+
+/// Performs binary operation with two closures.
 pub fn binop(
     function: &ast::Function,
     binop: &ast::BinOpExpression,
