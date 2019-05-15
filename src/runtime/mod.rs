@@ -2967,6 +2967,26 @@ impl Runtime {
                         &format!("{}\n{}", self.stack_trace(), err), self))
                 }
             }
+            (&Variable::Closure(ref a, ref a_env), b_val) => {
+                use hooo;
+
+                let b = Arc::new(hooo::lift(b_val.clone(), a));
+                match hooo::binop(module.function(self).unwrap(), binop, a, a_env, &b, a_env) {
+                    Ok((c, c_env)) => Variable::Closure(c, c_env),
+                    Err(err) => return Err(module.error(binop.source_range,
+                        &format!("{}\n{}", self.stack_trace(), err), self))
+                }
+            }
+            (a_val, &Variable::Closure(ref b, ref b_env)) => {
+                use hooo;
+
+                let a = Arc::new(hooo::lift(a_val.clone(), b));
+                match hooo::binop(module.function(self).unwrap(), binop, &a, b_env, b, b_env) {
+                    Ok((c, c_env)) => Variable::Closure(c, c_env),
+                    Err(err) => return Err(module.error(binop.source_range,
+                        &format!("{}\n{}", self.stack_trace(), err), self))
+                }
+            }
             _ => return Err(module.error(binop.source_range, &format!(
                 "{}\nInvalid type for binary operator `{:?}`, \
                 expected numbers, vec4s, bools or strings",

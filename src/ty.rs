@@ -317,6 +317,16 @@ impl Type {
                     None
                 }
             }
+            (&Closure(ref a), b) => {
+                    a.ret.add(b).map(|ret| {
+                    Closure(Box::new(Dfn {lts: vec![], tys: a.tys.clone(), ret}))
+                })
+            }
+            (b, &Closure(ref a)) => {
+                    b.add(&a.ret).map(|ret| {
+                    Closure(Box::new(Dfn {lts: vec![], tys: a.tys.clone(), ret}))
+                })
+            }
             _ => None
         }
     }
@@ -381,6 +391,16 @@ impl Type {
                     None
                 }
             }
+            (&Closure(ref a), b) => {
+                    a.ret.mul(b, binop).map(|ret| {
+                    Closure(Box::new(Dfn {lts: vec![], tys: a.tys.clone(), ret}))
+                })
+            }
+            (b, &Closure(ref a)) => {
+                    b.mul(&a.ret, binop).map(|ret| {
+                    Closure(Box::new(Dfn {lts: vec![], tys: a.tys.clone(), ret}))
+                })
+            }
             _ => None
         }
     }
@@ -418,6 +438,16 @@ impl Type {
                 } else {
                     None
                 }
+            }
+            (&Closure(ref a), b) => {
+                    a.ret.pow(b).map(|ret| {
+                    Closure(Box::new(Dfn {lts: vec![], tys: a.tys.clone(), ret}))
+                })
+            }
+            (b, &Closure(ref a)) => {
+                    b.pow(&a.ret).map(|ret| {
+                    Closure(Box::new(Dfn {lts: vec![], tys: a.tys.clone(), ret}))
+                })
             }
             _ => None
         }

@@ -13,6 +13,22 @@ pub fn same_input_type(a: &Dfn, b: &Dfn) -> bool {
     true
 }
 
+/// Lifts a variable into a closure.
+/// Only need dummy fields because it is used by binary operators.
+pub fn lift(
+    var: Variable,
+    from: &ast::Closure,
+) -> ast::Closure {
+    ast::Closure {
+        args: from.args.clone(),
+        currents: from.currents.clone(),
+        file: from.file.clone(),
+        ret: from.ret.clone(),
+        source: from.source.clone(),
+        source_range: from.source_range.clone(),
+        expr: ast::Expression::Variable(Box::new((Range::empty(0), var)))
+    }
+}
 /// Performs unary operation with closure.
 pub fn unop(
     function: &ast::Function,

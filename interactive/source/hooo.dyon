@@ -1,0 +1,42 @@
+fn main() {
+    time := 0
+    grid := 200
+    img := create_image(name: "scene", size: (grid, grid))
+    txt := create_texture(img)
+    set_event_loop(maxfps: 10)
+    loop {
+        if !next_event() {break}
+
+        if render() {
+            start := now()
+            half := grid * 0.5
+            center := (half, half)
+            time := time + unwrap(render_ext_dt())
+            circle := \(pos, radius) = \(x, y) =
+                        ((x-grab x(pos))^2 + (y-grab y(pos))^2) <= grab radius^2
+            f1 := \circle(center, 0.5 * half) -
+                  \circle(center, 0.4 * half) +
+                  \circle(center, 0.3 * half) -
+                  \circle(center, 0.2 * half)
+            f2 := \circle(center-dir(angle: time)*0.2*half, 0.35 * half)
+            f := f1 ^ f2
+
+            ~ draw_list := []
+            clear(color: #ffffff)
+            for i grid, j grid {
+                pxl(image: img, pos: (i, j), color:
+                    if \f(i, j) {#000000}
+                    // else if \g(i, j) <= 0 {#0000ff}
+                    else {#00000000})
+            }
+            println(now() - start)
+            update(texture: txt, image: img)
+            image(texture: txt, pos: (0, 0))
+            draw(draw_list)
+        }
+
+        if update() {
+            time += unwrap(update_dt()) * 10
+        }
+    }
+}
