@@ -33,9 +33,9 @@ pub fn lift(
 pub fn unop(
     function: &ast::Function,
     unop: &ast::UnOpExpression,
-    a: &Arc<ast::Closure>,
-) -> Arc<ast::Closure> {
-    Arc::new(ast::Closure {
+    a: &ast::Closure,
+) -> ast::Closure {
+    ast::Closure {
         args: a.args.clone(),
         currents: a.currents.clone(),
         file: function.file.clone(),
@@ -47,24 +47,24 @@ pub fn unop(
             expr: a.expr.clone(),
             source_range: unop.source_range,
         }))
-    })
+    }
 }
 
 /// Performs binary operation with two closures.
 pub fn binop(
     function: &ast::Function,
     binop: &ast::BinOpExpression,
-    a: &Arc<ast::Closure>,
+    a: &ast::Closure,
     a_env: &ClosureEnvironment,
-    b: &Arc<ast::Closure>,
+    b: &ast::Closure,
     b_env: &ClosureEnvironment,
-) -> Result<(Arc<ast::Closure>, Box<ClosureEnvironment>), String> {
+) -> Result<(ast::Closure, Box<ClosureEnvironment>), String> {
     if Arc::ptr_eq(&a_env.module, &b_env.module) &&
        a_env.relative == b_env.relative &&
        a.currents == b.currents {
         // Closure environment matches, can inline expressions.
         Ok((
-            Arc::new(ast::Closure {
+            ast::Closure {
                 args: a.args.clone(),
                 currents: a.currents.clone(),
                 file: function.file.clone(),
@@ -77,7 +77,7 @@ pub fn binop(
                     op: binop.op,
                     source_range: binop.source_range,
                 }))
-            }),
+            },
             Box::new(a_env.clone())
         ))
     } else {
@@ -85,7 +85,7 @@ pub fn binop(
 
         // Closure environment does not match, must grab closures.
         Ok((
-            Arc::new(ast::Closure {
+            ast::Closure {
                 args: a.args.clone(),
                 currents: vec![],
                 file: function.file.clone(),
@@ -111,7 +111,7 @@ pub fn binop(
                             })),
                             right: ast::Expression::Variable(Box::new((
                                 binop.source_range,
-                                Variable::Closure(a.clone(), Box::new(a_env.clone()))
+                                Variable::Closure(Arc::new(a.clone()), Box::new(a_env.clone()))
                             )))
                         })),
                         // b := grab b
@@ -130,7 +130,7 @@ pub fn binop(
                             })),
                             right: ast::Expression::Variable(Box::new((
                                 binop.source_range,
-                                Variable::Closure(b.clone(), Box::new(b_env.clone()))
+                                Variable::Closure(Arc::new(b.clone()), Box::new(b_env.clone()))
                             )))
                         })),
                         // a op b
@@ -188,7 +188,7 @@ pub fn binop(
                         }))
                     ]
                 }))
-            }),
+            },
             // The new environment does not matter, so just using the same as `a`.
             Box::new(a_env.clone())
         ))

@@ -649,8 +649,6 @@ pub fn text_arg(rt: &mut Runtime) -> Result<(), String> {
 }
 
 pub fn window_title<W: Any + AdvancedWindow>(rt: &mut Runtime) -> Result<(), String> {
-    use std::sync::Arc;
-
     let window = unsafe { &mut *Current::<W>::new() };
     rt.push(Arc::new(window.get_title()));
     Ok(())
@@ -658,8 +656,6 @@ pub fn window_title<W: Any + AdvancedWindow>(rt: &mut Runtime) -> Result<(), Str
 
 #[allow(non_snake_case)]
 pub fn set_window__title<W: Any + AdvancedWindow>(rt: &mut Runtime) -> Result<(), String> {
-    use std::sync::Arc;
-
     let window = unsafe { &mut *Current::<W>::new() };
     let title: Arc<String> = rt.pop()?;
     window.set_title((*title).clone());

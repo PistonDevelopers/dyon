@@ -2718,7 +2718,7 @@ impl Runtime {
                 use hooo;
 
                 Variable::Closure(
-                    hooo::unop(module.function(self).unwrap(), unop, a),
+                    Arc::new(hooo::unop(module.function(self).unwrap(), unop, a)),
                     a_env.clone()
                 )
             }
@@ -2962,7 +2962,7 @@ impl Runtime {
                 use hooo;
 
                 match hooo::binop(module.function(self).unwrap(), binop, a, a_env, b, b_env) {
-                    Ok((c, c_env)) => Variable::Closure(c, c_env),
+                    Ok((c, c_env)) => Variable::Closure(Arc::new(c), c_env),
                     Err(err) => return Err(module.error(binop.source_range,
                         &format!("{}\n{}", self.stack_trace(), err), self))
                 }
@@ -2970,9 +2970,9 @@ impl Runtime {
             (&Variable::Closure(ref a, ref a_env), b_val) => {
                 use hooo;
 
-                let b = Arc::new(hooo::lift(b_val.clone(), a));
+                let b = hooo::lift(b_val.clone(), a);
                 match hooo::binop(module.function(self).unwrap(), binop, a, a_env, &b, a_env) {
-                    Ok((c, c_env)) => Variable::Closure(c, c_env),
+                    Ok((c, c_env)) => Variable::Closure(Arc::new(c), c_env),
                     Err(err) => return Err(module.error(binop.source_range,
                         &format!("{}\n{}", self.stack_trace(), err), self))
                 }
@@ -2980,9 +2980,9 @@ impl Runtime {
             (a_val, &Variable::Closure(ref b, ref b_env)) => {
                 use hooo;
 
-                let a = Arc::new(hooo::lift(a_val.clone(), b));
+                let a = hooo::lift(a_val.clone(), b);
                 match hooo::binop(module.function(self).unwrap(), binop, &a, b_env, b, b_env) {
-                    Ok((c, c_env)) => Variable::Closure(c, c_env),
+                    Ok((c, c_env)) => Variable::Closure(Arc::new(c), c_env),
                     Err(err) => return Err(module.error(binop.source_range,
                         &format!("{}\n{}", self.stack_trace(), err), self))
                 }

@@ -1,0 +1,71 @@
+fn main() {
+    // set_event_loop(lazy: true)
+
+    a := (10, 10)
+    b := window_draw_size() - a
+
+    ta := 0
+    tb := 1
+    tc := 2
+
+    diag := line(a, b, t(ta))
+    top := line(a, (x(b), y(a)), t(ta))
+    bot := line((x(a), y(b)), b, 1-t(ta))
+    top_to_bot := line(top, bot, t(tb))
+
+    fa := qbez(a, (x(b), y(a)), b, t(ta))
+    fb := qbez(a, (x(a), y(b)), b, t(ta))
+    far := qbez(a, (x(b), y(a)), b, 1-t(ta))
+    fbr := qbez(a, (x(a), y(b)), b, 1-t(ta))
+    fab := line(fa, fb, t(tb))
+    fabr := line(far, fbr, t(tb))
+    base := unit_circle(0) * 100 +
+            window_draw_size()/2 +
+            (0, 100) +
+            (0, -200) * t(tb)
+    base2 := unit_circle(0) * 150 * t(tb) * (fsin(32 * t(tb)^0.2)+1)/2 +
+            window_draw_size()/2 +
+            (0, 100) +
+            (200, -300) * (1-t(tb))
+
+    // Change this line to see another function.
+    f := line(base, base2, t(tc))
+    // f := cbez(base, fabr, base2, top_to_bot, t(tc))
+
+    time := 0
+    loop {
+        if !next_event() {break}
+
+        if render() {
+            ~ draw_list := []
+            clear(color: #ffffff)
+
+            n := 50
+            m := 10
+            t := (sin(time) + 1)/2
+            for i n+1, j m {
+                a := \f((j/m, i/n, t))
+                b := \f(((j+1)/m, i/n, t))
+                // rectangle(color: (i/n, 0, 1, 1), corner: pos, size: (2, 2))
+                line(color: (i/n, 0.5, 0, 1), radius: 5, from: a, to: b)
+            }
+
+            draw(draw_list)
+        }
+
+        if update() {
+            time += unwrap(update_dt())
+        }
+    }
+}
+
+line(a, b, t) = a + (b - a) * t
+qbez(a, b, c, t) = line(line(a, b, t), line(b, c, t), t)
+cbez(a, b, c, d, t) = line(line(a, b, t), line(c, d, t), t)
+t(i: f64) = \(t: vec4) = s(t, grab i)
+fsin(f: \(vec4) -> f64) = \(t: vec4) = {
+    f := grab f
+    sin(\f(t))
+}
+
+unit_circle(i: f64) = \(t: vec4) = dir(angle: s(t, grab i) * tau())

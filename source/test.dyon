@@ -1,74 +1,44 @@
 fn main() {
-    /*
-    a := \(x: f64, y: f64) = sin(x + y)
-    b := \(x: f64, y: f64) = cos(x + y + tau()/4)
-    c := a + b
-    println(all i 10, j 10 {
-        abs(\c(i, j)) < 0.0001
-    })
-    println(c)
-    */
+    circle := \(x, y) = (x^2+y^2) - 1
+    x := \(x, dx, y, dy) = x+dx
+    y := \(x, dx, y, dy) = y+dy
+    // println(\circle(x, y))
 
-    // m := unwrap(load("source/hooo/main.dyon"))
-    // call(m, "main", [])
+    t0 := \(t) = x(t)
+    t1 := \(t) = y(t)
+    plane := line((0, 0), (1, 0), t0) + line((0, 0), (0, 1), t1)
+    // println(plane)
+    // println(\plane((0, 0)))
+    // println(\plane((0.5, 0.5)))
 
-    /*
-    ~ x := 3
-    ~ y := 2
-    a := \() ~ x = clone(x)
-    b := \() ~ y = y + 1
-    c := a + b
-    println(\c())
-    println(c)
-    d := a + a
-    println(\d())
-    println(d)
-    */
+    q0 := quad_bez((0, 0), (1, 0), (1, 1), t0)
+    q1 := quad_bez((0, 0), (0, 1), (1, 1), 1-t0)
+    // println(q0)
+    // println(\q0((0.5, 0)))
+    // println(\q1((0, 0.5)))
 
-    /*
-    a := \(x, y) = (x^2 + y^2) < 1
-    b := \(x, y) = (x^2 + y^2) < 2
-    c := b - a
-    println(c)
-    println(\c(0, 0.9))
-    println(\c(0, 1))
-    */
-
-    /*
-    f := \(a, w) = \(f) = sin((f + grab w) * tau()) * grab a
-    s := \f(1, 0.25) + \f(2, 0)
-    n := 10
-    for i n {
-        println(\s(i/n))
-    }
-    */
-
-    /*
-    f := \(eps) = \(x) = sin(x+grab eps)
-    diff := \(eps, f) = (\f(eps) - \f(-eps)) / \(x) = grab 2*eps
-    g := \diff(0.1, f)
-    println(g)
-    loop {
-        x := random()
-        println(\g(x) - cos(x))
-        sleep(1)
-    }
-    */
-
-    /*
-    a := \(a, b, t) = clone(a)
-    b := \(a, b, t) = clone(b)
-    t := \(a, b, t) = clone(t)
-    one := \(a, b, t) = 1
-    line := a * t + b * (one - t)
-    println(line)
-    */
-
-    f := \(x, y) = (x^2+y^2) < 1
-    g := !f
-    println(g)
-    println(\g(0, 0))
-    g := !g
-    println(g)
-    println(\g(0, 0))
+    c := line(q0, q1, t1)
+    // println(c)
+    // println(\c((0.5, 0.25)))
+    f := quad_bez(
+            solid_cylinder(radius: 0.1, height: 10, i: 0, j: 1, k: 2),
+            solid_cylinder(radius: 0.3, height: 7, i: 0, j: 1, k: 2),
+            solid_cylinder(radius: 0.2, height: 5, i: 0, j: 1, k: 2),
+            t(3)
+        )
+    // println(f)
+    println(\f((0.5, 0.25, 0, 0)))
+    println(\f((0.5, 0.25, 0, 1)))
 }
+
+t(i: f64) = \(t: vec4) = s(t, grab i)
+
+line(a, b, t) = a+(b-a)*t
+quad_bez(a, b, c, t) = line(line(a, b, t), line(b, c, t), t)
+
+unit_circle__i(i: f64) = \(t: vec4) = dir(angle: s(t, grab i) * tau())
+cylinder__radius_height_i_j(r: f64, h: f64, i: f64, j: f64) =
+    unit_circle(i: i) * r + (0, 0, h) * t(j)
+disc__i_j(i: f64, j: f64) = unit_circle(i: i) * t(j)
+solid_cylinder__radius_height_i_j_k(r: f64, h: f64, i: f64, j: f64, k: f64) =
+    disc(i: i, j: j) * r + (0, 0, h) * t(j)

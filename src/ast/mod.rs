@@ -1141,8 +1141,6 @@ impl Expression {
                     convert.source(start).unwrap(), Variable::bool(val)
                 ))));
             } else if let Ok((range, val)) = convert.meta_string("color") {
-                use read_color;
-
                 convert.update(range);
                 if let Some((rgb, a)) = read_color::rgb_maybe_a(&mut val.chars()) {
                     let v = [

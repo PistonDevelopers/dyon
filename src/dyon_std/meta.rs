@@ -82,7 +82,6 @@ pub fn load_meta_file(_: &str, _: &str) -> Result<Vec<Variable>, String> {
 #[cfg(feature = "http")]
 pub fn load_text_file_from_url(url: &str) -> Result<String, String> {
     use reqwest::{Client, Url, StatusCode};
-    use std::io::Read;
 
     let url_address = Url::parse(url)
         .map_err(|e| format!("Error parsing url:\n`{}`\n", e))?;
@@ -130,7 +129,6 @@ pub fn load_meta_url(_meta: &str, _url: &str) -> Result<Vec<Variable>, String> {
 pub fn download_url_to_file(url: &str, file: &str) -> Result<String, String> {
     use reqwest::{Client, Url, StatusCode};
     use std::io::copy;
-    use std::fs::File;
     use std::error::Error;
 
     let url_address = Url::parse(url)

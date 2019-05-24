@@ -965,8 +965,6 @@ pub(crate) fn module__in_string_imports(
     call: &ast::Call,
     module: &Arc<Module>,
 ) -> Result<Option<Variable>, String> {
-    use load_str;
-
     let modules = rt.stack.pop().expect(TINVOTS);
     let source = rt.stack.pop().expect(TINVOTS);
     let source = match rt.resolve(&source) {
@@ -1589,8 +1587,6 @@ dyon_fn!{fn load_string__url(url: Arc<String>) -> Variable {
 }}
 
 pub(crate) fn join__thread(rt: &mut Runtime) -> Result<(), String> {
-    use Thread;
-
     let thread = rt.stack.pop().expect(TINVOTS);
     let handle_res = Thread::invalidate_handle(rt, thread);
     let v = Variable::Result({
@@ -1747,7 +1743,6 @@ pub(crate) fn errstr__string_start_len_msg(
     module: &Arc<Module>,
 ) -> Result<Option<Variable>, String> {
     use piston_meta::ParseErrorHandler;
-    use range::Range;
 
     let msg = rt.stack.pop().expect(TINVOTS);
     let msg = match rt.resolve(&msg) {
