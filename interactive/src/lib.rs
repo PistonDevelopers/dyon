@@ -25,7 +25,7 @@ pub const NO_EVENT: &'static str = "No event";
 pub fn add_functions<W, F, C>(module: &mut Module)
     where W: Any + AdvancedWindow,
           F: 'static + Clone,
-          C::Texture: CreateTexture<F> + UpdateTexture<F, Error = <C::Texture as CreateTexture<F>>::Error>,
+          C::Texture: CreateTexture<F> + UpdateTexture<F>,
           C: Any + CharacterCache,
 {
     module.add(Arc::new("window_size".into()), window_size::<W>, Dfn {
@@ -688,7 +688,7 @@ pub fn font_names(rt: &mut Runtime) -> Result<(), String> {
 /// Helper method for loading fonts.
 pub fn load_font<F, T>(rt: &mut Runtime) -> Result<(), String>
     where F: 'static + Clone, T: 'static +
-          CreateTexture<F> + UpdateTexture<F, Error = <T as CreateTexture<F>>::Error> +
+          CreateTexture<F> + UpdateTexture<F> +
           graphics::ImageSize
 {
     use texture::{Filter, TextureSettings};
