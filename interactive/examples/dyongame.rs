@@ -56,7 +56,7 @@ fn main() {
         WindowSettings::new("dyongame", [512; 2])
         .exit_on_esc(true)
         .samples(4)
-        .opengl(opengl)
+        .graphics_api(opengl)
         .build()
         .unwrap();
     let dyon_module = match load_module(&file) {

@@ -15,7 +15,6 @@ fn main() {
 }
 
 fn load_module() -> Option<dyon::Module> {
-    use std::sync::Arc;
     use dyon::{error, load, Dfn, Module};
     use dyon::Type::*;
 

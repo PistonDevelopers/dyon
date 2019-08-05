@@ -13,7 +13,7 @@ use self::piston::input::*;
 use self::piston::window::*;
 use self::graphics::{Context, Graphics};
 use self::graphics::character::CharacterCache;
-use texture::CreateTexture;
+use texture::{CreateTexture, UpdateTexture};
 
 pub const NO_EVENT: &'static str = "No event";
 
@@ -25,7 +25,7 @@ pub const NO_EVENT: &'static str = "No event";
 pub fn add_functions<W, F, C>(module: &mut Module)
     where W: Any + AdvancedWindow,
           F: 'static + Clone,
-          C::Texture: CreateTexture<F>,
+          C::Texture: CreateTexture<F> + UpdateTexture<F, Error = <C::Texture as CreateTexture<F>>::Error>,
           C: Any + CharacterCache,
 {
     module.add(Arc::new("window_size".into()), window_size::<W>, Dfn {
@@ -649,8 +649,6 @@ pub fn text_arg(rt: &mut Runtime) -> Result<(), String> {
 }
 
 pub fn window_title<W: Any + AdvancedWindow>(rt: &mut Runtime) -> Result<(), String> {
-    use std::sync::Arc;
-
     let window = unsafe { &mut *Current::<W>::new() };
     rt.push(Arc::new(window.get_title()));
     Ok(())
@@ -658,8 +656,6 @@ pub fn window_title<W: Any + AdvancedWindow>(rt: &mut Runtime) -> Result<(), Str
 
 #[allow(non_snake_case)]
 pub fn set_window__title<W: Any + AdvancedWindow>(rt: &mut Runtime) -> Result<(), String> {
-    use std::sync::Arc;
-
     let window = unsafe { &mut *Current::<W>::new() };
     let title: Arc<String> = rt.pop()?;
     window.set_title((*title).clone());
@@ -691,7 +687,9 @@ pub fn font_names(rt: &mut Runtime) -> Result<(), String> {
 
 /// Helper method for loading fonts.
 pub fn load_font<F, T>(rt: &mut Runtime) -> Result<(), String>
-    where F: 'static + Clone, T: 'static + CreateTexture<F> + graphics::ImageSize
+    where F: 'static + Clone, T: 'static +
+          CreateTexture<F> + UpdateTexture<F, Error = <T as CreateTexture<F>>::Error> +
+          graphics::ImageSize
 {
     use texture::{Filter, TextureSettings};
     use graphics::glyph_cache::rusttype::GlyphCache;
@@ -786,7 +784,7 @@ pub fn image_size(rt: &mut Runtime) -> Result<(), String> {
 
 #[allow(non_snake_case)]
 pub fn pxl__image_pos_color(rt: &mut Runtime) -> Result<(), String> {
-    use image::{Rgba, RgbaImage, GenericImage};
+    use image::{Rgba, RgbaImage};
 
     let images = unsafe { &mut *Current::<Vec<RgbaImage>>::new() };
     let color: [f32; 4] = rt.pop_vec4()?;
@@ -803,22 +801,18 @@ pub fn pxl__image_pos_color(rt: &mut Runtime) -> Result<(), String> {
     if x >= w || y >= h {
         return Err("Pixel is out of image bounds".into());
     }
-    unsafe {
-        image.unsafe_put_pixel(x, y, Rgba {
-            data: [
-                (color[0] * 255.0) as u8,
-                (color[1] * 255.0) as u8,
-                (color[2] * 255.0) as u8,
-                (color[3] * 255.0) as u8
-            ]
-        });
-    }
+    image.put_pixel(x, y, Rgba([
+        (color[0] * 255.0) as u8,
+        (color[1] * 255.0) as u8,
+        (color[2] * 255.0) as u8,
+        (color[3] * 255.0) as u8
+    ]));
     Ok(())
 }
 
 #[allow(non_snake_case)]
 pub fn pxl__image_pos(rt: &mut Runtime) -> Result<(), String> {
-    use image::{GenericImageView, RgbaImage};
+    use image::RgbaImage;
 
     let images = unsafe { &*Current::<Vec<RgbaImage>>::new() };
     let pos: [f64; 2] = rt.pop_vec4()?;
@@ -834,7 +828,7 @@ pub fn pxl__image_pos(rt: &mut Runtime) -> Result<(), String> {
     if x >= w || y >= h {
         return Err("Pixel is out of image bounds".into());
     }
-    let color = unsafe { image.unsafe_get_pixel(x, y).data };
+    let color = image.get_pixel(x, y).0;
     rt.push_vec4([
         color[0] as f32 / 255.0,
         color[1] as f32 / 255.0,
