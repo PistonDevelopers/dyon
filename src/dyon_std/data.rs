@@ -218,8 +218,6 @@ fn array(
     strings: &mut Strings,
     data: &str
 ) -> Result<Variable, String> {
-    use std::sync::Arc;
-
     let mut res = vec![];
     let mut was_comma = false;
     loop {
