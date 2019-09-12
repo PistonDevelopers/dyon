@@ -488,6 +488,11 @@ impl Module {
             tys: vec![Type::array(), Type::Any],
             ret: Type::Void
         });
+        m.add_str("insert_ref(mut,_,_)", insert_ref, Dfn {
+            lts: vec![Lt::Default, Lt::Default, Lt::Arg(0)],
+            tys: vec![Type::array(), Type::F64, Type::Any],
+            ret: Type::Void
+        });
         m
     }
 

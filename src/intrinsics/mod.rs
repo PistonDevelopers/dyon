@@ -23,10 +23,9 @@ const KEYS: usize = 11;
 const ERRSTR__STRING_START_LEN_MSG: usize = 12;
 const META__SYNTAX_IN_STRING: usize = 13;
 const INSERT: usize = 14;
-const INSERT_REF: usize = 15;
-const REMOVE: usize = 16;
-const NEXT: usize = 17;
-const WAIT_NEXT: usize = 18;
+const REMOVE: usize = 15;
+const NEXT: usize = 16;
+const WAIT_NEXT: usize = 17;
 
 const TABLE: &[(usize, fn(
         &mut Runtime,
@@ -48,7 +47,6 @@ const TABLE: &[(usize, fn(
     (ERRSTR__STRING_START_LEN_MSG, errstr__string_start_len_msg),
     (META__SYNTAX_IN_STRING, meta__syntax_in_string),
     (INSERT, insert),
-    (INSERT_REF, insert_ref),
     (REMOVE, remove),
     (NEXT, next),
     (WAIT_NEXT, wait_next),
@@ -113,11 +111,6 @@ pub(crate) fn standard(f: &mut Prelude) {
         });
     f.intrinsic(Arc::new("insert(mut,_,_)".into()), INSERT, Dfn {
         lts: vec![Lt::Default; 3],
-        tys: vec![Type::array(), Type::F64, Type::Any],
-        ret: Type::Void
-    });
-    f.intrinsic(Arc::new("insert_ref(mut,_,_)".into()), INSERT_REF, Dfn {
-        lts: vec![Lt::Default, Lt::Default, Lt::Arg(0)],
         tys: vec![Type::array(), Type::F64, Type::Any],
         ret: Type::Void
     });
