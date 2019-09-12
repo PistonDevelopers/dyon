@@ -525,6 +525,7 @@ impl Module {
         m.add_str("has", has, Dfn::nl(vec![Object, Text], Bool));
         m.add_str("keys", keys, Dfn::nl(vec![Object], Type::Array(Box::new(Text))));
         m.add_str("chars", chars, Dfn::nl(vec![Text], Type::Array(Box::new(Text))));
+        m.add_str("wait_next", wait_next, Dfn::nl(vec![Type::in_ty()], Any));
 
         m
     }

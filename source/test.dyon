@@ -1,6 +1,3 @@
 fn main() {
-    b := 4
-    s := [1, 2, 3]
-    clear(mut s)
-    println(s)
+    println(chars("hello"))
 }

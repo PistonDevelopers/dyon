@@ -9,7 +9,6 @@ use Type;
 use dyon_std::*;
 
 const NEXT: usize = 0;
-const WAIT_NEXT: usize = 1;
 
 const TABLE: &[(usize, fn(
         &mut Runtime,
@@ -17,16 +16,10 @@ const TABLE: &[(usize, fn(
     ) -> Result<Option<Variable>, String>)]
 = &[
     (NEXT, next),
-    (WAIT_NEXT, wait_next),
 ];
 
 pub(crate) fn standard(f: &mut Prelude) {
     f.intrinsic(Arc::new("next".into()), NEXT, Dfn {
-        lts: vec![Lt::Default],
-        tys: vec![Type::in_ty()],
-        ret: Type::Any
-    });
-    f.intrinsic(Arc::new("wait_next".into()), WAIT_NEXT, Dfn {
         lts: vec![Lt::Default],
         tys: vec![Type::in_ty()],
         ret: Type::Any
