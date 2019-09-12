@@ -1,5 +1,6 @@
 fn main() {
-    m := unwrap(module(in: "foo.dyon", string: "foo", imports: []))
+    m := unwrap(module(in: "foo.dyon", string: "fn main() {_ := unwrap(err(\"hi\"))}", imports: []))
+    call(m, "main", [])
 }
 
 fn anon(a) -> {return clone(a)}

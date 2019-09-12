@@ -22,31 +22,30 @@ const POP: usize = 10;
 const REVERSE: usize = 11;
 const CLEAR: usize = 12;
 const SWAP: usize = 13;
-const CALL: usize = 14;
-const CALL_RET: usize = 15;
-const FUNCTIONS: usize = 16;
-const UNWRAP: usize = 17;
-const UNWRAP_ERR: usize = 18;
-const IS_ERR: usize = 19;
-const IS_OK: usize = 20;
-const MIN: usize = 21;
-const MAX: usize = 22;
-const SAVE__DATA_FILE: usize = 23;
-const JSON_FROM_META_DATA: usize = 24;
-const HAS: usize = 25;
-const CHARS: usize = 26;
-const UNWRAP_OR: usize = 27;
-const TIP: usize = 28;
-const NECK: usize = 29;
-const FUNCTIONS__MODULE: usize = 30;
-const KEYS: usize = 31;
-const ERRSTR__STRING_START_LEN_MSG: usize = 32;
-const META__SYNTAX_IN_STRING: usize = 33;
-const INSERT: usize = 34;
-const INSERT_REF: usize = 35;
-const REMOVE: usize = 36;
-const NEXT: usize = 37;
-const WAIT_NEXT: usize = 38;
+const CALL_RET: usize = 14;
+const FUNCTIONS: usize = 15;
+const UNWRAP: usize = 16;
+const UNWRAP_ERR: usize = 17;
+const IS_ERR: usize = 18;
+const IS_OK: usize = 19;
+const MIN: usize = 20;
+const MAX: usize = 21;
+const SAVE__DATA_FILE: usize = 22;
+const JSON_FROM_META_DATA: usize = 23;
+const HAS: usize = 24;
+const CHARS: usize = 25;
+const UNWRAP_OR: usize = 26;
+const TIP: usize = 27;
+const NECK: usize = 28;
+const FUNCTIONS__MODULE: usize = 29;
+const KEYS: usize = 30;
+const ERRSTR__STRING_START_LEN_MSG: usize = 31;
+const META__SYNTAX_IN_STRING: usize = 32;
+const INSERT: usize = 33;
+const INSERT_REF: usize = 34;
+const REMOVE: usize = 35;
+const NEXT: usize = 36;
+const WAIT_NEXT: usize = 37;
 
 const TABLE: &[(usize, fn(
         &mut Runtime,
@@ -67,7 +66,6 @@ const TABLE: &[(usize, fn(
     (REVERSE, reverse),
     (CLEAR, clear),
     (SWAP, swap),
-    (CALL, _call),
     (CALL_RET, call_ret),
     (FUNCTIONS, functions),
     (UNWRAP, unwrap),
@@ -147,11 +145,6 @@ pub(crate) fn standard(f: &mut Prelude) {
     f.intrinsic(Arc::new("swap(mut,_,_)".into()), SWAP, Dfn {
         lts: vec![Lt::Default; 3],
         tys: vec![Type::array(), Type::F64, Type::F64],
-        ret: Type::Void
-    });
-    f.intrinsic(Arc::new("call".into()), CALL, Dfn {
-        lts: vec![Lt::Default; 3],
-        tys: vec![Type::Any, Type::Text, Type::array()],
         ret: Type::Void
     });
     f.intrinsic(Arc::new("call_ret".into()), CALL_RET, Dfn {

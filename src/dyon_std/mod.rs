@@ -984,10 +984,7 @@ pub(crate) fn module__in_string_imports(rt: &mut Runtime) -> Result<(), String> 
 }
 
 // TODO: Can't be rewritten as an external function because it uses the current module.
-pub(crate) fn _call(
-    rt: &mut Runtime,
-    call: &ast::Call
-) -> Result<Option<Variable>, String> {
+pub(crate) fn _call(rt: &mut Runtime) -> Result<(), String> {
     // Use the source from calling function.
     let source = rt.module.functions[rt.call_stack.last().unwrap().index].source.clone();
     let args = rt.stack.pop().expect(TINVOTS);
@@ -995,18 +992,16 @@ pub(crate) fn _call(
     let call_module = rt.stack.pop().expect(TINVOTS);
     let fn_name = match rt.resolve(&fn_name) {
         &Variable::Text(ref text) => text.clone(),
-        x => return Err(rt.module.error(call.args[1].source_range(),
-                        &rt.expected(x, "text"), rt))
+        x => return Err(rt.expected_arg(1, x, "text"))
     };
     let args = match rt.resolve(&args) {
         &Variable::Array(ref arr) => arr.clone(),
-        x => return Err(rt.module.error(call.args[2].source_range(),
-                        &rt.expected(x, "array"), rt))
+        x => return Err(rt.expected_arg(2, x, "array"))
     };
-    let obj = match rt.resolve(&call_module) {
+    let x = rt.resolve(&call_module);
+    let obj = match x {
         &Variable::RustObject(ref obj) => obj.clone(),
-        x => return Err(rt.module.error(call.args[0].source_range(),
-                        &rt.expected(x, "Module"), rt))
+        x => return Err(rt.expected_arg(0, x, "Module"))
     };
 
     match obj.lock().unwrap()
@@ -1019,45 +1014,42 @@ pub(crate) fn _call(
                 FnIndex::Loaded(f_index) => {
                     let f = &m.functions[f_index as usize];
                     if f.args.len() != args.len() {
-                        return Err(rt.module.error(
-                            call.args[2].source_range(),
-                            &format!(
-                                "{}\nExpected `{}` arguments, found `{}`",
-                                rt.stack_trace(),
-                                f.args.len(), args.len()), rt))
+                        return Err({
+                            rt.arg_err_index.set(Some(2));
+                            format!(
+                                "Expected `{}` arguments, found `{}`",
+                                f.args.len(), args.len()
+                            )
+                        })
                     }
-                    lifetimechk::check(f, &args).map_err(|err|
-                        rt.module.error(call.args[2].source_range(),
-                        &format!("{}\n{}", err, rt.stack_trace()), rt))?;
+                    lifetimechk::check(f, &args).map_err(|err| {
+                        rt.arg_err_index.set(Some(2));
+                        err
+                    })?;
                 }
                 FnIndex::Intrinsic(_) | FnIndex::None |
                 FnIndex::ExternalVoid(_) | FnIndex::ExternalReturn(_) =>
-                    return Err(rt.module.error(
-                            call.args[1].source_range(),
-                            &format!(
-                                "{}\nCould not find function `{}`",
-                                rt.stack_trace(),
-                                fn_name), rt))
+                    return Err(format!("Could not find function `{}`", fn_name))
             }
+            // Use empty range instead of `call.source_range` (from when it was intrinsic).
+            let call_range = Range::empty(0);
             let call = ast::Call {
                 alias: None,
                 name: fn_name.clone(),
                 f_index: Cell::new(f_index),
                 args: args.iter().map(|arg|
                     ast::Expression::Variable(Box::new((
-                        call.source_range, arg.clone())))).collect(),
+                        call_range, arg.clone())))).collect(),
                 custom_source: Some(source),
-                source_range: call.source_range,
+                source_range: call_range,
             };
 
             rt.call(&call, &m)?;
         }
-        None => return Err(rt.module.error(call.args[0].source_range(),
-                    &format!("{}\nExpected `Module`",
-                        rt.stack_trace()), rt))
+        None => return Err(rt.expected_arg(0, x, "Module"))
     }
 
-    Ok(None)
+    Ok(())
 }
 
 // TODO: Can't be rewritten as an external function because it uses the current module.
