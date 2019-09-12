@@ -127,11 +127,7 @@ pub(crate) fn clone(rt: &mut Runtime) -> Result<(), String> {
     Ok(())
 }
 
-// TODO: Can't be rewritten as external function because it reports error on arguments.
-pub(crate) fn why(
-    rt: &mut Runtime,
-    call: &ast::Call
-) -> Result<Option<Variable>, String> {
+pub(crate) fn why(rt: &mut Runtime) -> Result<(), String> {
     let v = rt.stack.pop().expect(TINVOTS);
     let v = Variable::Array(Arc::new(match rt.resolve(&v) {
         &Variable::Bool(true, Some(ref sec)) => {
@@ -140,19 +136,21 @@ pub(crate) fn why(
             sec
         }
         &Variable::Bool(true, None) => {
-            return Err(rt.module.error(call.args[0].source_range(),
-                &format!("{}\nThis does not make sense, perhaps an array is empty?",
-                    rt.stack_trace()), rt))
+            return Err({
+                rt.arg_err_index.set(Some(0));
+                "This does not make sense, perhaps an array is empty?".into()
+            })
         }
         &Variable::Bool(false, _) => {
-            return Err(rt.module.error(call.args[0].source_range(),
-                &format!("{}\nMust be `true` to have meaning, try add or remove `!`",
-                    rt.stack_trace()), rt))
+            return Err({
+                rt.arg_err_index.set(Some(0));
+                "Must be `true` to have meaning, try add or remove `!`".into()
+            })
         }
-        x => return Err(rt.module.error(call.args[0].source_range(),
-            &rt.expected(x, "bool"), rt))
+        x => return Err(rt.expected_arg(0, x, "bool"))
     }));
-    Ok(Some(v))
+    rt.stack.push(v);
+    Ok(())
 }
 
 // TODO: Can't be rewritten as external function because it reports error on arguments.

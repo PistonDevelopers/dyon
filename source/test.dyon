@@ -1,3 +1,4 @@
 fn main() {
-    println(unwrap(ok(2)))
+    s := any i 5 {i == 3}
+    println(why(s))
 }
