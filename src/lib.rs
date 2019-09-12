@@ -473,6 +473,8 @@ impl Module {
         m.add_str("unwrap", unwrap, Dfn::nl(vec![Any], Any));
         m.add_str("why", why, Dfn::nl(vec![Type::Secret(Box::new(Bool))], Type::array()));
         m.add_str("where", _where, Dfn::nl(vec![Type::Secret(Box::new(F64))], Type::array()));
+        m.add_str("explain_why", explain_why, Dfn::nl(vec![Type::Bool, Type::Any],
+                                                      Type::Secret(Box::new(Type::Bool))));
         m
     }
 

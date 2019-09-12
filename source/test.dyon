@@ -1,4 +1,4 @@
 fn main() {
-    s := max i 5 {i}
-    println(where(s))
+    s := explain_why(true, "hi")
+    println(why(s))
 }

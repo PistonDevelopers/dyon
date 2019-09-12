@@ -8,41 +8,39 @@ use Variable;
 use Type;
 use dyon_std::*;
 
-const EXPLAIN_WHY: usize = 0;
-const EXPLAIN_WHERE: usize = 1;
-const HEAD: usize = 2;
-const TAIL: usize = 3;
-const IS_EMPTY: usize = 4;
-const LEN: usize = 5;
-const PUSH_REF: usize = 6;
-const PUSH: usize = 7;
-const POP: usize = 8;
-const REVERSE: usize = 9;
-const CLEAR: usize = 10;
-const SWAP: usize = 11;
-const UNWRAP_ERR: usize = 12;
-const SAVE__DATA_FILE: usize = 13;
-const JSON_FROM_META_DATA: usize = 14;
-const HAS: usize = 15;
-const CHARS: usize = 16;
-const UNWRAP_OR: usize = 17;
-const TIP: usize = 18;
-const NECK: usize = 19;
-const KEYS: usize = 20;
-const ERRSTR__STRING_START_LEN_MSG: usize = 21;
-const META__SYNTAX_IN_STRING: usize = 22;
-const INSERT: usize = 23;
-const INSERT_REF: usize = 24;
-const REMOVE: usize = 25;
-const NEXT: usize = 26;
-const WAIT_NEXT: usize = 27;
+const EXPLAIN_WHERE: usize = 0;
+const HEAD: usize = 1;
+const TAIL: usize = 2;
+const IS_EMPTY: usize = 3;
+const LEN: usize = 4;
+const PUSH_REF: usize = 5;
+const PUSH: usize = 6;
+const POP: usize = 7;
+const REVERSE: usize = 8;
+const CLEAR: usize = 9;
+const SWAP: usize = 10;
+const UNWRAP_ERR: usize = 11;
+const SAVE__DATA_FILE: usize = 12;
+const JSON_FROM_META_DATA: usize = 13;
+const HAS: usize = 14;
+const CHARS: usize = 15;
+const UNWRAP_OR: usize = 16;
+const TIP: usize = 17;
+const NECK: usize = 18;
+const KEYS: usize = 19;
+const ERRSTR__STRING_START_LEN_MSG: usize = 20;
+const META__SYNTAX_IN_STRING: usize = 21;
+const INSERT: usize = 22;
+const INSERT_REF: usize = 23;
+const REMOVE: usize = 24;
+const NEXT: usize = 25;
+const WAIT_NEXT: usize = 26;
 
 const TABLE: &[(usize, fn(
         &mut Runtime,
         &ast::Call,
     ) -> Result<Option<Variable>, String>)]
 = &[
-    (EXPLAIN_WHY, explain_why),
     (EXPLAIN_WHERE, explain_where),
     (HEAD, head),
     (TAIL, tail),
@@ -81,11 +79,6 @@ pub(crate) fn standard(f: &mut Prelude) {
         });
     };
 
-    f.intrinsic(Arc::new("explain_why".into()), EXPLAIN_WHY, Dfn {
-        lts: vec![Lt::Default; 2],
-        tys: vec![Type::Bool, Type::Any],
-        ret: Type::Secret(Box::new(Type::Bool))
-    });
     f.intrinsic(Arc::new("explain_where".into()), EXPLAIN_WHERE, Dfn {
         lts: vec![Lt::Default; 2],
         tys: vec![Type::F64, Type::Any],
