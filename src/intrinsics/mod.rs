@@ -22,30 +22,29 @@ const POP: usize = 10;
 const REVERSE: usize = 11;
 const CLEAR: usize = 12;
 const SWAP: usize = 13;
-const CALL_RET: usize = 14;
-const FUNCTIONS: usize = 15;
-const UNWRAP: usize = 16;
-const UNWRAP_ERR: usize = 17;
-const IS_ERR: usize = 18;
-const IS_OK: usize = 19;
-const MIN: usize = 20;
-const MAX: usize = 21;
-const SAVE__DATA_FILE: usize = 22;
-const JSON_FROM_META_DATA: usize = 23;
-const HAS: usize = 24;
-const CHARS: usize = 25;
-const UNWRAP_OR: usize = 26;
-const TIP: usize = 27;
-const NECK: usize = 28;
-const FUNCTIONS__MODULE: usize = 29;
-const KEYS: usize = 30;
-const ERRSTR__STRING_START_LEN_MSG: usize = 31;
-const META__SYNTAX_IN_STRING: usize = 32;
-const INSERT: usize = 33;
-const INSERT_REF: usize = 34;
-const REMOVE: usize = 35;
-const NEXT: usize = 36;
-const WAIT_NEXT: usize = 37;
+const FUNCTIONS: usize = 14;
+const UNWRAP: usize = 15;
+const UNWRAP_ERR: usize = 16;
+const IS_ERR: usize = 17;
+const IS_OK: usize = 18;
+const MIN: usize = 19;
+const MAX: usize = 20;
+const SAVE__DATA_FILE: usize = 21;
+const JSON_FROM_META_DATA: usize = 22;
+const HAS: usize = 23;
+const CHARS: usize = 24;
+const UNWRAP_OR: usize = 25;
+const TIP: usize = 26;
+const NECK: usize = 27;
+const FUNCTIONS__MODULE: usize = 28;
+const KEYS: usize = 29;
+const ERRSTR__STRING_START_LEN_MSG: usize = 30;
+const META__SYNTAX_IN_STRING: usize = 31;
+const INSERT: usize = 32;
+const INSERT_REF: usize = 33;
+const REMOVE: usize = 34;
+const NEXT: usize = 35;
+const WAIT_NEXT: usize = 36;
 
 const TABLE: &[(usize, fn(
         &mut Runtime,
@@ -66,7 +65,6 @@ const TABLE: &[(usize, fn(
     (REVERSE, reverse),
     (CLEAR, clear),
     (SWAP, swap),
-    (CALL_RET, call_ret),
     (FUNCTIONS, functions),
     (UNWRAP, unwrap),
     (UNWRAP_ERR, unwrap_err),
@@ -146,11 +144,6 @@ pub(crate) fn standard(f: &mut Prelude) {
         lts: vec![Lt::Default; 3],
         tys: vec![Type::array(), Type::F64, Type::F64],
         ret: Type::Void
-    });
-    f.intrinsic(Arc::new("call_ret".into()), CALL_RET, Dfn {
-        lts: vec![Lt::Default; 3],
-        tys: vec![Type::Any, Type::Text, Type::array()],
-        ret: Type::Any
     });
     f.intrinsic(Arc::new("functions".into()), FUNCTIONS, Dfn {
         lts: vec![],

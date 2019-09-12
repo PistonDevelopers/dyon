@@ -463,6 +463,7 @@ impl Module {
         m.add_str("module__in_string_imports", module__in_string_imports,
                   Dfn::nl(vec![Text, Text, Type::array()], Type::result()));
         m.add_str("call", _call, Dfn::nl(vec![Any, Text, Type::array()], Void));
+        m.add_str("call_ret", call_ret, Dfn::nl(vec![Any, Text, Type::array()], Any));
         m
     }
 
