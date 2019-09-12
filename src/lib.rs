@@ -457,6 +457,7 @@ impl Module {
         m.add_str("args_os", args_os, Dfn::nl(vec![], Type::Array(Box::new(Type::Text))));
         m.add_str("now", now, Dfn::nl(vec![], F64));
         m.add_str("is_nan", is_nan, Dfn::nl(vec![F64], Bool));
+        m.add_str("load", load, Dfn::nl(vec![Text], Type::result()));
         m
     }
 

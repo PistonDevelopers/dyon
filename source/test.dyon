@@ -1,2 +1,5 @@
 fn main() {
+    m := load(anon(2))
 }
+
+fn anon(a) -> {return clone(a)}

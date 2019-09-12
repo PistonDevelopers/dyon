@@ -1,6 +1,7 @@
 //! Dyon runtime.
 
 use std::sync::Arc;
+use std::cell::Cell;
 use std::collections::HashMap;
 use rand;
 use range::Range;
@@ -92,6 +93,8 @@ pub struct Runtime {
     pub current_stack: Vec<(Arc<String>, usize)>,
     ret: Arc<String>,
     pub(crate) rng: rand::rngs::StdRng,
+    /// External functions can choose to report an error on an argument.
+    pub arg_err_index: Cell<Option<usize>>,
 }
 
 impl Default for Runtime {
@@ -307,6 +310,7 @@ impl Runtime {
             current_stack: vec![],
             ret: Arc::new("return".into()),
             rng: rand::rngs::StdRng::from_entropy(),
+            arg_err_index: Cell::new(None),
         }
     }
 
@@ -409,6 +413,15 @@ impl Runtime {
         use std::sync::Mutex;
         use RustObject;
         self.stack.push(Variable::RustObject(Arc::new(Mutex::new(val)) as RustObject))
+    }
+
+    /// Generates error message that a certain type was expected for argument.
+    ///
+    /// Sets argument error index on runtime such that
+    /// external functions can report proper range.
+    pub fn expected_arg(&self, arg: usize, var: &Variable, ty: &str) -> String {
+        self.arg_err_index.set(Some(arg));
+        self.expected(var, ty)
     }
 
     /// Generates error message that a certain type was expected.
@@ -753,7 +766,6 @@ impl Runtime {
 
     /// Run `main` function in a module.
     pub fn run(&mut self, module: &Arc<Module>) -> Result<(), String> {
-        use std::cell::Cell;
         use std::mem::replace;
 
         let old_module = replace(&mut self.module, module.clone());
@@ -820,7 +832,6 @@ impl Runtime {
     /// Start a new thread and return the handle.
     pub fn go(&mut self, go: &ast::Go) -> Result<(Option<Variable>, Flow), String> {
         use std::thread::{self, JoinHandle};
-        use std::cell::Cell;
         use Thread;
 
         let n = go.call.args.len();
@@ -869,6 +880,7 @@ impl Runtime {
             }],
             rng: self.rng.clone(),
             ret: self.ret.clone(),
+            arg_err_index: Cell::new(None),
         };
         let handle: JoinHandle<Result<Variable, String>> = thread::spawn(move || {
             let mut new_rt = new_rt;
@@ -1065,8 +1077,15 @@ impl Runtime {
                                         self.stack_trace()), self))
                     };
                 }
-                (f)(self).map_err(|err|
-                    self.module.error(call.source_range, &err, self))?;
+                (f)(self).map_err(|err| {
+                    let range = if let Some(ind) = self.arg_err_index.get() {
+                        self.arg_err_index.set(None);
+                        call.args[ind].source_range()
+                    } else {
+                        call.source_range
+                    };
+                    self.module.error(range, &err, self)
+                })?;
                 Ok((None, Flow::Continue))
             }
             FnIndex::ExternalReturn(FnExternalRef(f)) => {
@@ -1080,8 +1099,15 @@ impl Runtime {
                                         self.stack_trace()), self))
                     };
                 }
-                (f)(self).map_err(|err|
-                    self.module.error(call.source_range, &err, self))?;
+                (f)(self).map_err(|err| {
+                    let range = if let Some(ind) = self.arg_err_index.get() {
+                        self.arg_err_index.set(None);
+                        call.args[ind].source_range()
+                    } else {
+                        call.source_range
+                    };
+                    self.module.error(range, &err, self)
+                })?;
                 Ok((Some(self.stack.pop().expect(TINVOTS)), Flow::Continue))
             }
             FnIndex::Loaded(f_index) => {
@@ -1266,8 +1292,6 @@ impl Runtime {
         args: &[Variable],
         module: &Arc<Module>
     ) -> Result<(), String> {
-        use std::cell::Cell;
-
         let name: Arc<String> = Arc::new(function.into());
         match module.find_function(&name, 0) {
             FnIndex::Loaded(f_index) => {
@@ -1296,8 +1320,6 @@ impl Runtime {
         args: &[Variable],
         module: &Arc<Module>
     ) -> Result<Variable, String> {
-        use std::cell::Cell;
-
         let name: Arc<String> = Arc::new(function.into());
         let fn_index = module.find_function(&name, 0);
         if let FnIndex::None = fn_index {
