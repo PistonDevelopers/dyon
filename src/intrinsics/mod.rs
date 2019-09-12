@@ -8,39 +8,37 @@ use Variable;
 use Type;
 use dyon_std::*;
 
-const HEAD: usize = 0;
-const TAIL: usize = 1;
-const IS_EMPTY: usize = 2;
-const LEN: usize = 3;
-const PUSH_REF: usize = 4;
-const PUSH: usize = 5;
-const POP: usize = 6;
-const REVERSE: usize = 7;
-const CLEAR: usize = 8;
-const SWAP: usize = 9;
-const UNWRAP_ERR: usize = 10;
-const SAVE__DATA_FILE: usize = 11;
-const JSON_FROM_META_DATA: usize = 12;
-const HAS: usize = 13;
-const CHARS: usize = 14;
-const UNWRAP_OR: usize = 15;
-const TIP: usize = 16;
-const NECK: usize = 17;
-const KEYS: usize = 18;
-const ERRSTR__STRING_START_LEN_MSG: usize = 19;
-const META__SYNTAX_IN_STRING: usize = 20;
-const INSERT: usize = 21;
-const INSERT_REF: usize = 22;
-const REMOVE: usize = 23;
-const NEXT: usize = 24;
-const WAIT_NEXT: usize = 25;
+const TAIL: usize = 0;
+const IS_EMPTY: usize = 1;
+const LEN: usize = 2;
+const PUSH_REF: usize = 3;
+const PUSH: usize = 4;
+const POP: usize = 5;
+const REVERSE: usize = 6;
+const CLEAR: usize = 7;
+const SWAP: usize = 8;
+const UNWRAP_ERR: usize = 9;
+const SAVE__DATA_FILE: usize = 10;
+const JSON_FROM_META_DATA: usize = 11;
+const HAS: usize = 12;
+const CHARS: usize = 13;
+const UNWRAP_OR: usize = 14;
+const TIP: usize = 15;
+const NECK: usize = 16;
+const KEYS: usize = 17;
+const ERRSTR__STRING_START_LEN_MSG: usize = 18;
+const META__SYNTAX_IN_STRING: usize = 19;
+const INSERT: usize = 20;
+const INSERT_REF: usize = 21;
+const REMOVE: usize = 22;
+const NEXT: usize = 23;
+const WAIT_NEXT: usize = 24;
 
 const TABLE: &[(usize, fn(
         &mut Runtime,
         &ast::Call,
     ) -> Result<Option<Variable>, String>)]
 = &[
-    (HEAD, head),
     (TAIL, tail),
     (IS_EMPTY, is_empty),
     (LEN, len),
@@ -77,7 +75,6 @@ pub(crate) fn standard(f: &mut Prelude) {
         });
     };
 
-    sarg(f, "head", HEAD, Type::Link, Type::Any);
     sarg(f, "tail", TAIL, Type::Link, Type::Link);
     sarg(f, "is_empty", IS_EMPTY, Type::Link, Type::Bool);
     sarg(f, "len", LEN, Type::array(), Type::F64);

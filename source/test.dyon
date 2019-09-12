@@ -1,4 +1,4 @@
 fn main() {
-    s := explain_where(5, "hi")
-    println(where(s))
+    s := link {1 2 3}
+    println(head(s))
 }
