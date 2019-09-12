@@ -8,31 +8,29 @@ use Variable;
 use Type;
 use dyon_std::*;
 
-const PUSH: usize = 0;
-const POP: usize = 1;
-const REVERSE: usize = 2;
-const CLEAR: usize = 3;
-const SWAP: usize = 4;
-const UNWRAP_ERR: usize = 5;
-const SAVE__DATA_FILE: usize = 6;
-const JSON_FROM_META_DATA: usize = 7;
-const HAS: usize = 8;
-const CHARS: usize = 9;
-const UNWRAP_OR: usize = 10;
-const KEYS: usize = 11;
-const ERRSTR__STRING_START_LEN_MSG: usize = 12;
-const META__SYNTAX_IN_STRING: usize = 13;
-const INSERT: usize = 14;
-const REMOVE: usize = 15;
-const NEXT: usize = 16;
-const WAIT_NEXT: usize = 17;
+const POP: usize = 0;
+const REVERSE: usize = 1;
+const CLEAR: usize = 2;
+const SWAP: usize = 3;
+const UNWRAP_ERR: usize = 4;
+const SAVE__DATA_FILE: usize = 5;
+const JSON_FROM_META_DATA: usize = 6;
+const HAS: usize = 7;
+const CHARS: usize = 8;
+const UNWRAP_OR: usize = 9;
+const KEYS: usize = 10;
+const ERRSTR__STRING_START_LEN_MSG: usize = 11;
+const META__SYNTAX_IN_STRING: usize = 12;
+const INSERT: usize = 13;
+const REMOVE: usize = 14;
+const NEXT: usize = 15;
+const WAIT_NEXT: usize = 16;
 
 const TABLE: &[(usize, fn(
         &mut Runtime,
         &ast::Call,
     ) -> Result<Option<Variable>, String>)]
 = &[
-    (PUSH, push),
     (POP, pop),
     (REVERSE, reverse),
     (CLEAR, clear),
@@ -61,11 +59,6 @@ pub(crate) fn standard(f: &mut Prelude) {
         });
     };
 
-    f.intrinsic(Arc::new("push(mut,_)".into()), PUSH, Dfn {
-        lts: vec![Lt::Default; 2],
-        tys: vec![Type::array(), Type::Any],
-        ret: Type::Void
-    });
     f.intrinsic(Arc::new("pop(mut)".into()), POP, Dfn {
         lts: vec![Lt::Return],
         tys: vec![Type::array()],

@@ -485,14 +485,15 @@ impl Module {
         m.add_str("len", len, Dfn::nl(vec![Type::array()], F64));
         m.add_str("push_ref(mut,_)", push_ref, Dfn {
             lts: vec![Lt::Default, Lt::Arg(0)],
-            tys: vec![Type::array(), Type::Any],
-            ret: Type::Void
+            tys: vec![Type::array(), Any],
+            ret: Void
         });
         m.add_str("insert_ref(mut,_,_)", insert_ref, Dfn {
             lts: vec![Lt::Default, Lt::Default, Lt::Arg(0)],
-            tys: vec![Type::array(), Type::F64, Type::Any],
-            ret: Type::Void
+            tys: vec![Type::array(), F64, Any],
+            ret: Void
         });
+        m.add_str("push(mut,_)", push, Dfn::nl(vec![Type::array(), Any], Void));
         m
     }
 

@@ -1,6 +1,6 @@
 fn main() {
     b := 4
     s := [1, 2, 3]
-    insert_ref(mut s, 1, b)
+    push(mut s, b)
     println(s)
 }
