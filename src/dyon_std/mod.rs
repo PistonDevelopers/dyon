@@ -922,29 +922,24 @@ pub(crate) fn load__source_imports(rt: &mut Runtime) -> Result<(), String> {
     Ok(())
 }
 
-// TODO: Can't be rewritten as an external function because it uses the current module.
-pub(crate) fn module__in_string_imports(
-    rt: &mut Runtime,
-    call: &ast::Call
-) -> Result<Option<Variable>, String> {
+pub(crate) fn module__in_string_imports(rt: &mut Runtime) -> Result<(), String> {
     let modules = rt.stack.pop().expect(TINVOTS);
     let source = rt.stack.pop().expect(TINVOTS);
     let source = match rt.resolve(&source) {
         &Variable::Text(ref t) => t.clone(),
-        x => return Err(rt.module.error(call.args[1].source_range(),
-                &rt.expected(x, "str"), rt))
+        x => return Err(rt.expected_arg(1, x, "str"))
     };
     let name = rt.stack.pop().expect(TINVOTS);
     let name = match rt.resolve(&name) {
         &Variable::Text(ref t) => t.clone(),
-        x => return Err(rt.module.error(call.args[0].source_range(),
-                &rt.expected(x, "str"), rt))
+        x => return Err(rt.expected_arg(0, x, "str"))
     };
     let mut new_module = Module::new_intrinsics(rt.module.intrinsics.clone());
     for f in &rt.module.ext_prelude {
         new_module.add(f.name.clone(), f.f, f.p.clone());
     }
-    match rt.resolve(&modules) {
+    let x = rt.resolve(&modules);
+    match x {
         &Variable::Array(ref array) => {
             for it in &**array {
                 match rt.resolve(it) {
@@ -964,27 +959,19 @@ pub(crate) fn module__in_string_imports(
                                     new_module.register(f.clone())
                                 }
                             }
-                            None => return Err(rt.module.error(
-                                call.args[2].source_range(),
-                                &format!("{}\nExpected `Module`",
-                                    rt.stack_trace()), rt))
+                            None => return Err(rt.expected_arg(2, x, "[Module]"))
                         }
                     }
-                    x => return Err(rt.module.error(
-                        call.args[2].source_range(),
-                        &rt.expected(x, "Module"), rt))
+                    x => return Err(rt.expected_arg(2, x, "[Module]"))
                 }
             }
         }
-        x => return Err(rt.module.error(call.args[2].source_range(),
-                &rt.expected(x, "[Module]"), rt))
+        x => return Err(rt.expected_arg(2, x, "[Module]"))
     }
     let v = if let Err(err) = load_str(&name, source, &mut new_module) {
             Variable::Result(Err(Box::new(Error {
                 message: Variable::Text(Arc::new(
-                    format!("{}\n{}\n{}", rt.stack_trace(), err,
-                        rt.module.error(call.args[0].source_range(),
-                        "When attempting to load module:", rt)))),
+                    format!("When attempting to load module:\n{}", err))),
                 trace: vec![]
             })))
         } else {
@@ -992,7 +979,8 @@ pub(crate) fn module__in_string_imports(
                 Variable::RustObject(Arc::new(
                     Mutex::new(Arc::new(new_module)))))))
         };
-    Ok(Some(v))
+    rt.stack.push(v);
+    Ok(())
 }
 
 // TODO: Can't be rewritten as an external function because it uses the current module.

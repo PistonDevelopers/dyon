@@ -42,12 +42,11 @@ const FUNCTIONS__MODULE: usize = 30;
 const KEYS: usize = 31;
 const ERRSTR__STRING_START_LEN_MSG: usize = 32;
 const META__SYNTAX_IN_STRING: usize = 33;
-const MODULE__IN_STRING_IMPORTS: usize = 34;
-const INSERT: usize = 35;
-const INSERT_REF: usize = 36;
-const REMOVE: usize = 37;
-const NEXT: usize = 38;
-const WAIT_NEXT: usize = 39;
+const INSERT: usize = 34;
+const INSERT_REF: usize = 35;
+const REMOVE: usize = 36;
+const NEXT: usize = 37;
+const WAIT_NEXT: usize = 38;
 
 const TABLE: &[(usize, fn(
         &mut Runtime,
@@ -88,7 +87,6 @@ const TABLE: &[(usize, fn(
     (KEYS, keys),
     (ERRSTR__STRING_START_LEN_MSG, errstr__string_start_len_msg),
     (META__SYNTAX_IN_STRING, meta__syntax_in_string),
-    (MODULE__IN_STRING_IMPORTS, module__in_string_imports),
     (INSERT, insert),
     (INSERT_REF, insert_ref),
     (REMOVE, remove),
@@ -205,11 +203,6 @@ pub(crate) fn standard(f: &mut Prelude) {
             tys: vec![Type::Any, Type::Text, Type::Text],
             ret: Type::Result(Box::new(Type::Array(Box::new(Type::array()))))
         });
-    f.intrinsic(Arc::new("module__in_string_imports".into()), MODULE__IN_STRING_IMPORTS, Dfn {
-        lts: vec![Lt::Default; 3],
-        tys: vec![Type::Text, Type::Text, Type::array()],
-        ret: Type::result()
-    });
     f.intrinsic(Arc::new("insert(mut,_,_)".into()), INSERT, Dfn {
         lts: vec![Lt::Default; 3],
         tys: vec![Type::array(), Type::F64, Type::Any],

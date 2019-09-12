@@ -460,6 +460,8 @@ impl Module {
         m.add_str("load", load, Dfn::nl(vec![Text], Type::result()));
         m.add_str("load__source_imports", load__source_imports,
                   Dfn::nl(vec![Type::Text, Type::array()], Type::result()));
+        m.add_str("module__in_string_imports", module__in_string_imports,
+                  Dfn::nl(vec![Type::Text, Type::Text, Type::array()], Type::result()));
         m
     }
 
