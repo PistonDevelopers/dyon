@@ -8,18 +8,16 @@ use Variable;
 use Type;
 use dyon_std::*;
 
-const HAS: usize = 0;
-const CHARS: usize = 1;
-const KEYS: usize = 2;
-const NEXT: usize = 3;
-const WAIT_NEXT: usize = 4;
+const CHARS: usize = 0;
+const KEYS: usize = 1;
+const NEXT: usize = 2;
+const WAIT_NEXT: usize = 3;
 
 const TABLE: &[(usize, fn(
         &mut Runtime,
         &ast::Call,
     ) -> Result<Option<Variable>, String>)]
 = &[
-    (HAS, has),
     (CHARS, chars),
     (KEYS, keys),
     (NEXT, next),
@@ -35,11 +33,6 @@ pub(crate) fn standard(f: &mut Prelude) {
         });
     };
 
-    f.intrinsic(Arc::new("has".into()), HAS, Dfn {
-        lts: vec![Lt::Default; 2],
-        tys: vec![Type::Object, Type::Text],
-        ret: Type::Bool
-    });
     sarg(f, "chars", CHARS, Type::Text, Type::Array(Box::new(Type::Text)));
     sarg(f, "keys", KEYS, Type::Object, Type::Array(Box::new(Type::Text)));
     f.intrinsic(Arc::new("next".into()), NEXT, Dfn {

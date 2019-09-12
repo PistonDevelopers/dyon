@@ -1563,24 +1563,19 @@ pub(crate) fn errstr__string_start_len_msg(rt: &mut Runtime) -> Result<(), Strin
     Ok(())
 }
 
-// TODO: Can't be rewritten as an external function because it reports errors on arguments.
-pub(crate) fn has(
-    rt: &mut Runtime,
-    call: &ast::Call
-) -> Result<Option<Variable>, String> {
+pub(crate) fn has(rt: &mut Runtime) -> Result<(), String> {
     let key = rt.stack.pop().expect(TINVOTS);
     let key = match rt.resolve(&key) {
         &Variable::Text(ref t) => t.clone(),
-        x => return Err(rt.module.error(call.args[1].source_range(),
-                        &rt.expected(x, "str"), rt))
+        x => return Err(rt.expected_arg(1, x, "str"))
     };
     let obj = rt.stack.pop().expect(TINVOTS);
     let res = match rt.resolve(&obj) {
         &Variable::Object(ref obj) => obj.contains_key(&key),
-        x => return Err(rt.module.error(call.args[0].source_range(),
-                        &rt.expected(x, "object"), rt))
+        x => return Err(rt.expected_arg(0, x, "object"))
     };
-    Ok(Some(Variable::bool(res)))
+    rt.stack.push(Variable::bool(res));
+    Ok(())
 }
 
 // TODO: Can't be rewritten as an external function because it reports errors on arguments.

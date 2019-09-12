@@ -522,6 +522,7 @@ impl Module {
             Dfn::nl(vec![Type::Array(Box::new(Type::array()))], Text));
         m.add_str("errstr__string_start_len_msg",
             errstr__string_start_len_msg, Dfn::nl(vec![Text, F64, F64, Text], Text));
+        m.add_str("has", has, Dfn::nl(vec![Object, Text], Bool));
 
         m
     }
