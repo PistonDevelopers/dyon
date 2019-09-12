@@ -8,27 +8,25 @@ use Variable;
 use Type;
 use dyon_std::*;
 
-const REVERSE: usize = 0;
-const CLEAR: usize = 1;
-const SWAP: usize = 2;
-const UNWRAP_ERR: usize = 3;
-const SAVE__DATA_FILE: usize = 4;
-const JSON_FROM_META_DATA: usize = 5;
-const HAS: usize = 6;
-const CHARS: usize = 7;
-const UNWRAP_OR: usize = 8;
-const KEYS: usize = 9;
-const ERRSTR__STRING_START_LEN_MSG: usize = 10;
-const META__SYNTAX_IN_STRING: usize = 11;
-const NEXT: usize = 12;
-const WAIT_NEXT: usize = 13;
+const CLEAR: usize = 0;
+const SWAP: usize = 1;
+const UNWRAP_ERR: usize = 2;
+const SAVE__DATA_FILE: usize = 3;
+const JSON_FROM_META_DATA: usize = 4;
+const HAS: usize = 5;
+const CHARS: usize = 6;
+const UNWRAP_OR: usize = 7;
+const KEYS: usize = 8;
+const ERRSTR__STRING_START_LEN_MSG: usize = 9;
+const META__SYNTAX_IN_STRING: usize = 10;
+const NEXT: usize = 11;
+const WAIT_NEXT: usize = 12;
 
 const TABLE: &[(usize, fn(
         &mut Runtime,
         &ast::Call,
     ) -> Result<Option<Variable>, String>)]
 = &[
-    (REVERSE, reverse),
     (CLEAR, clear),
     (SWAP, swap),
     (UNWRAP_ERR, unwrap_err),
@@ -53,7 +51,6 @@ pub(crate) fn standard(f: &mut Prelude) {
         });
     };
 
-    sarg(f, "reverse(mut)", REVERSE, Type::array(), Type::Void);
     sarg(f, "clear(mut)", CLEAR, Type::array(), Type::Void);
     f.intrinsic(Arc::new("swap(mut,_,_)".into()), SWAP, Dfn {
         lts: vec![Lt::Default; 3],

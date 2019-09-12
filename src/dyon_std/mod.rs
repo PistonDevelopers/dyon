@@ -527,11 +527,7 @@ pub(crate) fn remove(rt: &mut Runtime) -> Result<(), String> {
     }
 }
 
-// TODO: Can't be rewritten as external function because it reports error on arguments.
-pub(crate) fn reverse(
-    rt: &mut Runtime,
-    call: &ast::Call
-) -> Result<Option<Variable>, String> {
+pub(crate) fn reverse(rt: &mut Runtime) -> Result<(), String> {
     let v = rt.stack.pop().expect(TINVOTS);
     if let Variable::Ref(ind) = v {
         let ok = if let Variable::Array(ref mut arr) = rt.stack[ind] {
@@ -541,16 +537,18 @@ pub(crate) fn reverse(
             false
         };
         if !ok {
-            return Err(rt.module.error(call.args[0].source_range(),
-                &format!("{}\nExpected reference to array",
-                    rt.stack_trace()), rt));
+            return Err({
+                rt.arg_err_index.set(Some(0));
+                "Expected reference to array".into()
+            })
         }
     } else {
-        return Err(rt.module.error(call.args[0].source_range(),
-            &format!("{}\nExpected reference to array",
-                rt.stack_trace()), rt));
+        return Err({
+            rt.arg_err_index.set(Some(0));
+            "Expected reference to array".into()
+        })
     }
-    Ok(None)
+    Ok(())
 }
 
 // TODO: Can't be rewritten as external function because it reports error on arguments.

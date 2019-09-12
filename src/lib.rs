@@ -509,6 +509,7 @@ impl Module {
             tys: vec![Type::array(), F64],
             ret: Any
         });
+        m.add_str("reverse(mut)", reverse, Dfn::nl(vec![Type::array()], Void));
         m
     }
 
