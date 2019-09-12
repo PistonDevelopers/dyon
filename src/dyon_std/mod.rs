@@ -1239,11 +1239,7 @@ pub(crate) fn max(rt: &mut Runtime) -> Result<(), String> {
     Ok(())
 }
 
-// TODO: Can't be rewritten as an external function because it reports errors on arguments.
-pub(crate) fn unwrap(
-    rt: &mut Runtime,
-    call: &ast::Call
-) -> Result<Option<Variable>, String> {
+pub(crate) fn unwrap(rt: &mut Runtime) -> Result<(), String> {
     use write::{write_variable, EscapeString};
 
     // Return value does not depend on lifetime of argument since
@@ -1252,9 +1248,10 @@ pub(crate) fn unwrap(
     let v = match rt.resolve(&v) {
         &Variable::Option(Some(ref v)) => (**v).clone(),
         &Variable::Option(None) => {
-            return Err(rt.module.error(call.args[0].source_range(),
-                &format!("{}\nExpected `some(_)`",
-                    rt.stack_trace()), rt));
+            return Err({
+                rt.arg_err_index.set(Some(0));
+                "Expected `some(_)`".into()
+            })
         }
         &Variable::Result(Ok(ref ok)) => (**ok).clone(),
         &Variable::Result(Err(ref err)) => {
@@ -1270,15 +1267,15 @@ pub(crate) fn unwrap(
                 w.extend_from_slice("\n".as_bytes());
                 w.extend_from_slice(t.as_bytes());
             }
-            return Err(rt.module.error(call.args[0].source_range(),
-                                    from_utf8(&w).unwrap(), rt));
+            return Err({
+                rt.arg_err_index.set(Some(0));
+                from_utf8(&w).unwrap().into()
+            })
         }
-        x => {
-            return Err(rt.module.error(call.args[0].source_range(),
-                                    &rt.expected(x, "some(_) or ok(_)"), rt));
-        }
+        x => return Err(rt.expected_arg(0, x, "some(_) or ok(_)"))
     };
-    Ok(Some(v))
+    rt.stack.push(v);
+    Ok(())
 }
 
 // TODO: Can't be rewritten as an external function because it reports errors on arguments.
