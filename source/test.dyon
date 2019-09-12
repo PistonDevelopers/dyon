@@ -1,4 +1,6 @@
 fn main() {
+    b := 4
     s := [1, 2, 3]
+    push_ref(mut s, b)
     println(len(s))
 }

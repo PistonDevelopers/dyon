@@ -483,6 +483,11 @@ impl Module {
         m.add_str("neck", neck, Dfn::nl(vec![Link], Link));
         m.add_str("is_empty", is_empty, Dfn::nl(vec![Link], Bool));
         m.add_str("len", len, Dfn::nl(vec![Type::array()], F64));
+        m.add_str("push_ref(mut,_)", push_ref, Dfn {
+            lts: vec![Lt::Default, Lt::Arg(0)],
+            tys: vec![Type::array(), Type::Any],
+            ret: Type::Void
+        });
         m
     }
 

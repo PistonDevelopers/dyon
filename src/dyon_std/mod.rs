@@ -335,11 +335,7 @@ pub(crate) fn len(rt: &mut Runtime) -> Result<(), String> {
     Ok(())
 }
 
-// TODO: Can't be rewritten as external function because it reports error on arguments.
-pub(crate) fn push_ref(
-    rt: &mut Runtime,
-    call: &ast::Call
-) -> Result<Option<Variable>, String> {
+pub(crate) fn push_ref(rt: &mut Runtime) -> Result<(), String> {
     let item = rt.stack.pop().expect(TINVOTS);
     let v = rt.stack.pop().expect(TINVOTS);
 
@@ -351,16 +347,18 @@ pub(crate) fn push_ref(
             false
         };
         if !ok {
-            return Err(rt.module.error(call.args[0].source_range(),
-                &format!("{}\nExpected reference to array",
-                    rt.stack_trace()), rt));
+            return Err({
+                rt.arg_err_index.set(Some(0));
+                "Expected reference to array".into()
+            })
         }
     } else {
-        return Err(rt.module.error(call.args[0].source_range(),
-            &format!("{}\nExpected reference to array",
-                rt.stack_trace()), rt));
+        return Err({
+            rt.arg_err_index.set(Some(0));
+            "Expected reference to array".into()
+        })
     }
-    Ok(None)
+    Ok(())
 }
 
 // TODO: Can't be rewritten as external function because it reports error on arguments.
