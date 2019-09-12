@@ -4,7 +4,6 @@ use runtime::{Flow, Runtime, Side};
 use ast;
 use prelude::{Lt, Prelude, Dfn};
 
-use Module;
 use Variable;
 use Type;
 use dyon_std::*;
@@ -55,7 +54,6 @@ const WAIT_NEXT: usize = 41;
 const TABLE: &[(usize, fn(
         &mut Runtime,
         &ast::Call,
-        &Arc<Module>,
     ) -> Result<Option<Variable>, String>)]
 = &[
     (WHY, why),
@@ -252,14 +250,13 @@ pub(crate) fn standard(f: &mut Prelude) {
 pub(crate) fn call_standard(
     rt: &mut Runtime,
     index: usize,
-    call: &ast::Call,
-    module: &Arc<Module>
+    call: &ast::Call
 ) -> Result<(Option<Variable>, Flow), String> {
     for arg in &call.args {
-        match rt.expression(arg, Side::Right, module)? {
+        match rt.expression(arg, Side::Right)? {
             (x, Flow::Return) => { return Ok((x, Flow::Return)); }
             (Some(v), Flow::Continue) => rt.stack.push(v),
-            _ => return Err(module.error(arg.source_range(),
+            _ => return Err(rt.module.error(arg.source_range(),
                     &format!("{}\nExpected something. \
                     Expression did not return a value.",
                     rt.stack_trace()), rt))
@@ -267,6 +264,6 @@ pub(crate) fn call_standard(
     }
     let (ind, f) = TABLE[index];
     debug_assert!(ind == index);
-    let expect = (f)(rt, call, module)?;
+    let expect = (f)(rt, call)?;
     Ok((expect, Flow::Continue))
 }

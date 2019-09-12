@@ -77,6 +77,8 @@ lazy_static! {
 
 /// Stores data needed for running a Dyon program.
 pub struct Runtime {
+    /// Stores the current module in use.
+    pub module: Arc<Module>,
     /// Stores variables on the stack.
     pub stack: Vec<Variable>,
     /// name, file, stack_len, local_len.
@@ -298,6 +300,7 @@ impl Runtime {
         use rand::FromEntropy;
 
         Runtime {
+            module: Arc::new(Module::empty()),
             stack: vec![],
             call_stack: vec![],
             local_stack: vec![],
@@ -453,25 +456,37 @@ impl Runtime {
         }
     }
 
-    pub(crate) fn expression(
+    pub(crate) fn expression_module(
         &mut self,
         expr: &ast::Expression,
         side: Side,
         module: &Arc<Module>
     ) -> Result<(Option<Variable>, Flow), String> {
+        use std::mem::replace;
+        let old_module = replace(&mut self.module, module.clone());
+        let res = self.expression(expr, side);
+        self.module = old_module;
+        res
+    }
+
+    pub(crate) fn expression(
+        &mut self,
+        expr: &ast::Expression,
+        side: Side,
+    ) -> Result<(Option<Variable>, Flow), String> {
         use ast::Expression::*;
 
         match *expr {
-            Link(ref link) => self.link(link, module),
-            Object(ref obj) => self.object(obj, module),
-            Array(ref arr) => self.array(arr, module),
-            ArrayFill(ref array_fill) => self.array_fill(array_fill, module),
-            Block(ref block) => self.block(block, module),
+            Link(ref link) => self.link(link),
+            Object(ref obj) => self.object(obj),
+            Array(ref arr) => self.array(arr),
+            ArrayFill(ref array_fill) => self.array_fill(array_fill),
+            Block(ref block) => self.block(block),
             Return(ref ret) => {
-                let x = match self.expression(ret, Side::Right, module)? {
+                let x = match self.expression(ret, Side::Right)? {
                     (Some(x), Flow::Continue) => x,
                     (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-                    _ => return Err(module.error(expr.source_range(),
+                    _ => return Err(self.module.error(expr.source_range(),
                                     &format!("{}\nExpected something",
                                         self.stack_trace()), self))
                 };
@@ -480,58 +495,58 @@ impl Runtime {
             ReturnVoid(_) => Ok((None, Flow::Return)),
             Break(ref b) => Ok((None, Flow::Break(b.label.clone()))),
             Continue(ref b) => Ok((None, Flow::ContinueLoop(b.label.clone()))),
-            Go(ref go) => self.go(go, module),
+            Go(ref go) => self.go(go),
             Call(ref call) => {
                 let loader = false;
-                self.call_internal(call, loader, module)
+                self.call_internal(call, loader)
             }
-            Item(ref item) => self.item(item, side, module),
-            Norm(ref norm) => self.norm(norm, side, module),
-            UnOp(ref unop) => self.unop(unop, side, module),
-            BinOp(ref binop) => self.binop(binop, side, module),
-            Assign(ref assign) => self.assign(assign.op, &assign.left, &assign.right, module),
-            Vec4(ref vec4) => self.vec4(vec4, side, module),
-            Mat4(ref mat4) => self.mat4(mat4, side, module),
-            For(ref for_expr) => self.for_expr(for_expr, module),
-            ForN(ref for_n_expr) => self.for_n_expr(for_n_expr, module),
-            ForIn(ref for_in_expr) => self.for_in_expr(for_in_expr, module),
-            Sum(ref for_n_expr) => self.sum_n_expr(for_n_expr, module),
-            SumIn(ref sum_in_expr) => self.sum_in_expr(sum_in_expr, module),
-            SumVec4(ref for_n_expr) => self.sum_vec4_n_expr(for_n_expr, module),
-            Prod(ref for_n_expr) => self.prod_n_expr(for_n_expr, module),
-            ProdIn(ref for_in_expr) => self.prod_in_expr(for_in_expr, module),
-            ProdVec4(ref for_n_expr) => self.prod_vec4_n_expr(for_n_expr, module),
-            Min(ref for_n_expr) => self.min_n_expr(for_n_expr, module),
-            MinIn(ref for_in_expr) => self.min_in_expr(for_in_expr, module),
-            Max(ref for_n_expr) => self.max_n_expr(for_n_expr, module),
-            MaxIn(ref for_in_expr) => self.max_in_expr(for_in_expr, module),
-            Sift(ref for_n_expr) => self.sift_n_expr(for_n_expr, module),
-            SiftIn(ref for_in_expr) => self.sift_in_expr(for_in_expr, module),
-            Any(ref for_n_expr) => self.any_n_expr(for_n_expr, module),
-            AnyIn(ref for_in_expr) => self.any_in_expr(for_in_expr, module),
-            All(ref for_n_expr) => self.all_n_expr(for_n_expr, module),
-            AllIn(ref for_in_expr) => self.all_in_expr(for_in_expr, module),
-            LinkFor(ref for_n_expr) => self.link_for_n_expr(for_n_expr, module),
-            LinkIn(ref for_in_expr) => self.link_for_in_expr(for_in_expr, module),
-            If(ref if_expr) => self.if_expr(if_expr, module),
-            Compare(ref compare) => self.compare(compare, module),
+            Item(ref item) => self.item(item, side),
+            Norm(ref norm) => self.norm(norm, side),
+            UnOp(ref unop) => self.unop(unop, side),
+            BinOp(ref binop) => self.binop(binop, side),
+            Assign(ref assign) => self.assign(assign.op, &assign.left, &assign.right),
+            Vec4(ref vec4) => self.vec4(vec4, side),
+            Mat4(ref mat4) => self.mat4(mat4, side),
+            For(ref for_expr) => self.for_expr(for_expr),
+            ForN(ref for_n_expr) => self.for_n_expr(for_n_expr),
+            ForIn(ref for_in_expr) => self.for_in_expr(for_in_expr),
+            Sum(ref for_n_expr) => self.sum_n_expr(for_n_expr),
+            SumIn(ref sum_in_expr) => self.sum_in_expr(sum_in_expr),
+            SumVec4(ref for_n_expr) => self.sum_vec4_n_expr(for_n_expr),
+            Prod(ref for_n_expr) => self.prod_n_expr(for_n_expr),
+            ProdIn(ref for_in_expr) => self.prod_in_expr(for_in_expr),
+            ProdVec4(ref for_n_expr) => self.prod_vec4_n_expr(for_n_expr),
+            Min(ref for_n_expr) => self.min_n_expr(for_n_expr),
+            MinIn(ref for_in_expr) => self.min_in_expr(for_in_expr),
+            Max(ref for_n_expr) => self.max_n_expr(for_n_expr),
+            MaxIn(ref for_in_expr) => self.max_in_expr(for_in_expr),
+            Sift(ref for_n_expr) => self.sift_n_expr(for_n_expr),
+            SiftIn(ref for_in_expr) => self.sift_in_expr(for_in_expr),
+            Any(ref for_n_expr) => self.any_n_expr(for_n_expr),
+            AnyIn(ref for_in_expr) => self.any_in_expr(for_in_expr),
+            All(ref for_n_expr) => self.all_n_expr(for_n_expr),
+            AllIn(ref for_in_expr) => self.all_in_expr(for_in_expr),
+            LinkFor(ref for_n_expr) => self.link_for_n_expr(for_n_expr),
+            LinkIn(ref for_in_expr) => self.link_for_in_expr(for_in_expr),
+            If(ref if_expr) => self.if_expr(if_expr),
+            Compare(ref compare) => self.compare(compare),
             Variable(ref range_var) => Ok((Some(range_var.1.clone()), Flow::Continue)),
-            Try(ref expr) => self.try(expr, side, module),
+            Try(ref expr) => self.try(expr, side),
             Swizzle(ref sw) => {
-                let flow = self.swizzle(sw, module)?;
+                let flow = self.swizzle(sw)?;
                 Ok((None, flow))
             }
-            Closure(ref closure) => self.closure(closure, module),
-            CallClosure(ref call) => self.call_closure(call, module),
-            Grab(ref expr) => Err(module.error(expr.source_range,
+            Closure(ref closure) => self.closure(closure),
+            CallClosure(ref call) => self.call_closure(call),
+            Grab(ref expr) => Err(self.module.error(expr.source_range,
                     &format!("{}\n`grab` expressions must be inside a closure",
                         self.stack_trace()), self)),
-            TryExpr(ref try_expr) => self.try_expr(try_expr, module),
-            In(ref in_expr) => self.in_expr(in_expr, module),
+            TryExpr(ref try_expr) => self.try_expr(try_expr),
+            In(ref in_expr) => self.in_expr(in_expr),
         }
     }
 
-    fn in_expr(&mut self, in_expr: &ast::In, module: &Arc<Module>)
+    fn in_expr(&mut self, in_expr: &ast::In)
     -> Result<(Option<Variable>, Flow), String> {
         use std::sync::mpsc::channel;
         use std::sync::Mutex;
@@ -541,7 +556,7 @@ impl Runtime {
             FnIndex::Loaded(f_index) => {
                 let relative = self.call_stack.last().map(|c| c.index).unwrap_or(0);
                 let new_index = (f_index + relative as isize) as usize;
-                let f = &module.functions[new_index];
+                let f = &self.module.functions[new_index];
                 let (tx, rx) = channel();
                 // Guard the change of flag to avoid data race.
                 let mut guard = f.senders.1.lock().unwrap();
@@ -550,26 +565,25 @@ impl Runtime {
                 drop(guard);
                 Ok((Some(::Variable::In(Arc::new(Mutex::new(rx)))), Flow::Continue))
             }
-            _ => Err(module.error(in_expr.source_range,
+            _ => Err(self.module.error(in_expr.source_range,
                     &format!("{}\nExpected loaded function",
                         self.stack_trace()), self)),
         }
     }
 
-    fn try_expr(&mut self, try_expr: &ast::TryExpr, module: &Arc<Module>)
-    -> Result<(Option<Variable>, Flow), String> {
+    fn try_expr(&mut self, try_expr: &ast::TryExpr) -> Result<(Option<Variable>, Flow), String> {
         use Error;
 
         let cs = self.call_stack.len();
         let st = self.stack.len();
         let lc = self.local_stack.len();
         let cu = self.current_stack.len();
-        match self.expression(&try_expr.expr, Side::Right, module) {
+        match self.expression(&try_expr.expr, Side::Right) {
             Ok((Some(x), Flow::Continue)) => Ok((
                 Some(Variable::Result(Ok(Box::new(x)))),
                 Flow::Continue
             )),
-            Ok((None, Flow::Continue)) => Err(module.error(try_expr.source_range,
+            Ok((None, Flow::Continue)) => Err(self.module.error(try_expr.source_range,
                 &format!("{}\nExpected something", self.stack_trace()), self)),
             Ok((x, flow)) => Ok((x, flow)),
             Err(err) => {
@@ -589,18 +603,17 @@ impl Runtime {
         }
     }
 
-    fn closure(&mut self, closure: &ast::Closure, module: &Arc<Module>)
-    -> Result<(Option<Variable>, Flow), String> {
+    fn closure(&mut self, closure: &ast::Closure) -> Result<(Option<Variable>, Flow), String> {
         use grab::{self, Grabbed};
         use ClosureEnvironment;
 
         // Create closure.
         let relative = self.call_stack.last().map(|c| c.index).unwrap_or(0);
         // Evaluate `grab` expressions and generate new AST.
-        let new_expr = match grab::grab_expr(1, self, &closure.expr, Side::Right, module)? {
+        let new_expr = match grab::grab_expr(1, self, &closure.expr, Side::Right)? {
             (Grabbed::Expression(x), Flow::Continue) => x,
             (Grabbed::Variable(x), Flow::Return) => { return Ok((x, Flow::Return)); }
-            _ => return Err(module.error(closure.expr.source_range(),
+            _ => return Err(self.module.error(closure.expr.source_range(),
                             &format!("{}\nExpected something",
                                 self.stack_trace()), self))
         };
@@ -614,7 +627,7 @@ impl Runtime {
             source: closure.source.clone(),
             expr: new_expr,
         }), Box::new(ClosureEnvironment {
-            module: module.clone(),
+            module: self.module.clone(),
             relative
         }))), Flow::Continue))
     }
@@ -690,20 +703,19 @@ impl Runtime {
     fn try(
         &mut self,
         expr: &ast::Expression,
-        side: Side,
-        module: &Arc<Module>
+        side: Side
     ) -> Result<(Option<Variable>, Flow), String> {
-        let v = match self.expression(expr, side, module)? {
+        let v = match self.expression(expr, side)? {
             (Some(x), Flow::Continue) => x,
             (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-            _ => return Err(module.error(expr.source_range(),
+            _ => return Err(self.module.error(expr.source_range(),
                             &format!("{}\nExpected something",
                                 self.stack_trace()), self))
         };
         let v = match Runtime::try_msg(self.resolve(&v)) {
             Some(v) => v,
             None => {
-                return Err(module.error(expr.source_range(),
+                return Err(self.module.error(expr.source_range(),
                     &format!("{}\nExpected `ok(_)`, `err(_)`, `bool`, `f64`",
                         self.stack_trace()), self));
             }
@@ -715,14 +727,14 @@ impl Runtime {
             Err(mut err) => {
                 let call = self.call_stack.last().unwrap();
                 if call.stack_len == 0 {
-                    return Err(module.error(expr.source_range(),
+                    return Err(self.module.error(expr.source_range(),
                         &format!("{}\nRequires `->` on function `{}`",
                         self.stack_trace(),
                         &call.fn_name), self));
                 }
                 if let Variable::Return = self.stack[call.stack_len - 1] {}
                 else {
-                    return Err(module.error(expr.source_range(),
+                    return Err(self.module.error(expr.source_range(),
                         &format!("{}\nRequires `->` on function `{}`",
                         self.stack_trace(),
                         &call.fn_name), self));
@@ -731,7 +743,7 @@ impl Runtime {
                     None => "".into(),
                     Some(ref f) => format!(" ({})", f)
                 };
-                err.trace.push(module.error(expr.source_range(),
+                err.trace.push(self.module.error(expr.source_range(),
                     &format!("In function `{}`{}",
                     &call.fn_name, file), self));
                 Ok((Some(Variable::Result(Err(err))), Flow::Return))
@@ -742,7 +754,9 @@ impl Runtime {
     /// Run `main` function in a module.
     pub fn run(&mut self, module: &Arc<Module>) -> Result<(), String> {
         use std::cell::Cell;
+        use std::mem::replace;
 
+        let old_module = replace(&mut self.module, module.clone());
         let name: Arc<String> = Arc::new("main".into());
         let call = ast::Call {
             alias: None,
@@ -756,29 +770,37 @@ impl Runtime {
             FnIndex::Loaded(f_index) => {
                 let f = &module.functions[f_index as usize];
                 if !f.args.is_empty() {
+                    self.module = old_module;
                     return Err(module.error(f.args[0].source_range,
                                "`main` should not have arguments", self))
                 }
                 let loader = false;
-                self.call_internal(&call, loader, &module)?;
-                Ok(())
+                match self.call_internal(&call, loader) {
+                    Ok(_) => {
+                        self.module = old_module;
+                        Ok(())
+                    }
+                    Err(x) => {
+                        self.module = old_module;
+                        Err(x)
+                    }
+                }
             }
-            _ => Err(module.error(call.source_range,
+            _ => {
+                self.module = old_module;
+                Err(module.error(call.source_range,
                                "Could not find function `main`", self))
+            }
         }
     }
 
-    fn block(
-        &mut self,
-        block: &ast::Block,
-        module: &Arc<Module>
-    ) -> Result<(Option<Variable>, Flow), String> {
+    fn block(&mut self, block: &ast::Block) -> Result<(Option<Variable>, Flow), String> {
         let mut expect = None;
         let st = self.stack.len();
         let lc = self.local_stack.len();
         let cu = self.current_stack.len();
         for e in &block.expressions {
-            expect = match self.expression(e, Side::Right, module)? {
+            expect = match self.expression(e, Side::Right)? {
                 (x, Flow::Continue) => x,
                 x => {
                     self.stack.truncate(st);
@@ -796,7 +818,7 @@ impl Runtime {
     }
 
     /// Start a new thread and return the handle.
-    pub fn go(&mut self, go: &ast::Go, module: &Arc<Module>) -> Result<(Option<Variable>, Flow), String> {
+    pub fn go(&mut self, go: &ast::Go) -> Result<(Option<Variable>, Flow), String> {
         use std::thread::{self, JoinHandle};
         use std::cell::Cell;
         use Thread;
@@ -807,7 +829,7 @@ impl Runtime {
         let mut fake_call = ast::Call {
             alias: go.call.alias.clone(),
             name: go.call.name.clone(),
-            f_index: Cell::new(module.find_function(&go.call.name, relative)),
+            f_index: Cell::new(self.module.find_function(&go.call.name, relative)),
             args: Vec::with_capacity(n),
             custom_source: None,
             source_range: go.call.source_range,
@@ -815,10 +837,10 @@ impl Runtime {
         // Evaluate the arguments and put a deep clone on the new stack.
         // This prevents the arguments from containing any reference to other variables.
         for (i, arg) in go.call.args.iter().enumerate() {
-            let v = match self.expression(arg, Side::Right, module)? {
+            let v = match self.expression(arg, Side::Right)? {
                 (Some(x), Flow::Continue) => x,
                 (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-                _ => return Err(module.error(arg.source_range(),
+                _ => return Err(self.module.error(arg.source_range(),
                                 &format!("{}\nExpected something. \
                                 Expression did not return a value.",
                                 self.stack_trace()), self))
@@ -831,6 +853,7 @@ impl Runtime {
 
         let last_call = self.call_stack.last().unwrap();
         let new_rt = Runtime {
+            module: self.module.clone(),
             stack,
             local_stack: vec![],
             current_stack: vec![],
@@ -847,13 +870,11 @@ impl Runtime {
             rng: self.rng.clone(),
             ret: self.ret.clone(),
         };
-        let new_module = module.clone();
         let handle: JoinHandle<Result<Variable, String>> = thread::spawn(move || {
             let mut new_rt = new_rt;
-            let new_module = new_module;
             let fake_call = fake_call;
             let loader = false;
-            Ok(match new_rt.call_internal(&fake_call, loader, &new_module) {
+            Ok(match new_rt.call_internal(&fake_call, loader) {
                 Err(err) => return Err(err),
                 Ok((None, _)) => {
                     new_rt.stack.pop().expect(TINVOTS)
@@ -868,13 +889,12 @@ impl Runtime {
     pub fn call_closure(
         &mut self,
         call: &ast::CallClosure,
-        module: &Arc<Module>
     ) -> Result<(Option<Variable>, Flow), String> {
         // Find item.
-        let item = match self.item(&call.item, Side::Right, module)? {
+        let item = match self.item(&call.item, Side::Right)? {
             (Some(x), Flow::Continue) => x,
             (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-            _ => return Err(module.error(call.item.source_range,
+            _ => return Err(self.module.error(call.item.source_range,
                             &format!("{}\nExpected something. \
                             Check that item returns a value.",
                             self.stack_trace()), self))
@@ -882,12 +902,12 @@ impl Runtime {
 
         let (f, env) = match self.resolve(&item) {
             &Variable::Closure(ref f, ref env) => (f.clone(), env.clone()),
-            x => return Err(module.error(call.source_range,
+            x => return Err(self.module.error(call.source_range,
                     &self.expected(x, "closure"), self))
         };
 
         if call.arg_len() != f.args.len() {
-            return Err(module.error(call.source_range,
+            return Err(self.module.error(call.source_range,
                 &format!("{}\nExpected {} arguments but found {}",
                 self.stack_trace(),
                 f.args.len(),
@@ -903,11 +923,11 @@ impl Runtime {
         let lc = self.local_stack.len();
         let cu = self.current_stack.len();
         for arg in &call.args {
-            match self.expression(arg, Side::Right, module)? {
+            match self.expression(arg, Side::Right)? {
                 (Some(x), Flow::Continue) => self.stack.push(x),
                 (None, Flow::Continue) => {}
                 (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-                _ => return Err(module.error(arg.source_range(),
+                _ => return Err(self.module.error(arg.source_range(),
                                 &format!("{}\nExpected something. \
                                 Check that expression returns a value.",
                                 self.stack_trace()), self))
@@ -928,7 +948,7 @@ impl Runtime {
                     self.local_stack.push((current.name.clone(), self.stack.len()));
                     self.stack.push(Variable::Ref(ind));
                 } else {
-                    return Err(module.error(call.source_range, &format!(
+                    return Err(self.module.error(call.source_range, &format!(
                         "{}\nCould not find current variable `{}`",
                             self.stack_trace(), current.name), self));
                 }
@@ -943,22 +963,22 @@ impl Runtime {
             // Do not resolve locals to keep fixed length from end of stack.
             self.local_stack.push((arg.name.clone(), st + i));
         }
-        let (x, flow) = self.expression(&f.expr, Side::Right, &env.module)?;
+        let (x, flow) = self.expression_module(&f.expr, Side::Right, &env.module)?;
         match flow {
             Flow::Break(None) =>
-                return Err(module.error(call.source_range,
+                return Err(self.module.error(call.source_range,
                            &format!("{}\nCan not break from function",
                                 self.stack_trace()), self)),
             Flow::ContinueLoop(None) =>
-                return Err(module.error(call.source_range,
+                return Err(self.module.error(call.source_range,
                            &format!("{}\nCan not continue from function",
                                 self.stack_trace()), self)),
             Flow::Break(Some(ref label)) =>
-                return Err(module.error(call.source_range,
+                return Err(self.module.error(call.source_range,
                     &format!("{}\nThere is no loop labeled `{}`",
                              self.stack_trace(), label), self)),
             Flow::ContinueLoop(Some(ref label)) =>
-                return Err(module.error(call.source_range,
+                return Err(self.module.error(call.source_range,
                     &format!("{}\nThere is no loop labeled `{}`",
                             self.stack_trace(), label), self)),
             _ => {}
@@ -968,7 +988,7 @@ impl Runtime {
             (true, None) => {
                 match self.stack.pop().expect(TINVOTS) {
                     Variable::Return => {
-                        Err(module.error(
+                        Err(self.module.error(
                             call.source_range, &format!(
                             "{}\nFunction `{}` did not return a value",
                             self.stack_trace(),
@@ -982,7 +1002,7 @@ impl Runtime {
                 }
             }
             (false, Some(_)) => {
-                Err(module.error(call.source_range,
+                Err(self.module.error(call.source_range,
                     &format!(
                         "{}\nFunction `{}` should not return a value",
                         self.stack_trace(),
@@ -991,7 +1011,7 @@ impl Runtime {
             (true, Some(Variable::Return)) => {
                 // TODO: Could return the last value on the stack.
                 //       Requires .pop_fn delayed after.
-                Err(module.error(call.source_range,
+                Err(self.module.error(call.source_range,
                     &format!(
                     "{}\nFunction `{}` did not return a value. \
                     Did you forget a `return`?",
@@ -1011,7 +1031,11 @@ impl Runtime {
         call: &ast::Call,
         module: &Arc<Module>
     ) -> Result<(Option<Variable>, Flow), String> {
-        self.call_internal(call, true, module)
+        use std::mem::replace;
+        let old_module = replace(&mut self.module, module.clone());
+        let res = self.call_internal(call, true);
+        self.module = old_module;
+        res
     }
 
     /// Used internally because loaded functions are resolved
@@ -1023,42 +1047,41 @@ impl Runtime {
         &mut self,
         call: &ast::Call,
         loader: bool,
-        module: &Arc<Module>
     ) -> Result<(Option<Variable>, Flow), String> {
         use FnExternalRef;
 
         match call.f_index.get() {
             FnIndex::Intrinsic(index) => {
-                intrinsics::call_standard(self, index, call, module)
+                intrinsics::call_standard(self, index, call)
             }
             FnIndex::ExternalVoid(FnExternalRef(f)) => {
                 for arg in &call.args {
-                    match self.expression(arg, Side::Right, module)? {
+                    match self.expression(arg, Side::Right)? {
                         (Some(x), Flow::Continue) => self.stack.push(x),
                         (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-                        _ => return Err(module.error(arg.source_range(),
+                        _ => return Err(self.module.error(arg.source_range(),
                                         &format!("{}\nExpected something. \
                                         Expression did not return a value.",
                                         self.stack_trace()), self))
                     };
                 }
                 (f)(self).map_err(|err|
-                    module.error(call.source_range, &err, self))?;
+                    self.module.error(call.source_range, &err, self))?;
                 Ok((None, Flow::Continue))
             }
             FnIndex::ExternalReturn(FnExternalRef(f)) => {
                 for arg in &call.args {
-                    match self.expression(arg, Side::Right, module)? {
+                    match self.expression(arg, Side::Right)? {
                         (Some(x), Flow::Continue) => self.stack.push(x),
                         (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-                        _ => return Err(module.error(arg.source_range(),
+                        _ => return Err(self.module.error(arg.source_range(),
                                         &format!("{}\nExpected something. \
                                         Expression did not return a value.",
                                         self.stack_trace()), self))
                     };
                 }
                 (f)(self).map_err(|err|
-                    module.error(call.source_range, &err, self))?;
+                    self.module.error(call.source_range, &err, self))?;
                 Ok((Some(self.stack.pop().expect(TINVOTS)), Flow::Continue))
             }
             FnIndex::Loaded(f_index) => {
@@ -1068,9 +1091,11 @@ impl Runtime {
                     self.call_stack.last().map(|c| c.index).unwrap_or(0)
                 };
                 let new_index = (f_index + relative as isize) as usize;
-                let f = &module.functions[new_index];
+                // Copy the module to avoid problems with borrow checker.
+                let mod_copy = self.module.clone();
+                let ref f = mod_copy.functions[new_index].clone();
                 if call.arg_len() != f.args.len() {
-                    return Err(module.error(call.source_range,
+                    return Err(self.module.error(call.source_range,
                         &format!("{}\nExpected {} arguments but found {}",
                         self.stack_trace(),
                         f.args.len(),
@@ -1087,11 +1112,11 @@ impl Runtime {
                 let cu = self.current_stack.len();
 
                 for arg in &call.args {
-                    match self.expression(arg, Side::Right, module)? {
+                    match self.expression(arg, Side::Right)? {
                         (Some(x), Flow::Continue) => self.stack.push(x),
                         (None, Flow::Continue) => {}
                         (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-                        _ => return Err(module.error(arg.source_range(),
+                        _ => return Err(self.module.error(arg.source_range(),
                                         &format!("{}\nExpected something. \
                                         Check that expression returns a value.",
                                         self.stack_trace()), self))
@@ -1112,7 +1137,7 @@ impl Runtime {
                             self.local_stack.push((current.name.clone(), self.stack.len()));
                             self.stack.push(Variable::Ref(ind));
                         } else {
-                            return Err(module.error(call.source_range, &format!(
+                            return Err(self.module.error(call.source_range, &format!(
                                 "{}\nCould not find current variable `{}`",
                                     self.stack_trace(), current.name), self));
                         }
@@ -1155,22 +1180,22 @@ impl Runtime {
                     // Do not resolve locals to keep fixed length from end of stack.
                     self.local_stack.push((arg.name.clone(), st + i));
                 }
-                let (x, flow) = self.block(&f.block, module)?;
+                let (x, flow) = self.block(&f.block)?;
                 match flow {
                     Flow::Break(None) =>
-                        return Err(module.error(call.source_range,
+                        return Err(self.module.error(call.source_range,
                                    &format!("{}\nCan not break from function",
                                         self.stack_trace()), self)),
                     Flow::ContinueLoop(None) =>
-                        return Err(module.error(call.source_range,
+                        return Err(self.module.error(call.source_range,
                                    &format!("{}\nCan not continue from function",
                                         self.stack_trace()), self)),
                     Flow::Break(Some(ref label)) =>
-                        return Err(module.error(call.source_range,
+                        return Err(self.module.error(call.source_range,
                             &format!("{}\nThere is no loop labeled `{}`",
                                      self.stack_trace(), label), self)),
                     Flow::ContinueLoop(Some(ref label)) =>
-                        return Err(module.error(call.source_range,
+                        return Err(self.module.error(call.source_range,
                             &format!("{}\nThere is no loop labeled `{}`",
                                     self.stack_trace(), label), self)),
                     _ => {}
@@ -1181,11 +1206,11 @@ impl Runtime {
                         match self.stack.pop().expect(TINVOTS) {
                             Variable::Return => {
                                 let source = call.custom_source.as_ref().unwrap_or(
-                                    &module.functions[
+                                    &self.module.functions[
                                         self.call_stack.last().unwrap().index
                                     ].source
                                 );
-                                Err(module.error_source(
+                                Err(self.module.error_source(
                                 call.source_range, &format!(
                                 "{}\nFunction `{}` did not return a value",
                                 self.stack_trace(),
@@ -1200,9 +1225,9 @@ impl Runtime {
                     }
                     (false, Some(_)) => {
                         let source = call.custom_source.as_ref().unwrap_or(
-                            &module.functions[self.call_stack.last().unwrap().index].source
+                            &self.module.functions[self.call_stack.last().unwrap().index].source
                         );
-                        Err(module.error_source(call.source_range,
+                        Err(self.module.error_source(call.source_range,
                             &format!(
                                 "{}\nFunction `{}` should not return a value",
                                 self.stack_trace(),
@@ -1212,9 +1237,9 @@ impl Runtime {
                         // TODO: Could return the last value on the stack.
                         //       Requires .pop_fn delayed after.
                         let source = call.custom_source.as_ref().unwrap_or(
-                            &module.functions[self.call_stack.last().unwrap().index].source
+                            &self.module.functions[self.call_stack.last().unwrap().index].source
                         );
-                        Err(module.error_source(call.source_range,
+                        Err(self.module.error_source(call.source_range,
                             &format!(
                             "{}\nFunction `{}` did not return a value. \
                             Did you forget a `return`?",
@@ -1228,7 +1253,7 @@ impl Runtime {
                 }
             }
             FnIndex::None => {
-                Err(module.error(call.source_range,
+                Err(self.module.error(call.source_range,
                     &format!("{}\nUnknown function `{}`", self.stack_trace(), call.name), self))
             }
         }
@@ -1301,17 +1326,17 @@ impl Runtime {
         }
     }
 
-    fn swizzle(&mut self, sw: &ast::Swizzle, module: &Arc<Module>) -> Result<Flow, String> {
-        let v = match self.expression(&sw.expr, Side::Right, module)? {
+    fn swizzle(&mut self, sw: &ast::Swizzle) -> Result<Flow, String> {
+        let v = match self.expression(&sw.expr, Side::Right)? {
             (Some(x), Flow::Continue) => x,
             (_, Flow::Return) => { return Ok(Flow::Return); }
-            _ => return Err(module.error(sw.expr.source_range(),
+            _ => return Err(self.module.error(sw.expr.source_range(),
                             &format!("{}\nExpected something",
                                 self.stack_trace()), self))
         };
         let v = match self.resolve(&v) {
             &Variable::Vec4(v) => v,
-            x => return Err(module.error(sw.source_range,
+            x => return Err(self.module.error(sw.source_range,
                     &self.expected(x, "vec4"), self))
         };
         self.stack.push(Variable::f64(f64::from(v[sw.sw0])));
@@ -1325,11 +1350,7 @@ impl Runtime {
         Ok(Flow::Continue)
     }
 
-    fn link(
-        &mut self,
-        link: &ast::Link,
-        module: &Arc<Module>
-    ) -> Result<(Option<Variable>, Flow), String> {
+    fn link(&mut self, link: &ast::Link) -> Result<(Option<Variable>, Flow), String> {
         use Link;
 
         Ok((Some(if link.items.is_empty() {
@@ -1340,14 +1361,14 @@ impl Runtime {
             let cu = self.current_stack.len();
             let mut new_link = Link::new();
             for item in &link.items {
-                let v = match self.expression(item, Side::Right, module)? {
+                let v = match self.expression(item, Side::Right)? {
                     (Some(x), Flow::Continue) => x,
                     (None, Flow::Continue) => continue,
                     (res, flow) => { return Ok((res, flow)); }
                 };
                 match new_link.push(self.resolve(&v)) {
                     Err(err) => {
-                        return Err(module.error(item.source_range(),
+                        return Err(self.module.error(item.source_range(),
                             &format!("{}\n{}", self.stack_trace(),
                             err), self))
                     }
@@ -1361,23 +1382,19 @@ impl Runtime {
         }), Flow::Continue))
     }
 
-    fn object(
-        &mut self,
-        obj: &ast::Object,
-        module: &Arc<Module>
-    ) -> Result<(Option<Variable>, Flow), String> {
+    fn object(&mut self, obj: &ast::Object) -> Result<(Option<Variable>, Flow), String> {
         let mut object: HashMap<_, _> = HashMap::new();
         for &(ref key, ref expr) in &obj.key_values {
-            let x = match self.expression(expr, Side::Right, module)? {
+            let x = match self.expression(expr, Side::Right)? {
                 (Some(x), Flow::Continue) => x,
                 (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-                _ => return Err(module.error(expr.source_range(),
+                _ => return Err(self.module.error(expr.source_range(),
                                 &format!("{}\nExpected something",
                                     self.stack_trace()), self))
             };
             match object.insert(key.clone(), x) {
                 None => {}
-                Some(_) => return Err(module.error(expr.source_range(),
+                Some(_) => return Err(self.module.error(expr.source_range(),
                     &format!("{}\nDuplicate key in object `{}`",
                         self.stack_trace(), key), self))
             }
@@ -1388,14 +1405,13 @@ impl Runtime {
     fn array(
         &mut self,
         arr: &ast::Array,
-        module: &Arc<Module>
     ) -> Result<(Option<Variable>, Flow), String> {
         let mut array: Vec<Variable> = Vec::new();
         for item in &arr.items {
-            array.push(match self.expression(item, Side::Right, module)? {
+            array.push(match self.expression(item, Side::Right)? {
                 (Some(x), Flow::Continue) => x,
                 (x, Flow::Return) => return Ok((x, Flow::Return)),
-                _ => return Err(module.error(item.source_range(),
+                _ => return Err(self.module.error(item.source_range(),
                     &format!("{}\nExpected something",
                         self.stack_trace()), self))
             });
@@ -1406,19 +1422,18 @@ impl Runtime {
     fn array_fill(
         &mut self,
         array_fill: &ast::ArrayFill,
-        module: &Arc<Module>
     ) -> Result<(Option<Variable>, Flow), String> {
-        let fill = match self.expression(&array_fill.fill, Side::Right, module)? {
+        let fill = match self.expression(&array_fill.fill, Side::Right)? {
             (x, Flow::Return) => return Ok((x, Flow::Return)),
             (Some(x), Flow::Continue) => x,
-            _ => return Err(module.error(array_fill.fill.source_range(),
+            _ => return Err(self.module.error(array_fill.fill.source_range(),
                             &format!("{}\nExpected something",
                                 self.stack_trace()), self))
         };
-        let n = match self.expression(&array_fill.n, Side::Right, module)? {
+        let n = match self.expression(&array_fill.n, Side::Right)? {
             (x, Flow::Return) => return Ok((x, Flow::Return)),
             (Some(x), Flow::Continue) => x,
-            _ => return Err(module.error(array_fill.n.source_range(),
+            _ => return Err(self.module.error(array_fill.n.source_range(),
                             &format!("{}\nExpected something",
                                 self.stack_trace()), self))
         };
@@ -1426,7 +1441,7 @@ impl Runtime {
             (x, &Variable::F64(n, _)) => {
                 Variable::Array(Arc::new(vec![x.clone(); n as usize]))
             }
-            _ => return Err(module.error(array_fill.n.source_range(),
+            _ => return Err(self.module.error(array_fill.n.source_range(),
                 &format!("{}\nExpected number for length in `[value; length]`",
                     self.stack_trace()), self))
         };
@@ -1437,8 +1452,7 @@ impl Runtime {
         &mut self,
         op: ast::AssignOp,
         left: &ast::Expression,
-        right: &ast::Expression,
-        module: &Arc<Module>
+        right: &ast::Expression
     ) -> Result<(Option<Variable>, Flow), String> {
         use ast::AssignOp::*;
         use ast::Expression;
@@ -1447,17 +1461,17 @@ impl Runtime {
             // Evaluate right side before left because the left leaves
             // an raw pointer on the stack which might point to wrong place
             // if there are side effects of the right side affecting it.
-            let b = match self.expression(right, Side::Right, module)? {
+            let b = match self.expression(right, Side::Right)? {
                 (Some(x), Flow::Continue) => x,
                 (x, Flow::Return) => return Ok((x, Flow::Return)),
-                _ => return Err(module.error(right.source_range(),
+                _ => return Err(self.module.error(right.source_range(),
                         &format!("{}\nExpected something from the right side",
                             self.stack_trace()), self))
             };
-            let a = match self.expression(left, Side::LeftInsert(false), module)? {
+            let a = match self.expression(left, Side::LeftInsert(false))? {
                 (Some(x), Flow::Continue) => x,
                 (x, Flow::Return) => return Ok((x, Flow::Return)),
-                _ => return Err(module.error(left.source_range(),
+                _ => return Err(self.module.error(left.source_range(),
                         &format!("{}\nExpected something from the left side",
                             self.stack_trace()), self))
             };
@@ -1510,7 +1524,7 @@ impl Runtime {
                                                  n[2] % b, n[3] % b],
                                     Pow => *n = [n[0].powf(b), n[1].powf(b),
                                                  n[2].powf(b), n[3].powf(b)],
-                                    _ => return Err(module.error(
+                                    _ => return Err(self.module.error(
                                             left.source_range(),
                                             &format!("{}\nExpected assigning to a number",
                                                 self.stack_trace()), self))
@@ -1520,7 +1534,7 @@ impl Runtime {
                                 if let Set = op {
                                     *r.0 = Variable::F64(b, sec.clone())
                                 } else {
-                                    return Err(module.error(
+                                    return Err(self.module.error(
                                         left.source_range(),
                                         &format!("{}\nReturn has no value",
                                             self.stack_trace()), self))
@@ -1530,14 +1544,14 @@ impl Runtime {
                                 if let Add = op {
                                     n.push(&Variable::f64(b))?;
                                 } else {
-                                    return Err(module.error(
+                                    return Err(self.module.error(
                                         left.source_range(),
                                         &format!("{}\nCan not use this assignment \
                                         operator with `link` and `number`",
                                             self.stack_trace()), self));
                                 }
                             }
-                            _ => return Err(module.error(
+                            _ => return Err(self.module.error(
                                     left.source_range(),
                                     &format!("{}\nExpected assigning to a number",
                                         self.stack_trace()), self))
@@ -1569,13 +1583,13 @@ impl Runtime {
                                 if let Set = op {
                                     *r.0 = Variable::Vec4(b)
                                 } else {
-                                    return Err(module.error(
+                                    return Err(self.module.error(
                                         left.source_range(),
                                         &format!("{}\nReturn has no value",
                                             self.stack_trace()), self))
                                 }
                             }
-                            _ => return Err(module.error(
+                            _ => return Err(self.module.error(
                                     left.source_range(),
                                     &format!("{}\nExpected assigning to a vec4",
                                         self.stack_trace()), self))
@@ -1606,7 +1620,7 @@ impl Runtime {
                                         **n = mat4_sub(**n, **b);
                                     }
                                     _ => {
-                                        return Err(module.error(
+                                        return Err(self.module.error(
                                             left.source_range(),
                                             &format!("{}\nCan not use this assignment \
                                             operator with `mat4`",
@@ -1618,13 +1632,13 @@ impl Runtime {
                                 if let Set = op {
                                     *r.0 = Variable::Mat4(b.clone())
                                 } else {
-                                    return Err(module.error(
+                                    return Err(self.module.error(
                                         left.source_range(),
                                         &format!("{}\nReturn has no value",
                                             self.stack_trace()), self))
                                 }
                             }
-                            _ => return Err(module.error(
+                            _ => return Err(self.module.error(
                                     left.source_range(),
                                     &format!("{}\nExpected assigning to a mat4",
                                         self.stack_trace()), self))
@@ -1645,7 +1659,7 @@ impl Runtime {
                                 if let Set = op {
                                     *r.0 = Variable::Bool(b, sec.clone())
                                 } else {
-                                    return Err(module.error(
+                                    return Err(self.module.error(
                                         left.source_range(),
                                         &format!("{}\nReturn has no value",
                                             self.stack_trace()), self))
@@ -1655,14 +1669,14 @@ impl Runtime {
                                 if let Add = op {
                                     n.push(&Variable::bool(b))?;
                                 } else {
-                                    return Err(module.error(
+                                    return Err(self.module.error(
                                         left.source_range(),
                                         &format!("{}\nCan not use this assignment \
                                         operator with `link` and `bool`",
                                             self.stack_trace()), self));
                                 }
                             }
-                            _ => return Err(module.error(
+                            _ => return Err(self.module.error(
                                     left.source_range(),
                                     &format!("{}\nExpected assigning to a bool",
                                         self.stack_trace()), self))
@@ -1683,7 +1697,7 @@ impl Runtime {
                                 if let Set = op {
                                     *r.0 = Variable::Text(b.clone())
                                 } else {
-                                    return Err(module.error(
+                                    return Err(self.module.error(
                                         left.source_range(),
                                         &format!("{}\nReturn has no value",
                                             self.stack_trace()), self))
@@ -1693,14 +1707,14 @@ impl Runtime {
                                 if let Add = op {
                                     n.push(&Variable::Text(b.clone()))?;
                                 } else {
-                                    return Err(module.error(
+                                    return Err(self.module.error(
                                         left.source_range(),
                                         &format!("{}\nCan not use this assignment \
                                         operator with `link` and `text`",
                                             self.stack_trace()), self));
                                 }
                             }
-                            _ => return Err(module.error(
+                            _ => return Err(self.module.error(
                                 left.source_range(),
                                 &format!("{}\nExpected assigning to text",
                                     self.stack_trace()), self))
@@ -1721,13 +1735,13 @@ impl Runtime {
                                 if let Set = op {
                                     *r.0 = Variable::Object(b.clone())
                                 } else {
-                                    return Err(module.error(
+                                    return Err(self.module.error(
                                         left.source_range(),
                                         &format!("{}\nReturn has no value",
                                             self.stack_trace()), self))
                                 }
                             }
-                            _ => return Err(module.error(
+                            _ => return Err(self.module.error(
                                 left.source_range(),
                                 &format!("{}\nExpected assigning to object",
                                     self.stack_trace()), self))
@@ -1748,13 +1762,13 @@ impl Runtime {
                                 if let Set = op {
                                     *r.0 = Variable::Array(b.clone())
                                 } else {
-                                    return Err(module.error(
+                                    return Err(self.module.error(
                                         left.source_range(),
                                         &format!("{}\nReturn has no value",
                                             self.stack_trace()), self))
                                 }
                             }
-                            _ => return Err(module.error(
+                            _ => return Err(self.module.error(
                                 left.source_range(),
                                 &format!("{}\nExpected assigning to array",
                                     self.stack_trace()), self))
@@ -1776,13 +1790,13 @@ impl Runtime {
                                 if let Set = op {
                                     *r.0 = Variable::Link(b.clone())
                                 } else {
-                                    return Err(module.error(
+                                    return Err(self.module.error(
                                         left.source_range(),
                                         &format!("{}\nReturn has no value",
                                             self.stack_trace()), self))
                                 }
                             }
-                            _ => return Err(module.error(
+                            _ => return Err(self.module.error(
                                 left.source_range(),
                                 &format!("{}\nExpected assigning to link",
                                     self.stack_trace()), self))
@@ -1803,13 +1817,13 @@ impl Runtime {
                                 if let Set = op {
                                     *r.0 = Variable::Option(b.clone())
                                 } else {
-                                    return Err(module.error(
+                                    return Err(self.module.error(
                                         left.source_range(),
                                         &format!("{}\nReturn has no value",
                                             self.stack_trace()), self))
                                 }
                             }
-                            _ => return Err(module.error(
+                            _ => return Err(self.module.error(
                                 left.source_range(),
                                 &format!("{}\nExpected assigning to option",
                                     self.stack_trace()), self))
@@ -1830,13 +1844,13 @@ impl Runtime {
                                 if let Set = op {
                                     *r.0 = Variable::Result(b.clone())
                                 } else {
-                                    return Err(module.error(
+                                    return Err(self.module.error(
                                         left.source_range(),
                                         &format!("{}\nReturn has no value",
                                             self.stack_trace()), self))
                                 }
                             }
-                            _ => return Err(module.error(
+                            _ => return Err(self.module.error(
                                 left.source_range(),
                                 &format!("{}\nExpected assigning to result",
                                     self.stack_trace()), self))
@@ -1857,13 +1871,13 @@ impl Runtime {
                                 if let Set = op {
                                     *r.0 = Variable::RustObject(b.clone())
                                 } else {
-                                    return Err(module.error(
+                                    return Err(self.module.error(
                                         left.source_range(),
                                         &format!("{}\nReturn has no value",
                                             self.stack_trace()), self))
                                 }
                             }
-                            _ => return Err(module.error(
+                            _ => return Err(self.module.error(
                                 left.source_range(),
                                 &format!(
                                     "{}\nExpected assigning to rust_object",
@@ -1885,13 +1899,13 @@ impl Runtime {
                                 if let Set = op {
                                     *r.0 = Variable::Closure(b.clone(), env.clone())
                                 } else {
-                                    return Err(module.error(
+                                    return Err(self.module.error(
                                         left.source_range(),
                                         &format!("{}\nReturn has no value",
                                             self.stack_trace()), self))
                                 }
                             }
-                            _ => return Err(module.error(
+                            _ => return Err(self.module.error(
                                 left.source_range(),
                                 &format!(
                                     "{}\nExpected assigning to closure",
@@ -1900,7 +1914,7 @@ impl Runtime {
                     }
                 }
                 ref x => {
-                    return Err(module.error(
+                    return Err(self.module.error(
                         left.source_range(),
                         &format!("{}\nCan not use this assignment operator with `{}`",
                             self.stack_trace(), x.typeof_var()), self));
@@ -1910,10 +1924,10 @@ impl Runtime {
         } else {
             match *left {
                 Expression::Item(ref item) => {
-                    let x = match self.expression(right, Side::Right, module)? {
+                    let x = match self.expression(right, Side::Right)? {
                         (x, Flow::Return) => return Ok((x, Flow::Return)),
                         (Some(x), Flow::Continue) => x,
-                        _ => return Err(module.error(right.source_range(),
+                        _ => return Err(self.module.error(right.source_range(),
                                     &format!("{}\nExpected something from the right side",
                                         self.stack_trace()), self))
                     };
@@ -1923,10 +1937,10 @@ impl Runtime {
                         x => x
                     };
                     if !item.ids.is_empty() {
-                        let x = match self.expression(left, Side::LeftInsert(true), module)? {
+                        let x = match self.expression(left, Side::LeftInsert(true))? {
                             (Some(x), Flow::Continue) => x,
                             (x, Flow::Return) => return Ok((x, Flow::Return)),
-                            _ => return Err(module.error(left.source_range(),
+                            _ => return Err(self.module.error(left.source_range(),
                                     &format!("{}\nExpected something from the left side",
                                         self.stack_trace()), self))
                         };
@@ -1945,7 +1959,7 @@ impl Runtime {
                     }
                     Ok((None, Flow::Continue))
                 }
-                _ => Err(module.error(left.source_range(),
+                _ => Err(self.module.error(left.source_range(),
                                 &format!("{}\nExpected item",
                                     self.stack_trace()), self))
             }
@@ -1958,7 +1972,6 @@ impl Runtime {
         &mut self,
         item: &ast::Item,
         side: Side,
-        module: &Arc<Module>
     ) -> Result<(Option<Variable>, Flow), String> {
         use Error;
 
@@ -2020,7 +2033,7 @@ impl Runtime {
 
                                 let static_stack_id = item.static_stack_id.get();
                                 if new_val != static_stack_id {
-                                    return Err(module.error(item.source_range,
+                                    return Err(self.module.error(item.source_range,
                                         &format!(
                                             "DEBUG: resolved not same for {} `{:?}` vs static `{:?}`",
                                             name,
@@ -2036,12 +2049,12 @@ impl Runtime {
                         if found {
                             self.stack.len() - item.stack_id.get().unwrap()
                         } else if name == "return" {
-                            return Err(module.error(item.source_range, &format!(
+                            return Err(self.module.error(item.source_range, &format!(
                                 "{}\nRequires `->` on function `{}`",
                                 self.stack_trace(),
                                 &self.call_stack.last().unwrap().fn_name), self));
                         } else {
-                            return Err(module.error(item.source_range, &format!(
+                            return Err(self.module.error(item.source_range, &format!(
                                 "{}\nCould not find local or current variable `{}`",
                                     self.stack_trace(), name), self));
                         }
@@ -2054,7 +2067,7 @@ impl Runtime {
             for &(ref n, id) in self.local_stack.iter().rev().take(locals) {
                 if **n == **item.name {
                     if stack_id != id {
-                        return Err(module.error(item.source_range,
+                        return Err(self.module.error(item.source_range,
                             &format!("DEBUG: Not same for {} stack_id `{:?}` vs id `{:?}`",
                                 item.name,
                                 stack_id,
@@ -2076,13 +2089,13 @@ impl Runtime {
                 let v = match Runtime::try_msg(&self.stack[stack_id]) {
                     Some(v) => v,
                     None => {
-                        return Err(module.error(item.source_range,
+                        return Err(self.module.error(item.source_range,
                             &format!("{}\nExpected `ok(_)`, `err(_)`, `bool`, `f64`",
                                 self.stack_trace()), self));
                     }
                 };
                 return try(&mut self.stack, &self.call_stack, v,
-                           item.source_range, module);
+                           item.source_range, &self.module);
             } else {
                 return Ok((Some(Variable::Ref(stack_id)), Flow::Continue));
             }
@@ -2092,10 +2105,10 @@ impl Runtime {
         let start_stack_len = self.stack.len();
         for id in &item.ids {
             if let Id::Expression(ref expr) = *id {
-                match self.expression(expr, Side::Right, module)? {
+                match self.expression(expr, Side::Right)? {
                     (x, Flow::Return) => return Ok((x, Flow::Return)),
                     (Some(x), Flow::Continue) => self.stack.push(x),
-                    _ => return Err(module.error(expr.source_range(),
+                    _ => return Err(self.module.error(expr.source_range(),
                         &format!("{}\nExpected something for index",
                             self.stack_trace()), self))
                 };
@@ -2116,7 +2129,7 @@ impl Runtime {
             let item_len = item.ids.len();
             // Get the first variable (a.x).y
             let mut var: *mut Variable = item_lookup(
-                module,
+                &self.module,
                 &mut stack[stack_id],
                 stack,
                 call_stack,
@@ -2132,7 +2145,7 @@ impl Runtime {
                 let v = unsafe {match Runtime::try_msg(&*var) {
                     Some(v) => v,
                     None => {
-                        return Err(module.error_fnindex(item.ids[0].source_range(),
+                        return Err(self.module.error_fnindex(item.ids[0].source_range(),
                             &format!("{}\nExpected `ok(_)` or `err(_)`",
                                 stack_trace(call_stack)),
                                 call_stack.last().unwrap().index));
@@ -2146,7 +2159,7 @@ impl Runtime {
                     Err(ref err) => {
                         let call = call_stack.last().unwrap();
                         if call.stack_len == 0 {
-                            return Err(module.error_fnindex(
+                            return Err(self.module.error_fnindex(
                                 item.ids[0].source_range(),
                                 &format!("{}\nRequires `->` on function `{}`",
                                 stack_trace(call_stack),
@@ -2155,7 +2168,7 @@ impl Runtime {
                         }
                         if let Variable::Return = stack[call.stack_len - 1] {}
                         else {
-                            return Err(module.error_fnindex(
+                            return Err(self.module.error_fnindex(
                                 item.ids[0].source_range(),
                                 &format!("{}\nRequires `->` on function `{}`",
                                 stack_trace(call_stack),
@@ -2167,7 +2180,7 @@ impl Runtime {
                             None => "".into(),
                             Some(f) => format!(" ({})", f)
                         };
-                        err.trace.push(module.error_fnindex(
+                        err.trace.push(self.module.error_fnindex(
                             item.ids[0].source_range(),
                             &format!("In function `{}`{}",
                                 &call.fn_name, file),
@@ -2179,7 +2192,7 @@ impl Runtime {
             // Get the rest of the variables.
             for (i, prop) in item.ids[1..].iter().enumerate() {
                 var = item_lookup(
-                    module,
+                    &self.module,
                     unsafe { &mut *var },
                     stack,
                     call_stack,
@@ -2197,7 +2210,7 @@ impl Runtime {
                     let v = unsafe {match Runtime::try_msg(&*var) {
                         Some(v) => v,
                         None => {
-                            return Err(module.error_fnindex(prop.source_range(),
+                            return Err(self.module.error_fnindex(prop.source_range(),
                                 &format!("{}\nExpected `ok(_)`, `err(_)`, `bool`, `f64`",
                                     stack_trace(call_stack)),
                                     call_stack.last().unwrap().index));
@@ -2211,7 +2224,7 @@ impl Runtime {
                         Err(ref err) => {
                             let call = call_stack.last().unwrap();
                             if call.stack_len == 0 {
-                                return Err(module.error_fnindex(
+                                return Err(self.module.error_fnindex(
                                     prop.source_range(),
                                     &format!("{}\nRequires `->` on function `{}`",
                                         stack_trace(call_stack),
@@ -2220,7 +2233,7 @@ impl Runtime {
                             }
                             if let Variable::Return = stack[call.stack_len - 1] {}
                             else {
-                                return Err(module.error_fnindex(
+                                return Err(self.module.error_fnindex(
                                     prop.source_range(),
                                     &format!("{}\nRequires `->` on function `{}`",
                                         stack_trace(call_stack),
@@ -2232,7 +2245,7 @@ impl Runtime {
                                 None => "".into(),
                                 Some(f) => format!(" ({})", f)
                             };
-                            err.trace.push(module.error_fnindex(
+                            err.trace.push(self.module.error_fnindex(
                                 prop.source_range(),
                                 &format!("In function `{}`{}",
                                     &call.fn_name, file),
@@ -2254,13 +2267,11 @@ impl Runtime {
 
     fn compare(
         &mut self,
-        compare: &ast::Compare,
-        module: &Arc<Module>
+        compare: &ast::Compare
     ) -> Result<(Option<Variable>, Flow), String> {
         fn sub_compare(
             rt: &Runtime,
             compare: &ast::Compare,
-            module: &Module,
             a: &Variable,
             b: &Variable
         ) -> Result<Variable, String> {
@@ -2291,7 +2302,7 @@ impl Runtime {
                     Ok(Variable::Bool(match compare.op {
                         Equal => a == b,
                         NotEqual => a != b,
-                        x => return Err(module.error(compare.source_range,
+                        x => return Err(rt.module.error(compare.source_range,
                             &format!("{}\n`{}` can not be used with bools",
                                 rt.stack_trace(),
                                 x.symbol()), rt))
@@ -2301,7 +2312,7 @@ impl Runtime {
                     Ok(Variable::bool(match compare.op {
                         Equal => a == b,
                         NotEqual => a != b,
-                        x => return Err(module.error(compare.source_range,
+                        x => return Err(rt.module.error(compare.source_range,
                             &format!("{}\n`{}` can not be used with vec4s",
                                 rt.stack_trace(),
                                 x.symbol()), rt))
@@ -2314,7 +2325,7 @@ impl Runtime {
                             a.iter().all(|a| {
                                 if let Some(b_val) = b.get(a.0) {
                                     if let Ok(Variable::Bool(true, _)) =
-                                        sub_compare(rt, compare, module, &a.1, b_val) {true}
+                                        sub_compare(rt, compare, &a.1, b_val) {true}
                                     else {false}
                                 } else {false}
                             })
@@ -2324,12 +2335,12 @@ impl Runtime {
                             a.iter().any(|a| {
                                 if let Some(b_val) = b.get(a.0) {
                                     if let Ok(Variable::Bool(false, _)) =
-                                        sub_compare(rt, compare, module, &a.1, b_val) {false}
+                                        sub_compare(rt, compare, &a.1, b_val) {false}
                                     else {true}
                                 } else {true}
                             })
                         }
-                        x => return Err(module.error(compare.source_range,
+                        x => return Err(rt.module.error(compare.source_range,
                             &format!("{}\n`{}` can not be used with objects",
                                 rt.stack_trace(),
                                 x.symbol()), rt))
@@ -2341,17 +2352,17 @@ impl Runtime {
                             a.len() == b.len() &&
                             a.iter().zip(b.iter()).all(|(a, b)| {
                                 if let Ok(Variable::Bool(true, _)) =
-                                    sub_compare(rt, compare, module, a, b) {true} else {false}
+                                    sub_compare(rt, compare, a, b) {true} else {false}
                             })
                         }
                         NotEqual => {
                             a.len() != b.len() ||
                             a.iter().zip(b.iter()).any(|(a, b)| {
                                 if let Ok(Variable::Bool(false, _)) =
-                                    sub_compare(rt, compare, module, a, b) {false} else {true}
+                                    sub_compare(rt, compare, a, b) {false} else {true}
                             })
                         }
-                        x => return Err(module.error(compare.source_range,
+                        x => return Err(rt.module.error(compare.source_range,
                             &format!("{}\n`{}` can not be used with arrays",
                                 rt.stack_trace(),
                                 x.symbol()), rt))
@@ -2361,7 +2372,7 @@ impl Runtime {
                     Ok(Variable::bool(match compare.op {
                         Equal => true,
                         NotEqual => false,
-                        x => return Err(module.error(compare.source_range,
+                        x => return Err(rt.module.error(compare.source_range,
                             &format!("{}\n`{}` can not be used with options",
                                 rt.stack_trace(),
                                 x.symbol()), rt))
@@ -2371,7 +2382,7 @@ impl Runtime {
                     Ok(Variable::bool(match compare.op {
                         Equal => false,
                         NotEqual => true,
-                        x => return Err(module.error(compare.source_range,
+                        x => return Err(rt.module.error(compare.source_range,
                             &format!("{}\n`{}` can not be used with options",
                                 rt.stack_trace(),
                                 x.symbol()), rt))
@@ -2381,7 +2392,7 @@ impl Runtime {
                     Ok(Variable::bool(match compare.op {
                         Equal => false,
                         NotEqual => true,
-                        x => return Err(module.error(compare.source_range,
+                        x => return Err(rt.module.error(compare.source_range,
                             &format!("{}\n`{}` can not be used with options",
                                 rt.stack_trace(),
                                 x.symbol()), rt))
@@ -2389,9 +2400,9 @@ impl Runtime {
                 }
                 (&Variable::Option(Some(ref b)),
                  &Variable::Option(Some(ref a))) => {
-                    sub_compare(rt, compare, module, a, b)
+                    sub_compare(rt, compare, a, b)
                 }
-                (b, a) => Err(module.error(compare.source_range,
+                (b, a) => Err(rt.module.error(compare.source_range,
                     &format!(
                     "{}\n`{}` can not be used with `{}` and `{}`",
                     rt.stack_trace(),
@@ -2401,81 +2412,76 @@ impl Runtime {
             }
         }
 
-        let left = match self.expression(&compare.left, Side::Right, module)? {
+        let left = match self.expression(&compare.left, Side::Right)? {
             (Some(x), Flow::Continue) => x,
             (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-            _ => return Err(module.error(compare.left.source_range(),
+            _ => return Err(self.module.error(compare.left.source_range(),
                 &format!("{}\nExpected something from the left argument",
                     self.stack_trace()), self))
         };
-        let right = match self.expression(&compare.right, Side::Right, module)? {
+        let right = match self.expression(&compare.right, Side::Right)? {
             (Some(x), Flow::Continue) => x,
             (x, Flow::Return) => return Ok((x, Flow::Return)),
-            _ => return Err(module.error(compare.right.source_range(),
+            _ => return Err(self.module.error(compare.right.source_range(),
                 &format!("{}\nExpected something from the right argument",
                     self.stack_trace()), self))
         };
-        Ok((Some(sub_compare(self, compare, module, &left, &right)?), Flow::Continue))
+        Ok((Some(sub_compare(self, compare, &left, &right)?), Flow::Continue))
     }
     fn if_expr(
         &mut self,
-        if_expr: &ast::If,
-        module: &Arc<Module>
+        if_expr: &ast::If
     ) -> Result<(Option<Variable>, Flow), String> {
-        let cond = match self.expression(&if_expr.cond, Side::Right, module)? {
+        let cond = match self.expression(&if_expr.cond, Side::Right)? {
             (Some(x), Flow::Continue) => x,
             (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-            _ => return Err(module.error(if_expr.cond.source_range(),
+            _ => return Err(self.module.error(if_expr.cond.source_range(),
                 &format!("{}\nExpected bool from if condition",
                     self.stack_trace()), self))
         };
         let val = match *self.resolve(&cond) {
             Variable::Bool(val, _) => val,
-            _ => return Err(module.error(if_expr.cond.source_range(),
+            _ => return Err(self.module.error(if_expr.cond.source_range(),
                 &format!("{}\nExpected bool from if condition",
                     self.stack_trace()), self))
         };
         if val {
-            return self.block(&if_expr.true_block, module);
+            return self.block(&if_expr.true_block);
         }
         for (cond, body) in if_expr.else_if_conds.iter()
             .zip(if_expr.else_if_blocks.iter()) {
-            let else_if_cond = match self.expression(cond, Side::Right, module)? {
+            let else_if_cond = match self.expression(cond, Side::Right)? {
                 (Some(x), Flow::Continue) => x,
                 (x, Flow::Return) => {
                     return Ok((x, Flow::Return));
                 }
-                _ => return Err(module.error(cond.source_range(),
+                _ => return Err(self.module.error(cond.source_range(),
                     &format!("{}\nExpected bool from else if condition",
                         self.stack_trace()), self))
             };
             match *self.resolve(&else_if_cond) {
                 Variable::Bool(false, _) => {}
                 Variable::Bool(true, _) => {
-                    return self.block(body, module);
+                    return self.block(body);
                 }
-                _ => return Err(module.error(cond.source_range(),
+                _ => return Err(self.module.error(cond.source_range(),
                     &format!("{}\nExpected bool from else if condition",
                         self.stack_trace()), self))
             }
         }
         if let Some(ref block) = if_expr.else_block {
-            self.block(block, module)
+            self.block(block)
         } else {
             Ok((None, Flow::Continue))
         }
     }
-    fn for_expr(
-        &mut self,
-        for_expr: &ast::For,
-        module: &Arc<Module>
-    ) -> Result<(Option<Variable>, Flow), String> {
+    fn for_expr(&mut self, for_expr: &ast::For) -> Result<(Option<Variable>, Flow), String> {
         let prev_st = self.stack.len();
         let prev_lc = self.local_stack.len();
-        match self.expression(&for_expr.init, Side::Right, module)? {
+        match self.expression(&for_expr.init, Side::Right)? {
         (None, Flow::Continue) => {}
             (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-            _ => return Err(module.error(for_expr.init.source_range(),
+            _ => return Err(self.module.error(for_expr.init.source_range(),
                 &format!("{}\nExpected nothing from for init",
                     self.stack_trace()), self))
         };
@@ -2483,21 +2489,21 @@ impl Runtime {
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
         loop {
-            let val = match self.expression(&for_expr.cond, Side::Right, module)? {
+            let val = match self.expression(&for_expr.cond, Side::Right)? {
                 (Some(x), Flow::Continue) => x,
                 (x, Flow::Return) => return Ok((x, Flow::Return)),
-                _ => return Err(module.error(for_expr.cond.source_range(),
+                _ => return Err(self.module.error(for_expr.cond.source_range(),
                     &format!("{}\nExpected bool from for condition",
                         self.stack_trace()), self))
             };
             let val = match val {
                 Variable::Bool(val, _) => val,
-                _ => return Err(module.error(
+                _ => return Err(self.module.error(
                     for_expr.cond.source_range(),
                     &format!("{}\nExpected bool", self.stack_trace()), self))
             };
             if !val { break }
-            match self.block(&for_expr.block, module)? {
+            match self.block(&for_expr.block)? {
                 (x, Flow::Return) => return Ok((x, Flow::Return)),
                 (_, Flow::Continue) => {}
                 (_, Flow::Break(x)) => {
@@ -2523,10 +2529,10 @@ impl Runtime {
                             break;
                         }
                     }
-                    match self.expression(&for_expr.step, Side::Right, module)? {
+                    match self.expression(&for_expr.step, Side::Right)? {
                         (None, Flow::Continue) => {}
                         (x, Flow::Return) => return Ok((x, Flow::Return)),
-                        _ => return Err(module.error(
+                        _ => return Err(self.module.error(
                             for_expr.step.source_range(),
                             &format!("{}\nExpected nothing from for step",
                                 self.stack_trace()), self))
@@ -2534,10 +2540,10 @@ impl Runtime {
                     continue;
                 }
             }
-            match self.expression(&for_expr.step, Side::Right, module)? {
+            match self.expression(&for_expr.step, Side::Right)? {
                 (None, Flow::Continue) => {}
                 (x, Flow::Return) => return Ok((x, Flow::Return)),
-                _ => return Err(module.error(
+                _ => return Err(self.module.error(
                     for_expr.step.source_range(),
                     &format!("{}\nExpected nothing from for step",
                         self.stack_trace()), self))
@@ -2552,16 +2558,15 @@ impl Runtime {
     fn vec4(
         &mut self,
         vec4: &ast::Vec4,
-        side: Side,
-        module: &Arc<Module>
+        side: Side
     ) -> Result<(Option<Variable>, Flow), String> {
         let st = self.stack.len();
         for expr in &vec4.args {
-            match self.expression(expr, side, module)? {
+            match self.expression(expr, side)? {
                 (None, Flow::Continue) => {}
                 (Some(x), Flow::Continue) => self.stack.push(x),
                 (x, Flow::Return) => return Ok((x, Flow::Return)),
-                _ => return Err(module.error(expr.source_range(),
+                _ => return Err(self.module.error(expr.source_range(),
                     &format!("{}\nExpected something from vec4 argument",
                         self.stack_trace()), self))
             };
@@ -2571,25 +2576,25 @@ impl Runtime {
         let w = self.stack.pop().expect(TINVOTS);
         let w = match self.resolve(&w) {
             &Variable::F64(val, _) => val,
-            x => return Err(module.error(vec4.args[3].source_range(),
+            x => return Err(self.module.error(vec4.args[3].source_range(),
                 &self.expected(x, "number"), self))
         };
         let z = self.stack.pop().expect(TINVOTS);
         let z = match self.resolve(&z) {
             &Variable::F64(val, _) => val,
-            x => return Err(module.error(vec4.args[2].source_range(),
+            x => return Err(self.module.error(vec4.args[2].source_range(),
                 &self.expected(x, "number"), self))
         };
         let y = self.stack.pop().expect(TINVOTS);
         let y = match self.resolve(&y) {
             &Variable::F64(val, _) => val,
-            x => return Err(module.error(vec4.args[1].source_range(),
+            x => return Err(self.module.error(vec4.args[1].source_range(),
                 &self.expected(x, "number"), self))
         };
         let x = self.stack.pop().expect(TINVOTS);
         let x = match self.resolve(&x) {
             &Variable::F64(val, _) => val,
-            x => return Err(module.error(vec4.args[0].source_range(),
+            x => return Err(self.module.error(vec4.args[0].source_range(),
                 &self.expected(x, "number"), self))
         };
         Ok((Some(Variable::Vec4([x as f32, y as f32, z as f32, w as f32])), Flow::Continue))
@@ -2597,15 +2602,14 @@ impl Runtime {
     fn mat4(
         &mut self,
         mat4: &ast::Mat4,
-        side: Side,
-        module: &Arc<Module>
+        side: Side
     ) -> Result<(Option<Variable>, Flow), String> {
         for expr in &mat4.args {
-            match self.expression(expr, side, module)? {
+            match self.expression(expr, side)? {
                 (None, Flow::Continue) => {}
                 (Some(x), Flow::Continue) => self.stack.push(x),
                 (x, Flow::Return) => return Ok((x, Flow::Return)),
-                _ => return Err(module.error(expr.source_range(),
+                _ => return Err(self.module.error(expr.source_range(),
                     &format!("{}\nExpected something from mat4 argument",
                         self.stack_trace()), self))
             };
@@ -2613,25 +2617,25 @@ impl Runtime {
         let w = self.stack.pop().expect(TINVOTS);
         let w = match self.resolve(&w) {
             &Variable::Vec4(val) => val,
-            x => return Err(module.error(mat4.args[3].source_range(),
+            x => return Err(self.module.error(mat4.args[3].source_range(),
                 &self.expected(x, "vec4"), self))
         };
         let z = self.stack.pop().expect(TINVOTS);
         let z = match self.resolve(&z) {
             &Variable::Vec4(val) => val,
-            x => return Err(module.error(mat4.args[2].source_range(),
+            x => return Err(self.module.error(mat4.args[2].source_range(),
                 &self.expected(x, "vec4"), self))
         };
         let y = self.stack.pop().expect(TINVOTS);
         let y = match self.resolve(&y) {
             &Variable::Vec4(val) => val,
-            x => return Err(module.error(mat4.args[1].source_range(),
+            x => return Err(self.module.error(mat4.args[1].source_range(),
                 &self.expected(x, "vec4"), self))
         };
         let x = self.stack.pop().expect(TINVOTS);
         let x = match self.resolve(&x) {
             &Variable::Vec4(val) => val,
-            x => return Err(module.error(mat4.args[0].source_range(),
+            x => return Err(self.module.error(mat4.args[0].source_range(),
                 &self.expected(x, "vec4"), self))
         };
         Ok((Some(Variable::Mat4(Box::new([
@@ -2645,12 +2649,11 @@ impl Runtime {
         &mut self,
         norm: &ast::Norm,
         side: Side,
-        module: &Arc<Module>
     ) -> Result<(Option<Variable>, Flow), String> {
-        let val = match self.expression(&norm.expr, side, module)? {
+        let val = match self.expression(&norm.expr, side)? {
             (Some(x), Flow::Continue) => x,
             (x, Flow::Return) => return Ok((x, Flow::Return)),
-            _ => return Err(module.error(norm.source_range,
+            _ => return Err(self.module.error(norm.source_range,
                 &format!("{}\nExpected something from unary argument",
                     self.stack_trace()), self))
         };
@@ -2658,7 +2661,7 @@ impl Runtime {
             Variable::Vec4(b) => {
                 Variable::f64(f64::from(b[0] * b[0] + b[1] * b[1] + b[2] * b[2]).sqrt())
             }
-            ref x => return Err(module.error(norm.source_range,
+            ref x => return Err(self.module.error(norm.source_range,
                 &self.expected(x, "vec4"), self))
         };
         Ok((Some(v), Flow::Continue))
@@ -2666,13 +2669,12 @@ impl Runtime {
     fn unop(
         &mut self,
         unop: &ast::UnOpExpression,
-        side: Side,
-        module: &Arc<Module>
+        side: Side
     ) -> Result<(Option<Variable>, Flow), String> {
-        let val = match self.expression(&unop.expr, side, module)? {
+        let val = match self.expression(&unop.expr, side)? {
             (Some(x), Flow::Continue) => x,
             (x, Flow::Return) => return Ok((x, Flow::Return)),
-            _ => return Err(module.error(unop.source_range,
+            _ => return Err(self.module.error(unop.source_range,
                 &format!("{}\nExpected something from unary argument",
                     self.stack_trace()), self))
         };
@@ -2680,7 +2682,7 @@ impl Runtime {
             Variable::Bool(b, ref sec) => {
                 Variable::Bool(match unop.op {
                     ast::UnOp::Not => !b,
-                    _ => return Err(module.error(unop.source_range,
+                    _ => return Err(self.module.error(unop.source_range,
                                     &format!("{}\nUnknown boolean unary operator",
                                              self.stack_trace()), self))
                 }, sec.clone())
@@ -2688,7 +2690,7 @@ impl Runtime {
             Variable::F64(v, ref sec) => {
                 Variable::F64(match unop.op {
                     ast::UnOp::Neg => -v,
-                    _ => return Err(module.error(unop.source_range,
+                    _ => return Err(self.module.error(unop.source_range,
                                     &format!("{}\nUnknown number unary operator",
                                              self.stack_trace()), self))
                 }, sec.clone())
@@ -2696,7 +2698,7 @@ impl Runtime {
             Variable::Vec4(v) => {
                 Variable::Vec4(match unop.op {
                     ast::UnOp::Neg => [-v[0], -v[1], -v[2], -v[3]],
-                    _ => return Err(module.error(unop.source_range,
+                    _ => return Err(self.module.error(unop.source_range,
                                     &format!("{}\nUnknown vec4 unary operator",
                                              self.stack_trace()), self))
                 })
@@ -2709,12 +2711,12 @@ impl Runtime {
                             [-m[2][0], -m[2][1], -m[2][2], -m[2][3]],
                             [-m[3][0], -m[3][1], -m[3][2], -m[3][3]],
                         ])),
-                    _ => return Err(module.error(unop.source_range,
+                    _ => return Err(self.module.error(unop.source_range,
                                     &format!("{}\nUnknown mat4 unary operator",
                                              self.stack_trace()), self))
                 }
             }
-            _ => return Err(module.error(unop.source_range,
+            _ => return Err(self.module.error(unop.source_range,
                 &format!("{}\nInvalid type for unary operator, expected bool, f64, vec4 or mat4", self.stack_trace()), self))
         };
         Ok((Some(v), Flow::Continue))
@@ -2722,15 +2724,14 @@ impl Runtime {
     fn binop(
         &mut self,
         binop: &ast::BinOpExpression,
-        side: Side,
-        module: &Arc<Module>
+        side: Side
     ) -> Result<(Option<Variable>, Flow), String> {
         use ast::BinOp::*;
 
-        let left = match self.expression(&binop.left, side, module)? {
+        let left = match self.expression(&binop.left, side)? {
             (Some(x), Flow::Continue) => x,
             (x, Flow::Return) => return Ok((x, Flow::Return)),
-            _ => return Err(module.error(binop.source_range,
+            _ => return Err(self.module.error(binop.source_range,
                 &format!("{}\nExpected something from left argument",
                     self.stack_trace()), self))
         };
@@ -2750,10 +2751,10 @@ impl Runtime {
             _ => {}
         }
 
-        let right = match self.expression(&binop.right, side, module)? {
+        let right = match self.expression(&binop.right, side)? {
             (Some(x), Flow::Continue) => x,
             (x, Flow::Return) => return Ok((x, Flow::Return)),
-            _ => return Err(module.error(binop.source_range,
+            _ => return Err(self.module.error(binop.source_range,
                 &format!("{}\nExpected something from right argument",
                     self.stack_trace()), self))
         };
@@ -2766,7 +2767,7 @@ impl Runtime {
                     Div => a / b,
                     Rem => a % b,
                     Pow => a.powf(b),
-                    _ => return Err(module.error(binop.source_range,
+                    _ => return Err(self.module.error(binop.source_range,
                         &format!("{}\nUnknown number operator `{:?}`",
                             self.stack_trace(),
                             binop.op.symbol()), self))
@@ -2786,7 +2787,7 @@ impl Runtime {
                     Rem => Variable::Vec4([a[0] % b[0], a[1] % b[1], a[2] % b[2], a[3] % b[3]]),
                     Pow => Variable::Vec4([a[0].powf(b[0]), a[1].powf(b[1]),
                                            a[2].powf(b[2]), a[3].powf(b[3])]),
-                    AndAlso | OrElse => return Err(module.error(binop.source_range,
+                    AndAlso | OrElse => return Err(self.module.error(binop.source_range,
                         &format!("{}\nUnknown operator `{:?}` for `vec4` and `vec4`",
                             self.stack_trace(),
                             binop.op.symbol_bool()), self)),
@@ -2799,14 +2800,14 @@ impl Runtime {
                     Sub => Variable::Vec4([a[0] - b, a[1] - b, a[2] - b, a[3] - b]),
                     Mul => Variable::Vec4([a[0] * b, a[1] * b, a[2] * b, a[3] * b]),
                     Dot => Variable::f64(f64::from(a[0] * b + a[1] * b + a[2] * b + a[3] * b)),
-                    Cross => return Err(module.error(binop.source_range,
+                    Cross => return Err(self.module.error(binop.source_range,
                         &format!("{}\nExpected two vec4 for `{:?}`",
                             self.stack_trace(), binop.op.symbol()), self)),
                     Div => Variable::Vec4([a[0] / b, a[1] / b, a[2] / b, a[3] / b]),
                     Rem => Variable::Vec4([a[0] % b, a[1] % b, a[2] % b, a[3] % b]),
                     Pow => Variable::Vec4([a[0].powf(b), a[1].powf(b),
                                            a[2].powf(b), a[3].powf(b)]),
-                    AndAlso | OrElse => return Err(module.error(binop.source_range,
+                    AndAlso | OrElse => return Err(self.module.error(binop.source_range,
                         &format!("{}\nUnknown operator `{:?}` for `vec4` and `f64`",
                             self.stack_trace(),
                             binop.op.symbol_bool()), self)),
@@ -2823,10 +2824,10 @@ impl Runtime {
                     Rem => Variable::Vec4([a % b[0], a % b[1], a % b[2], a % b[3]]),
                     Pow => Variable::Vec4([a.powf(b[0]), a.powf(b[1]),
                                            a.powf(b[2]), a.powf(b[3])]),
-                    Cross => return Err(module.error(binop.source_range,
+                    Cross => return Err(self.module.error(binop.source_range,
                         &format!("{}\nExpected two vec4 for `{:?}`",
                             self.stack_trace(), binop.op.symbol()), self)),
-                    AndAlso | OrElse => return Err(module.error(binop.source_range,
+                    AndAlso | OrElse => return Err(self.module.error(binop.source_range,
                         &format!("{}\nUnknown operator `{:?}` for `f64` and `vec4`",
                             self.stack_trace(),
                             binop.op.symbol_bool()), self)),
@@ -2839,7 +2840,7 @@ impl Runtime {
                     Add => Variable::Mat4(Box::new(mat4_add(**a, **b))),
                     Sub => Variable::Mat4(Box::new(mat4_sub(**a, **b))),
                     Mul => Variable::Mat4(Box::new(col_mat4_mul(**a, **b))),
-                    _ => return Err(module.error(binop.source_range,
+                    _ => return Err(self.module.error(binop.source_range,
                         &format!("{}\nUnknown operator `{:?}` for `mat4` and `mat4`",
                             self.stack_trace(),
                             binop.op.symbol_bool()), self)),
@@ -2866,7 +2867,7 @@ impl Runtime {
                             [b[2][0] * a, b[2][1] * a, b[2][2] * a, b[2][3] * a],
                             [b[3][0] * a, b[3][1] * a, b[3][2] * a, b[3][3] * a]
                         ])),
-                    _ => return Err(module.error(binop.source_range,
+                    _ => return Err(self.module.error(binop.source_range,
                         &format!("{}\nUnknown operator `{:?}` for `f64` and `mat4`",
                             self.stack_trace(),
                             binop.op.symbol_bool()), self)),
@@ -2893,7 +2894,7 @@ impl Runtime {
                             [b[2][0] * a, b[2][1] * a, b[2][2] * a, b[2][3] * a],
                             [b[3][0] * a, b[3][1] * a, b[3][2] * a, b[3][3] * a]
                         ])),
-                    _ => return Err(module.error(binop.source_range,
+                    _ => return Err(self.module.error(binop.source_range,
                         &format!("{}\nUnknown operator `{:?}` for `f64` and `mat4`",
                             self.stack_trace(),
                             binop.op.symbol_bool()), self)),
@@ -2904,7 +2905,7 @@ impl Runtime {
 
                 match binop.op {
                     Mul => Variable::Vec4(col_mat4_transform(**a, b)),
-                    _ => return Err(module.error(binop.source_range,
+                    _ => return Err(self.module.error(binop.source_range,
                         &format!("{}\nUnknown operator `{:?}` for `mat4` and `vec4`",
                             self.stack_trace(),
                             binop.op.symbol_bool()), self)),
@@ -2917,7 +2918,7 @@ impl Runtime {
                     Sub => a && !b,
                     Mul | AndAlso => a && b,
                     Pow => a ^ b,
-                    _ => return Err(module.error(binop.source_range,
+                    _ => return Err(self.module.error(binop.source_range,
                         &format!("{}\nUnknown boolean operator `{:?}`",
                             self.stack_trace(),
                             binop.op.symbol_bool()), self))
@@ -2931,13 +2932,13 @@ impl Runtime {
                         res.push_str(b);
                         Variable::Text(Arc::new(res))
                     }
-                    _ => return Err(module.error(binop.source_range,
+                    _ => return Err(self.module.error(binop.source_range,
                         &format!("{}\nThis operation can not be used with strings",
                             self.stack_trace()), self))
                 }
             }
             (&Variable::Text(_), _) =>
-                return Err(module.error(binop.source_range,
+                return Err(self.module.error(binop.source_range,
                 &format!("{}\nThe right argument must be a string. \
                 Try the `str` function", self.stack_trace()), self)),
             (&Variable::Link(ref a), &Variable::Link(ref b)) => {
@@ -2945,12 +2946,12 @@ impl Runtime {
                     Add => {
                         Variable::Link(Box::new(a.add(b)))
                     }
-                    _ => return Err(module.error(binop.source_range,
+                    _ => return Err(self.module.error(binop.source_range,
                         &format!("{}\nThis operation can not be used with links",
                             self.stack_trace()), self))
                 }
             }
-            _ => return Err(module.error(binop.source_range, &format!(
+            _ => return Err(self.module.error(binop.source_range, &format!(
                 "{}\nInvalid type for binary operator `{:?}`, \
                 expected numbers, vec4s, bools or strings",
                 self.stack_trace(),

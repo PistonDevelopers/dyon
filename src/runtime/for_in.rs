@@ -1,31 +1,31 @@
 use super::*;
 
 macro_rules! iter(
-    ($rt:ident, $for_in_expr:ident, $module:ident) => {{
-        let iter = match $rt.expression(&$for_in_expr.iter, Side::Right, $module)? {
+    ($rt:ident, $for_in_expr:ident) => {{
+        let iter = match $rt.expression(&$for_in_expr.iter, Side::Right)? {
             (x, Flow::Return) => { return Ok((x, Flow::Return)); }
             (Some(x), Flow::Continue) => x,
-            _ => return Err($module.error($for_in_expr.iter.source_range(),
+            _ => return Err($rt.module.error($for_in_expr.iter.source_range(),
                 &format!("{}\nExpected in-type from for iter",
                     $rt.stack_trace()), $rt))
         };
         match $rt.resolve(&iter) {
             &Variable::In(ref val) => val.clone(),
-            x => return Err($module.error($for_in_expr.iter.source_range(),
+            x => return Err($rt.module.error($for_in_expr.iter.source_range(),
                             &$rt.expected(x, "in"), $rt))
         }
     }};
 );
 
 macro_rules! iter_val(
-    ($iter:ident, $rt:ident, $for_in_expr:ident, $module:ident) => {
+    ($iter:ident, $rt:ident, $for_in_expr:ident) => {
         match $iter.lock() {
             Ok(x) => match x.try_recv() {
                 Ok(x) => x,
                 Err(_) => return Ok((None, Flow::Continue)),
             },
             Err(err) => {
-                return Err($module.error($for_in_expr.source_range,
+                return Err($rt.module.error($for_in_expr.source_range,
                 &format!("Can not lock In mutex:\n{}", err.description()), $rt));
             }
         }
@@ -63,14 +63,14 @@ macro_rules! continue_(
 );
 
 macro_rules! iter_val_inc(
-    ($iter:ident, $rt:ident, $for_in_expr:ident, $module:ident) => {
+    ($iter:ident, $rt:ident, $for_in_expr:ident) => {
         match $iter.lock() {
             Ok(x) => match x.try_recv() {
                 Ok(x) => x,
                 Err(_) => break,
             },
             Err(err) => {
-                return Err($module.error($for_in_expr.source_range,
+                return Err($rt.module.error($for_in_expr.source_range,
                 &format!("Can not lock In mutex:\n{}", err.description()), $rt));
             }
         }
@@ -80,16 +80,15 @@ macro_rules! iter_val_inc(
 impl Runtime {
     pub(crate) fn for_in_expr(
         &mut self,
-        for_in_expr: &ast::ForIn,
-        module: &Arc<Module>
+        for_in_expr: &ast::ForIn
     ) -> Result<(Option<Variable>, Flow), String> {
         use std::error::Error;
 
         let prev_st = self.stack.len();
         let prev_lc = self.local_stack.len();
 
-        let iter = iter!(self, for_in_expr, module);
-        let iter_val = iter_val!(iter, self, for_in_expr, module);
+        let iter = iter!(self, for_in_expr);
+        let iter_val = iter_val!(iter, self, for_in_expr);
 
         // Initialize counter.
         self.local_stack.push((for_in_expr.name.clone(), self.stack.len()));
@@ -99,14 +98,14 @@ impl Runtime {
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
         loop {
-            match self.block(&for_in_expr.block, module)? {
+            match self.block(&for_in_expr.block)? {
                 (x, Flow::Return) => { return Ok((x, Flow::Return)); }
                 (_, Flow::Continue) => {}
                 (_, Flow::Break(x)) => break_!(x, for_in_expr, flow),
                 (_, Flow::ContinueLoop(x)) => continue_!(x, for_in_expr, flow),
             }
 
-            self.stack[st - 1] = iter_val_inc!(iter, self, for_in_expr, module);
+            self.stack[st - 1] = iter_val_inc!(iter, self, for_in_expr);
             self.stack.truncate(st);
             self.local_stack.truncate(lc);
         };
@@ -117,16 +116,15 @@ impl Runtime {
 
     pub(crate) fn sum_in_expr(
         &mut self,
-        for_in_expr: &ast::ForIn,
-        module: &Arc<Module>
+        for_in_expr: &ast::ForIn
     ) -> Result<(Option<Variable>, Flow), String> {
         use std::error::Error;
 
         let prev_st = self.stack.len();
         let prev_lc = self.local_stack.len();
 
-        let iter = iter!(self, for_in_expr, module);
-        let iter_val = iter_val!(iter, self, for_in_expr, module);
+        let iter = iter!(self, for_in_expr);
+        let iter_val = iter_val!(iter, self, for_in_expr);
 
         let mut sum = 0.0;
 
@@ -138,11 +136,11 @@ impl Runtime {
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
         loop {
-            match self.block(&for_in_expr.block, module)? {
+            match self.block(&for_in_expr.block)? {
                 (Some(x), Flow::Continue) => {
                     match self.resolve(&x) {
                         &Variable::F64(val, _) => sum += val,
-                        x => return Err(module.error(for_in_expr.block.source_range,
+                        x => return Err(self.module.error(for_in_expr.block.source_range,
                                 &self.expected(x, "number"), self))
                     };
                 }
@@ -152,7 +150,7 @@ impl Runtime {
                 (_, Flow::ContinueLoop(x)) => continue_!(x, for_in_expr, flow),
             }
 
-            self.stack[st - 1] = iter_val_inc!(iter, self, for_in_expr, module);
+            self.stack[st - 1] = iter_val_inc!(iter, self, for_in_expr);
             self.stack.truncate(st);
             self.local_stack.truncate(lc);
         };
@@ -163,16 +161,15 @@ impl Runtime {
 
     pub(crate) fn prod_in_expr(
         &mut self,
-        for_in_expr: &ast::ForIn,
-        module: &Arc<Module>
+        for_in_expr: &ast::ForIn
     ) -> Result<(Option<Variable>, Flow), String> {
         use std::error::Error;
 
         let prev_st = self.stack.len();
         let prev_lc = self.local_stack.len();
 
-        let iter = iter!(self, for_in_expr, module);
-        let iter_val = iter_val!(iter, self, for_in_expr, module);
+        let iter = iter!(self, for_in_expr);
+        let iter_val = iter_val!(iter, self, for_in_expr);
 
         let mut prod = 1.0;
 
@@ -184,11 +181,11 @@ impl Runtime {
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
         loop {
-            match self.block(&for_in_expr.block, module)? {
+            match self.block(&for_in_expr.block)? {
                 (Some(x), Flow::Continue) => {
                     match self.resolve(&x) {
                         &Variable::F64(val, _) => prod *= val,
-                        x => return Err(module.error(for_in_expr.block.source_range,
+                        x => return Err(self.module.error(for_in_expr.block.source_range,
                                 &self.expected(x, "number"), self))
                     };
                 }
@@ -198,7 +195,7 @@ impl Runtime {
                 (_, Flow::ContinueLoop(x)) => continue_!(x, for_in_expr, flow),
             }
 
-            self.stack[st - 1] = iter_val_inc!(iter, self, for_in_expr, module);
+            self.stack[st - 1] = iter_val_inc!(iter, self, for_in_expr);
             self.stack.truncate(st);
             self.local_stack.truncate(lc);
         };
@@ -209,16 +206,15 @@ impl Runtime {
 
     pub(crate) fn min_in_expr(
         &mut self,
-        for_in_expr: &ast::ForIn,
-        module: &Arc<Module>
+        for_in_expr: &ast::ForIn
     ) -> Result<(Option<Variable>, Flow), String> {
         use std::error::Error;
 
         let prev_st = self.stack.len();
         let prev_lc = self.local_stack.len();
 
-        let iter = iter!(self, for_in_expr, module);
-        let iter_val = iter_val!(iter, self, for_in_expr, module);
+        let iter = iter!(self, for_in_expr);
+        let iter_val = iter_val!(iter, self, for_in_expr);
 
         let mut min = ::std::f64::NAN;
         let mut sec = None;
@@ -229,7 +225,7 @@ impl Runtime {
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
         loop {
-            match self.block(&for_in_expr.block, module)? {
+            match self.block(&for_in_expr.block)? {
                 (Some(x), Flow::Continue) => {
                     match self.resolve(&x) {
                         &Variable::F64(val, ref val_sec) => {
@@ -247,20 +243,20 @@ impl Runtime {
                                 };
                             }
                         },
-                        x => return Err(module.error(for_in_expr.block.source_range,
+                        x => return Err(self.module.error(for_in_expr.block.source_range,
                                 &self.expected(x, "number"), self))
                     };
                 }
                 (x, Flow::Return) => { return Ok((x, Flow::Return)); }
                 (None, Flow::Continue) => {
-                    return Err(module.error(for_in_expr.block.source_range,
+                    return Err(self.module.error(for_in_expr.block.source_range,
                                 "Expected `number or option`", self))
                 }
                 (_, Flow::Break(x)) => break_!(x, for_in_expr, flow),
                 (_, Flow::ContinueLoop(x)) => continue_!(x, for_in_expr, flow),
             }
 
-            self.stack[st - 1] = iter_val_inc!(iter, self, for_in_expr, module);
+            self.stack[st - 1] = iter_val_inc!(iter, self, for_in_expr);
             self.stack.truncate(st);
             self.local_stack.truncate(lc);
         };
@@ -271,16 +267,15 @@ impl Runtime {
 
     pub(crate) fn max_in_expr(
         &mut self,
-        for_in_expr: &ast::ForIn,
-        module: &Arc<Module>
+        for_in_expr: &ast::ForIn
     ) -> Result<(Option<Variable>, Flow), String> {
         use std::error::Error;
 
         let prev_st = self.stack.len();
         let prev_lc = self.local_stack.len();
 
-        let iter = iter!(self, for_in_expr, module);
-        let iter_val = iter_val!(iter, self, for_in_expr, module);
+        let iter = iter!(self, for_in_expr);
+        let iter_val = iter_val!(iter, self, for_in_expr);
 
         let mut max = ::std::f64::NAN;
         let mut sec = None;
@@ -291,7 +286,7 @@ impl Runtime {
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
         loop {
-            match self.block(&for_in_expr.block, module)? {
+            match self.block(&for_in_expr.block)? {
                 (Some(x), Flow::Continue) => {
                     match self.resolve(&x) {
                         &Variable::F64(val, ref val_sec) => {
@@ -309,20 +304,20 @@ impl Runtime {
                                 };
                             }
                         },
-                        x => return Err(module.error(for_in_expr.block.source_range,
+                        x => return Err(self.module.error(for_in_expr.block.source_range,
                                 &self.expected(x, "number"), self))
                     };
                 }
                 (x, Flow::Return) => { return Ok((x, Flow::Return)); }
                 (None, Flow::Continue) => {
-                    return Err(module.error(for_in_expr.block.source_range,
+                    return Err(self.module.error(for_in_expr.block.source_range,
                                 "Expected `number or option`", self))
                 }
                 (_, Flow::Break(x)) => break_!(x, for_in_expr, flow),
                 (_, Flow::ContinueLoop(x)) => continue_!(x, for_in_expr, flow),
             }
 
-            self.stack[st - 1] = iter_val_inc!(iter, self, for_in_expr, module);
+            self.stack[st - 1] = iter_val_inc!(iter, self, for_in_expr);
             self.stack.truncate(st);
             self.local_stack.truncate(lc);
         };
@@ -333,16 +328,15 @@ impl Runtime {
 
     pub(crate) fn any_in_expr(
         &mut self,
-        for_in_expr: &ast::ForIn,
-        module: &Arc<Module>
+        for_in_expr: &ast::ForIn
     ) -> Result<(Option<Variable>, Flow), String> {
         use std::error::Error;
 
         let prev_st = self.stack.len();
         let prev_lc = self.local_stack.len();
 
-        let iter = iter!(self, for_in_expr, module);
-        let iter_val = iter_val!(iter, self, for_in_expr, module);
+        let iter = iter!(self, for_in_expr);
+        let iter_val = iter_val!(iter, self, for_in_expr);
 
         let mut any = false;
         let mut sec = None;
@@ -354,7 +348,7 @@ impl Runtime {
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
         loop {
-            match self.block(&for_in_expr.block, module)? {
+            match self.block(&for_in_expr.block)? {
                 (Some(x), Flow::Continue) => {
                     match self.resolve(&x) {
                         &Variable::Bool(val, ref val_sec) => {
@@ -373,20 +367,20 @@ impl Runtime {
                                 break;
                             }
                         },
-                        x => return Err(module.error(for_in_expr.block.source_range,
+                        x => return Err(self.module.error(for_in_expr.block.source_range,
                                 &self.expected(x, "boolean"), self))
                     };
                 }
                 (x, Flow::Return) => { return Ok((x, Flow::Return)); }
                 (None, Flow::Continue) => {
-                    return Err(module.error(for_in_expr.block.source_range,
+                    return Err(self.module.error(for_in_expr.block.source_range,
                                 "Expected `boolean`", self))
                 }
                 (_, Flow::Break(x)) => break_!(x, for_in_expr, flow),
                 (_, Flow::ContinueLoop(x)) => continue_!(x, for_in_expr, flow),
             }
 
-            self.stack[st - 1] = iter_val_inc!(iter, self, for_in_expr, module);
+            self.stack[st - 1] = iter_val_inc!(iter, self, for_in_expr);
             self.stack.truncate(st);
             self.local_stack.truncate(lc);
         };
@@ -397,16 +391,15 @@ impl Runtime {
 
     pub(crate) fn all_in_expr(
         &mut self,
-        for_in_expr: &ast::ForIn,
-        module: &Arc<Module>
+        for_in_expr: &ast::ForIn
     ) -> Result<(Option<Variable>, Flow), String> {
         use std::error::Error;
 
         let prev_st = self.stack.len();
         let prev_lc = self.local_stack.len();
 
-        let iter = iter!(self, for_in_expr, module);
-        let iter_val = iter_val!(iter, self, for_in_expr, module);
+        let iter = iter!(self, for_in_expr);
+        let iter_val = iter_val!(iter, self, for_in_expr);
 
         let mut all = true;
         let mut sec = None;
@@ -418,7 +411,7 @@ impl Runtime {
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
         loop {
-            match self.block(&for_in_expr.block, module)? {
+            match self.block(&for_in_expr.block)? {
                 (Some(x), Flow::Continue) => {
                     match self.resolve(&x) {
                         &Variable::Bool(val, ref val_sec) => {
@@ -437,20 +430,20 @@ impl Runtime {
                                 break;
                             }
                         },
-                        x => return Err(module.error(for_in_expr.block.source_range,
+                        x => return Err(self.module.error(for_in_expr.block.source_range,
                                 &self.expected(x, "boolean"), self))
                     };
                 }
                 (x, Flow::Return) => { return Ok((x, Flow::Return)); }
                 (None, Flow::Continue) => {
-                    return Err(module.error(for_in_expr.block.source_range,
+                    return Err(self.module.error(for_in_expr.block.source_range,
                                 "Expected `boolean`", self))
                 }
                 (_, Flow::Break(x)) => break_!(x, for_in_expr, flow),
                 (_, Flow::ContinueLoop(x)) => continue_!(x, for_in_expr, flow),
             }
 
-            self.stack[st - 1] = iter_val_inc!(iter, self, for_in_expr, module);
+            self.stack[st - 1] = iter_val_inc!(iter, self, for_in_expr);
             self.stack.truncate(st);
             self.local_stack.truncate(lc);
         };
@@ -461,24 +454,22 @@ impl Runtime {
 
     pub(crate) fn link_for_in_expr(
         &mut self,
-        for_in_expr: &ast::ForIn,
-        module: &Arc<Module>
+        for_in_expr: &ast::ForIn
     ) -> Result<(Option<Variable>, Flow), String> {
         use Link;
 
         fn sub_link_for_in_expr(
             res: &mut Link,
             rt: &mut Runtime,
-            for_in_expr: &ast::ForIn,
-            module: &Arc<Module>
+            for_in_expr: &ast::ForIn
         ) -> Result<(Option<Variable>, Flow), String> {
             use std::error::Error;
 
             let prev_st = rt.stack.len();
             let prev_lc = rt.local_stack.len();
 
-            let iter = iter!(rt, for_in_expr, module);
-            let iter_val = iter_val!(iter, rt, for_in_expr, module);
+            let iter = iter!(rt, for_in_expr);
+            let iter_val = iter_val!(iter, rt, for_in_expr);
 
             // Initialize counter.
             rt.local_stack.push((for_in_expr.name.clone(), rt.stack.len()));
@@ -493,11 +484,11 @@ impl Runtime {
                     ast::Expression::Link(ref link) => {
                         // Evaluate link items directly.
                         'inner: for item in &link.items {
-                            match rt.expression(item, Side::Right, module)? {
+                            match rt.expression(item, Side::Right)? {
                                 (Some(ref x), Flow::Continue) => {
                                     match res.push(rt.resolve(x)) {
                                         Err(err) => {
-                                            return Err(module.error(for_in_expr.source_range,
+                                            return Err(rt.module.error(for_in_expr.source_range,
                                                 &format!("{}\n{}", rt.stack_trace(),
                                                 err), rt))
                                         }
@@ -542,7 +533,7 @@ impl Runtime {
                     }
                     ast::Expression::LinkIn(ref for_in) => {
                         // Pass on control to next link loop.
-                        match sub_link_for_in_expr(res, rt, for_in, module) {
+                        match sub_link_for_in_expr(res, rt, for_in) {
                             Ok((None, Flow::Continue)) => {}
                             Ok((_, Flow::Break(x))) => {
                                 if let Some(label) = x {
@@ -576,7 +567,7 @@ impl Runtime {
                     }
                 }
 
-                rt.stack[st - 1] = iter_val_inc!(iter, rt, for_in_expr, module);
+                rt.stack[st - 1] = iter_val_inc!(iter, rt, for_in_expr);
                 rt.stack.truncate(st);
                 rt.local_stack.truncate(lc);
             };
@@ -586,7 +577,7 @@ impl Runtime {
         }
 
         let mut res: Link = Link::new();
-        match sub_link_for_in_expr(&mut res, self, for_in_expr, module) {
+        match sub_link_for_in_expr(&mut res, self, for_in_expr) {
             Ok((None, Flow::Continue)) =>
                 Ok((Some(Variable::Link(Box::new(res))), Flow::Continue)),
             x => x
@@ -595,8 +586,7 @@ impl Runtime {
 
     pub(crate) fn sift_in_expr(
         &mut self,
-        for_in_expr: &ast::ForIn,
-        module: &Arc<Module>
+        for_in_expr: &ast::ForIn
     ) -> Result<(Option<Variable>, Flow), String> {
         use std::error::Error;
 
@@ -604,8 +594,8 @@ impl Runtime {
         let prev_lc = self.local_stack.len();
         let mut res: Vec<Variable> = vec![];
 
-        let iter = iter!(self, for_in_expr, module);
-        let iter_val = iter_val!(iter, self, for_in_expr, module);
+        let iter = iter!(self, for_in_expr);
+        let iter_val = iter_val!(iter, self, for_in_expr);
 
         // Initialize counter.
         self.local_stack.push((for_in_expr.name.clone(), self.stack.len()));
@@ -615,18 +605,18 @@ impl Runtime {
         let lc = self.local_stack.len();
         let mut flow = Flow::Continue;
         loop {
-            match self.block(&for_in_expr.block, module)? {
+            match self.block(&for_in_expr.block)? {
                 (Some(x), Flow::Continue) => res.push(x),
                 (x, Flow::Return) => { return Ok((x, Flow::Return)); }
                 (None, Flow::Continue) => {
-                    return Err(module.error(for_in_expr.block.source_range,
+                    return Err(self.module.error(for_in_expr.block.source_range,
                                 "Expected variable", self))
                 }
                 (_, Flow::Break(x)) => break_!(x, for_in_expr, flow),
                 (_, Flow::ContinueLoop(x)) => continue_!(x, for_in_expr, flow),
             }
 
-            self.stack[st - 1] = iter_val_inc!(iter, self, for_in_expr, module);
+            self.stack[st - 1] = iter_val_inc!(iter, self, for_in_expr);
             self.stack.truncate(st);
             self.local_stack.truncate(lc);
         };
