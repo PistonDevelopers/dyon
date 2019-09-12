@@ -1531,43 +1531,36 @@ pub(crate) fn json_from_meta_data(rt: &mut Runtime) -> Result<(), String> {
     Ok(())
 }
 
-// TODO: Can't be rewritten as an external function because it reports errors on arguments.
-pub(crate) fn errstr__string_start_len_msg(
-    rt: &mut Runtime,
-    call: &ast::Call
-) -> Result<Option<Variable>, String> {
+pub(crate) fn errstr__string_start_len_msg(rt: &mut Runtime) -> Result<(), String> {
     use piston_meta::ParseErrorHandler;
 
     let msg = rt.stack.pop().expect(TINVOTS);
     let msg = match rt.resolve(&msg) {
         &Variable::Text(ref t) => t.clone(),
-        x => return Err(rt.module.error(call.args[3].source_range(),
-                        &rt.expected(x, "str"), rt))
+        x => return Err(rt.expected_arg(3, x, "str"))
     };
     let len = rt.stack.pop().expect(TINVOTS);
     let len = match rt.resolve(&len) {
         &Variable::F64(v, _) => v as usize,
-        x => return Err(rt.module.error(call.args[2].source_range(),
-                        &rt.expected(x, "f64"), rt))
+        x => return Err(rt.expected_arg(2, x, "f64"))
     };
     let start = rt.stack.pop().expect(TINVOTS);
     let start = match rt.resolve(&start) {
         &Variable::F64(v, _) => v as usize,
-        x => return Err(rt.module.error(call.args[1].source_range(),
-                        &rt.expected(x, "f64"), rt))
+        x => return Err(rt.expected_arg(1, x, "f64"))
     };
     let source = rt.stack.pop().expect(TINVOTS);
     let source = match rt.resolve(&source) {
         &Variable::Text(ref t) => t.clone(),
-        x => return Err(rt.module.error(call.args[0].source_range(),
-                        &rt.expected(x, "str"), rt))
+        x => return Err(rt.expected_arg(0, x, "str"))
     };
 
     let mut buf: Vec<u8> = vec![];
     ParseErrorHandler::new(&source)
         .write_msg(&mut buf, Range::new(start, len), &msg)
         .unwrap();
-    Ok(Some(Variable::Text(Arc::new(String::from_utf8(buf).unwrap()))))
+    rt.stack.push(Variable::Text(Arc::new(String::from_utf8(buf).unwrap())));
+    Ok(())
 }
 
 // TODO: Can't be rewritten as an external function because it reports errors on arguments.

@@ -11,9 +11,8 @@ use dyon_std::*;
 const HAS: usize = 0;
 const CHARS: usize = 1;
 const KEYS: usize = 2;
-const ERRSTR__STRING_START_LEN_MSG: usize = 3;
-const NEXT: usize = 4;
-const WAIT_NEXT: usize = 5;
+const NEXT: usize = 3;
+const WAIT_NEXT: usize = 4;
 
 const TABLE: &[(usize, fn(
         &mut Runtime,
@@ -23,7 +22,6 @@ const TABLE: &[(usize, fn(
     (HAS, has),
     (CHARS, chars),
     (KEYS, keys),
-    (ERRSTR__STRING_START_LEN_MSG, errstr__string_start_len_msg),
     (NEXT, next),
     (WAIT_NEXT, wait_next),
 ];
@@ -44,12 +42,6 @@ pub(crate) fn standard(f: &mut Prelude) {
     });
     sarg(f, "chars", CHARS, Type::Text, Type::Array(Box::new(Type::Text)));
     sarg(f, "keys", KEYS, Type::Object, Type::Array(Box::new(Type::Text)));
-    f.intrinsic(Arc::new("errstr__string_start_len_msg".into()),
-        ERRSTR__STRING_START_LEN_MSG, Dfn {
-            lts: vec![Lt::Default; 4],
-            tys: vec![Type::Text, Type::F64, Type::F64, Type::Text],
-            ret: Type::Text
-        });
     f.intrinsic(Arc::new("next".into()), NEXT, Dfn {
         lts: vec![Lt::Default],
         tys: vec![Type::in_ty()],
