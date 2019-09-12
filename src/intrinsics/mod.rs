@@ -8,30 +8,19 @@ use Variable;
 use Type;
 use dyon_std::*;
 
-const CHARS: usize = 0;
-const NEXT: usize = 1;
-const WAIT_NEXT: usize = 2;
+const NEXT: usize = 0;
+const WAIT_NEXT: usize = 1;
 
 const TABLE: &[(usize, fn(
         &mut Runtime,
         &ast::Call,
     ) -> Result<Option<Variable>, String>)]
 = &[
-    (CHARS, chars),
     (NEXT, next),
     (WAIT_NEXT, wait_next),
 ];
 
 pub(crate) fn standard(f: &mut Prelude) {
-    let sarg = |f: &mut Prelude, name: &str, index: usize, ty: Type, ret: Type| {
-        f.intrinsic(Arc::new(name.into()), index, Dfn {
-            lts: vec![Lt::Default],
-            tys: vec![ty],
-            ret
-        });
-    };
-
-    sarg(f, "chars", CHARS, Type::Text, Type::Array(Box::new(Type::Text)));
     f.intrinsic(Arc::new("next".into()), NEXT, Dfn {
         lts: vec![Lt::Default],
         tys: vec![Type::in_ty()],

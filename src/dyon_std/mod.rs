@@ -1590,16 +1590,11 @@ pub(crate) fn keys(rt: &mut Runtime) -> Result<(), String> {
     Ok(())
 }
 
-// TODO: Can't be rewritten as an external function because it reports errors on arguments.
-pub(crate) fn chars(
-    rt: &mut Runtime,
-    call: &ast::Call,
-) -> Result<Option<Variable>, String> {
+pub(crate) fn chars(rt: &mut Runtime) -> Result<(), String> {
     let t = rt.stack.pop().expect(TINVOTS);
     let t = match rt.resolve(&t) {
         &Variable::Text(ref t) => t.clone(),
-        x => return Err(rt.module.error(call.args[0].source_range(),
-                        &rt.expected(x, "str"), rt))
+        x => return Err(rt.expected_arg(0, x, "str"))
     };
     let res = t.chars()
         .map(|ch| {
@@ -1608,7 +1603,8 @@ pub(crate) fn chars(
             Variable::Text(Arc::new(s))
         })
         .collect::<Vec<_>>();
-    Ok(Some(Variable::Array(Arc::new(res))))
+    rt.stack.push(Variable::Array(Arc::new(res)));
+    Ok(())
 }
 
 dyon_fn!{fn now() -> f64 {
