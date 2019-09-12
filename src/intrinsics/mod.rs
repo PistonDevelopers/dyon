@@ -21,10 +21,9 @@ const UNWRAP_OR: usize = 9;
 const KEYS: usize = 10;
 const ERRSTR__STRING_START_LEN_MSG: usize = 11;
 const META__SYNTAX_IN_STRING: usize = 12;
-const INSERT: usize = 13;
-const REMOVE: usize = 14;
-const NEXT: usize = 15;
-const WAIT_NEXT: usize = 16;
+const REMOVE: usize = 13;
+const NEXT: usize = 14;
+const WAIT_NEXT: usize = 15;
 
 const TABLE: &[(usize, fn(
         &mut Runtime,
@@ -44,7 +43,6 @@ const TABLE: &[(usize, fn(
     (KEYS, keys),
     (ERRSTR__STRING_START_LEN_MSG, errstr__string_start_len_msg),
     (META__SYNTAX_IN_STRING, meta__syntax_in_string),
-    (INSERT, insert),
     (REMOVE, remove),
     (NEXT, next),
     (WAIT_NEXT, wait_next),
@@ -102,11 +100,6 @@ pub(crate) fn standard(f: &mut Prelude) {
             tys: vec![Type::Any, Type::Text, Type::Text],
             ret: Type::Result(Box::new(Type::Array(Box::new(Type::array()))))
         });
-    f.intrinsic(Arc::new("insert(mut,_,_)".into()), INSERT, Dfn {
-        lts: vec![Lt::Default; 3],
-        tys: vec![Type::array(), Type::F64, Type::Any],
-        ret: Type::Void
-    });
     f.intrinsic(Arc::new("remove(mut,_)".into()), REMOVE, Dfn {
         lts: vec![Lt::Return, Lt::Default],
         tys: vec![Type::array(), Type::F64],

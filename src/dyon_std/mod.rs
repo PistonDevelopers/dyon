@@ -425,19 +425,13 @@ pub(crate) fn push(rt: &mut Runtime) -> Result<(), String> {
     Ok(())
 }
 
-// TODO: Can't be rewritten as external function because it reports error on arguments.
-pub(crate) fn insert(
-    rt: &mut Runtime,
-    call: &ast::Call
-) -> Result<Option<Variable>, String> {
+pub(crate) fn insert(rt: &mut Runtime) -> Result<(), String> {
     let item = rt.stack.pop().expect(TINVOTS);
     let item = rt.resolve(&item).deep_clone(&rt.stack);
     let index = rt.stack.pop().expect(TINVOTS);
-    let index = match *rt.resolve(&index) {
-        Variable::F64(index, _) => index,
-        _ => return Err(rt.module.error(call.args[1].source_range(),
-                        &format!("{}\nExpected number",
-                            rt.stack_trace()), rt))
+    let index = match rt.resolve(&index) {
+        &Variable::F64(index, _) => index,
+        x => return Err(rt.expected_arg(1, x, "number"))
     };
     let v = rt.stack.pop().expect(TINVOTS);
 
@@ -445,9 +439,7 @@ pub(crate) fn insert(
         if let Variable::Array(ref arr) = rt.stack[ind] {
             let index = index as usize;
             if index > arr.len() {
-                return Err(rt.module.error(call.source_range,
-                            &format!("{}\nIndex out of bounds",
-                            rt.stack_trace()), rt))
+                return Err("Index out of bounds".into())
             }
         }
         let ok = if let Variable::Array(ref mut arr) = rt.stack[ind] {
@@ -457,16 +449,18 @@ pub(crate) fn insert(
             false
         };
         if !ok {
-            return Err(rt.module.error(call.args[0].source_range(),
-                &format!("{}\nExpected reference to array",
-                    rt.stack_trace()), rt));
+            return Err({
+                rt.arg_err_index.set(Some(0));
+                "Expected reference to array".into()
+            })
         }
     } else {
-        return Err(rt.module.error(call.args[0].source_range(),
-            &format!("{}\nExpected reference to array",
-                rt.stack_trace()), rt));
+        return Err({
+            rt.arg_err_index.set(Some(0));
+            "Expected reference to array".into()
+        })
     }
-    Ok(None)
+    Ok(())
 }
 
 // TODO: Can't be rewritten as external function because it reports error on arguments.

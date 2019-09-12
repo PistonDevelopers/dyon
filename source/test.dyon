@@ -1,6 +1,6 @@
 fn main() {
     b := 4
     s := [1, 2, 3]
-    push(mut s, b)
+    insert(mut s, 1, b)
     println(s)
 }

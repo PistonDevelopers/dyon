@@ -494,6 +494,11 @@ impl Module {
             ret: Void
         });
         m.add_str("push(mut,_)", push, Dfn::nl(vec![Type::array(), Any], Void));
+        m.add_str("insert(mut,_,_)", insert, Dfn {
+            lts: vec![Lt::Default; 3],
+            tys: vec![Type::array(), F64, Any],
+            ret: Void
+        });
         m
     }
 
