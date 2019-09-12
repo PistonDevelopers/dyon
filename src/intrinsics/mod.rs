@@ -35,15 +35,14 @@ const CHARS: usize = 23;
 const UNWRAP_OR: usize = 24;
 const TIP: usize = 25;
 const NECK: usize = 26;
-const FUNCTIONS__MODULE: usize = 27;
-const KEYS: usize = 28;
-const ERRSTR__STRING_START_LEN_MSG: usize = 29;
-const META__SYNTAX_IN_STRING: usize = 30;
-const INSERT: usize = 31;
-const INSERT_REF: usize = 32;
-const REMOVE: usize = 33;
-const NEXT: usize = 34;
-const WAIT_NEXT: usize = 35;
+const KEYS: usize = 27;
+const ERRSTR__STRING_START_LEN_MSG: usize = 28;
+const META__SYNTAX_IN_STRING: usize = 29;
+const INSERT: usize = 30;
+const INSERT_REF: usize = 31;
+const REMOVE: usize = 32;
+const NEXT: usize = 33;
+const WAIT_NEXT: usize = 34;
 
 const TABLE: &[(usize, fn(
         &mut Runtime,
@@ -77,7 +76,6 @@ const TABLE: &[(usize, fn(
     (UNWRAP_OR, unwrap_or),
     (TIP, tip),
     (NECK, neck),
-    (FUNCTIONS__MODULE, functions__module),
     (KEYS, keys),
     (ERRSTR__STRING_START_LEN_MSG, errstr__string_start_len_msg),
     (META__SYNTAX_IN_STRING, meta__syntax_in_string),
@@ -168,7 +166,6 @@ pub(crate) fn standard(f: &mut Prelude) {
     });
     sarg(f, "tip", TIP, Type::Link, Type::Option(Box::new(Type::Any)));
     sarg(f, "neck", NECK, Type::Link, Type::Link);
-    sarg(f, "functions__module", FUNCTIONS__MODULE, Type::Any, Type::Any);
     sarg(f, "keys", KEYS, Type::Object, Type::Array(Box::new(Type::Text)));
     f.intrinsic(Arc::new("errstr__string_start_len_msg".into()),
         ERRSTR__STRING_START_LEN_MSG, Dfn {

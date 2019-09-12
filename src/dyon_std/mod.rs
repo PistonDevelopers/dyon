@@ -1130,28 +1130,24 @@ pub(crate) fn functions(rt: &mut Runtime) -> Result<(), String> {
     Ok(())
 }
 
-// TODO: Can't be rewritten as an external function because it reports errors on arguments.
-pub(crate) fn functions__module(
-    rt: &mut Runtime,
-    call: &ast::Call
-) -> Result<Option<Variable>, String> {
+pub(crate) fn functions__module(rt: &mut Runtime) -> Result<(), String> {
     // List available functions in scope.
     let m = rt.stack.pop().expect(TINVOTS);
-    let m = match rt.resolve(&m) {
+    let x = rt.resolve(&m);
+    let m = match x {
         &Variable::RustObject(ref obj) => obj.clone(),
-        x => return Err(rt.module.error(call.args[0].source_range(),
-                        &rt.expected(x, "Module"), rt))
+        x => return Err(rt.expected_arg(0, x, "Module"))
     };
 
     let functions = match m.lock().unwrap()
         .downcast_ref::<Arc<Module>>() {
         Some(m) => functions::list_functions(m),
-        None => return Err(rt.module.error(call.args[0].source_range(),
-            &format!("{}\nExpected `Module`", rt.stack_trace()), rt))
+        None => return Err(rt.expected_arg(0, x, "Module"))
     };
 
     let v = Variable::Array(Arc::new(functions));
-    Ok(Some(v))
+    rt.push(v);
+    Ok(())
 }
 
 dyon_fn!{fn none() -> Option<Variable> {None}}

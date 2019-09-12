@@ -465,6 +465,7 @@ impl Module {
         m.add_str("call", _call, Dfn::nl(vec![Any, Text, Type::array()], Void));
         m.add_str("call_ret", call_ret, Dfn::nl(vec![Any, Text, Type::array()], Any));
         m.add_str("functions", functions, Dfn::nl(vec![], Any));
+        m.add_str("functions__module", functions__module, Dfn::nl(vec![Any], Any));
         m
     }
 

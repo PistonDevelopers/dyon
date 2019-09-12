@@ -1,6 +1,6 @@
 fn main() {
     m := unwrap(module(in: "foo.dyon", string: "fn main() {}", imports: []))
-    println(functions())
+    println(functions(module: m))
 }
 
 fn anon(a) -> {return clone(a)}
