@@ -1224,19 +1224,14 @@ pub(crate) fn unwrap_or(rt: &mut Runtime) -> Result<(), String> {
     Ok(())
 }
 
-// TODO: Can't be rewritten as an external function because it reports errors on arguments.
-pub(crate) fn unwrap_err(
-    rt: &mut Runtime,
-    call: &ast::Call
-) -> Result<Option<Variable>, String> {
+pub(crate) fn unwrap_err(rt: &mut Runtime) -> Result<(), String> {
     let v = rt.stack.pop().expect(TINVOTS);
-    Ok(Some(match rt.resolve(&v) {
+    let v = match rt.resolve(&v) {
         &Variable::Result(Err(ref err)) => err.message.clone(),
-        x => {
-            return Err(rt.module.error(call.args[0].source_range(),
-                &rt.expected(x, "err(_)"), rt));
-        }
-    }))
+        x => return Err(rt.expected_arg(0, x, "err(_)"))
+    };
+    rt.stack.push(v);
+    Ok(())
 }
 
 dyon_fn!{fn dir__angle(val: f64) -> Vec4 {Vec4([val.cos() as f32, val.sin() as f32, 0.0, 0.0])}}

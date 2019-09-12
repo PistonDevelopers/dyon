@@ -513,6 +513,7 @@ impl Module {
         m.add_str("clear(mut)", clear, Dfn::nl(vec![Type::array()], Void));
         m.add_str("swap(mut,_,_)", swap, Dfn::nl(vec![Type::array(), F64, F64], Void));
         m.add_str("unwrap_or", unwrap_or, Dfn::nl(vec![Any; 2], Any));
+        m.add_str("unwrap_err", unwrap_err, Dfn::nl(vec![Any], Any));
         m
     }
 

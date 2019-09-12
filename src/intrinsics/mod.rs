@@ -8,23 +8,21 @@ use Variable;
 use Type;
 use dyon_std::*;
 
-const UNWRAP_ERR: usize = 0;
-const SAVE__DATA_FILE: usize = 1;
-const JSON_FROM_META_DATA: usize = 2;
-const HAS: usize = 3;
-const CHARS: usize = 4;
-const KEYS: usize = 5;
-const ERRSTR__STRING_START_LEN_MSG: usize = 6;
-const META__SYNTAX_IN_STRING: usize = 7;
-const NEXT: usize = 8;
-const WAIT_NEXT: usize = 9;
+const SAVE__DATA_FILE: usize = 0;
+const JSON_FROM_META_DATA: usize = 1;
+const HAS: usize = 2;
+const CHARS: usize = 3;
+const KEYS: usize = 4;
+const ERRSTR__STRING_START_LEN_MSG: usize = 5;
+const META__SYNTAX_IN_STRING: usize = 6;
+const NEXT: usize = 7;
+const WAIT_NEXT: usize = 8;
 
 const TABLE: &[(usize, fn(
         &mut Runtime,
         &ast::Call,
     ) -> Result<Option<Variable>, String>)]
 = &[
-    (UNWRAP_ERR, unwrap_err),
     (SAVE__DATA_FILE, save__data_file),
     (JSON_FROM_META_DATA, json_from_meta_data),
     (HAS, has),
@@ -45,7 +43,6 @@ pub(crate) fn standard(f: &mut Prelude) {
         });
     };
 
-    sarg(f, "unwrap_err", UNWRAP_ERR, Type::Any, Type::Any);
     f.intrinsic(Arc::new("save__data_file".into()), SAVE__DATA_FILE, Dfn {
         lts: vec![Lt::Default; 2],
         tys: vec![Type::Any, Type::Text],
