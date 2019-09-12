@@ -478,6 +478,7 @@ impl Module {
         m.add_str("explain_where", explain_where, Dfn::nl(vec![F64, Any],
                                                           Type::Secret(Box::new(F64))));
         m.add_str("head", head, Dfn::nl(vec![Link], Any));
+        m.add_str("tip", tip, Dfn::nl(vec![Link], Type::Option(Box::new(Any))));
         m
     }
 
