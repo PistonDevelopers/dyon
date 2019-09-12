@@ -504,6 +504,11 @@ impl Module {
             tys: vec![Type::array()],
             ret: Any
         });
+        m.add_str("remove(mut,_)", remove, Dfn {
+            lts: vec![Lt::Return, Lt::Default],
+            tys: vec![Type::array(), F64],
+            ret: Any
+        });
         m
     }
 
