@@ -4,7 +4,6 @@ use runtime::{Flow, Runtime, Side};
 use ast;
 use prelude::{Lt, Prelude, Dfn};
 
-use Module;
 use Variable;
 use Type;
 use dyon_std::*;
@@ -55,7 +54,6 @@ const WAIT_NEXT: usize = 41;
 const TABLE: &[(usize, fn(
         &mut Runtime,
         &ast::Call,
-        &Arc<Module>,
     ) -> Result<Option<Variable>, String>)]
 = &[
     (WHY, why),
@@ -266,8 +264,6 @@ pub(crate) fn call_standard(
     }
     let (ind, f) = TABLE[index];
     debug_assert!(ind == index);
-    // TODO: Remove when no longer needed.
-    let ref module = rt.module.clone();
-    let expect = (f)(rt, call, module)?;
+    let expect = (f)(rt, call)?;
     Ok((expect, Flow::Continue))
 }

@@ -130,8 +130,7 @@ pub(crate) fn clone(rt: &mut Runtime) -> Result<(), String> {
 // TODO: Can't be rewritten as external function because it reports error on arguments.
 pub(crate) fn why(
     rt: &mut Runtime,
-    call: &ast::Call,
-    module: &Arc<Module>,
+    call: &ast::Call
 ) -> Result<Option<Variable>, String> {
     let v = rt.stack.pop().expect(TINVOTS);
     let v = Variable::Array(Arc::new(match rt.resolve(&v) {
@@ -141,16 +140,16 @@ pub(crate) fn why(
             sec
         }
         &Variable::Bool(true, None) => {
-            return Err(module.error(call.args[0].source_range(),
+            return Err(rt.module.error(call.args[0].source_range(),
                 &format!("{}\nThis does not make sense, perhaps an array is empty?",
                     rt.stack_trace()), rt))
         }
         &Variable::Bool(false, _) => {
-            return Err(module.error(call.args[0].source_range(),
+            return Err(rt.module.error(call.args[0].source_range(),
                 &format!("{}\nMust be `true` to have meaning, try add or remove `!`",
                     rt.stack_trace()), rt))
         }
-        x => return Err(module.error(call.args[0].source_range(),
+        x => return Err(rt.module.error(call.args[0].source_range(),
             &rt.expected(x, "bool"), rt))
     }));
     Ok(Some(v))
@@ -159,14 +158,13 @@ pub(crate) fn why(
 // TODO: Can't be rewritten as external function because it reports error on arguments.
 pub(crate) fn _where(
     rt: &mut Runtime,
-    call: &ast::Call,
-    module: &Arc<Module>,
+    call: &ast::Call
 ) -> Result<Option<Variable>, String> {
     let v = rt.stack.pop().expect(TINVOTS);
     let v = Variable::Array(Arc::new(match rt.resolve(&v) {
         &Variable::F64(val, Some(ref sec)) => {
             if val.is_nan() {
-                return Err(module.error(call.args[0].source_range(),
+                return Err(rt.module.error(call.args[0].source_range(),
                     &format!("{}\nExpected number, found `NaN`",
                         rt.stack_trace()), rt))
             } else {
@@ -176,11 +174,11 @@ pub(crate) fn _where(
             }
         }
         &Variable::F64(_, None) => {
-            return Err(module.error(call.args[0].source_range(),
+            return Err(rt.module.error(call.args[0].source_range(),
                 &format!("{}\nThis does not make sense, perhaps an array is empty?",
                     rt.stack_trace()), rt))
         }
-        x => return Err(module.error(call.args[0].source_range(),
+        x => return Err(rt.module.error(call.args[0].source_range(),
             &rt.expected(x, "f64"), rt))
     }));
     Ok(Some(v))
@@ -189,8 +187,7 @@ pub(crate) fn _where(
 // TODO: Can't be rewritten as external function because it reports error on arguments.
 pub(crate) fn explain_why(
     rt: &mut Runtime,
-    call: &ast::Call,
-    module: &Arc<Module>,
+    call: &ast::Call
 ) -> Result<Option<Variable>, String> {
     let why = rt.stack.pop().expect(TINVOTS);
     let val = rt.stack.pop().expect(TINVOTS);
@@ -205,7 +202,7 @@ pub(crate) fn explain_why(
                 }
             }
         ),
-        x => return Err(module.error(call.args[0].source_range(),
+        x => return Err(rt.module.error(call.args[0].source_range(),
             &rt.expected(x, "bool"), rt))
     };
     Ok(Some(Variable::Bool(val, Some(why))))
@@ -214,8 +211,7 @@ pub(crate) fn explain_why(
 // TODO: Can't be rewritten as external function because it reports error on arguments.
 pub(crate) fn explain_where(
     rt: &mut Runtime,
-    call: &ast::Call,
-    module: &Arc<Module>,
+    call: &ast::Call
 ) -> Result<Option<Variable>, String> {
     let wh = rt.stack.pop().expect(TINVOTS);
     let val = rt.stack.pop().expect(TINVOTS);
@@ -230,7 +226,7 @@ pub(crate) fn explain_where(
                 }
             }
         ),
-        x => return Err(module.error(call.args[0].source_range(),
+        x => return Err(rt.module.error(call.args[0].source_range(),
             &rt.expected(x, "bool"), rt))
     };
     Ok(Some(Variable::F64(val, Some(wh))))
@@ -281,13 +277,12 @@ dyon_fn!{fn sleep(v: f64) {
 // TODO: Can't be rewritten as external function because it reports error on arguments.
 pub(crate) fn head(
     rt: &mut Runtime,
-    call: &ast::Call,
-    module: &Arc<Module>,
+    call: &ast::Call
 ) -> Result<Option<Variable>, String> {
     let v = rt.stack.pop().expect(TINVOTS);
     let v = Variable::Option(match rt.resolve(&v) {
         &Variable::Link(ref link) => link.head(),
-        x => return Err(module.error(call.args[0].source_range(),
+        x => return Err(rt.module.error(call.args[0].source_range(),
                         &rt.expected(x, "link"), rt))
     });
     Ok(Some(v))
@@ -296,13 +291,12 @@ pub(crate) fn head(
 // TODO: Can't be rewritten as external function because it reports error on arguments.
 pub(crate) fn tip(
     rt: &mut Runtime,
-    call: &ast::Call,
-    module: &Arc<Module>,
+    call: &ast::Call
 ) -> Result<Option<Variable>, String> {
     let v = rt.stack.pop().expect(TINVOTS);
     let v = Variable::Option(match rt.resolve(&v) {
         &Variable::Link(ref link) => link.tip(),
-        x => return Err(module.error(call.args[0].source_range(),
+        x => return Err(rt.module.error(call.args[0].source_range(),
                         &rt.expected(x, "link"), rt))
     });
     Ok(Some(v))
@@ -311,13 +305,12 @@ pub(crate) fn tip(
 // TODO: Can't be rewritten as external function because it reports error on arguments.
 pub(crate) fn tail(
     rt: &mut Runtime,
-    call: &ast::Call,
-    module: &Arc<Module>,
+    call: &ast::Call
 ) -> Result<Option<Variable>, String> {
     let v = rt.stack.pop().expect(TINVOTS);
     let v = Variable::Link(Box::new(match rt.resolve(&v) {
         &Variable::Link(ref link) => link.tail(),
-        x => return Err(module.error(call.args[0].source_range(),
+        x => return Err(rt.module.error(call.args[0].source_range(),
                         &rt.expected(x, "link"), rt))
     }));
     Ok(Some(v))
@@ -326,13 +319,12 @@ pub(crate) fn tail(
 // TODO: Can't be rewritten as external function because it reports error on arguments.
 pub(crate) fn neck(
     rt: &mut Runtime,
-    call: &ast::Call,
-    module: &Arc<Module>,
+    call: &ast::Call
 ) -> Result<Option<Variable>, String> {
     let v = rt.stack.pop().expect(TINVOTS);
     let v = Variable::Link(Box::new(match rt.resolve(&v) {
         &Variable::Link(ref link) => link.neck(),
-        x => return Err(module.error(call.args[0].source_range(),
+        x => return Err(rt.module.error(call.args[0].source_range(),
                         &rt.expected(x, "link"), rt))
     }));
     Ok(Some(v))
@@ -341,13 +333,12 @@ pub(crate) fn neck(
 // TODO: Can't be rewritten as external function because it reports error on arguments.
 pub(crate) fn is_empty(
     rt: &mut Runtime,
-    call: &ast::Call,
-    module: &Arc<Module>,
+    call: &ast::Call
 ) -> Result<Option<Variable>, String> {
     let v = rt.stack.pop().expect(TINVOTS);
     Ok(Some(Variable::bool(match rt.resolve(&v) {
         &Variable::Link(ref link) => link.is_empty(),
-        x => return Err(module.error(call.args[0].source_range(),
+        x => return Err(rt.module.error(call.args[0].source_range(),
                         &rt.expected(x, "link"), rt))
     })))
 }
@@ -365,8 +356,7 @@ dyon_fn!{fn tau() -> f64 {6.283_185_307_179_586}}
 // TODO: Can't be rewritten as external function because it reports error on arguments.
 pub(crate) fn len(
     rt: &mut Runtime,
-    call: &ast::Call,
-    module: &Arc<Module>,
+    call: &ast::Call
 ) -> Result<Option<Variable>, String> {
     let v = match rt.stack.pop() {
         Some(v) => v,
@@ -376,7 +366,7 @@ pub(crate) fn len(
     let v = {
         let arr = match rt.resolve(&v) {
             &Variable::Array(ref arr) => arr,
-            x => return Err(module.error(call.args[0].source_range(),
+            x => return Err(rt.module.error(call.args[0].source_range(),
                             &rt.expected(x, "array"), rt))
         };
         Variable::f64(arr.len() as f64)
@@ -387,8 +377,7 @@ pub(crate) fn len(
 // TODO: Can't be rewritten as external function because it reports error on arguments.
 pub(crate) fn push_ref(
     rt: &mut Runtime,
-    call: &ast::Call,
-    module: &Arc<Module>,
+    call: &ast::Call
 ) -> Result<Option<Variable>, String> {
     let item = rt.stack.pop().expect(TINVOTS);
     let v = rt.stack.pop().expect(TINVOTS);
@@ -401,12 +390,12 @@ pub(crate) fn push_ref(
             false
         };
         if !ok {
-            return Err(module.error(call.args[0].source_range(),
+            return Err(rt.module.error(call.args[0].source_range(),
                 &format!("{}\nExpected reference to array",
                     rt.stack_trace()), rt));
         }
     } else {
-        return Err(module.error(call.args[0].source_range(),
+        return Err(rt.module.error(call.args[0].source_range(),
             &format!("{}\nExpected reference to array",
                 rt.stack_trace()), rt));
     }
@@ -417,13 +406,12 @@ pub(crate) fn push_ref(
 pub(crate) fn insert_ref(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Arc<Module>,
 ) -> Result<Option<Variable>, String> {
     let item = rt.stack.pop().expect(TINVOTS);
     let index = rt.stack.pop().expect(TINVOTS);
     let index = match *rt.resolve(&index) {
         Variable::F64(index, _) => index,
-        _ => return Err(module.error(call.args[1].source_range(),
+        _ => return Err(rt.module.error(call.args[1].source_range(),
                         &format!("{}\nExpected number",
                             rt.stack_trace()), rt))
     };
@@ -433,7 +421,7 @@ pub(crate) fn insert_ref(
         if let Variable::Array(ref arr) = rt.stack[ind] {
             let index = index as usize;
             if index > arr.len() {
-                return Err(module.error(call.source_range,
+                return Err(rt.module.error(call.source_range,
                             &format!("{}\nIndex out of bounds",
                             rt.stack_trace()), rt))
             }
@@ -445,12 +433,12 @@ pub(crate) fn insert_ref(
             false
         };
         if !ok {
-            return Err(module.error(call.args[0].source_range(),
+            return Err(rt.module.error(call.args[0].source_range(),
                 &format!("{}\nExpected reference to array",
                     rt.stack_trace()), rt));
         }
     } else {
-        return Err(module.error(call.args[0].source_range(),
+        return Err(rt.module.error(call.args[0].source_range(),
             &format!("{}\nExpected reference to array",
                 rt.stack_trace()), rt));
     }
@@ -460,8 +448,7 @@ pub(crate) fn insert_ref(
 // TODO: Can't be rewritten as external function because it reports error on arguments.
 pub(crate) fn push(
     rt: &mut Runtime,
-    call: &ast::Call,
-    module: &Arc<Module>,
+    call: &ast::Call
 ) -> Result<Option<Variable>, String> {
     let item = rt.stack.pop().expect(TINVOTS);
     let item = rt.resolve(&item).deep_clone(&rt.stack);
@@ -475,12 +462,12 @@ pub(crate) fn push(
             false
         };
         if !ok {
-            return Err(module.error(call.args[0].source_range(),
+            return Err(rt.module.error(call.args[0].source_range(),
                 &format!("{}\nExpected reference to array",
                     rt.stack_trace()), rt));
         }
     } else {
-        return Err(module.error(call.args[0].source_range(),
+        return Err(rt.module.error(call.args[0].source_range(),
             &format!("{}\nExpected reference to array",
                 rt.stack_trace()), rt));
     }
@@ -490,15 +477,14 @@ pub(crate) fn push(
 // TODO: Can't be rewritten as external function because it reports error on arguments.
 pub(crate) fn insert(
     rt: &mut Runtime,
-    call: &ast::Call,
-    module: &Arc<Module>
+    call: &ast::Call
 ) -> Result<Option<Variable>, String> {
     let item = rt.stack.pop().expect(TINVOTS);
     let item = rt.resolve(&item).deep_clone(&rt.stack);
     let index = rt.stack.pop().expect(TINVOTS);
     let index = match *rt.resolve(&index) {
         Variable::F64(index, _) => index,
-        _ => return Err(module.error(call.args[1].source_range(),
+        _ => return Err(rt.module.error(call.args[1].source_range(),
                         &format!("{}\nExpected number",
                             rt.stack_trace()), rt))
     };
@@ -508,7 +494,7 @@ pub(crate) fn insert(
         if let Variable::Array(ref arr) = rt.stack[ind] {
             let index = index as usize;
             if index > arr.len() {
-                return Err(module.error(call.source_range,
+                return Err(rt.module.error(call.source_range,
                             &format!("{}\nIndex out of bounds",
                             rt.stack_trace()), rt))
             }
@@ -520,12 +506,12 @@ pub(crate) fn insert(
             false
         };
         if !ok {
-            return Err(module.error(call.args[0].source_range(),
+            return Err(rt.module.error(call.args[0].source_range(),
                 &format!("{}\nExpected reference to array",
                     rt.stack_trace()), rt));
         }
     } else {
-        return Err(module.error(call.args[0].source_range(),
+        return Err(rt.module.error(call.args[0].source_range(),
             &format!("{}\nExpected reference to array",
                 rt.stack_trace()), rt));
     }
@@ -535,8 +521,7 @@ pub(crate) fn insert(
 // TODO: Can't be rewritten as external function because it reports error on arguments.
 pub(crate) fn pop(
     rt: &mut Runtime,
-    call: &ast::Call,
-    module: &Arc<Module>,
+    call: &ast::Call
 ) -> Result<Option<Variable>, String> {
     let arr = rt.stack.pop().expect(TINVOTS);
     let mut v: Option<Variable> = None;
@@ -548,17 +533,17 @@ pub(crate) fn pop(
             false
         };
         if !ok {
-            return Err(module.error(call.args[0].source_range(),
+            return Err(rt.module.error(call.args[0].source_range(),
                 &format!("{}\nExpected reference to array",
                     rt.stack_trace()), rt));
         }
     } else {
-        return Err(module.error(call.args[0].source_range(),
+        return Err(rt.module.error(call.args[0].source_range(),
             &format!("{}\nExpected reference to array",
                 rt.stack_trace()), rt));
     }
     let v = match v {
-        None => return Err(module.error(call.args[0].source_range(),
+        None => return Err(rt.module.error(call.args[0].source_range(),
             &format!("{}\nExpected non-empty array",
                 rt.stack_trace()), rt)),
         Some(val) => val
@@ -569,13 +554,12 @@ pub(crate) fn pop(
 // TODO: Can't be rewritten as external function because it reports error on arguments.
 pub(crate) fn remove(
     rt: &mut Runtime,
-    call: &ast::Call,
-    module: &Arc<Module>,
+    call: &ast::Call
 ) -> Result<Option<Variable>, String> {
     let index = rt.stack.pop().expect(TINVOTS);
     let index = match *rt.resolve(&index) {
         Variable::F64(index, _) => index,
-        _ => return Err(module.error(call.args[1].source_range(),
+        _ => return Err(rt.module.error(call.args[1].source_range(),
                         &format!("{}\nExpected number",
                             rt.stack_trace()), rt))
     };
@@ -584,7 +568,7 @@ pub(crate) fn remove(
         if let Variable::Array(ref arr) = rt.stack[ind] {
             let index = index as usize;
             if index >= arr.len() {
-                return Err(module.error(call.source_range,
+                return Err(rt.module.error(call.source_range,
                             &format!("{}\nIndex out of bounds",
                             rt.stack_trace()), rt))
             }
@@ -594,11 +578,11 @@ pub(crate) fn remove(
         } else {
             false
         };
-        return Err(module.error(call.args[0].source_range(),
+        return Err(rt.module.error(call.args[0].source_range(),
             &format!("{}\nExpected reference to array",
                 rt.stack_trace()), rt));
     } else {
-        return Err(module.error(call.args[0].source_range(),
+        return Err(rt.module.error(call.args[0].source_range(),
             &format!("{}\nExpected reference to array",
                 rt.stack_trace()), rt));
     }
@@ -607,8 +591,7 @@ pub(crate) fn remove(
 // TODO: Can't be rewritten as external function because it reports error on arguments.
 pub(crate) fn reverse(
     rt: &mut Runtime,
-    call: &ast::Call,
-    module: &Arc<Module>,
+    call: &ast::Call
 ) -> Result<Option<Variable>, String> {
     let v = rt.stack.pop().expect(TINVOTS);
     if let Variable::Ref(ind) = v {
@@ -619,12 +602,12 @@ pub(crate) fn reverse(
             false
         };
         if !ok {
-            return Err(module.error(call.args[0].source_range(),
+            return Err(rt.module.error(call.args[0].source_range(),
                 &format!("{}\nExpected reference to array",
                     rt.stack_trace()), rt));
         }
     } else {
-        return Err(module.error(call.args[0].source_range(),
+        return Err(rt.module.error(call.args[0].source_range(),
             &format!("{}\nExpected reference to array",
                 rt.stack_trace()), rt));
     }
@@ -634,8 +617,7 @@ pub(crate) fn reverse(
 // TODO: Can't be rewritten as external function because it reports error on arguments.
 pub(crate) fn clear(
     rt: &mut Runtime,
-    call: &ast::Call,
-    module: &Arc<Module>,
+    call: &ast::Call
 ) -> Result<Option<Variable>, String> {
     let v = rt.stack.pop().expect(TINVOTS);
     if let Variable::Ref(ind) = v {
@@ -646,12 +628,12 @@ pub(crate) fn clear(
             false
         };
         if !ok {
-            return Err(module.error(call.args[0].source_range(),
+            return Err(rt.module.error(call.args[0].source_range(),
                 &format!("{}\nExpected reference to array",
                     rt.stack_trace()), rt));
         }
     } else {
-        return Err(module.error(call.args[0].source_range(),
+        return Err(rt.module.error(call.args[0].source_range(),
             &format!("{}\nExpected reference to array",
                 rt.stack_trace()), rt));
     }
@@ -661,19 +643,18 @@ pub(crate) fn clear(
 // TODO: Can't be rewritten as external function because it reports error on arguments.
 pub(crate) fn swap(
     rt: &mut Runtime,
-    call: &ast::Call,
-    module: &Arc<Module>,
+    call: &ast::Call
 ) -> Result<Option<Variable>, String> {
     let j = rt.stack.pop().expect(TINVOTS);
     let i = rt.stack.pop().expect(TINVOTS);
     let j = match rt.resolve(&j) {
         &Variable::F64(val, _) => val,
-        x => return Err(module.error(call.args[2].source_range(),
+        x => return Err(rt.module.error(call.args[2].source_range(),
             &rt.expected(x, "number"), rt))
     };
     let i = match rt.resolve(&i) {
         &Variable::F64(val, _) => val,
-        x => return Err(module.error(call.args[1].source_range(),
+        x => return Err(rt.module.error(call.args[1].source_range(),
             &rt.expected(x, "number"), rt))
     };
     let v = rt.stack.pop().expect(TINVOTS);
@@ -685,12 +666,12 @@ pub(crate) fn swap(
             false
         };
         if !ok {
-            return Err(module.error(call.args[0].source_range(),
+            return Err(rt.module.error(call.args[0].source_range(),
                 &format!("{}\nExpected reference to array",
                     rt.stack_trace()), rt));
         }
     } else {
-        return Err(module.error(call.args[0].source_range(),
+        return Err(rt.module.error(call.args[0].source_range(),
             &format!("{}\nExpected reference to array",
                 rt.stack_trace()), rt));
     }
@@ -857,23 +838,22 @@ pub(crate) fn backtrace(rt: &mut Runtime) -> Result<(), String> {
 // TODO: Can't be rewritten as an external function because it uses the current module.
 pub(crate) fn load(
     rt: &mut Runtime,
-    call: &ast::Call,
-    module: &Arc<Module>,
+    call: &ast::Call
 ) -> Result<Option<Variable>, String> {
     use load;
 
     let v = rt.stack.pop().expect(TINVOTS);
     let v = match rt.resolve(&v) {
         &Variable::Text(ref text) => {
-            let mut m = Module::new_intrinsics(module.intrinsics.clone());
-            for f in &module.ext_prelude {
+            let mut m = Module::new_intrinsics(rt.module.intrinsics.clone());
+            for f in &rt.module.ext_prelude {
                 m.add(f.name.clone(), f.f, f.p.clone());
             }
             if let Err(err) = load(text, &mut m) {
                 Variable::Result(Err(Box::new(Error {
                     message: Variable::Text(Arc::new(
                         format!("{}\n{}\n{}", rt.stack_trace(), err,
-                            module.error(call.args[0].source_range(),
+                            rt.module.error(call.args[0].source_range(),
                             "When attempting to load module:", rt)))),
                     trace: vec![]
                 })))
@@ -882,7 +862,7 @@ pub(crate) fn load(
                     Variable::RustObject(Arc::new(Mutex::new(Arc::new(m)))))))
             }
         }
-        x => return Err(module.error(call.args[0].source_range(),
+        x => return Err(rt.module.error(call.args[0].source_range(),
                 &rt.expected(x, "string"), rt))
     };
     Ok(Some(v))
@@ -891,15 +871,14 @@ pub(crate) fn load(
 // TODO: Can't be rewritten as an external function because it uses the current module.
 pub(crate) fn load__source_imports(
     rt: &mut Runtime,
-    call: &ast::Call,
-    module: &Arc<Module>,
+    call: &ast::Call
 ) -> Result<Option<Variable>, String> {
     use load;
 
     let modules = rt.stack.pop().expect(TINVOTS);
     let source = rt.stack.pop().expect(TINVOTS);
-    let mut new_module = Module::new_intrinsics(module.intrinsics.clone());
-    for f in &module.ext_prelude {
+    let mut new_module = Module::new_intrinsics(rt.module.intrinsics.clone());
+    for f in &rt.module.ext_prelude {
         new_module.add(f.name.clone(), f.f, f.p.clone());
     }
     match rt.resolve(&modules) {
@@ -922,19 +901,19 @@ pub(crate) fn load__source_imports(
                                     new_module.register(f.clone())
                                 }
                             }
-                            None => return Err(module.error(
+                            None => return Err(rt.module.error(
                                 call.args[1].source_range(),
                                 &format!("{}\nExpected `Module`",
                                     rt.stack_trace()), rt))
                         }
                     }
-                    x => return Err(module.error(
+                    x => return Err(rt.module.error(
                         call.args[1].source_range(),
                         &rt.expected(x, "Module"), rt))
                 }
             }
         }
-        x => return Err(module.error(call.args[1].source_range(),
+        x => return Err(rt.module.error(call.args[1].source_range(),
                 &rt.expected(x, "[Module]"), rt))
     }
     let v = match rt.resolve(&source) {
@@ -943,7 +922,7 @@ pub(crate) fn load__source_imports(
                 Variable::Result(Err(Box::new(Error {
                     message: Variable::Text(Arc::new(
                         format!("{}\n{}\n{}", rt.stack_trace(), err,
-                            module.error(call.args[0].source_range(),
+                            rt.module.error(call.args[0].source_range(),
                             "When attempting to load module:", rt)))),
                     trace: vec![]
                 })))
@@ -953,7 +932,7 @@ pub(crate) fn load__source_imports(
                         Mutex::new(Arc::new(new_module)))))))
             }
         }
-        x => return Err(module.error(call.args[0].source_range(),
+        x => return Err(rt.module.error(call.args[0].source_range(),
                 &rt.expected(x, "[Module]"), rt))
     };
     Ok(Some(v))
@@ -962,24 +941,23 @@ pub(crate) fn load__source_imports(
 // TODO: Can't be rewritten as an external function because it uses the current module.
 pub(crate) fn module__in_string_imports(
     rt: &mut Runtime,
-    call: &ast::Call,
-    module: &Arc<Module>,
+    call: &ast::Call
 ) -> Result<Option<Variable>, String> {
     let modules = rt.stack.pop().expect(TINVOTS);
     let source = rt.stack.pop().expect(TINVOTS);
     let source = match rt.resolve(&source) {
         &Variable::Text(ref t) => t.clone(),
-        x => return Err(module.error(call.args[1].source_range(),
+        x => return Err(rt.module.error(call.args[1].source_range(),
                 &rt.expected(x, "str"), rt))
     };
     let name = rt.stack.pop().expect(TINVOTS);
     let name = match rt.resolve(&name) {
         &Variable::Text(ref t) => t.clone(),
-        x => return Err(module.error(call.args[0].source_range(),
+        x => return Err(rt.module.error(call.args[0].source_range(),
                 &rt.expected(x, "str"), rt))
     };
-    let mut new_module = Module::new_intrinsics(module.intrinsics.clone());
-    for f in &module.ext_prelude {
+    let mut new_module = Module::new_intrinsics(rt.module.intrinsics.clone());
+    for f in &rt.module.ext_prelude {
         new_module.add(f.name.clone(), f.f, f.p.clone());
     }
     match rt.resolve(&modules) {
@@ -1002,26 +980,26 @@ pub(crate) fn module__in_string_imports(
                                     new_module.register(f.clone())
                                 }
                             }
-                            None => return Err(module.error(
+                            None => return Err(rt.module.error(
                                 call.args[2].source_range(),
                                 &format!("{}\nExpected `Module`",
                                     rt.stack_trace()), rt))
                         }
                     }
-                    x => return Err(module.error(
+                    x => return Err(rt.module.error(
                         call.args[2].source_range(),
                         &rt.expected(x, "Module"), rt))
                 }
             }
         }
-        x => return Err(module.error(call.args[2].source_range(),
+        x => return Err(rt.module.error(call.args[2].source_range(),
                 &rt.expected(x, "[Module]"), rt))
     }
     let v = if let Err(err) = load_str(&name, source, &mut new_module) {
             Variable::Result(Err(Box::new(Error {
                 message: Variable::Text(Arc::new(
                     format!("{}\n{}\n{}", rt.stack_trace(), err,
-                        module.error(call.args[0].source_range(),
+                        rt.module.error(call.args[0].source_range(),
                         "When attempting to load module:", rt)))),
                 trace: vec![]
             })))
@@ -1036,27 +1014,26 @@ pub(crate) fn module__in_string_imports(
 // TODO: Can't be rewritten as an external function because it uses the current module.
 pub(crate) fn _call(
     rt: &mut Runtime,
-    call: &ast::Call,
-    module: &Arc<Module>,
+    call: &ast::Call
 ) -> Result<Option<Variable>, String> {
     // Use the source from calling function.
-    let source = module.functions[rt.call_stack.last().unwrap().index].source.clone();
+    let source = rt.module.functions[rt.call_stack.last().unwrap().index].source.clone();
     let args = rt.stack.pop().expect(TINVOTS);
     let fn_name = rt.stack.pop().expect(TINVOTS);
     let call_module = rt.stack.pop().expect(TINVOTS);
     let fn_name = match rt.resolve(&fn_name) {
         &Variable::Text(ref text) => text.clone(),
-        x => return Err(module.error(call.args[1].source_range(),
+        x => return Err(rt.module.error(call.args[1].source_range(),
                         &rt.expected(x, "text"), rt))
     };
     let args = match rt.resolve(&args) {
         &Variable::Array(ref arr) => arr.clone(),
-        x => return Err(module.error(call.args[2].source_range(),
+        x => return Err(rt.module.error(call.args[2].source_range(),
                         &rt.expected(x, "array"), rt))
     };
     let obj = match rt.resolve(&call_module) {
         &Variable::RustObject(ref obj) => obj.clone(),
-        x => return Err(module.error(call.args[0].source_range(),
+        x => return Err(rt.module.error(call.args[0].source_range(),
                         &rt.expected(x, "Module"), rt))
     };
 
@@ -1070,7 +1047,7 @@ pub(crate) fn _call(
                 FnIndex::Loaded(f_index) => {
                     let f = &m.functions[f_index as usize];
                     if f.args.len() != args.len() {
-                        return Err(module.error(
+                        return Err(rt.module.error(
                             call.args[2].source_range(),
                             &format!(
                                 "{}\nExpected `{}` arguments, found `{}`",
@@ -1078,12 +1055,12 @@ pub(crate) fn _call(
                                 f.args.len(), args.len()), rt))
                     }
                     lifetimechk::check(f, &args).map_err(|err|
-                        module.error(call.args[2].source_range(),
+                        rt.module.error(call.args[2].source_range(),
                         &format!("{}\n{}", err, rt.stack_trace()), rt))?;
                 }
                 FnIndex::Intrinsic(_) | FnIndex::None |
                 FnIndex::ExternalVoid(_) | FnIndex::ExternalReturn(_) =>
-                    return Err(module.error(
+                    return Err(rt.module.error(
                             call.args[1].source_range(),
                             &format!(
                                 "{}\nCould not find function `{}`",
@@ -1103,7 +1080,7 @@ pub(crate) fn _call(
 
             rt.call(&call, &m)?;
         }
-        None => return Err(module.error(call.args[0].source_range(),
+        None => return Err(rt.module.error(call.args[0].source_range(),
                     &format!("{}\nExpected `Module`",
                         rt.stack_trace()), rt))
     }
@@ -1114,27 +1091,26 @@ pub(crate) fn _call(
 // TODO: Can't be rewritten as an external function because it uses the current module.
 pub(crate) fn call_ret(
     rt: &mut Runtime,
-    call: &ast::Call,
-    module: &Arc<Module>,
+    call: &ast::Call
 ) -> Result<Option<Variable>, String> {
     // Use the source from calling function.
-    let source = module.functions[rt.call_stack.last().unwrap().index].source.clone();
+    let source = rt.module.functions[rt.call_stack.last().unwrap().index].source.clone();
     let args = rt.stack.pop().expect(TINVOTS);
     let fn_name = rt.stack.pop().expect(TINVOTS);
     let call_module = rt.stack.pop().expect(TINVOTS);
     let fn_name = match rt.resolve(&fn_name) {
         &Variable::Text(ref text) => text.clone(),
-        x => return Err(module.error(call.args[1].source_range(),
+        x => return Err(rt.module.error(call.args[1].source_range(),
                         &rt.expected(x, "text"), rt))
     };
     let args = match rt.resolve(&args) {
         &Variable::Array(ref arr) => arr.clone(),
-        x => return Err(module.error(call.args[2].source_range(),
+        x => return Err(rt.module.error(call.args[2].source_range(),
                         &rt.expected(x, "array"), rt))
     };
     let obj = match rt.resolve(&call_module) {
         &Variable::RustObject(ref obj) => obj.clone(),
-        x => return Err(module.error(call.args[0].source_range(),
+        x => return Err(rt.module.error(call.args[0].source_range(),
                         &rt.expected(x, "Module"), rt))
     };
 
@@ -1148,7 +1124,7 @@ pub(crate) fn call_ret(
                 FnIndex::Loaded(f_index) => {
                     let f = &m.functions[f_index as usize];
                     if f.args.len() != args.len() {
-                        return Err(module.error(
+                        return Err(rt.module.error(
                             call.args[2].source_range(),
                             &format!(
                                 "{}\nExpected `{}` arguments, found `{}`",
@@ -1156,12 +1132,12 @@ pub(crate) fn call_ret(
                                 f.args.len(), args.len()), rt))
                     }
                     lifetimechk::check(f, &args).map_err(|err|
-                        module.error(call.args[2].source_range(),
+                        rt.module.error(call.args[2].source_range(),
                         &format!("{}\n{}", err, rt.stack_trace()), rt))?;
                 }
                 FnIndex::Intrinsic(_) | FnIndex::None |
                 FnIndex::ExternalVoid(_) | FnIndex::ExternalReturn(_) =>
-                    return Err(module.error(
+                    return Err(rt.module.error(
                         call.args[1].source_range(),
                         &format!(
                             "{}\nCould not find function `{}`",
@@ -1181,7 +1157,7 @@ pub(crate) fn call_ret(
 
             rt.call(&call, &m)?.0
         }
-        None => return Err(module.error(call.args[0].source_range(),
+        None => return Err(rt.module.error(call.args[0].source_range(),
             &format!("{}\nExpected `Module`", rt.stack_trace()), rt))
     };
 
@@ -1190,33 +1166,31 @@ pub(crate) fn call_ret(
 
 // TODO: Can't be rewritten as an external function because it uses the current module.
 pub(crate) fn functions(
-    _rt: &mut Runtime,
+    rt: &mut Runtime,
     _call: &ast::Call,
-    module: &Arc<Module>,
 ) -> Result<Option<Variable>, String> {
     // List available functions in scope.
-    let v = Variable::Array(Arc::new(functions::list_functions(module)));
+    let v = Variable::Array(Arc::new(functions::list_functions(&rt.module)));
     Ok(Some(v))
 }
 
 // TODO: Can't be rewritten as an external function because it reports errors on arguments.
 pub(crate) fn functions__module(
     rt: &mut Runtime,
-    call: &ast::Call,
-    module: &Arc<Module>,
+    call: &ast::Call
 ) -> Result<Option<Variable>, String> {
     // List available functions in scope.
     let m = rt.stack.pop().expect(TINVOTS);
     let m = match rt.resolve(&m) {
         &Variable::RustObject(ref obj) => obj.clone(),
-        x => return Err(module.error(call.args[0].source_range(),
+        x => return Err(rt.module.error(call.args[0].source_range(),
                         &rt.expected(x, "Module"), rt))
     };
 
     let functions = match m.lock().unwrap()
         .downcast_ref::<Arc<Module>>() {
         Some(m) => functions::list_functions(m),
-        None => return Err(module.error(call.args[0].source_range(),
+        None => return Err(rt.module.error(call.args[0].source_range(),
             &format!("{}\nExpected `Module`", rt.stack_trace()), rt))
     };
 
@@ -1258,15 +1232,14 @@ pub(crate) fn err(rt: &mut Runtime) -> Result<(), String> {
 // TODO: Can't be rewritten as an external function because it reports errors on arguments.
 pub(crate) fn is_err(
     rt: &mut Runtime,
-    call: &ast::Call,
-    module: &Arc<Module>,
+    call: &ast::Call
 ) -> Result<Option<Variable>, String> {
     let v = rt.stack.pop().expect(TINVOTS);
     Ok(Some(match rt.resolve(&v) {
         &Variable::Result(Err(_)) => Variable::bool(true),
         &Variable::Result(Ok(_)) => Variable::bool(false),
         x => {
-            return Err(module.error(call.args[0].source_range(),
+            return Err(rt.module.error(call.args[0].source_range(),
                 &rt.expected(x, "result"), rt));
         }
     }))
@@ -1275,15 +1248,14 @@ pub(crate) fn is_err(
 // TODO: Can't be rewritten as an external function because it reports errors on arguments.
 pub(crate) fn is_ok(
     rt: &mut Runtime,
-    call: &ast::Call,
-    module: &Arc<Module>,
+    call: &ast::Call
 ) -> Result<Option<Variable>, String> {
     let v = rt.stack.pop().expect(TINVOTS);
     Ok(Some(match rt.resolve(&v) {
         &Variable::Result(Err(_)) => Variable::bool(false),
         &Variable::Result(Ok(_)) => Variable::bool(true),
         x => {
-            return Err(module.error(call.args[0].source_range(),
+            return Err(rt.module.error(call.args[0].source_range(),
                 &rt.expected(x, "result"), rt));
         }
     }))
@@ -1292,8 +1264,7 @@ pub(crate) fn is_ok(
 // TODO: Can't be rewritten as an external function because it reports errors on arguments.
 pub(crate) fn min(
     rt: &mut Runtime,
-    call: &ast::Call,
-    module: &Arc<Module>,
+    call: &ast::Call
 ) -> Result<Option<Variable>, String> {
     let v = rt.stack.pop().expect(TINVOTS);
     let v = match rt.resolve(&v) {
@@ -1307,7 +1278,7 @@ pub(crate) fn min(
             min
         }
         x => {
-            return Err(module.error(call.args[0].source_range(),
+            return Err(rt.module.error(call.args[0].source_range(),
                 &rt.expected(x, "array"), rt));
         }
     };
@@ -1318,7 +1289,6 @@ pub(crate) fn min(
 pub(crate) fn max(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Arc<Module>,
 ) -> Result<Option<Variable>, String> {
     let v = rt.stack.pop().expect(TINVOTS);
     let v = match rt.resolve(&v) {
@@ -1332,7 +1302,7 @@ pub(crate) fn max(
             max
         }
         x => {
-            return Err(module.error(call.args[0].source_range(),
+            return Err(rt.module.error(call.args[0].source_range(),
                 &rt.expected(x, "array"), rt));
         }
     };
@@ -1342,8 +1312,7 @@ pub(crate) fn max(
 // TODO: Can't be rewritten as an external function because it reports errors on arguments.
 pub(crate) fn unwrap(
     rt: &mut Runtime,
-    call: &ast::Call,
-    module: &Arc<Module>,
+    call: &ast::Call
 ) -> Result<Option<Variable>, String> {
     use write::{write_variable, EscapeString};
 
@@ -1353,7 +1322,7 @@ pub(crate) fn unwrap(
     let v = match rt.resolve(&v) {
         &Variable::Option(Some(ref v)) => (**v).clone(),
         &Variable::Option(None) => {
-            return Err(module.error(call.args[0].source_range(),
+            return Err(rt.module.error(call.args[0].source_range(),
                 &format!("{}\nExpected `some(_)`",
                     rt.stack_trace()), rt));
         }
@@ -1371,11 +1340,11 @@ pub(crate) fn unwrap(
                 w.extend_from_slice("\n".as_bytes());
                 w.extend_from_slice(t.as_bytes());
             }
-            return Err(module.error(call.args[0].source_range(),
+            return Err(rt.module.error(call.args[0].source_range(),
                                     from_utf8(&w).unwrap(), rt));
         }
         x => {
-            return Err(module.error(call.args[0].source_range(),
+            return Err(rt.module.error(call.args[0].source_range(),
                                     &rt.expected(x, "some(_) or ok(_)"), rt));
         }
     };
@@ -1385,8 +1354,7 @@ pub(crate) fn unwrap(
 // TODO: Can't be rewritten as an external function because it reports errors on arguments.
 pub(crate) fn unwrap_or(
     rt: &mut Runtime,
-    call: &ast::Call,
-    module: &Arc<Module>,
+    call: &ast::Call
 ) -> Result<Option<Variable>, String> {
     // Return value does not depend on lifetime of argument since
     // `ok(x)` and `some(x)` perform a deep clone.
@@ -1398,7 +1366,7 @@ pub(crate) fn unwrap_or(
         &Variable::Option(None) |
         &Variable::Result(Err(_)) => rt.resolve(&def).clone(),
         x => {
-            return Err(module.error(call.args[0].source_range(),
+            return Err(rt.module.error(call.args[0].source_range(),
                                     &rt.expected(x, "some(_) or ok(_)"), rt));
         }
     };
@@ -1408,14 +1376,13 @@ pub(crate) fn unwrap_or(
 // TODO: Can't be rewritten as an external function because it reports errors on arguments.
 pub(crate) fn unwrap_err(
     rt: &mut Runtime,
-    call: &ast::Call,
-    module: &Arc<Module>,
+    call: &ast::Call
 ) -> Result<Option<Variable>, String> {
     let v = rt.stack.pop().expect(TINVOTS);
     Ok(Some(match rt.resolve(&v) {
         &Variable::Result(Err(ref err)) => err.message.clone(),
         x => {
-            return Err(module.error(call.args[0].source_range(),
+            return Err(rt.module.error(call.args[0].source_range(),
                 &rt.expected(x, "err(_)"), rt));
         }
     }))
@@ -1462,33 +1429,32 @@ dyon_fn!{fn syntax__in_string(name: Arc<String>, text: Arc<String>) -> Variable 
 // TODO: Can't be rewritten as an external function because it reports errors on arguments.
 pub(crate) fn meta__syntax_in_string(
     rt: &mut Runtime,
-    call: &ast::Call,
-    module: &Arc<Module>,
+    call: &ast::Call
 ) -> Result<Option<Variable>, String> {
     use piston_meta::Syntax;
 
     let text = rt.stack.pop().expect(TINVOTS);
     let text = match rt.resolve(&text) {
         &Variable::Text(ref t) => t.clone(),
-        x => return Err(module.error(call.args[2].source_range(),
+        x => return Err(rt.module.error(call.args[2].source_range(),
                         &rt.expected(x, "str"), rt))
     };
     let name = rt.stack.pop().expect(TINVOTS);
     let name = match rt.resolve(&name) {
         &Variable::Text(ref t) => t.clone(),
-        x => return Err(module.error(call.args[1].source_range(),
+        x => return Err(rt.module.error(call.args[1].source_range(),
                         &rt.expected(x, "str"), rt))
     };
     let syntax_var = rt.stack.pop().expect(TINVOTS);
     let syntax = match rt.resolve(&syntax_var) {
         &Variable::RustObject(ref obj) => obj.clone(),
-        x => return Err(module.error(call.args[0].source_range(),
+        x => return Err(rt.module.error(call.args[0].source_range(),
                         &rt.expected(x, "Syntax"), rt))
     };
     let res = meta::parse_syntax_data(match syntax.lock().unwrap()
         .downcast_ref::<Arc<Syntax>>() {
         Some(s) => s,
-        None => return Err(module.error(call.args[0].source_range(),
+        None => return Err(rt.module.error(call.args[0].source_range(),
                         &rt.expected(&syntax_var, "Syntax"), rt))
     }, &name, &text);
     Ok(Some(Variable::Result(match res {
@@ -1666,8 +1632,7 @@ pub(crate) fn args_os(rt: &mut Runtime) -> Result<(), String> {
 #[cfg(feature = "file")]
 pub(crate) fn save__data_file(
     rt: &mut Runtime,
-    call: &ast::Call,
-    module: &Arc<Module>,
+    call: &ast::Call
 ) -> Result<Option<Variable>, String> {
     use std::error::Error;
     use std::fs::File;
@@ -1677,7 +1642,7 @@ pub(crate) fn save__data_file(
     let file = rt.stack.pop().expect(TINVOTS);
     let file = match rt.resolve(&file) {
         &Variable::Text(ref t) => t.clone(),
-        x => return Err(module.error(call.args[1].source_range(),
+        x => return Err(rt.module.error(call.args[1].source_range(),
                         &rt.expected(x, "string"), rt))
     };
     let data = rt.stack.pop().expect(TINVOTS);
@@ -1685,7 +1650,7 @@ pub(crate) fn save__data_file(
     let mut f = match File::create(&**file) {
         Ok(f) => BufWriter::new(f),
         Err(err) => {
-            return Err(module.error(call.args[0].source_range(),
+            return Err(rt.module.error(call.args[0].source_range(),
                        &format!("{}\nError when creating file `{}`:\n{}",
                         rt.stack_trace(), file, err.description()), rt))
         }
@@ -1716,8 +1681,7 @@ pub(crate) fn save__data_file(
 // TODO: Can't be rewritten as an external function because it reports errors on arguments.
 pub(crate) fn json_from_meta_data(
     rt: &mut Runtime,
-    call: &ast::Call,
-    module: &Arc<Module>,
+    call: &ast::Call
 ) -> Result<Option<Variable>, String> {
     use std::error::Error;
 
@@ -1730,7 +1694,7 @@ pub(crate) fn json_from_meta_data(
                         err.description())
             })?
         }
-        x => return Err(module.error(call.args[0].source_range(),
+        x => return Err(rt.module.error(call.args[0].source_range(),
                         &rt.expected(x, "array"), rt))
     };
     Ok(Some(Variable::Text(Arc::new(json))))
@@ -1739,33 +1703,32 @@ pub(crate) fn json_from_meta_data(
 // TODO: Can't be rewritten as an external function because it reports errors on arguments.
 pub(crate) fn errstr__string_start_len_msg(
     rt: &mut Runtime,
-    call: &ast::Call,
-    module: &Arc<Module>,
+    call: &ast::Call
 ) -> Result<Option<Variable>, String> {
     use piston_meta::ParseErrorHandler;
 
     let msg = rt.stack.pop().expect(TINVOTS);
     let msg = match rt.resolve(&msg) {
         &Variable::Text(ref t) => t.clone(),
-        x => return Err(module.error(call.args[3].source_range(),
+        x => return Err(rt.module.error(call.args[3].source_range(),
                         &rt.expected(x, "str"), rt))
     };
     let len = rt.stack.pop().expect(TINVOTS);
     let len = match rt.resolve(&len) {
         &Variable::F64(v, _) => v as usize,
-        x => return Err(module.error(call.args[2].source_range(),
+        x => return Err(rt.module.error(call.args[2].source_range(),
                         &rt.expected(x, "f64"), rt))
     };
     let start = rt.stack.pop().expect(TINVOTS);
     let start = match rt.resolve(&start) {
         &Variable::F64(v, _) => v as usize,
-        x => return Err(module.error(call.args[1].source_range(),
+        x => return Err(rt.module.error(call.args[1].source_range(),
                         &rt.expected(x, "f64"), rt))
     };
     let source = rt.stack.pop().expect(TINVOTS);
     let source = match rt.resolve(&source) {
         &Variable::Text(ref t) => t.clone(),
-        x => return Err(module.error(call.args[0].source_range(),
+        x => return Err(rt.module.error(call.args[0].source_range(),
                         &rt.expected(x, "str"), rt))
     };
 
@@ -1779,19 +1742,18 @@ pub(crate) fn errstr__string_start_len_msg(
 // TODO: Can't be rewritten as an external function because it reports errors on arguments.
 pub(crate) fn has(
     rt: &mut Runtime,
-    call: &ast::Call,
-    module: &Arc<Module>,
+    call: &ast::Call
 ) -> Result<Option<Variable>, String> {
     let key = rt.stack.pop().expect(TINVOTS);
     let key = match rt.resolve(&key) {
         &Variable::Text(ref t) => t.clone(),
-        x => return Err(module.error(call.args[1].source_range(),
+        x => return Err(rt.module.error(call.args[1].source_range(),
                         &rt.expected(x, "str"), rt))
     };
     let obj = rt.stack.pop().expect(TINVOTS);
     let res = match rt.resolve(&obj) {
         &Variable::Object(ref obj) => obj.contains_key(&key),
-        x => return Err(module.error(call.args[0].source_range(),
+        x => return Err(rt.module.error(call.args[0].source_range(),
                         &rt.expected(x, "object"), rt))
     };
     Ok(Some(Variable::bool(res)))
@@ -1801,14 +1763,13 @@ pub(crate) fn has(
 pub(crate) fn keys(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Arc<Module>,
 ) -> Result<Option<Variable>, String> {
     let obj = rt.stack.pop().expect(TINVOTS);
     let res = Variable::Array(Arc::new(match rt.resolve(&obj) {
         &Variable::Object(ref obj) => {
             obj.keys().map(|k| Variable::Text(k.clone())).collect()
         }
-        x => return Err(module.error(call.args[0].source_range(),
+        x => return Err(rt.module.error(call.args[0].source_range(),
                         &rt.expected(x, "object"), rt))
     }));
     Ok(Some(res))
@@ -1818,12 +1779,11 @@ pub(crate) fn keys(
 pub(crate) fn chars(
     rt: &mut Runtime,
     call: &ast::Call,
-    module: &Arc<Module>,
 ) -> Result<Option<Variable>, String> {
     let t = rt.stack.pop().expect(TINVOTS);
     let t = match rt.resolve(&t) {
         &Variable::Text(ref t) => t.clone(),
-        x => return Err(module.error(call.args[0].source_range(),
+        x => return Err(rt.module.error(call.args[0].source_range(),
                         &rt.expected(x, "str"), rt))
     };
     let res = t.chars()
@@ -1855,8 +1815,7 @@ dyon_fn!{fn is_nan(v: f64) -> bool {v.is_nan()}}
 // TODO: Can't be rewritten as an external function because it reports errors on arguments.
 pub(crate) fn wait_next(
     rt: &mut Runtime,
-    call: &ast::Call,
-    module: &Arc<Module>
+    call: &ast::Call
 ) -> Result<Option<Variable>, String> {
     use std::error::Error;
 
@@ -1869,12 +1828,12 @@ pub(crate) fn wait_next(
                     Err(_) => Variable::Option(None),
                 },
                 Err(err) => {
-                    return Err(module.error(call.source_range,
+                    return Err(rt.module.error(call.source_range,
                     &format!("Can not lock In mutex:\n{}", err.description()), rt));
                 }
             }
         }
-        x => return Err(module.error(call.args[0].source_range(),
+        x => return Err(rt.module.error(call.args[0].source_range(),
                         &rt.expected(x, "in"), rt))
     }))
 }
@@ -1882,8 +1841,7 @@ pub(crate) fn wait_next(
 // TODO: Can't be rewritten as an external function because it reports errors on arguments.
 pub(crate) fn next(
     rt: &mut Runtime,
-    call: &ast::Call,
-    module: &Arc<Module>
+    call: &ast::Call
 ) -> Result<Option<Variable>, String> {
     use std::error::Error;
 
@@ -1896,12 +1854,12 @@ pub(crate) fn next(
                     Err(_) => Variable::Option(None),
                 },
                 Err(err) => {
-                    return Err(module.error(call.source_range,
+                    return Err(rt.module.error(call.source_range,
                     &format!("Can not lock In mutex:\n{}", err.description()), rt));
                 }
             }
         }
-        x => return Err(module.error(call.args[0].source_range(),
+        x => return Err(rt.module.error(call.args[0].source_range(),
                         &rt.expected(x, "in"), rt))
     }))
 }
