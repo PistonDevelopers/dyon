@@ -2,7 +2,6 @@ use std::sync::Arc;
 use std::collections::HashMap;
 
 use ast;
-use intrinsics;
 use Module;
 use Type;
 
@@ -98,15 +97,6 @@ impl Prelude {
         self.namespaces.push((namespace, name));
     }
 
-    /// Adds a new intrinsic.
-    pub fn intrinsic(&mut self, name: Arc<String>, index: usize, f: Dfn) {
-        let n = self.list.len();
-        assert!(n == index, "{}", name);
-        self.functions.insert(name.clone(), n);
-        self.list.push(f);
-        self.namespaces.push((Arc::new(vec![]), name));
-    }
-
     /// Creates a new prelude.
     pub fn new() -> Prelude {
         Prelude {
@@ -116,17 +106,9 @@ impl Prelude {
         }
     }
 
-    /// Creates prelude with standard intrinsics.
-    pub fn new_intrinsics() -> Prelude {
-        let mut prelude = Prelude::new();
-        intrinsics::standard(&mut prelude);
-        prelude
-    }
-
     /// Creates prelude from existing module.
     pub fn from_module(module: &Module) -> Prelude {
         let mut prelude = Prelude::new();
-        intrinsics::standard(&mut prelude);
         for f in &*module.ext_prelude {
             prelude.insert(f.namespace.clone(), f.name.clone(), f.p.clone());
         }

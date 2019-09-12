@@ -31,7 +31,6 @@ use piston_meta::MetaData;
 pub mod ast;
 pub mod runtime;
 mod lifetime;
-mod intrinsics;
 mod prelude;
 pub mod embed;
 mod ty;
@@ -292,8 +291,6 @@ impl PartialEq for Variable {
 pub enum FnIndex {
     /// No function.
     None,
-    /// An intrinsic function.
-    Intrinsic(usize),
     /// Relative to function you call from.
     Loaded(isize),
     /// External function with no return value.
@@ -341,7 +338,6 @@ impl Clone for FnExternal {
 pub struct Module {
     functions: Vec<ast::Function>,
     ext_prelude: Vec<FnExternal>,
-    intrinsics: Arc<HashMap<Arc<String>, usize>>,
     register_namespace: Arc<Vec<Arc<String>>>,
 }
 
@@ -355,7 +351,6 @@ impl Module {
         Module {
             functions: vec![],
             ext_prelude: vec![],
-            intrinsics: Arc::new(HashMap::new()),
             register_namespace: Arc::new(vec![]),
         }
     }
@@ -365,7 +360,7 @@ impl Module {
         use Type::*;
         use dyon_std::*;
 
-        let mut m = Module::new_intrinsics(Arc::new(Prelude::new_intrinsics().functions));
+        let mut m = Module::empty();
         m.add_str("x", x, Dfn::nl(vec![Vec4], F64));
         m.add_str("y", y, Dfn::nl(vec![Vec4], F64));
         m.add_str("z", z, Dfn::nl(vec![Vec4], F64));
@@ -531,16 +526,6 @@ impl Module {
         m
     }
 
-    /// Creates a new module with custom intrinsics.
-    pub fn new_intrinsics(intrinsics: Arc<HashMap<Arc<String>, usize>>) -> Module {
-        Module {
-            functions: vec![],
-            ext_prelude: vec![],
-            intrinsics,
-            register_namespace: Arc::new(vec![]),
-        }
-    }
-
     /// Sets namespace for following added functions.
     pub fn ns(&mut self, ns: &str) {
         self.register_namespace = Arc::new(ns
@@ -574,10 +559,7 @@ impl Module {
                 };
             }
         }
-        match self.intrinsics.get(name) {
-            None => FnIndex::None,
-            Some(&ind) => FnIndex::Intrinsic(ind)
-        }
+        FnIndex::None
     }
 
     /// Generates an error message.

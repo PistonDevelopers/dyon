@@ -7,7 +7,6 @@ use rand;
 use range::Range;
 
 use ast;
-use intrinsics;
 use embed;
 
 use FnIndex;
@@ -1063,9 +1062,6 @@ impl Runtime {
         use FnExternalRef;
 
         match call.f_index.get() {
-            FnIndex::Intrinsic(index) => {
-                intrinsics::call_standard(self, index, call)
-            }
             FnIndex::ExternalVoid(FnExternalRef(f)) => {
                 for arg in &call.args {
                     match self.expression(arg, Side::Right)? {

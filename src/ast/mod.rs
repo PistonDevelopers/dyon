@@ -2612,7 +2612,6 @@ impl Call {
                 // Don't push return since last value in block
                 // is used as return value.
             }
-            FnIndex::Intrinsic(_) => {}
             FnIndex::None => {}
         }
         for arg in &self.args {
