@@ -467,6 +467,7 @@ impl Module {
         m.add_str("functions", functions, Dfn::nl(vec![], Any));
         m.add_str("functions__module", functions__module, Dfn::nl(vec![Any], Any));
         m.add_str("is_err", is_err, Dfn::nl(vec![Type::result()], Bool));
+        m.add_str("is_ok", is_ok, Dfn::nl(vec![Type::result()], Bool));
         m
     }
 

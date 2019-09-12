@@ -1,5 +1,5 @@
 fn main() {
-    println(is_err(anon(2)))
+    println(is_ok(anon(2)))
 }
 
 fn anon(x) -> {return clone(x)}
