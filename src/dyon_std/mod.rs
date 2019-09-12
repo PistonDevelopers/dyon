@@ -322,25 +322,17 @@ pub(crate) fn random(rt: &mut Runtime) -> Result<(), String> {
 
 dyon_fn!{fn tau() -> f64 {6.283_185_307_179_586}}
 
-// TODO: Can't be rewritten as external function because it reports error on arguments.
-pub(crate) fn len(
-    rt: &mut Runtime,
-    call: &ast::Call
-) -> Result<Option<Variable>, String> {
-    let v = match rt.stack.pop() {
-        Some(v) => v,
-        None => panic!(TINVOTS)
-    };
-
+pub(crate) fn len(rt: &mut Runtime) -> Result<(), String> {
+    let v = rt.stack.pop().expect(TINVOTS);
     let v = {
         let arr = match rt.resolve(&v) {
             &Variable::Array(ref arr) => arr,
-            x => return Err(rt.module.error(call.args[0].source_range(),
-                            &rt.expected(x, "array"), rt))
+            x => return Err(rt.expected_arg(0, x, "array"))
         };
         Variable::f64(arr.len() as f64)
     };
-    Ok(Some(v))
+    rt.stack.push(v);
+    Ok(())
 }
 
 // TODO: Can't be rewritten as external function because it reports error on arguments.

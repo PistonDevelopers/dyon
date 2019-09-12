@@ -1,4 +1,4 @@
 fn main() {
-    s := link {1 2 3}
-    println(is_empty(s))
+    s := [1, 2, 3]
+    println(len(s))
 }

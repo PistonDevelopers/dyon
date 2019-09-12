@@ -482,6 +482,7 @@ impl Module {
         m.add_str("tail", tail, Dfn::nl(vec![Link], Link));
         m.add_str("neck", neck, Dfn::nl(vec![Link], Link));
         m.add_str("is_empty", is_empty, Dfn::nl(vec![Link], Bool));
+        m.add_str("len", len, Dfn::nl(vec![Type::array()], F64));
         m
     }
 
