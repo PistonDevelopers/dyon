@@ -252,14 +252,13 @@ pub(crate) fn standard(f: &mut Prelude) {
 pub(crate) fn call_standard(
     rt: &mut Runtime,
     index: usize,
-    call: &ast::Call,
-    module: &Arc<Module>
+    call: &ast::Call
 ) -> Result<(Option<Variable>, Flow), String> {
     for arg in &call.args {
-        match rt.expression(arg, Side::Right, module)? {
+        match rt.expression(arg, Side::Right)? {
             (x, Flow::Return) => { return Ok((x, Flow::Return)); }
             (Some(v), Flow::Continue) => rt.stack.push(v),
-            _ => return Err(module.error(arg.source_range(),
+            _ => return Err(rt.module.error(arg.source_range(),
                     &format!("{}\nExpected something. \
                     Expression did not return a value.",
                     rt.stack_trace()), rt))
@@ -267,6 +266,8 @@ pub(crate) fn call_standard(
     }
     let (ind, f) = TABLE[index];
     debug_assert!(ind == index);
+    // TODO: Remove when no longer needed.
+    let ref module = rt.module.clone();
     let expect = (f)(rt, call, module)?;
     Ok((expect, Flow::Continue))
 }

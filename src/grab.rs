@@ -6,7 +6,6 @@ are constants.
 use std::sync::Arc;
 use ast;
 use runtime::{Flow, Runtime, Side};
-use Module;
 use Variable;
 
 #[derive(Debug)]
@@ -23,7 +22,6 @@ pub fn grab_expr(
     rt: &mut Runtime,
     expr: &ast::Expression,
     side: Side,
-    module: &Arc<Module>,
 ) -> Result<(Grabbed, Flow), String> {
     use ast::Expression as E;
 
@@ -31,10 +29,10 @@ pub fn grab_expr(
         E::Grab(ref grab) => {
             if grab.level == level {
                 // Evaluate the expression and insert it into new AST as constant.
-                let v = match rt.expression(&grab.expr, side, module)? {
+                let v = match rt.expression(&grab.expr, side)? {
                     (Some(x), Flow::Continue) => x,
                     (x, Flow::Return) => { return Ok((Grabbed::Variable(x), Flow::Return)); }
-                    _ => return Err(module.error(expr.source_range(),
+                    _ => return Err(rt.module.error(expr.source_range(),
                                     &format!("{}\nExpected something",
                                         rt.stack_trace()), rt))
                 };
@@ -46,14 +44,14 @@ pub fn grab_expr(
         }
         E::Return(ref expr) => {
             Ok((Grabbed::Expression(E::Return(
-                Box::new(match grab_expr(level, rt, expr, side, module) {
+                Box::new(match grab_expr(level, rt, expr, side) {
                     Ok((Grabbed::Expression(x), Flow::Continue)) => x,
                     x => return x,
                 }))), Flow::Continue))
         }
         E::Try(ref expr) => {
             Ok((Grabbed::Expression(E::Try(
-                Box::new(match grab_expr(level, rt, expr, side, module) {
+                Box::new(match grab_expr(level, rt, expr, side) {
                     Ok((Grabbed::Expression(x), Flow::Continue)) => x,
                     x => return x,
                 }))), Flow::Continue))
@@ -61,11 +59,11 @@ pub fn grab_expr(
         E::BinOp(ref binop_expr) => {
             Ok((Grabbed::Expression(E::BinOp(Box::new(ast::BinOpExpression {
                 op: binop_expr.op,
-                left: match grab_expr(level, rt, &binop_expr.left, side, module) {
+                left: match grab_expr(level, rt, &binop_expr.left, side) {
                     Ok((Grabbed::Expression(x), Flow::Continue)) => x,
                     x => return x,
                 },
-                right: match grab_expr(level, rt, &binop_expr.right, side, module) {
+                right: match grab_expr(level, rt, &binop_expr.right, side) {
                     Ok((Grabbed::Expression(x), Flow::Continue)) => x,
                     x => return x,
                 },
@@ -83,7 +81,7 @@ pub fn grab_expr(
                 source: closure.source.clone(),
                 args: closure.args.clone(),
                 currents: closure.currents.clone(),
-                expr: match grab_expr(level + 1, rt, &closure.expr, side, module) {
+                expr: match grab_expr(level + 1, rt, &closure.expr, side) {
                     Ok((Grabbed::Expression(x), Flow::Continue)) => x,
                     x => return x,
                 },
@@ -91,13 +89,13 @@ pub fn grab_expr(
                 source_range: closure.source_range,
             }))), Flow::Continue))
         }
-        E::Item(ref item) => match grab_item(level, rt, item, side, module) {
+        E::Item(ref item) => match grab_item(level, rt, item, side) {
             Ok((Grabbed::Item(x), Flow::Continue)) => {
                 Ok((Grabbed::Expression(E::Item(Box::new(x))), Flow::Continue))
             }
             x => x,
         },
-        E::Block(ref block) => match grab_block(level, rt, block, side, module) {
+        E::Block(ref block) => match grab_block(level, rt, block, side) {
             Ok((Grabbed::Block(x), Flow::Continue)) => {
                 Ok((Grabbed::Expression(E::Block(Box::new(x))), Flow::Continue))
             }
@@ -106,11 +104,11 @@ pub fn grab_expr(
         E::Assign(ref assign) => {
             Ok((Grabbed::Expression(E::Assign(Box::new(ast::Assign {
                 op: assign.op,
-                left: match grab_expr(level, rt, &assign.left, side, module) {
+                left: match grab_expr(level, rt, &assign.left, side) {
                     Ok((Grabbed::Expression(x), Flow::Continue)) => x,
                     x => return x,
                 },
-                right: match grab_expr(level, rt, &assign.right, side, module) {
+                right: match grab_expr(level, rt, &assign.right, side) {
                     Ok((Grabbed::Expression(x), Flow::Continue)) => x,
                     x => return x,
                 },
@@ -120,11 +118,11 @@ pub fn grab_expr(
         E::Compare(ref compare) => {
             Ok((Grabbed::Expression(E::Compare(Box::new(ast::Compare {
                 op: compare.op,
-                left: match grab_expr(level, rt, &compare.left, side, module) {
+                left: match grab_expr(level, rt, &compare.left, side) {
                     Ok((Grabbed::Expression(x), Flow::Continue)) => x,
                     x => return x,
                 },
-                right: match grab_expr(level, rt, &compare.right, side, module) {
+                right: match grab_expr(level, rt, &compare.right, side) {
                     Ok((Grabbed::Expression(x), Flow::Continue)) => x,
                     x => return x,
                 },
@@ -133,11 +131,11 @@ pub fn grab_expr(
         }
         E::If(ref if_expr) => {
             Ok((Grabbed::Expression(E::If(Box::new(ast::If {
-                cond: match grab_expr(level, rt, &if_expr.cond, side, module) {
+                cond: match grab_expr(level, rt, &if_expr.cond, side) {
                     Ok((Grabbed::Expression(x), Flow::Continue)) => x,
                     x => return x,
                 },
-                true_block: match grab_block(level, rt, &if_expr.true_block, side, module) {
+                true_block: match grab_block(level, rt, &if_expr.true_block, side) {
                     Ok((Grabbed::Block(x), Flow::Continue)) => x,
                     x => return x,
                 },
@@ -145,7 +143,7 @@ pub fn grab_expr(
                     let mut new_else_if_conds = vec![];
                     for else_if_cond in &if_expr.else_if_conds {
                         new_else_if_conds.push(
-                            match grab_expr(level, rt, else_if_cond, side, module) {
+                            match grab_expr(level, rt, else_if_cond, side) {
                                 Ok((Grabbed::Expression(x), Flow::Continue)) => x,
                                 x => return x,
                             });
@@ -156,7 +154,7 @@ pub fn grab_expr(
                     let mut new_else_if_blocks = vec![];
                     for else_if_block in &if_expr.else_if_blocks {
                         new_else_if_blocks.push(
-                                match grab_block(level, rt, else_if_block, side, module) {
+                                match grab_block(level, rt, else_if_block, side) {
                                 Ok((Grabbed::Block(x), Flow::Continue)) => x,
                                 x => return x,
                             });
@@ -166,7 +164,7 @@ pub fn grab_expr(
                 else_block: match if_expr.else_block {
                     None => None,
                     Some(ref else_block) => {
-                        match grab_block(level, rt, &else_block, side, module) {
+                        match grab_block(level, rt, &else_block, side) {
                             Ok((Grabbed::Block(x), Flow::Continue)) => Some(x),
                             x => return x,
                         }
@@ -184,7 +182,7 @@ pub fn grab_expr(
                     args: {
                         let mut new_args = vec![];
                         for arg in &call.args {
-                            new_args.push(match grab_expr(level, rt, arg, side, module) {
+                            new_args.push(match grab_expr(level, rt, arg, side) {
                                 Ok((Grabbed::Expression(x), Flow::Continue)) => x,
                                 x => return x,
                             });
@@ -205,7 +203,7 @@ pub fn grab_expr(
                 args: {
                     let mut new_args = vec![];
                     for arg in &call.args {
-                        new_args.push(match grab_expr(level, rt, arg, side, module) {
+                        new_args.push(match grab_expr(level, rt, arg, side) {
                             Ok((Grabbed::Expression(x), Flow::Continue)) => x,
                             x => return x,
                         });
@@ -219,14 +217,14 @@ pub fn grab_expr(
         }
         E::CallClosure(ref call_closure) => {
             Ok((Grabbed::Expression(E::CallClosure(Box::new(ast::CallClosure {
-                item: match grab_item(level, rt, &call_closure.item, side, module) {
+                item: match grab_item(level, rt, &call_closure.item, side) {
                     Ok((Grabbed::Item(x), Flow::Continue)) => x,
                     x => return x,
                 },
                 args: {
                     let mut new_args = vec![];
                     for arg in &call_closure.args {
-                        new_args.push(match grab_expr(level, rt, arg, side, module) {
+                        new_args.push(match grab_expr(level, rt, arg, side) {
                             Ok((Grabbed::Expression(x), Flow::Continue)) => x,
                             x => return x,
                         });
@@ -236,67 +234,67 @@ pub fn grab_expr(
                 source_range: call_closure.source_range,
             }))), Flow::Continue))
         }
-        E::ForN(ref for_n) => match grab_for_n(level, rt, for_n, side, module) {
+        E::ForN(ref for_n) => match grab_for_n(level, rt, for_n, side) {
             Ok((Grabbed::ForN(x), Flow::Continue)) => {
                 Ok((Grabbed::Expression(E::ForN(Box::new(x))), Flow::Continue))
             }
             x => x,
         },
-        E::Sum(ref for_n) => match grab_for_n(level, rt, for_n, side, module) {
+        E::Sum(ref for_n) => match grab_for_n(level, rt, for_n, side) {
             Ok((Grabbed::ForN(x), Flow::Continue)) => {
                 Ok((Grabbed::Expression(E::Sum(Box::new(x))), Flow::Continue))
             }
             x => x,
         },
-        E::Prod(ref for_n) => match grab_for_n(level, rt, for_n, side, module) {
+        E::Prod(ref for_n) => match grab_for_n(level, rt, for_n, side) {
             Ok((Grabbed::ForN(x), Flow::Continue)) => {
                 Ok((Grabbed::Expression(E::Prod(Box::new(x))), Flow::Continue))
             }
             x => x,
         },
-        E::Min(ref for_n) => match grab_for_n(level, rt, for_n, side, module) {
+        E::Min(ref for_n) => match grab_for_n(level, rt, for_n, side) {
             Ok((Grabbed::ForN(x), Flow::Continue)) => {
                 Ok((Grabbed::Expression(E::Min(Box::new(x))), Flow::Continue))
             }
             x => x,
         },
-        E::Max(ref for_n) => match grab_for_n(level, rt, for_n, side, module) {
+        E::Max(ref for_n) => match grab_for_n(level, rt, for_n, side) {
             Ok((Grabbed::ForN(x), Flow::Continue)) => {
                 Ok((Grabbed::Expression(E::Max(Box::new(x))), Flow::Continue))
             }
             x => x,
         },
-        E::Any(ref for_n) => match grab_for_n(level, rt, for_n, side, module) {
+        E::Any(ref for_n) => match grab_for_n(level, rt, for_n, side) {
             Ok((Grabbed::ForN(x), Flow::Continue)) => {
                 Ok((Grabbed::Expression(E::Any(Box::new(x))), Flow::Continue))
             }
             x => x,
         },
-        E::All(ref for_n) => match grab_for_n(level, rt, for_n, side, module) {
+        E::All(ref for_n) => match grab_for_n(level, rt, for_n, side) {
             Ok((Grabbed::ForN(x), Flow::Continue)) => {
                 Ok((Grabbed::Expression(E::All(Box::new(x))), Flow::Continue))
             }
             x => x,
         },
-        E::LinkFor(ref for_n) => match grab_for_n(level, rt, for_n, side, module) {
+        E::LinkFor(ref for_n) => match grab_for_n(level, rt, for_n, side) {
             Ok((Grabbed::ForN(x), Flow::Continue)) => {
                 Ok((Grabbed::Expression(E::LinkFor(Box::new(x))), Flow::Continue))
             }
             x => x,
         },
-        E::SumVec4(ref for_n) => match grab_for_n(level, rt, for_n, side, module) {
+        E::SumVec4(ref for_n) => match grab_for_n(level, rt, for_n, side) {
             Ok((Grabbed::ForN(x), Flow::Continue)) => {
                 Ok((Grabbed::Expression(E::SumVec4(Box::new(x))), Flow::Continue))
             }
             x => x,
         },
-        E::ProdVec4(ref for_n) => match grab_for_n(level, rt, for_n, side, module) {
+        E::ProdVec4(ref for_n) => match grab_for_n(level, rt, for_n, side) {
             Ok((Grabbed::ForN(x), Flow::Continue)) => {
                 Ok((Grabbed::Expression(E::ProdVec4(Box::new(x))), Flow::Continue))
             }
             x => x,
         },
-        E::Sift(ref for_n) => match grab_for_n(level, rt, for_n, side, module) {
+        E::Sift(ref for_n) => match grab_for_n(level, rt, for_n, side) {
             Ok((Grabbed::ForN(x), Flow::Continue)) => {
                 Ok((Grabbed::Expression(E::Sift(Box::new(x))), Flow::Continue))
             }
@@ -305,7 +303,7 @@ pub fn grab_expr(
         E::UnOp(ref unop) => {
             Ok((Grabbed::Expression(E::UnOp(Box::new(ast::UnOpExpression {
                 op: unop.op,
-                expr: match grab_expr(level, rt, &unop.expr, side, module) {
+                expr: match grab_expr(level, rt, &unop.expr, side) {
                     Ok((Grabbed::Expression(x), Flow::Continue)) => x,
                     x => return x,
                 },
@@ -314,7 +312,7 @@ pub fn grab_expr(
         }
         E::Norm(ref norm) => {
             Ok((Grabbed::Expression(E::Norm(Box::new(ast::Norm {
-                expr: match grab_expr(level, rt, &norm.expr, side, module) {
+                expr: match grab_expr(level, rt, &norm.expr, side) {
                     Ok((Grabbed::Expression(x), Flow::Continue)) => x,
                     x => return x,
                 },
@@ -326,7 +324,7 @@ pub fn grab_expr(
                 args: {
                     let mut new_args = vec![];
                     for arg in &vec4.args {
-                        new_args.push(match grab_expr(level, rt, arg, side, module) {
+                        new_args.push(match grab_expr(level, rt, arg, side) {
                             Ok((Grabbed::Expression(x), Flow::Continue)) => x,
                             x => return x,
                         });
@@ -341,7 +339,7 @@ pub fn grab_expr(
                 args: {
                     let mut new_args = vec![];
                     for arg in &mat4.args {
-                        new_args.push(match grab_expr(level, rt, arg, side, module) {
+                        new_args.push(match grab_expr(level, rt, arg, side) {
                             Ok((Grabbed::Expression(x), Flow::Continue)) => x,
                             x => return x,
                         });
@@ -356,7 +354,7 @@ pub fn grab_expr(
                 items: {
                     let mut new_items = vec![];
                     for item in &link.items {
-                        new_items.push(match grab_expr(level, rt, item, side, module) {
+                        new_items.push(match grab_expr(level, rt, item, side) {
                             Ok((Grabbed::Expression(x), Flow::Continue)) => x,
                             x => return x,
                         });
@@ -372,7 +370,7 @@ pub fn grab_expr(
                     let mut new_key_values = vec![];
                     for key_value in &obj.key_values {
                         new_key_values.push((key_value.0.clone(),
-                        match grab_expr(level, rt, &key_value.1, side, module) {
+                        match grab_expr(level, rt, &key_value.1, side) {
                             Ok((Grabbed::Expression(x), Flow::Continue)) => x,
                             x => return x,
                         }));
@@ -387,7 +385,7 @@ pub fn grab_expr(
                 items: {
                     let mut new_items = vec![];
                     for item in &arr.items {
-                        new_items.push(match grab_expr(level, rt, item, side, module) {
+                        new_items.push(match grab_expr(level, rt, item, side) {
                             Ok((Grabbed::Expression(x), Flow::Continue)) => x,
                             x => return x,
                         });
@@ -399,11 +397,11 @@ pub fn grab_expr(
         }
         E::ArrayFill(ref arr_fill) => {
             Ok((Grabbed::Expression(E::ArrayFill(Box::new(ast::ArrayFill {
-                fill: match grab_expr(level, rt, &arr_fill.fill, side, module) {
+                fill: match grab_expr(level, rt, &arr_fill.fill, side) {
                     Ok((Grabbed::Expression(x), Flow::Continue)) => x,
                     x => return x,
                 },
-                n: match grab_expr(level, rt, &arr_fill.n, side, module) {
+                n: match grab_expr(level, rt, &arr_fill.n, side) {
                     Ok((Grabbed::Expression(x), Flow::Continue)) => x,
                     x => return x,
                 },
@@ -412,19 +410,19 @@ pub fn grab_expr(
         }
         E::For(ref for_expr) => {
             Ok((Grabbed::Expression(E::For(Box::new(ast::For {
-                init: match grab_expr(level, rt, &for_expr.init, side, module) {
+                init: match grab_expr(level, rt, &for_expr.init, side) {
                     Ok((Grabbed::Expression(x), Flow::Continue)) => x,
                     x => return x,
                 },
-                cond: match grab_expr(level, rt, &for_expr.cond, side, module) {
+                cond: match grab_expr(level, rt, &for_expr.cond, side) {
                     Ok((Grabbed::Expression(x), Flow::Continue)) => x,
                     x => return x,
                 },
-                step: match grab_expr(level, rt, &for_expr.step, side, module) {
+                step: match grab_expr(level, rt, &for_expr.step, side) {
                     Ok((Grabbed::Expression(x), Flow::Continue)) => x,
                     x => return x,
                 },
-                block: match grab_block(level, rt, &for_expr.block, side, module) {
+                block: match grab_block(level, rt, &for_expr.block, side) {
                     Ok((Grabbed::Block(x), Flow::Continue)) => x,
                     x => return x,
                 },
@@ -435,11 +433,11 @@ pub fn grab_expr(
         E::ForIn(ref for_in_expr) => {
             Ok((Grabbed::Expression(E::ForIn(Box::new(ast::ForIn {
                 name: for_in_expr.name.clone(),
-                iter: match grab_expr(level, rt, &for_in_expr.iter, side, module) {
+                iter: match grab_expr(level, rt, &for_in_expr.iter, side) {
                     Ok((Grabbed::Expression(x), Flow::Continue)) => x,
                     x => return x,
                 },
-                block: match grab_block(level, rt, &for_in_expr.block, side, module) {
+                block: match grab_block(level, rt, &for_in_expr.block, side) {
                     Ok((Grabbed::Block(x), Flow::Continue)) => x,
                     x => return x,
                 },
@@ -450,11 +448,11 @@ pub fn grab_expr(
         E::SumIn(ref for_in_expr) => {
             Ok((Grabbed::Expression(E::SumIn(Box::new(ast::ForIn {
                 name: for_in_expr.name.clone(),
-                iter: match grab_expr(level, rt, &for_in_expr.iter, side, module) {
+                iter: match grab_expr(level, rt, &for_in_expr.iter, side) {
                     Ok((Grabbed::Expression(x), Flow::Continue)) => x,
                     x => return x,
                 },
-                block: match grab_block(level, rt, &for_in_expr.block, side, module) {
+                block: match grab_block(level, rt, &for_in_expr.block, side) {
                     Ok((Grabbed::Block(x), Flow::Continue)) => x,
                     x => return x,
                 },
@@ -465,11 +463,11 @@ pub fn grab_expr(
         E::ProdIn(ref for_in_expr) => {
             Ok((Grabbed::Expression(E::ProdIn(Box::new(ast::ForIn {
                 name: for_in_expr.name.clone(),
-                iter: match grab_expr(level, rt, &for_in_expr.iter, side, module) {
+                iter: match grab_expr(level, rt, &for_in_expr.iter, side) {
                     Ok((Grabbed::Expression(x), Flow::Continue)) => x,
                     x => return x,
                 },
-                block: match grab_block(level, rt, &for_in_expr.block, side, module) {
+                block: match grab_block(level, rt, &for_in_expr.block, side) {
                     Ok((Grabbed::Block(x), Flow::Continue)) => x,
                     x => return x,
                 },
@@ -480,11 +478,11 @@ pub fn grab_expr(
         E::MinIn(ref for_in_expr) => {
             Ok((Grabbed::Expression(E::MinIn(Box::new(ast::ForIn {
                 name: for_in_expr.name.clone(),
-                iter: match grab_expr(level, rt, &for_in_expr.iter, side, module) {
+                iter: match grab_expr(level, rt, &for_in_expr.iter, side) {
                     Ok((Grabbed::Expression(x), Flow::Continue)) => x,
                     x => return x,
                 },
-                block: match grab_block(level, rt, &for_in_expr.block, side, module) {
+                block: match grab_block(level, rt, &for_in_expr.block, side) {
                     Ok((Grabbed::Block(x), Flow::Continue)) => x,
                     x => return x,
                 },
@@ -495,11 +493,11 @@ pub fn grab_expr(
         E::MaxIn(ref for_in_expr) => {
             Ok((Grabbed::Expression(E::MaxIn(Box::new(ast::ForIn {
                 name: for_in_expr.name.clone(),
-                iter: match grab_expr(level, rt, &for_in_expr.iter, side, module) {
+                iter: match grab_expr(level, rt, &for_in_expr.iter, side) {
                     Ok((Grabbed::Expression(x), Flow::Continue)) => x,
                     x => return x,
                 },
-                block: match grab_block(level, rt, &for_in_expr.block, side, module) {
+                block: match grab_block(level, rt, &for_in_expr.block, side) {
                     Ok((Grabbed::Block(x), Flow::Continue)) => x,
                     x => return x,
                 },
@@ -510,11 +508,11 @@ pub fn grab_expr(
         E::AnyIn(ref for_in_expr) => {
             Ok((Grabbed::Expression(E::AnyIn(Box::new(ast::ForIn {
                 name: for_in_expr.name.clone(),
-                iter: match grab_expr(level, rt, &for_in_expr.iter, side, module) {
+                iter: match grab_expr(level, rt, &for_in_expr.iter, side) {
                     Ok((Grabbed::Expression(x), Flow::Continue)) => x,
                     x => return x,
                 },
-                block: match grab_block(level, rt, &for_in_expr.block, side, module) {
+                block: match grab_block(level, rt, &for_in_expr.block, side) {
                     Ok((Grabbed::Block(x), Flow::Continue)) => x,
                     x => return x,
                 },
@@ -525,11 +523,11 @@ pub fn grab_expr(
         E::AllIn(ref for_in_expr) => {
             Ok((Grabbed::Expression(E::AllIn(Box::new(ast::ForIn {
                 name: for_in_expr.name.clone(),
-                iter: match grab_expr(level, rt, &for_in_expr.iter, side, module) {
+                iter: match grab_expr(level, rt, &for_in_expr.iter, side) {
                     Ok((Grabbed::Expression(x), Flow::Continue)) => x,
                     x => return x,
                 },
-                block: match grab_block(level, rt, &for_in_expr.block, side, module) {
+                block: match grab_block(level, rt, &for_in_expr.block, side) {
                     Ok((Grabbed::Block(x), Flow::Continue)) => x,
                     x => return x,
                 },
@@ -540,11 +538,11 @@ pub fn grab_expr(
         E::SiftIn(ref for_in_expr) => {
             Ok((Grabbed::Expression(E::SiftIn(Box::new(ast::ForIn {
                 name: for_in_expr.name.clone(),
-                iter: match grab_expr(level, rt, &for_in_expr.iter, side, module) {
+                iter: match grab_expr(level, rt, &for_in_expr.iter, side) {
                     Ok((Grabbed::Expression(x), Flow::Continue)) => x,
                     x => return x,
                 },
-                block: match grab_block(level, rt, &for_in_expr.block, side, module) {
+                block: match grab_block(level, rt, &for_in_expr.block, side) {
                     Ok((Grabbed::Block(x), Flow::Continue)) => x,
                     x => return x,
                 },
@@ -555,11 +553,11 @@ pub fn grab_expr(
         E::LinkIn(ref for_in_expr) => {
             Ok((Grabbed::Expression(E::LinkIn(Box::new(ast::ForIn {
                 name: for_in_expr.name.clone(),
-                iter: match grab_expr(level, rt, &for_in_expr.iter, side, module) {
+                iter: match grab_expr(level, rt, &for_in_expr.iter, side) {
                     Ok((Grabbed::Expression(x), Flow::Continue)) => x,
                     x => return x,
                 },
-                block: match grab_block(level, rt, &for_in_expr.block, side, module) {
+                block: match grab_block(level, rt, &for_in_expr.block, side) {
                     Ok((Grabbed::Block(x), Flow::Continue)) => x,
                     x => return x,
                 },
@@ -573,7 +571,7 @@ pub fn grab_expr(
                 sw1: swizzle.sw1,
                 sw2: swizzle.sw2,
                 sw3: swizzle.sw3,
-                expr: match grab_expr(level, rt, &swizzle.expr, side, module) {
+                expr: match grab_expr(level, rt, &swizzle.expr, side) {
                     Ok((Grabbed::Expression(x), Flow::Continue)) => x,
                     x => return x,
                 },
@@ -582,7 +580,7 @@ pub fn grab_expr(
         }
         E::TryExpr(ref try_expr) => {
             Ok((Grabbed::Expression(E::TryExpr(Box::new(ast::TryExpr {
-                expr: match grab_expr(level, rt, &try_expr.expr, side, module) {
+                expr: match grab_expr(level, rt, &try_expr.expr, side) {
                     Ok((Grabbed::Expression(x), Flow::Continue)) => x,
                     x => return x,
                 },
@@ -600,13 +598,12 @@ fn grab_block(
     rt: &mut Runtime,
     block: &ast::Block,
     side: Side,
-    module: &Arc<Module>,
 ) -> Result<(Grabbed, Flow), String> {
     Ok((Grabbed::Block(ast::Block {
         expressions: {
             let mut new_expressions = vec![];
             for expr in &block.expressions {
-                new_expressions.push(match grab_expr(level, rt, expr, side, module) {
+                new_expressions.push(match grab_expr(level, rt, expr, side) {
                     Ok((Grabbed::Expression(x), Flow::Continue)) => x,
                     x => return x,
                 });
@@ -622,7 +619,6 @@ fn grab_item(
     rt: &mut Runtime,
     item: &ast::Item,
     side: Side,
-    module: &Arc<Module>,
 ) -> Result<(Grabbed, Flow), String> {
     Ok((Grabbed::Item(ast::Item {
         name: item.name.clone(),
@@ -637,7 +633,7 @@ fn grab_item(
                     ast::Id::String(_, _) => id.clone(),
                     ast::Id::F64(_, _) => id.clone(),
                     ast::Id::Expression(ref expr) =>
-                        match grab_expr(level, rt, &expr, side, module) {
+                        match grab_expr(level, rt, &expr, side) {
                             Ok((Grabbed::Expression(x), Flow::Continue)) =>
                                 ast::Id::Expression(x),
                             x => return x,
@@ -656,24 +652,23 @@ fn grab_for_n(
     rt: &mut Runtime,
     for_n: &ast::ForN,
     side: Side,
-    module: &Arc<Module>,
 ) -> Result<(Grabbed, Flow), String> {
     Ok((Grabbed::ForN(ast::ForN {
         name: for_n.name.clone(),
         start: match for_n.start {
             None => None,
             Some(ref start) => {
-                match grab_expr(level, rt, start, side, module) {
+                match grab_expr(level, rt, start, side) {
                     Ok((Grabbed::Expression(x), Flow::Continue)) => Some(x),
                     x => return x,
                 }
             }
         },
-        end: match grab_expr(level, rt, &for_n.end, side, module) {
+        end: match grab_expr(level, rt, &for_n.end, side) {
             Ok((Grabbed::Expression(x), Flow::Continue)) => x,
             x => return x,
         },
-        block: match grab_block(level, rt, &for_n.block, side, module) {
+        block: match grab_block(level, rt, &for_n.block, side) {
             Ok((Grabbed::Block(x), Flow::Continue)) => x,
             x => return x,
         },
