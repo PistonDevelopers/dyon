@@ -8,21 +8,19 @@ use Variable;
 use Type;
 use dyon_std::*;
 
-const SAVE__DATA_FILE: usize = 0;
-const JSON_FROM_META_DATA: usize = 1;
-const HAS: usize = 2;
-const CHARS: usize = 3;
-const KEYS: usize = 4;
-const ERRSTR__STRING_START_LEN_MSG: usize = 5;
-const NEXT: usize = 6;
-const WAIT_NEXT: usize = 7;
+const JSON_FROM_META_DATA: usize = 0;
+const HAS: usize = 1;
+const CHARS: usize = 2;
+const KEYS: usize = 3;
+const ERRSTR__STRING_START_LEN_MSG: usize = 4;
+const NEXT: usize = 5;
+const WAIT_NEXT: usize = 6;
 
 const TABLE: &[(usize, fn(
         &mut Runtime,
         &ast::Call,
     ) -> Result<Option<Variable>, String>)]
 = &[
-    (SAVE__DATA_FILE, save__data_file),
     (JSON_FROM_META_DATA, json_from_meta_data),
     (HAS, has),
     (CHARS, chars),
@@ -41,11 +39,6 @@ pub(crate) fn standard(f: &mut Prelude) {
         });
     };
 
-    f.intrinsic(Arc::new("save__data_file".into()), SAVE__DATA_FILE, Dfn {
-        lts: vec![Lt::Default; 2],
-        tys: vec![Type::Any, Type::Text],
-        ret: Type::Result(Box::new(Type::Text))
-    });
     sarg(f, "json_from_meta_data", JSON_FROM_META_DATA, Type::Array(Box::new(Type::array())), Type::Text);
     f.intrinsic(Arc::new("has".into()), HAS, Dfn {
         lts: vec![Lt::Default; 2],

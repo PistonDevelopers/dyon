@@ -1469,12 +1469,8 @@ pub(crate) fn args_os(rt: &mut Runtime) -> Result<(), String> {
     Ok(())
 }
 
-// TODO: Can't be rewritten as an external function because it reports errors on arguments.
 #[cfg(feature = "file")]
-pub(crate) fn save__data_file(
-    rt: &mut Runtime,
-    call: &ast::Call
-) -> Result<Option<Variable>, String> {
+pub(crate) fn save__data_file(rt: &mut Runtime) -> Result<(), String> {
     use std::error::Error;
     use std::fs::File;
     use std::io::BufWriter;
@@ -1483,17 +1479,18 @@ pub(crate) fn save__data_file(
     let file = rt.stack.pop().expect(TINVOTS);
     let file = match rt.resolve(&file) {
         &Variable::Text(ref t) => t.clone(),
-        x => return Err(rt.module.error(call.args[1].source_range(),
-                        &rt.expected(x, "string"), rt))
+        x => return Err(rt.expected_arg(1, x, "str"))
     };
     let data = rt.stack.pop().expect(TINVOTS);
 
     let mut f = match File::create(&**file) {
         Ok(f) => BufWriter::new(f),
         Err(err) => {
-            return Err(rt.module.error(call.args[0].source_range(),
-                       &format!("{}\nError when creating file `{}`:\n{}",
-                        rt.stack_trace(), file, err.description()), rt))
+            return Err({
+                rt.arg_err_index.set(Some(0));
+                format!("Error when creating file `{}`:\n{}",
+                 file, err.description())
+            })
         }
     };
     let res = match write_variable(&mut f, rt, &data, EscapeString::Json, 0) {
@@ -1507,15 +1504,12 @@ pub(crate) fn save__data_file(
             }))
         }
     };
-    Ok(Some(Variable::Result(res)))
+    rt.stack.push(Variable::Result(res));
+    Ok(())
 }
 
 #[cfg(not(feature = "file"))]
-pub(crate) fn save__data_file(
-    _: &mut Runtime,
-    _: &ast::Call,
-    _: &Arc<Module>,
-) -> Result<Option<Variable>, String> {
+pub(crate) fn save__data_file(_: &mut Runtime) -> Result<(), String> {
     Err(FILE_SUPPORT_DISABLED.into())
 }
 

@@ -517,6 +517,7 @@ impl Module {
         m.add_str("meta__syntax_in_string",
             meta__syntax_in_string, Dfn::nl(vec![Any, Text, Text],
                 Type::Result(Box::new(Type::Array(Box::new(Type::array()))))));
+        m.add_str("save__data_file", save__data_file, Dfn::nl(vec![Any, Text], Text));
         m
     }
 
