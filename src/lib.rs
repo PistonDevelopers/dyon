@@ -510,6 +510,7 @@ impl Module {
             ret: Any
         });
         m.add_str("reverse(mut)", reverse, Dfn::nl(vec![Type::array()], Void));
+        m.add_str("clear(mut)", clear, Dfn::nl(vec![Type::array()], Void));
         m
     }
 

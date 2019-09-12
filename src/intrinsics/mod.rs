@@ -8,26 +8,24 @@ use Variable;
 use Type;
 use dyon_std::*;
 
-const CLEAR: usize = 0;
-const SWAP: usize = 1;
-const UNWRAP_ERR: usize = 2;
-const SAVE__DATA_FILE: usize = 3;
-const JSON_FROM_META_DATA: usize = 4;
-const HAS: usize = 5;
-const CHARS: usize = 6;
-const UNWRAP_OR: usize = 7;
-const KEYS: usize = 8;
-const ERRSTR__STRING_START_LEN_MSG: usize = 9;
-const META__SYNTAX_IN_STRING: usize = 10;
-const NEXT: usize = 11;
-const WAIT_NEXT: usize = 12;
+const SWAP: usize = 0;
+const UNWRAP_ERR: usize = 1;
+const SAVE__DATA_FILE: usize = 2;
+const JSON_FROM_META_DATA: usize = 3;
+const HAS: usize = 4;
+const CHARS: usize = 5;
+const UNWRAP_OR: usize = 6;
+const KEYS: usize = 7;
+const ERRSTR__STRING_START_LEN_MSG: usize = 8;
+const META__SYNTAX_IN_STRING: usize = 9;
+const NEXT: usize = 10;
+const WAIT_NEXT: usize = 11;
 
 const TABLE: &[(usize, fn(
         &mut Runtime,
         &ast::Call,
     ) -> Result<Option<Variable>, String>)]
 = &[
-    (CLEAR, clear),
     (SWAP, swap),
     (UNWRAP_ERR, unwrap_err),
     (SAVE__DATA_FILE, save__data_file),
@@ -51,7 +49,6 @@ pub(crate) fn standard(f: &mut Prelude) {
         });
     };
 
-    sarg(f, "clear(mut)", CLEAR, Type::array(), Type::Void);
     f.intrinsic(Arc::new("swap(mut,_,_)".into()), SWAP, Dfn {
         lts: vec![Lt::Default; 3],
         tys: vec![Type::array(), Type::F64, Type::F64],
