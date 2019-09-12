@@ -9,9 +9,8 @@ use Type;
 use dyon_std::*;
 
 const CHARS: usize = 0;
-const KEYS: usize = 1;
-const NEXT: usize = 2;
-const WAIT_NEXT: usize = 3;
+const NEXT: usize = 1;
+const WAIT_NEXT: usize = 2;
 
 const TABLE: &[(usize, fn(
         &mut Runtime,
@@ -19,7 +18,6 @@ const TABLE: &[(usize, fn(
     ) -> Result<Option<Variable>, String>)]
 = &[
     (CHARS, chars),
-    (KEYS, keys),
     (NEXT, next),
     (WAIT_NEXT, wait_next),
 ];
@@ -34,7 +32,6 @@ pub(crate) fn standard(f: &mut Prelude) {
     };
 
     sarg(f, "chars", CHARS, Type::Text, Type::Array(Box::new(Type::Text)));
-    sarg(f, "keys", KEYS, Type::Object, Type::Array(Box::new(Type::Text)));
     f.intrinsic(Arc::new("next".into()), NEXT, Dfn {
         lts: vec![Lt::Default],
         tys: vec![Type::in_ty()],

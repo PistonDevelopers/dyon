@@ -1578,20 +1578,16 @@ pub(crate) fn has(rt: &mut Runtime) -> Result<(), String> {
     Ok(())
 }
 
-// TODO: Can't be rewritten as an external function because it reports errors on arguments.
-pub(crate) fn keys(
-    rt: &mut Runtime,
-    call: &ast::Call,
-) -> Result<Option<Variable>, String> {
+pub(crate) fn keys(rt: &mut Runtime) -> Result<(), String> {
     let obj = rt.stack.pop().expect(TINVOTS);
     let res = Variable::Array(Arc::new(match rt.resolve(&obj) {
         &Variable::Object(ref obj) => {
             obj.keys().map(|k| Variable::Text(k.clone())).collect()
         }
-        x => return Err(rt.module.error(call.args[0].source_range(),
-                        &rt.expected(x, "object"), rt))
+        x => return Err(rt.expected_arg(0, x, "object"))
     }));
-    Ok(Some(res))
+    rt.stack.push(res);
+    Ok(())
 }
 
 // TODO: Can't be rewritten as an external function because it reports errors on arguments.
