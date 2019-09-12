@@ -13,12 +13,11 @@ const SAVE__DATA_FILE: usize = 1;
 const JSON_FROM_META_DATA: usize = 2;
 const HAS: usize = 3;
 const CHARS: usize = 4;
-const UNWRAP_OR: usize = 5;
-const KEYS: usize = 6;
-const ERRSTR__STRING_START_LEN_MSG: usize = 7;
-const META__SYNTAX_IN_STRING: usize = 8;
-const NEXT: usize = 9;
-const WAIT_NEXT: usize = 10;
+const KEYS: usize = 5;
+const ERRSTR__STRING_START_LEN_MSG: usize = 6;
+const META__SYNTAX_IN_STRING: usize = 7;
+const NEXT: usize = 8;
+const WAIT_NEXT: usize = 9;
 
 const TABLE: &[(usize, fn(
         &mut Runtime,
@@ -30,7 +29,6 @@ const TABLE: &[(usize, fn(
     (JSON_FROM_META_DATA, json_from_meta_data),
     (HAS, has),
     (CHARS, chars),
-    (UNWRAP_OR, unwrap_or),
     (KEYS, keys),
     (ERRSTR__STRING_START_LEN_MSG, errstr__string_start_len_msg),
     (META__SYNTAX_IN_STRING, meta__syntax_in_string),
@@ -60,11 +58,6 @@ pub(crate) fn standard(f: &mut Prelude) {
         ret: Type::Bool
     });
     sarg(f, "chars", CHARS, Type::Text, Type::Array(Box::new(Type::Text)));
-    f.intrinsic(Arc::new("unwrap_or".into()), UNWRAP_OR, Dfn {
-        lts: vec![Lt::Default; 2],
-        tys: vec![Type::Any, Type::Any],
-        ret: Type::Any
-    });
     sarg(f, "keys", KEYS, Type::Object, Type::Array(Box::new(Type::Text)));
     f.intrinsic(Arc::new("errstr__string_start_len_msg".into()),
         ERRSTR__STRING_START_LEN_MSG, Dfn {

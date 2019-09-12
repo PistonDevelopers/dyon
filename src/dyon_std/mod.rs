@@ -914,7 +914,6 @@ pub(crate) fn module__in_string_imports(rt: &mut Runtime) -> Result<(), String> 
     Ok(())
 }
 
-// TODO: Can't be rewritten as an external function because it uses the current module.
 pub(crate) fn _call(rt: &mut Runtime) -> Result<(), String> {
     // Use the source from calling function.
     let source = rt.module.functions[rt.call_stack.last().unwrap().index].source.clone();
@@ -1209,11 +1208,7 @@ pub(crate) fn unwrap(rt: &mut Runtime) -> Result<(), String> {
     Ok(())
 }
 
-// TODO: Can't be rewritten as an external function because it reports errors on arguments.
-pub(crate) fn unwrap_or(
-    rt: &mut Runtime,
-    call: &ast::Call
-) -> Result<Option<Variable>, String> {
+pub(crate) fn unwrap_or(rt: &mut Runtime) -> Result<(), String> {
     // Return value does not depend on lifetime of argument since
     // `ok(x)` and `some(x)` perform a deep clone.
     let def = rt.stack.pop().expect(TINVOTS);
@@ -1223,12 +1218,10 @@ pub(crate) fn unwrap_or(
         &Variable::Result(Ok(ref ok)) => (**ok).clone(),
         &Variable::Option(None) |
         &Variable::Result(Err(_)) => rt.resolve(&def).clone(),
-        x => {
-            return Err(rt.module.error(call.args[0].source_range(),
-                                    &rt.expected(x, "some(_) or ok(_)"), rt));
-        }
+        x => return Err(rt.expected_arg(0, x, "some(_) or ok(_)"))
     };
-    Ok(Some(v))
+    rt.stack.push(v);
+    Ok(())
 }
 
 // TODO: Can't be rewritten as an external function because it reports errors on arguments.
