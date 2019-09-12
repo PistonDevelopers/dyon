@@ -772,7 +772,7 @@ pub(crate) fn load(rt: &mut Runtime) -> Result<(), String> {
     let v = rt.stack.pop().expect(TINVOTS);
     let v = match rt.resolve(&v) {
         &Variable::Text(ref text) => {
-            let mut m = Module::new_intrinsics(rt.module.intrinsics.clone());
+            let mut m = Module::empty();
             for f in &rt.module.ext_prelude {
                 m.add(f.name.clone(), f.f, f.p.clone());
             }
@@ -799,7 +799,7 @@ pub(crate) fn load__source_imports(rt: &mut Runtime) -> Result<(), String> {
 
     let modules = rt.stack.pop().expect(TINVOTS);
     let source = rt.stack.pop().expect(TINVOTS);
-    let mut new_module = Module::new_intrinsics(rt.module.intrinsics.clone());
+    let mut new_module = Module::empty();
     for f in &rt.module.ext_prelude {
         new_module.add(f.name.clone(), f.f, f.p.clone());
     }
@@ -865,7 +865,7 @@ pub(crate) fn module__in_string_imports(rt: &mut Runtime) -> Result<(), String> 
         &Variable::Text(ref t) => t.clone(),
         x => return Err(rt.expected_arg(0, x, "str"))
     };
-    let mut new_module = Module::new_intrinsics(rt.module.intrinsics.clone());
+    let mut new_module = Module::empty();
     for f in &rt.module.ext_prelude {
         new_module.add(f.name.clone(), f.f, f.p.clone());
     }
@@ -957,7 +957,7 @@ pub(crate) fn _call(rt: &mut Runtime) -> Result<(), String> {
                         err
                     })?;
                 }
-                FnIndex::Intrinsic(_) | FnIndex::None |
+                FnIndex::None |
                 FnIndex::ExternalVoid(_) | FnIndex::ExternalReturn(_) =>
                     return Err(format!("Could not find function `{}`", fn_name))
             }
@@ -1025,7 +1025,7 @@ pub(crate) fn call_ret(rt: &mut Runtime) -> Result<(), String> {
                         err
                     })?;
                 }
-                FnIndex::Intrinsic(_) | FnIndex::None |
+                FnIndex::None |
                 FnIndex::ExternalVoid(_) | FnIndex::ExternalReturn(_) =>
                     return Err(format!("Could not find function `{}`", fn_name))
             }

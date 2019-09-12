@@ -1,10 +1,8 @@
 use std::sync::Arc;
 use std::collections::HashMap;
 
-use intrinsics::standard;
 use Lt;
 use Module;
-use Prelude;
 use Variable;
 
 /// Lists all functions available in a module.
@@ -17,40 +15,8 @@ pub fn list_functions(module: &Module) -> Vec<Variable> {
     let lifetime: Arc<String> = Arc::new("lifetime".into());
     let ret_lifetime: Arc<String> = Arc::new("return".into());
     let ty: Arc<String> = Arc::new("type".into());
-    let intrinsic: Arc<String> = Arc::new("intrinsic".into());
     let external: Arc<String> = Arc::new("external".into());
     let loaded: Arc<String> = Arc::new("loaded".into());
-    let mut intrinsics = Prelude::new();
-    standard(&mut intrinsics);
-    for (f_name, &f) in &intrinsics.functions {
-        let f = &intrinsics.list[f];
-        let mut obj = HashMap::new();
-        obj.insert(name.clone(), Variable::Text(f_name.clone()));
-        obj.insert(returns.clone(), Variable::Text(Arc::new(f.ret.description())));
-        obj.insert(ty.clone(), Variable::Text(intrinsic.clone()));
-        let mut args = vec![];
-        for (i, lt) in f.lts.iter().enumerate() {
-            let mut obj_arg = HashMap::new();
-            obj_arg.insert(name.clone(),
-                Variable::Text(Arc::new(format!("arg{}", i))));
-            obj_arg.insert(lifetime.clone(), match *lt {
-                Lt::Default => Variable::Option(None),
-                Lt::Arg(ind) => Variable::Option(Some(
-                        Box::new(Variable::Text(
-                            Arc::new(format!("arg{}", ind))
-                        ))
-                    )),
-                Lt::Return => Variable::Option(Some(
-                        Box::new(Variable::Text(ret_lifetime.clone()))
-                    )),
-            });
-            obj_arg.insert(takes.clone(),
-                Variable::Text(Arc::new(f.tys[i].description())));
-            args.push(Variable::Object(Arc::new(obj_arg)));
-        }
-        obj.insert(arguments.clone(), Variable::Array(Arc::new(args)));
-        functions.push(Variable::Object(Arc::new(obj)));
-    }
     for f in &*module.ext_prelude {
         let mut obj = HashMap::new();
         obj.insert(name.clone(), Variable::Text(f.name.clone()));
