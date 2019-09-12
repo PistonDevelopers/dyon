@@ -59,7 +59,7 @@ pub type Array = Arc<Vec<Variable>>;
 /// Type alias for Dyon objects.
 pub type Object = Arc<HashMap<Arc<String>, Variable>>;
 /// Type alias for Rust objects.
-pub type RustObject = Arc<Mutex<Any>>;
+pub type RustObject = Arc<Mutex<dyn Any>>;
 
 /// Stores Dyon errors.
 #[derive(Debug, Clone)]
@@ -350,6 +350,16 @@ impl Default for Module {
 }
 
 impl Module {
+    /// Creates a new empty module.
+    pub fn empty() -> Module {
+        Module {
+            functions: vec![],
+            ext_prelude: vec![],
+            intrinsics: Arc::new(HashMap::new()),
+            register_namespace: Arc::new(vec![]),
+        }
+    }
+
     /// Creates a new module with standard library.
     pub fn new() -> Module {
         use Type::*;

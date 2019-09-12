@@ -77,6 +77,8 @@ lazy_static! {
 
 /// Stores data needed for running a Dyon program.
 pub struct Runtime {
+    /// Stores the current module in use.
+    pub module: Arc<Module>,
     /// Stores variables on the stack.
     pub stack: Vec<Variable>,
     /// name, file, stack_len, local_len.
@@ -298,6 +300,7 @@ impl Runtime {
         use rand::FromEntropy;
 
         Runtime {
+            module: Arc::new(Module::empty()),
             stack: vec![],
             call_stack: vec![],
             local_stack: vec![],
@@ -831,6 +834,7 @@ impl Runtime {
 
         let last_call = self.call_stack.last().unwrap();
         let new_rt = Runtime {
+            module: module.clone(),
             stack,
             local_stack: vec![],
             current_stack: vec![],
@@ -847,12 +851,11 @@ impl Runtime {
             rng: self.rng.clone(),
             ret: self.ret.clone(),
         };
-        let new_module = module.clone();
         let handle: JoinHandle<Result<Variable, String>> = thread::spawn(move || {
             let mut new_rt = new_rt;
-            let new_module = new_module;
             let fake_call = fake_call;
             let loader = false;
+            let new_module = new_rt.module.clone();
             Ok(match new_rt.call_internal(&fake_call, loader, &new_module) {
                 Err(err) => return Err(err),
                 Ok((None, _)) => {
