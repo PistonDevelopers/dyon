@@ -153,18 +153,15 @@ pub(crate) fn why(rt: &mut Runtime) -> Result<(), String> {
     Ok(())
 }
 
-// TODO: Can't be rewritten as external function because it reports error on arguments.
-pub(crate) fn _where(
-    rt: &mut Runtime,
-    call: &ast::Call
-) -> Result<Option<Variable>, String> {
+pub(crate) fn _where(rt: &mut Runtime) -> Result<(), String> {
     let v = rt.stack.pop().expect(TINVOTS);
     let v = Variable::Array(Arc::new(match rt.resolve(&v) {
         &Variable::F64(val, Some(ref sec)) => {
             if val.is_nan() {
-                return Err(rt.module.error(call.args[0].source_range(),
-                    &format!("{}\nExpected number, found `NaN`",
-                        rt.stack_trace()), rt))
+                return Err({
+                    rt.arg_err_index.set(Some(0));
+                    "Expected number, found `NaN`".into()
+                })
             } else {
                 let mut sec = (**sec).clone();
                 sec.reverse();
@@ -172,14 +169,15 @@ pub(crate) fn _where(
             }
         }
         &Variable::F64(_, None) => {
-            return Err(rt.module.error(call.args[0].source_range(),
-                &format!("{}\nThis does not make sense, perhaps an array is empty?",
-                    rt.stack_trace()), rt))
+            return Err({
+                rt.arg_err_index.set(Some(0));
+                "This does not make sense, perhaps an array is empty?".into()
+            })
         }
-        x => return Err(rt.module.error(call.args[0].source_range(),
-            &rt.expected(x, "f64"), rt))
+        x => return Err(rt.expected_arg(0, x, "f64"))
     }));
-    Ok(Some(v))
+    rt.stack.push(v);
+    Ok(())
 }
 
 // TODO: Can't be rewritten as external function because it reports error on arguments.

@@ -471,7 +471,8 @@ impl Module {
         m.add_str("min", min, Dfn::nl(vec![Type::Array(Box::new(F64))], F64));
         m.add_str("max", max, Dfn::nl(vec![Type::Array(Box::new(F64))], F64));
         m.add_str("unwrap", unwrap, Dfn::nl(vec![Any], Any));
-        m.add_str("why", why, Dfn::nl(vec![Type::Secret(Box::new(Type::Bool))], Type::array()));
+        m.add_str("why", why, Dfn::nl(vec![Type::Secret(Box::new(Bool))], Type::array()));
+        m.add_str("where", _where, Dfn::nl(vec![Type::Secret(Box::new(F64))], Type::array()));
         m
     }
 

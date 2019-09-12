@@ -1,4 +1,4 @@
 fn main() {
-    s := any i 5 {i == 3}
-    println(why(s))
+    s := max i 5 {i}
+    println(where(s))
 }

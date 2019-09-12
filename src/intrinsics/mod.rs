@@ -8,42 +8,40 @@ use Variable;
 use Type;
 use dyon_std::*;
 
-const WHERE: usize = 0;
-const EXPLAIN_WHY: usize = 1;
-const EXPLAIN_WHERE: usize = 2;
-const HEAD: usize = 3;
-const TAIL: usize = 4;
-const IS_EMPTY: usize = 5;
-const LEN: usize = 6;
-const PUSH_REF: usize = 7;
-const PUSH: usize = 8;
-const POP: usize = 9;
-const REVERSE: usize = 10;
-const CLEAR: usize = 11;
-const SWAP: usize = 12;
-const UNWRAP_ERR: usize = 13;
-const SAVE__DATA_FILE: usize = 14;
-const JSON_FROM_META_DATA: usize = 15;
-const HAS: usize = 16;
-const CHARS: usize = 17;
-const UNWRAP_OR: usize = 18;
-const TIP: usize = 19;
-const NECK: usize = 20;
-const KEYS: usize = 21;
-const ERRSTR__STRING_START_LEN_MSG: usize = 22;
-const META__SYNTAX_IN_STRING: usize = 23;
-const INSERT: usize = 24;
-const INSERT_REF: usize = 25;
-const REMOVE: usize = 26;
-const NEXT: usize = 27;
-const WAIT_NEXT: usize = 28;
+const EXPLAIN_WHY: usize = 0;
+const EXPLAIN_WHERE: usize = 1;
+const HEAD: usize = 2;
+const TAIL: usize = 3;
+const IS_EMPTY: usize = 4;
+const LEN: usize = 5;
+const PUSH_REF: usize = 6;
+const PUSH: usize = 7;
+const POP: usize = 8;
+const REVERSE: usize = 9;
+const CLEAR: usize = 10;
+const SWAP: usize = 11;
+const UNWRAP_ERR: usize = 12;
+const SAVE__DATA_FILE: usize = 13;
+const JSON_FROM_META_DATA: usize = 14;
+const HAS: usize = 15;
+const CHARS: usize = 16;
+const UNWRAP_OR: usize = 17;
+const TIP: usize = 18;
+const NECK: usize = 19;
+const KEYS: usize = 20;
+const ERRSTR__STRING_START_LEN_MSG: usize = 21;
+const META__SYNTAX_IN_STRING: usize = 22;
+const INSERT: usize = 23;
+const INSERT_REF: usize = 24;
+const REMOVE: usize = 25;
+const NEXT: usize = 26;
+const WAIT_NEXT: usize = 27;
 
 const TABLE: &[(usize, fn(
         &mut Runtime,
         &ast::Call,
     ) -> Result<Option<Variable>, String>)]
 = &[
-    (WHERE, _where),
     (EXPLAIN_WHY, explain_why),
     (EXPLAIN_WHERE, explain_where),
     (HEAD, head),
@@ -83,11 +81,6 @@ pub(crate) fn standard(f: &mut Prelude) {
         });
     };
 
-    f.intrinsic(Arc::new("where".into()), WHERE, Dfn {
-        lts: vec![Lt::Default],
-        tys: vec![Type::Secret(Box::new(Type::F64))],
-        ret: Type::array()
-    });
     f.intrinsic(Arc::new("explain_why".into()), EXPLAIN_WHY, Dfn {
         lts: vec![Lt::Default; 2],
         tys: vec![Type::Bool, Type::Any],
