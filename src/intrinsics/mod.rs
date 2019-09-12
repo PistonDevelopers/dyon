@@ -14,9 +14,8 @@ const HAS: usize = 2;
 const CHARS: usize = 3;
 const KEYS: usize = 4;
 const ERRSTR__STRING_START_LEN_MSG: usize = 5;
-const META__SYNTAX_IN_STRING: usize = 6;
-const NEXT: usize = 7;
-const WAIT_NEXT: usize = 8;
+const NEXT: usize = 6;
+const WAIT_NEXT: usize = 7;
 
 const TABLE: &[(usize, fn(
         &mut Runtime,
@@ -29,7 +28,6 @@ const TABLE: &[(usize, fn(
     (CHARS, chars),
     (KEYS, keys),
     (ERRSTR__STRING_START_LEN_MSG, errstr__string_start_len_msg),
-    (META__SYNTAX_IN_STRING, meta__syntax_in_string),
     (NEXT, next),
     (WAIT_NEXT, wait_next),
 ];
@@ -61,12 +59,6 @@ pub(crate) fn standard(f: &mut Prelude) {
             lts: vec![Lt::Default; 4],
             tys: vec![Type::Text, Type::F64, Type::F64, Type::Text],
             ret: Type::Text
-        });
-    f.intrinsic(Arc::new("meta__syntax_in_string".into()),
-        META__SYNTAX_IN_STRING, Dfn {
-            lts: vec![Lt::Default; 3],
-            tys: vec![Type::Any, Type::Text, Type::Text],
-            ret: Type::Result(Box::new(Type::Array(Box::new(Type::array()))))
         });
     f.intrinsic(Arc::new("next".into()), NEXT, Dfn {
         lts: vec![Lt::Default],

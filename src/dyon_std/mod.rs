@@ -1272,44 +1272,39 @@ dyon_fn!{fn syntax__in_string(name: Arc<String>, text: Arc<String>) -> Variable 
     })
 }}
 
-// TODO: Can't be rewritten as an external function because it reports errors on arguments.
-pub(crate) fn meta__syntax_in_string(
-    rt: &mut Runtime,
-    call: &ast::Call
-) -> Result<Option<Variable>, String> {
+pub(crate) fn meta__syntax_in_string(rt: &mut Runtime) -> Result<(), String> {
     use piston_meta::Syntax;
 
     let text = rt.stack.pop().expect(TINVOTS);
     let text = match rt.resolve(&text) {
         &Variable::Text(ref t) => t.clone(),
-        x => return Err(rt.module.error(call.args[2].source_range(),
-                        &rt.expected(x, "str"), rt))
+        x => return Err(rt.expected_arg(2, x, "str"))
     };
     let name = rt.stack.pop().expect(TINVOTS);
     let name = match rt.resolve(&name) {
         &Variable::Text(ref t) => t.clone(),
-        x => return Err(rt.module.error(call.args[1].source_range(),
-                        &rt.expected(x, "str"), rt))
+        x => return Err(rt.expected_arg(1, x, "str"))
     };
     let syntax_var = rt.stack.pop().expect(TINVOTS);
-    let syntax = match rt.resolve(&syntax_var) {
+    let syntax_var = rt.resolve(&syntax_var);
+    let syntax = match syntax_var {
         &Variable::RustObject(ref obj) => obj.clone(),
-        x => return Err(rt.module.error(call.args[0].source_range(),
-                        &rt.expected(x, "Syntax"), rt))
+        x => return Err(rt.expected_arg(0, x, "Syntax"))
     };
     let res = meta::parse_syntax_data(match syntax.lock().unwrap()
         .downcast_ref::<Arc<Syntax>>() {
         Some(s) => s,
-        None => return Err(rt.module.error(call.args[0].source_range(),
-                        &rt.expected(&syntax_var, "Syntax"), rt))
+        None => return Err(rt.expected_arg(0, syntax_var, "Syntax"))
     }, &name, &text);
-    Ok(Some(Variable::Result(match res {
+    let v = Variable::Result(match res {
         Ok(res) => Ok(Box::new(Variable::Array(Arc::new(res)))),
         Err(err) => Err(Box::new(Error {
             message: Variable::Text(Arc::new(err)),
             trace: vec![]
         }))
-    })))
+    });
+    rt.stack.push(v);
+    Ok(())
 }
 
 dyon_fn!{fn download__url_file(url: Arc<String>, file: Arc<String>) -> Variable {

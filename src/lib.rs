@@ -514,6 +514,9 @@ impl Module {
         m.add_str("swap(mut,_,_)", swap, Dfn::nl(vec![Type::array(), F64, F64], Void));
         m.add_str("unwrap_or", unwrap_or, Dfn::nl(vec![Any; 2], Any));
         m.add_str("unwrap_err", unwrap_err, Dfn::nl(vec![Any], Any));
+        m.add_str("meta__syntax_in_string",
+            meta__syntax_in_string, Dfn::nl(vec![Any, Text, Text],
+                Type::Result(Box::new(Type::Array(Box::new(Type::array()))))));
         m
     }
 
