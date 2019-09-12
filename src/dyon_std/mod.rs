@@ -200,11 +200,7 @@ pub(crate) fn explain_why(rt: &mut Runtime) -> Result<(), String> {
     Ok(())
 }
 
-// TODO: Can't be rewritten as external function because it reports error on arguments.
-pub(crate) fn explain_where(
-    rt: &mut Runtime,
-    call: &ast::Call
-) -> Result<Option<Variable>, String> {
+pub(crate) fn explain_where(rt: &mut Runtime) -> Result<(), String> {
     let wh = rt.stack.pop().expect(TINVOTS);
     let val = rt.stack.pop().expect(TINVOTS);
     let (val, wh) = match rt.resolve(&val) {
@@ -218,10 +214,10 @@ pub(crate) fn explain_where(
                 }
             }
         ),
-        x => return Err(rt.module.error(call.args[0].source_range(),
-            &rt.expected(x, "bool"), rt))
+        x => return Err(rt.expected_arg(0, x, "bool"))
     };
-    Ok(Some(Variable::F64(val, Some(wh))))
+    rt.stack.push(Variable::F64(val, Some(wh)));
+    Ok(())
 }
 
 pub(crate) fn println(rt: &mut Runtime) -> Result<(), String> {

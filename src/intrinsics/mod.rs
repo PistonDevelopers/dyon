@@ -8,40 +8,38 @@ use Variable;
 use Type;
 use dyon_std::*;
 
-const EXPLAIN_WHERE: usize = 0;
-const HEAD: usize = 1;
-const TAIL: usize = 2;
-const IS_EMPTY: usize = 3;
-const LEN: usize = 4;
-const PUSH_REF: usize = 5;
-const PUSH: usize = 6;
-const POP: usize = 7;
-const REVERSE: usize = 8;
-const CLEAR: usize = 9;
-const SWAP: usize = 10;
-const UNWRAP_ERR: usize = 11;
-const SAVE__DATA_FILE: usize = 12;
-const JSON_FROM_META_DATA: usize = 13;
-const HAS: usize = 14;
-const CHARS: usize = 15;
-const UNWRAP_OR: usize = 16;
-const TIP: usize = 17;
-const NECK: usize = 18;
-const KEYS: usize = 19;
-const ERRSTR__STRING_START_LEN_MSG: usize = 20;
-const META__SYNTAX_IN_STRING: usize = 21;
-const INSERT: usize = 22;
-const INSERT_REF: usize = 23;
-const REMOVE: usize = 24;
-const NEXT: usize = 25;
-const WAIT_NEXT: usize = 26;
+const HEAD: usize = 0;
+const TAIL: usize = 1;
+const IS_EMPTY: usize = 2;
+const LEN: usize = 3;
+const PUSH_REF: usize = 4;
+const PUSH: usize = 5;
+const POP: usize = 6;
+const REVERSE: usize = 7;
+const CLEAR: usize = 8;
+const SWAP: usize = 9;
+const UNWRAP_ERR: usize = 10;
+const SAVE__DATA_FILE: usize = 11;
+const JSON_FROM_META_DATA: usize = 12;
+const HAS: usize = 13;
+const CHARS: usize = 14;
+const UNWRAP_OR: usize = 15;
+const TIP: usize = 16;
+const NECK: usize = 17;
+const KEYS: usize = 18;
+const ERRSTR__STRING_START_LEN_MSG: usize = 19;
+const META__SYNTAX_IN_STRING: usize = 20;
+const INSERT: usize = 21;
+const INSERT_REF: usize = 22;
+const REMOVE: usize = 23;
+const NEXT: usize = 24;
+const WAIT_NEXT: usize = 25;
 
 const TABLE: &[(usize, fn(
         &mut Runtime,
         &ast::Call,
     ) -> Result<Option<Variable>, String>)]
 = &[
-    (EXPLAIN_WHERE, explain_where),
     (HEAD, head),
     (TAIL, tail),
     (IS_EMPTY, is_empty),
@@ -79,11 +77,6 @@ pub(crate) fn standard(f: &mut Prelude) {
         });
     };
 
-    f.intrinsic(Arc::new("explain_where".into()), EXPLAIN_WHERE, Dfn {
-        lts: vec![Lt::Default; 2],
-        tys: vec![Type::F64, Type::Any],
-        ret: Type::Secret(Box::new(Type::F64))
-    });
     sarg(f, "head", HEAD, Type::Link, Type::Any);
     sarg(f, "tail", TAIL, Type::Link, Type::Link);
     sarg(f, "is_empty", IS_EMPTY, Type::Link, Type::Bool);

@@ -1,4 +1,4 @@
 fn main() {
-    s := explain_why(true, "hi")
-    println(why(s))
+    s := explain_where(5, "hi")
+    println(where(s))
 }
