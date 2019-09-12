@@ -22,15 +22,14 @@ const JSON_FROM_META_DATA: usize = 10;
 const HAS: usize = 11;
 const CHARS: usize = 12;
 const UNWRAP_OR: usize = 13;
-const NECK: usize = 14;
-const KEYS: usize = 15;
-const ERRSTR__STRING_START_LEN_MSG: usize = 16;
-const META__SYNTAX_IN_STRING: usize = 17;
-const INSERT: usize = 18;
-const INSERT_REF: usize = 19;
-const REMOVE: usize = 20;
-const NEXT: usize = 21;
-const WAIT_NEXT: usize = 22;
+const KEYS: usize = 14;
+const ERRSTR__STRING_START_LEN_MSG: usize = 15;
+const META__SYNTAX_IN_STRING: usize = 16;
+const INSERT: usize = 17;
+const INSERT_REF: usize = 18;
+const REMOVE: usize = 19;
+const NEXT: usize = 20;
+const WAIT_NEXT: usize = 21;
 
 const TABLE: &[(usize, fn(
         &mut Runtime,
@@ -51,7 +50,6 @@ const TABLE: &[(usize, fn(
     (HAS, has),
     (CHARS, chars),
     (UNWRAP_OR, unwrap_or),
-    (NECK, neck),
     (KEYS, keys),
     (ERRSTR__STRING_START_LEN_MSG, errstr__string_start_len_msg),
     (META__SYNTAX_IN_STRING, meta__syntax_in_string),
@@ -113,7 +111,6 @@ pub(crate) fn standard(f: &mut Prelude) {
         tys: vec![Type::Any, Type::Any],
         ret: Type::Any
     });
-    sarg(f, "neck", NECK, Type::Link, Type::Link);
     sarg(f, "keys", KEYS, Type::Object, Type::Array(Box::new(Type::Text)));
     f.intrinsic(Arc::new("errstr__string_start_len_msg".into()),
         ERRSTR__STRING_START_LEN_MSG, Dfn {
