@@ -8,20 +8,18 @@ use Variable;
 use Type;
 use dyon_std::*;
 
-const JSON_FROM_META_DATA: usize = 0;
-const HAS: usize = 1;
-const CHARS: usize = 2;
-const KEYS: usize = 3;
-const ERRSTR__STRING_START_LEN_MSG: usize = 4;
-const NEXT: usize = 5;
-const WAIT_NEXT: usize = 6;
+const HAS: usize = 0;
+const CHARS: usize = 1;
+const KEYS: usize = 2;
+const ERRSTR__STRING_START_LEN_MSG: usize = 3;
+const NEXT: usize = 4;
+const WAIT_NEXT: usize = 5;
 
 const TABLE: &[(usize, fn(
         &mut Runtime,
         &ast::Call,
     ) -> Result<Option<Variable>, String>)]
 = &[
-    (JSON_FROM_META_DATA, json_from_meta_data),
     (HAS, has),
     (CHARS, chars),
     (KEYS, keys),
@@ -39,7 +37,6 @@ pub(crate) fn standard(f: &mut Prelude) {
         });
     };
 
-    sarg(f, "json_from_meta_data", JSON_FROM_META_DATA, Type::Array(Box::new(Type::array())), Type::Text);
     f.intrinsic(Arc::new("has".into()), HAS, Dfn {
         lts: vec![Lt::Default; 2],
         tys: vec![Type::Object, Type::Text],

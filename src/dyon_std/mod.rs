@@ -1513,11 +1513,7 @@ pub(crate) fn save__data_file(_: &mut Runtime) -> Result<(), String> {
     Err(FILE_SUPPORT_DISABLED.into())
 }
 
-// TODO: Can't be rewritten as an external function because it reports errors on arguments.
-pub(crate) fn json_from_meta_data(
-    rt: &mut Runtime,
-    call: &ast::Call
-) -> Result<Option<Variable>, String> {
+pub(crate) fn json_from_meta_data(rt: &mut Runtime) -> Result<(), String> {
     use std::error::Error;
 
     let meta_data = rt.stack.pop().expect(TINVOTS);
@@ -1529,10 +1525,10 @@ pub(crate) fn json_from_meta_data(
                         err.description())
             })?
         }
-        x => return Err(rt.module.error(call.args[0].source_range(),
-                        &rt.expected(x, "array"), rt))
+        x => return Err(rt.expected_arg(0, x, "array"))
     };
-    Ok(Some(Variable::Text(Arc::new(json))))
+    rt.stack.push(Variable::Text(Arc::new(json)));
+    Ok(())
 }
 
 // TODO: Can't be rewritten as an external function because it reports errors on arguments.
