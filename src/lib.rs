@@ -469,6 +469,7 @@ impl Module {
         m.add_str("is_err", is_err, Dfn::nl(vec![Type::result()], Bool));
         m.add_str("is_ok", is_ok, Dfn::nl(vec![Type::result()], Bool));
         m.add_str("min", min, Dfn::nl(vec![Type::Array(Box::new(F64))], F64));
+        m.add_str("max", max, Dfn::nl(vec![Type::Array(Box::new(F64))], F64));
         m
     }
 

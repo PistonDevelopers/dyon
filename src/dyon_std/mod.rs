@@ -1221,11 +1221,7 @@ pub(crate) fn min(rt: &mut Runtime) -> Result<(), String> {
     Ok(())
 }
 
-// TODO: Can't be rewritten as an external function because it reports errors on arguments.
-pub(crate) fn max(
-    rt: &mut Runtime,
-    call: &ast::Call,
-) -> Result<Option<Variable>, String> {
+pub(crate) fn max(rt: &mut Runtime) -> Result<(), String> {
     let v = rt.stack.pop().expect(TINVOTS);
     let v = match rt.resolve(&v) {
         &Variable::Array(ref arr) => {
@@ -1237,12 +1233,10 @@ pub(crate) fn max(
             }
             max
         }
-        x => {
-            return Err(rt.module.error(call.args[0].source_range(),
-                &rt.expected(x, "array"), rt));
-        }
+        x => return Err(rt.expected_arg(0, x, "array"))
     };
-    Ok(Some(Variable::f64(v)))
+    rt.stack.push(Variable::f64(v));
+    Ok(())
 }
 
 // TODO: Can't be rewritten as an external function because it reports errors on arguments.
