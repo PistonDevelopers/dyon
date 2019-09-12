@@ -499,6 +499,11 @@ impl Module {
             tys: vec![Type::array(), F64, Any],
             ret: Void
         });
+        m.add_str("pop(mut)", pop, Dfn {
+            lts: vec![Lt::Return],
+            tys: vec![Type::array()],
+            ret: Any
+        });
         m
     }
 

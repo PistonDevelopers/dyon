@@ -463,11 +463,7 @@ pub(crate) fn insert(rt: &mut Runtime) -> Result<(), String> {
     Ok(())
 }
 
-// TODO: Can't be rewritten as external function because it reports error on arguments.
-pub(crate) fn pop(
-    rt: &mut Runtime,
-    call: &ast::Call
-) -> Result<Option<Variable>, String> {
+pub(crate) fn pop(rt: &mut Runtime) -> Result<(), String> {
     let arr = rt.stack.pop().expect(TINVOTS);
     let mut v: Option<Variable> = None;
     if let Variable::Ref(ind) = arr {
@@ -478,22 +474,26 @@ pub(crate) fn pop(
             false
         };
         if !ok {
-            return Err(rt.module.error(call.args[0].source_range(),
-                &format!("{}\nExpected reference to array",
-                    rt.stack_trace()), rt));
+            return Err({
+                rt.arg_err_index.set(Some(0));
+                "Expected reference to array".into()
+            })
         }
     } else {
-        return Err(rt.module.error(call.args[0].source_range(),
-            &format!("{}\nExpected reference to array",
-                rt.stack_trace()), rt));
+        return Err({
+            rt.arg_err_index.set(Some(0));
+            "Expected reference to array".into()
+        })
     }
     let v = match v {
-        None => return Err(rt.module.error(call.args[0].source_range(),
-            &format!("{}\nExpected non-empty array",
-                rt.stack_trace()), rt)),
+        None => return Err({
+            rt.arg_err_index.set(Some(0));
+            "Expected non-empty array".into()
+        }),
         Some(val) => val
     };
-    Ok(Some(v))
+    rt.stack.push(v);
+    Ok(())
 }
 
 // TODO: Can't be rewritten as external function because it reports error on arguments.
