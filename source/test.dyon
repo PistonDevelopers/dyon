@@ -1,5 +1,5 @@
 fn main() {
-    m := load(anon(2))
+    m := unwrap(load(source: "source/functor.dyon", imports: [1]))
 }
 
 fn anon(a) -> {return clone(a)}

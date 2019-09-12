@@ -458,6 +458,8 @@ impl Module {
         m.add_str("now", now, Dfn::nl(vec![], F64));
         m.add_str("is_nan", is_nan, Dfn::nl(vec![F64], Bool));
         m.add_str("load", load, Dfn::nl(vec![Text], Type::result()));
+        m.add_str("load__source_imports", load__source_imports,
+                  Dfn::nl(vec![Type::Text, Type::array()], Type::result()));
         m
     }
 

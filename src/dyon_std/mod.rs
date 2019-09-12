@@ -863,11 +863,7 @@ pub(crate) fn load(rt: &mut Runtime) -> Result<(), String> {
     Ok(())
 }
 
-// TODO: Can't be rewritten as an external function because it uses the current module.
-pub(crate) fn load__source_imports(
-    rt: &mut Runtime,
-    call: &ast::Call
-) -> Result<Option<Variable>, String> {
+pub(crate) fn load__source_imports(rt: &mut Runtime) -> Result<(), String> {
     use load;
 
     let modules = rt.stack.pop().expect(TINVOTS);
@@ -876,7 +872,8 @@ pub(crate) fn load__source_imports(
     for f in &rt.module.ext_prelude {
         new_module.add(f.name.clone(), f.f, f.p.clone());
     }
-    match rt.resolve(&modules) {
+    let x = rt.resolve(&modules);
+    match x {
         &Variable::Array(ref array) => {
             for it in &**array {
                 match rt.resolve(it) {
@@ -896,29 +893,21 @@ pub(crate) fn load__source_imports(
                                     new_module.register(f.clone())
                                 }
                             }
-                            None => return Err(rt.module.error(
-                                call.args[1].source_range(),
-                                &format!("{}\nExpected `Module`",
-                                    rt.stack_trace()), rt))
+                            None => return Err(rt.expected_arg(1, x, "[Module]"))
                         }
                     }
-                    x => return Err(rt.module.error(
-                        call.args[1].source_range(),
-                        &rt.expected(x, "Module"), rt))
+                    x => return Err(rt.expected_arg(1, x, "[Module]"))
                 }
             }
         }
-        x => return Err(rt.module.error(call.args[1].source_range(),
-                &rt.expected(x, "[Module]"), rt))
+        x => return Err(rt.expected_arg(1, x, "[Module]"))
     }
     let v = match rt.resolve(&source) {
         &Variable::Text(ref text) => {
             if let Err(err) = load(text, &mut new_module) {
                 Variable::Result(Err(Box::new(Error {
                     message: Variable::Text(Arc::new(
-                        format!("{}\n{}\n{}", rt.stack_trace(), err,
-                            rt.module.error(call.args[0].source_range(),
-                            "When attempting to load module:", rt)))),
+                        format!("When attempting to load module:\n{}", err))),
                     trace: vec![]
                 })))
             } else {
@@ -927,10 +916,10 @@ pub(crate) fn load__source_imports(
                         Mutex::new(Arc::new(new_module)))))))
             }
         }
-        x => return Err(rt.module.error(call.args[0].source_range(),
-                &rt.expected(x, "[Module]"), rt))
+        x => return Err(rt.expected_arg(0, x, "str"))
     };
-    Ok(Some(v))
+    rt.stack.push(v);
+    Ok(())
 }
 
 // TODO: Can't be rewritten as an external function because it uses the current module.
