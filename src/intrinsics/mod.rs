@@ -24,23 +24,22 @@ const CLEAR: usize = 12;
 const SWAP: usize = 13;
 const UNWRAP: usize = 14;
 const UNWRAP_ERR: usize = 15;
-const MIN: usize = 16;
-const MAX: usize = 17;
-const SAVE__DATA_FILE: usize = 18;
-const JSON_FROM_META_DATA: usize = 19;
-const HAS: usize = 20;
-const CHARS: usize = 21;
-const UNWRAP_OR: usize = 22;
-const TIP: usize = 23;
-const NECK: usize = 24;
-const KEYS: usize = 25;
-const ERRSTR__STRING_START_LEN_MSG: usize = 26;
-const META__SYNTAX_IN_STRING: usize = 27;
-const INSERT: usize = 28;
-const INSERT_REF: usize = 29;
-const REMOVE: usize = 30;
-const NEXT: usize = 31;
-const WAIT_NEXT: usize = 32;
+const MAX: usize = 16;
+const SAVE__DATA_FILE: usize = 17;
+const JSON_FROM_META_DATA: usize = 18;
+const HAS: usize = 19;
+const CHARS: usize = 20;
+const UNWRAP_OR: usize = 21;
+const TIP: usize = 22;
+const NECK: usize = 23;
+const KEYS: usize = 24;
+const ERRSTR__STRING_START_LEN_MSG: usize = 25;
+const META__SYNTAX_IN_STRING: usize = 26;
+const INSERT: usize = 27;
+const INSERT_REF: usize = 28;
+const REMOVE: usize = 29;
+const NEXT: usize = 30;
+const WAIT_NEXT: usize = 31;
 
 const TABLE: &[(usize, fn(
         &mut Runtime,
@@ -63,7 +62,6 @@ const TABLE: &[(usize, fn(
     (SWAP, swap),
     (UNWRAP, unwrap),
     (UNWRAP_ERR, unwrap_err),
-    (MIN, min),
     (MAX, max),
     (SAVE__DATA_FILE, save__data_file),
     (JSON_FROM_META_DATA, json_from_meta_data),
@@ -139,7 +137,6 @@ pub(crate) fn standard(f: &mut Prelude) {
     });
     sarg(f, "unwrap", UNWRAP, Type::Any, Type::Any);
     sarg(f, "unwrap_err", UNWRAP_ERR, Type::Any, Type::Any);
-    sarg(f, "min", MIN, Type::Array(Box::new(Type::F64)), Type::F64);
     sarg(f, "max", MAX, Type::Array(Box::new(Type::F64)), Type::F64);
     f.intrinsic(Arc::new("save__data_file".into()), SAVE__DATA_FILE, Dfn {
         lts: vec![Lt::Default; 2],

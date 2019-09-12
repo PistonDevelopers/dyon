@@ -1,5 +1,3 @@
 fn main() {
-    println(is_ok(anon(2)))
+    println(min([2, 4]))
 }
-
-fn anon(x) -> {return clone(x)}
