@@ -302,17 +302,14 @@ pub(crate) fn neck(rt: &mut Runtime) -> Result<(), String> {
     Ok(())
 }
 
-// TODO: Can't be rewritten as external function because it reports error on arguments.
-pub(crate) fn is_empty(
-    rt: &mut Runtime,
-    call: &ast::Call
-) -> Result<Option<Variable>, String> {
+pub(crate) fn is_empty(rt: &mut Runtime) -> Result<(), String> {
     let v = rt.stack.pop().expect(TINVOTS);
-    Ok(Some(Variable::bool(match rt.resolve(&v) {
+    let v = Variable::bool(match rt.resolve(&v) {
         &Variable::Link(ref link) => link.is_empty(),
-        x => return Err(rt.module.error(call.args[0].source_range(),
-                        &rt.expected(x, "link"), rt))
-    })))
+        x => return Err(rt.expected_arg(0, x, "link"))
+    });
+    rt.stack.push(v);
+    Ok(())
 }
 
 pub(crate) fn random(rt: &mut Runtime) -> Result<(), String> {

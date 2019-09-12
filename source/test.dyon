@@ -1,4 +1,4 @@
 fn main() {
     s := link {1 2 3}
-    println(neck(s))
+    println(is_empty(s))
 }
