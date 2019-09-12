@@ -1644,28 +1644,23 @@ pub(crate) fn wait_next(rt: &mut Runtime) -> Result<(), String> {
     Ok(())
 }
 
-// TODO: Can't be rewritten as an external function because it reports errors on arguments.
-pub(crate) fn next(
-    rt: &mut Runtime,
-    call: &ast::Call
-) -> Result<Option<Variable>, String> {
+pub(crate) fn next(rt: &mut Runtime) -> Result<(), String> {
     use std::error::Error;
 
     let v = rt.stack.pop().expect(TINVOTS);
-    Ok(Some(match rt.resolve(&v) {
+    let v = match rt.resolve(&v) {
         &Variable::In(ref mutex) => {
             match mutex.lock() {
                 Ok(x) => match x.try_recv() {
                     Ok(x) => Variable::Option(Some(Box::new(x))),
                     Err(_) => Variable::Option(None),
                 },
-                Err(err) => {
-                    return Err(rt.module.error(call.source_range,
-                    &format!("Can not lock In mutex:\n{}", err.description()), rt));
-                }
+                Err(err) =>
+                    return Err(format!("Can not lock In mutex:\n{}", err.description()))
             }
         }
-        x => return Err(rt.module.error(call.args[0].source_range(),
-                        &rt.expected(x, "in"), rt))
-    }))
+        x => return Err(rt.expected_arg(0, x, "in"))
+    };
+    rt.stack.push(v);
+    Ok(())
 }

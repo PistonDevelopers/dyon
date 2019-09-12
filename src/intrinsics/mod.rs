@@ -1,29 +1,17 @@
-use std::sync::Arc;
-
 use runtime::{Flow, Runtime, Side};
 use ast;
-use prelude::{Lt, Prelude, Dfn};
+use prelude::Prelude;
 
 use Variable;
-use Type;
-use dyon_std::*;
-
-const NEXT: usize = 0;
 
 const TABLE: &[(usize, fn(
         &mut Runtime,
         &ast::Call,
     ) -> Result<Option<Variable>, String>)]
 = &[
-    (NEXT, next),
 ];
 
-pub(crate) fn standard(f: &mut Prelude) {
-    f.intrinsic(Arc::new("next".into()), NEXT, Dfn {
-        lts: vec![Lt::Default],
-        tys: vec![Type::in_ty()],
-        ret: Type::Any
-    });
+pub(crate) fn standard(_: &mut Prelude) {
 }
 
 pub(crate) fn call_standard(
