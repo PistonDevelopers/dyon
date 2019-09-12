@@ -1123,14 +1123,11 @@ pub(crate) fn call_ret(rt: &mut Runtime) -> Result<(), String> {
     Ok(())
 }
 
-// TODO: Can't be rewritten as an external function because it uses the current module.
-pub(crate) fn functions(
-    rt: &mut Runtime,
-    _call: &ast::Call,
-) -> Result<Option<Variable>, String> {
+pub(crate) fn functions(rt: &mut Runtime) -> Result<(), String> {
     // List available functions in scope.
     let v = Variable::Array(Arc::new(functions::list_functions(&rt.module)));
-    Ok(Some(v))
+    rt.stack.push(v);
+    Ok(())
 }
 
 // TODO: Can't be rewritten as an external function because it reports errors on arguments.

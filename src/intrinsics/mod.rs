@@ -22,29 +22,28 @@ const POP: usize = 10;
 const REVERSE: usize = 11;
 const CLEAR: usize = 12;
 const SWAP: usize = 13;
-const FUNCTIONS: usize = 14;
-const UNWRAP: usize = 15;
-const UNWRAP_ERR: usize = 16;
-const IS_ERR: usize = 17;
-const IS_OK: usize = 18;
-const MIN: usize = 19;
-const MAX: usize = 20;
-const SAVE__DATA_FILE: usize = 21;
-const JSON_FROM_META_DATA: usize = 22;
-const HAS: usize = 23;
-const CHARS: usize = 24;
-const UNWRAP_OR: usize = 25;
-const TIP: usize = 26;
-const NECK: usize = 27;
-const FUNCTIONS__MODULE: usize = 28;
-const KEYS: usize = 29;
-const ERRSTR__STRING_START_LEN_MSG: usize = 30;
-const META__SYNTAX_IN_STRING: usize = 31;
-const INSERT: usize = 32;
-const INSERT_REF: usize = 33;
-const REMOVE: usize = 34;
-const NEXT: usize = 35;
-const WAIT_NEXT: usize = 36;
+const UNWRAP: usize = 14;
+const UNWRAP_ERR: usize = 15;
+const IS_ERR: usize = 16;
+const IS_OK: usize = 17;
+const MIN: usize = 18;
+const MAX: usize = 19;
+const SAVE__DATA_FILE: usize = 20;
+const JSON_FROM_META_DATA: usize = 21;
+const HAS: usize = 22;
+const CHARS: usize = 23;
+const UNWRAP_OR: usize = 24;
+const TIP: usize = 25;
+const NECK: usize = 26;
+const FUNCTIONS__MODULE: usize = 27;
+const KEYS: usize = 28;
+const ERRSTR__STRING_START_LEN_MSG: usize = 29;
+const META__SYNTAX_IN_STRING: usize = 30;
+const INSERT: usize = 31;
+const INSERT_REF: usize = 32;
+const REMOVE: usize = 33;
+const NEXT: usize = 34;
+const WAIT_NEXT: usize = 35;
 
 const TABLE: &[(usize, fn(
         &mut Runtime,
@@ -65,7 +64,6 @@ const TABLE: &[(usize, fn(
     (REVERSE, reverse),
     (CLEAR, clear),
     (SWAP, swap),
-    (FUNCTIONS, functions),
     (UNWRAP, unwrap),
     (UNWRAP_ERR, unwrap_err),
     (IS_ERR, is_err),
@@ -144,11 +142,6 @@ pub(crate) fn standard(f: &mut Prelude) {
         lts: vec![Lt::Default; 3],
         tys: vec![Type::array(), Type::F64, Type::F64],
         ret: Type::Void
-    });
-    f.intrinsic(Arc::new("functions".into()), FUNCTIONS, Dfn {
-        lts: vec![],
-        tys: vec![],
-        ret: Type::Any
     });
     sarg(f, "unwrap", UNWRAP, Type::Any, Type::Any);
     sarg(f, "unwrap_err", UNWRAP_ERR, Type::Any, Type::Any);

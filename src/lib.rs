@@ -432,29 +432,29 @@ impl Module {
         m.add_str("ok", ok, Dfn::nl(vec![Any], Type::result()));
         m.add_str("err", err, Dfn::nl(vec![Any], Type::result()));
         m.add_str("dir__angle", dir__angle, Dfn::nl(vec![F64], Vec4));
-        m.add_str("load__meta_file", load__meta_file, Dfn::nl(vec![Type::Text; 2],
+        m.add_str("load__meta_file", load__meta_file, Dfn::nl(vec![Text; 2],
             Type::Result(Box::new(Type::Array(Box::new(Type::array()))))
         ));
-        m.add_str("load__meta_url", load__meta_url, Dfn::nl(vec![Type::Text; 2],
+        m.add_str("load__meta_url", load__meta_url, Dfn::nl(vec![Text; 2],
             Type::Result(Box::new(Type::Array(Box::new(Type::array()))))
         ));
         m.add_str("syntax__in_string", syntax__in_string,
-                  Dfn::nl(vec![Type::Text; 2], Type::Result(Box::new(Type::Any))));
+                  Dfn::nl(vec![Type::Text; 2], Type::Result(Box::new(Any))));
         m.add_str("download__url_file", download__url_file,
-                  Dfn::nl(vec![Type::Text; 2], Type::Result(Box::new(Type::Text))));
+                  Dfn::nl(vec![Type::Text; 2], Type::Result(Box::new(Text))));
         m.add_str("save__string_file", save__string_file,
-                  Dfn::nl(vec![Type::Text; 2], Type::Result(Box::new(Type::Text))));
+                  Dfn::nl(vec![Type::Text; 2], Type::Result(Box::new(Text))));
         m.add_str("load_string__file", load_string__file,
-                  Dfn::nl(vec![Text], Type::Result(Box::new(Type::Text))));
+                  Dfn::nl(vec![Text], Type::Result(Box::new(Text))));
         m.add_str("load_string__url", load_string__url,
-                  Dfn::nl(vec![Text], Type::Result(Box::new(Type::Text))));
+                  Dfn::nl(vec![Text], Type::Result(Box::new(Text))));
         m.add_str("join__thread", join__thread,
-                  Dfn::nl(vec![Type::thread()], Type::Result(Box::new(Type::Any))));
+                  Dfn::nl(vec![Type::thread()], Type::Result(Box::new(Any))));
         m.add_str("load_data__file", load_data__file,
-                  Dfn::nl(vec![Text], Type::Result(Box::new(Type::Any))));
+                  Dfn::nl(vec![Text], Type::Result(Box::new(Any))));
         m.add_str("load_data__string", load_data__string,
-                  Dfn::nl(vec![Text], Type::Result(Box::new(Type::Any))));
-        m.add_str("args_os", args_os, Dfn::nl(vec![], Type::Array(Box::new(Type::Text))));
+                  Dfn::nl(vec![Text], Type::Result(Box::new(Any))));
+        m.add_str("args_os", args_os, Dfn::nl(vec![], Type::Array(Box::new(Text))));
         m.add_str("now", now, Dfn::nl(vec![], F64));
         m.add_str("is_nan", is_nan, Dfn::nl(vec![F64], Bool));
         m.add_str("load", load, Dfn::nl(vec![Text], Type::result()));
@@ -464,6 +464,7 @@ impl Module {
                   Dfn::nl(vec![Text, Text, Type::array()], Type::result()));
         m.add_str("call", _call, Dfn::nl(vec![Any, Text, Type::array()], Void));
         m.add_str("call_ret", call_ret, Dfn::nl(vec![Any, Text, Type::array()], Any));
+        m.add_str("functions", functions, Dfn::nl(vec![], Any));
         m
     }
 
