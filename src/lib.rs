@@ -511,6 +511,11 @@ impl Module {
         });
         m.add_str("reverse(mut)", reverse, Dfn::nl(vec![Type::array()], Void));
         m.add_str("clear(mut)", clear, Dfn::nl(vec![Type::array()], Void));
+        m.add_str("swap(mut,_,_)", swap, Dfn {
+            lts: vec![Lt::Default; 3],
+            tys: vec![Type::array(), F64, F64],
+            ret: Void
+        });
         m
     }
 

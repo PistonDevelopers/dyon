@@ -575,22 +575,16 @@ pub(crate) fn clear(rt: &mut Runtime) -> Result<(), String> {
     Ok(())
 }
 
-// TODO: Can't be rewritten as external function because it reports error on arguments.
-pub(crate) fn swap(
-    rt: &mut Runtime,
-    call: &ast::Call
-) -> Result<Option<Variable>, String> {
+pub(crate) fn swap(rt: &mut Runtime) -> Result<(), String> {
     let j = rt.stack.pop().expect(TINVOTS);
     let i = rt.stack.pop().expect(TINVOTS);
     let j = match rt.resolve(&j) {
         &Variable::F64(val, _) => val,
-        x => return Err(rt.module.error(call.args[2].source_range(),
-            &rt.expected(x, "number"), rt))
+        x => return Err(rt.expected_arg(2, x, "number"))
     };
     let i = match rt.resolve(&i) {
         &Variable::F64(val, _) => val,
-        x => return Err(rt.module.error(call.args[1].source_range(),
-            &rt.expected(x, "number"), rt))
+        x => return Err(rt.expected_arg(1, x, "number"))
     };
     let v = rt.stack.pop().expect(TINVOTS);
     if let Variable::Ref(ind) = v {
@@ -601,16 +595,18 @@ pub(crate) fn swap(
             false
         };
         if !ok {
-            return Err(rt.module.error(call.args[0].source_range(),
-                &format!("{}\nExpected reference to array",
-                    rt.stack_trace()), rt));
+            return Err({
+                rt.arg_err_index.set(Some(0));
+                "Expected reference to array".into()
+            })
         }
     } else {
-        return Err(rt.module.error(call.args[0].source_range(),
-            &format!("{}\nExpected reference to array",
-                rt.stack_trace()), rt));
+        return Err({
+            rt.arg_err_index.set(Some(0));
+            "Expected reference to array".into()
+        })
     }
-    Ok(None)
+    Ok(())
 }
 
 pub(crate) fn read_line(rt: &mut Runtime) -> Result<(), String> {
