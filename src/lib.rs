@@ -479,6 +479,7 @@ impl Module {
                                                           Type::Secret(Box::new(F64))));
         m.add_str("head", head, Dfn::nl(vec![Link], Any));
         m.add_str("tip", tip, Dfn::nl(vec![Link], Type::Option(Box::new(Any))));
+        m.add_str("tail", tail, Dfn::nl(vec![Link], Link));
         m
     }
 

@@ -8,37 +8,35 @@ use Variable;
 use Type;
 use dyon_std::*;
 
-const TAIL: usize = 0;
-const IS_EMPTY: usize = 1;
-const LEN: usize = 2;
-const PUSH_REF: usize = 3;
-const PUSH: usize = 4;
-const POP: usize = 5;
-const REVERSE: usize = 6;
-const CLEAR: usize = 7;
-const SWAP: usize = 8;
-const UNWRAP_ERR: usize = 9;
-const SAVE__DATA_FILE: usize = 10;
-const JSON_FROM_META_DATA: usize = 11;
-const HAS: usize = 12;
-const CHARS: usize = 13;
-const UNWRAP_OR: usize = 14;
-const NECK: usize = 15;
-const KEYS: usize = 16;
-const ERRSTR__STRING_START_LEN_MSG: usize = 17;
-const META__SYNTAX_IN_STRING: usize = 18;
-const INSERT: usize = 19;
-const INSERT_REF: usize = 20;
-const REMOVE: usize = 21;
-const NEXT: usize = 22;
-const WAIT_NEXT: usize = 23;
+const IS_EMPTY: usize = 0;
+const LEN: usize = 1;
+const PUSH_REF: usize = 2;
+const PUSH: usize = 3;
+const POP: usize = 4;
+const REVERSE: usize = 5;
+const CLEAR: usize = 6;
+const SWAP: usize = 7;
+const UNWRAP_ERR: usize = 8;
+const SAVE__DATA_FILE: usize = 9;
+const JSON_FROM_META_DATA: usize = 10;
+const HAS: usize = 11;
+const CHARS: usize = 12;
+const UNWRAP_OR: usize = 13;
+const NECK: usize = 14;
+const KEYS: usize = 15;
+const ERRSTR__STRING_START_LEN_MSG: usize = 16;
+const META__SYNTAX_IN_STRING: usize = 17;
+const INSERT: usize = 18;
+const INSERT_REF: usize = 19;
+const REMOVE: usize = 20;
+const NEXT: usize = 21;
+const WAIT_NEXT: usize = 22;
 
 const TABLE: &[(usize, fn(
         &mut Runtime,
         &ast::Call,
     ) -> Result<Option<Variable>, String>)]
 = &[
-    (TAIL, tail),
     (IS_EMPTY, is_empty),
     (LEN, len),
     (PUSH_REF, push_ref),
@@ -73,7 +71,6 @@ pub(crate) fn standard(f: &mut Prelude) {
         });
     };
 
-    sarg(f, "tail", TAIL, Type::Link, Type::Link);
     sarg(f, "is_empty", IS_EMPTY, Type::Link, Type::Bool);
     sarg(f, "len", LEN, Type::array(), Type::F64);
     f.intrinsic(Arc::new("push_ref(mut,_)".into()), PUSH_REF, Dfn {

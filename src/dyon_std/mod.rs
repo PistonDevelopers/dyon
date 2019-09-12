@@ -282,18 +282,14 @@ pub(crate) fn tip(rt: &mut Runtime) -> Result<(), String> {
     Ok(())
 }
 
-// TODO: Can't be rewritten as external function because it reports error on arguments.
-pub(crate) fn tail(
-    rt: &mut Runtime,
-    call: &ast::Call
-) -> Result<Option<Variable>, String> {
+pub(crate) fn tail(rt: &mut Runtime) -> Result<(), String> {
     let v = rt.stack.pop().expect(TINVOTS);
     let v = Variable::Link(Box::new(match rt.resolve(&v) {
         &Variable::Link(ref link) => link.tail(),
-        x => return Err(rt.module.error(call.args[0].source_range(),
-                        &rt.expected(x, "link"), rt))
+        x => return Err(rt.expected_arg(0, x, "link"))
     }));
-    Ok(Some(v))
+    rt.stack.push(v);
+    Ok(())
 }
 
 // TODO: Can't be rewritten as external function because it reports error on arguments.
