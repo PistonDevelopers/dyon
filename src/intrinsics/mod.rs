@@ -22,34 +22,33 @@ const POP: usize = 10;
 const REVERSE: usize = 11;
 const CLEAR: usize = 12;
 const SWAP: usize = 13;
-const LOAD: usize = 14;
-const LOAD__SOURCE_IMPORTS: usize = 15;
-const CALL: usize = 16;
-const CALL_RET: usize = 17;
-const FUNCTIONS: usize = 18;
-const UNWRAP: usize = 19;
-const UNWRAP_ERR: usize = 20;
-const IS_ERR: usize = 21;
-const IS_OK: usize = 22;
-const MIN: usize = 23;
-const MAX: usize = 24;
-const SAVE__DATA_FILE: usize = 25;
-const JSON_FROM_META_DATA: usize = 26;
-const HAS: usize = 27;
-const CHARS: usize = 28;
-const UNWRAP_OR: usize = 29;
-const TIP: usize = 30;
-const NECK: usize = 31;
-const FUNCTIONS__MODULE: usize = 32;
-const KEYS: usize = 33;
-const ERRSTR__STRING_START_LEN_MSG: usize = 34;
-const META__SYNTAX_IN_STRING: usize = 35;
-const MODULE__IN_STRING_IMPORTS: usize = 36;
-const INSERT: usize = 37;
-const INSERT_REF: usize = 38;
-const REMOVE: usize = 39;
-const NEXT: usize = 40;
-const WAIT_NEXT: usize = 41;
+const LOAD__SOURCE_IMPORTS: usize = 14;
+const CALL: usize = 15;
+const CALL_RET: usize = 16;
+const FUNCTIONS: usize = 17;
+const UNWRAP: usize = 18;
+const UNWRAP_ERR: usize = 19;
+const IS_ERR: usize = 20;
+const IS_OK: usize = 21;
+const MIN: usize = 22;
+const MAX: usize = 23;
+const SAVE__DATA_FILE: usize = 24;
+const JSON_FROM_META_DATA: usize = 25;
+const HAS: usize = 26;
+const CHARS: usize = 27;
+const UNWRAP_OR: usize = 28;
+const TIP: usize = 29;
+const NECK: usize = 30;
+const FUNCTIONS__MODULE: usize = 31;
+const KEYS: usize = 32;
+const ERRSTR__STRING_START_LEN_MSG: usize = 33;
+const META__SYNTAX_IN_STRING: usize = 34;
+const MODULE__IN_STRING_IMPORTS: usize = 35;
+const INSERT: usize = 36;
+const INSERT_REF: usize = 37;
+const REMOVE: usize = 38;
+const NEXT: usize = 39;
+const WAIT_NEXT: usize = 40;
 
 const TABLE: &[(usize, fn(
         &mut Runtime,
@@ -70,7 +69,6 @@ const TABLE: &[(usize, fn(
     (REVERSE, reverse),
     (CLEAR, clear),
     (SWAP, swap),
-    (LOAD, load),
     (LOAD__SOURCE_IMPORTS, load__source_imports),
     (CALL, _call),
     (CALL_RET, call_ret),
@@ -155,7 +153,6 @@ pub(crate) fn standard(f: &mut Prelude) {
         tys: vec![Type::array(), Type::F64, Type::F64],
         ret: Type::Void
     });
-    sarg(f, "load", LOAD, Type::Text, Type::result());
     f.intrinsic(Arc::new("load__source_imports".into()), LOAD__SOURCE_IMPORTS, Dfn {
         lts: vec![Lt::Default; 2],
         tys: vec![Type::Text, Type::array()],

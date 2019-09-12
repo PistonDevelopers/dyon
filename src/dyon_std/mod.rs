@@ -835,11 +835,7 @@ pub(crate) fn backtrace(rt: &mut Runtime) -> Result<(), String> {
     Ok(())
 }
 
-// TODO: Can't be rewritten as an external function because it uses the current module.
-pub(crate) fn load(
-    rt: &mut Runtime,
-    call: &ast::Call
-) -> Result<Option<Variable>, String> {
+pub(crate) fn load(rt: &mut Runtime) -> Result<(), String> {
     use load;
 
     let v = rt.stack.pop().expect(TINVOTS);
@@ -851,10 +847,7 @@ pub(crate) fn load(
             }
             if let Err(err) = load(text, &mut m) {
                 Variable::Result(Err(Box::new(Error {
-                    message: Variable::Text(Arc::new(
-                        format!("{}\n{}\n{}", rt.stack_trace(), err,
-                            rt.module.error(call.args[0].source_range(),
-                            "When attempting to load module:", rt)))),
+                    message: Variable::Text(Arc::new(format!("When attempting to load module:\n{}", err))),
                     trace: vec![]
                 })))
             } else {
@@ -862,10 +855,12 @@ pub(crate) fn load(
                     Variable::RustObject(Arc::new(Mutex::new(Arc::new(m)))))))
             }
         }
-        x => return Err(rt.module.error(call.args[0].source_range(),
-                &rt.expected(x, "string"), rt))
+        x => {
+            return Err(rt.expected_arg(0, x, "string"));
+        }
     };
-    Ok(Some(v))
+    rt.stack.push(v);
+    Ok(())
 }
 
 // TODO: Can't be rewritten as an external function because it uses the current module.
