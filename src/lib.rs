@@ -432,32 +432,102 @@ impl Module {
         m.add_str("ok", ok, Dfn::nl(vec![Any], Type::result()));
         m.add_str("err", err, Dfn::nl(vec![Any], Type::result()));
         m.add_str("dir__angle", dir__angle, Dfn::nl(vec![F64], Vec4));
-        m.add_str("load__meta_file", load__meta_file, Dfn::nl(vec![Type::Text; 2],
+        m.add_str("load__meta_file", load__meta_file, Dfn::nl(vec![Text; 2],
             Type::Result(Box::new(Type::Array(Box::new(Type::array()))))
         ));
-        m.add_str("load__meta_url", load__meta_url, Dfn::nl(vec![Type::Text; 2],
+        m.add_str("load__meta_url", load__meta_url, Dfn::nl(vec![Text; 2],
             Type::Result(Box::new(Type::Array(Box::new(Type::array()))))
         ));
         m.add_str("syntax__in_string", syntax__in_string,
-                  Dfn::nl(vec![Type::Text; 2], Type::Result(Box::new(Type::Any))));
+                  Dfn::nl(vec![Type::Text; 2], Type::Result(Box::new(Any))));
         m.add_str("download__url_file", download__url_file,
-                  Dfn::nl(vec![Type::Text; 2], Type::Result(Box::new(Type::Text))));
+                  Dfn::nl(vec![Type::Text; 2], Type::Result(Box::new(Text))));
         m.add_str("save__string_file", save__string_file,
-                  Dfn::nl(vec![Type::Text; 2], Type::Result(Box::new(Type::Text))));
+                  Dfn::nl(vec![Type::Text; 2], Type::Result(Box::new(Text))));
         m.add_str("load_string__file", load_string__file,
-                  Dfn::nl(vec![Text], Type::Result(Box::new(Type::Text))));
+                  Dfn::nl(vec![Text], Type::Result(Box::new(Text))));
         m.add_str("load_string__url", load_string__url,
-                  Dfn::nl(vec![Text], Type::Result(Box::new(Type::Text))));
+                  Dfn::nl(vec![Text], Type::Result(Box::new(Text))));
         m.add_str("join__thread", join__thread,
-                  Dfn::nl(vec![Type::thread()], Type::Result(Box::new(Type::Any))));
+                  Dfn::nl(vec![Type::thread()], Type::Result(Box::new(Any))));
         m.add_str("load_data__file", load_data__file,
-                  Dfn::nl(vec![Text], Type::Result(Box::new(Type::Any))));
+                  Dfn::nl(vec![Text], Type::Result(Box::new(Any))));
         m.add_str("load_data__string", load_data__string,
-                  Dfn::nl(vec![Text], Type::Result(Box::new(Type::Any))));
-        m.add_str("args_os", args_os, Dfn::nl(vec![], Type::Array(Box::new(Type::Text))));
+                  Dfn::nl(vec![Text], Type::Result(Box::new(Any))));
+        m.add_str("args_os", args_os, Dfn::nl(vec![], Type::Array(Box::new(Text))));
         m.add_str("now", now, Dfn::nl(vec![], F64));
         m.add_str("is_nan", is_nan, Dfn::nl(vec![F64], Bool));
         m.add_str("load", load, Dfn::nl(vec![Text], Type::result()));
+        m.add_str("load__source_imports", load__source_imports,
+                  Dfn::nl(vec![Text, Type::array()], Type::result()));
+        m.add_str("module__in_string_imports", module__in_string_imports,
+                  Dfn::nl(vec![Text, Text, Type::array()], Type::result()));
+        m.add_str("call", _call, Dfn::nl(vec![Any, Text, Type::array()], Void));
+        m.add_str("call_ret", call_ret, Dfn::nl(vec![Any, Text, Type::array()], Any));
+        m.add_str("functions", functions, Dfn::nl(vec![], Any));
+        m.add_str("functions__module", functions__module, Dfn::nl(vec![Any], Any));
+        m.add_str("is_err", is_err, Dfn::nl(vec![Type::result()], Bool));
+        m.add_str("is_ok", is_ok, Dfn::nl(vec![Type::result()], Bool));
+        m.add_str("min", min, Dfn::nl(vec![Type::Array(Box::new(F64))], F64));
+        m.add_str("max", max, Dfn::nl(vec![Type::Array(Box::new(F64))], F64));
+        m.add_str("unwrap", unwrap, Dfn::nl(vec![Any], Any));
+        m.add_str("why", why, Dfn::nl(vec![Type::Secret(Box::new(Bool))], Type::array()));
+        m.add_str("where", _where, Dfn::nl(vec![Type::Secret(Box::new(F64))], Type::array()));
+        m.add_str("explain_why", explain_why, Dfn::nl(vec![Bool, Any],
+                                                      Type::Secret(Box::new(Bool))));
+        m.add_str("explain_where", explain_where, Dfn::nl(vec![F64, Any],
+                                                          Type::Secret(Box::new(F64))));
+        m.add_str("head", head, Dfn::nl(vec![Link], Any));
+        m.add_str("tip", tip, Dfn::nl(vec![Link], Type::Option(Box::new(Any))));
+        m.add_str("tail", tail, Dfn::nl(vec![Link], Link));
+        m.add_str("neck", neck, Dfn::nl(vec![Link], Link));
+        m.add_str("is_empty", is_empty, Dfn::nl(vec![Link], Bool));
+        m.add_str("len", len, Dfn::nl(vec![Type::array()], F64));
+        m.add_str("push_ref(mut,_)", push_ref, Dfn {
+            lts: vec![Lt::Default, Lt::Arg(0)],
+            tys: vec![Type::array(), Any],
+            ret: Void
+        });
+        m.add_str("insert_ref(mut,_,_)", insert_ref, Dfn {
+            lts: vec![Lt::Default, Lt::Default, Lt::Arg(0)],
+            tys: vec![Type::array(), F64, Any],
+            ret: Void
+        });
+        m.add_str("push(mut,_)", push, Dfn::nl(vec![Type::array(), Any], Void));
+        m.add_str("insert(mut,_,_)", insert, Dfn {
+            lts: vec![Lt::Default; 3],
+            tys: vec![Type::array(), F64, Any],
+            ret: Void
+        });
+        m.add_str("pop(mut)", pop, Dfn {
+            lts: vec![Lt::Return],
+            tys: vec![Type::array()],
+            ret: Any
+        });
+        m.add_str("remove(mut,_)", remove, Dfn {
+            lts: vec![Lt::Return, Lt::Default],
+            tys: vec![Type::array(), F64],
+            ret: Any
+        });
+        m.add_str("reverse(mut)", reverse, Dfn::nl(vec![Type::array()], Void));
+        m.add_str("clear(mut)", clear, Dfn::nl(vec![Type::array()], Void));
+        m.add_str("swap(mut,_,_)", swap, Dfn::nl(vec![Type::array(), F64, F64], Void));
+        m.add_str("unwrap_or", unwrap_or, Dfn::nl(vec![Any; 2], Any));
+        m.add_str("unwrap_err", unwrap_err, Dfn::nl(vec![Any], Any));
+        m.add_str("meta__syntax_in_string",
+            meta__syntax_in_string, Dfn::nl(vec![Any, Text, Text],
+                Type::Result(Box::new(Type::Array(Box::new(Type::array()))))));
+        m.add_str("save__data_file", save__data_file, Dfn::nl(vec![Any, Text], Text));
+        m.add_str("json_from_meta_data", json_from_meta_data,
+            Dfn::nl(vec![Type::Array(Box::new(Type::array()))], Text));
+        m.add_str("errstr__string_start_len_msg",
+            errstr__string_start_len_msg, Dfn::nl(vec![Text, F64, F64, Text], Text));
+        m.add_str("has", has, Dfn::nl(vec![Object, Text], Bool));
+        m.add_str("keys", keys, Dfn::nl(vec![Object], Type::Array(Box::new(Text))));
+        m.add_str("chars", chars, Dfn::nl(vec![Text], Type::Array(Box::new(Text))));
+        m.add_str("wait_next", wait_next, Dfn::nl(vec![Type::in_ty()], Any));
+        m.add_str("next", next, Dfn::nl(vec![Type::in_ty()], Type::option()));
+
         m
     }
 

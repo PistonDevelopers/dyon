@@ -1,5 +1,3 @@
 fn main() {
-    m := load(anon(2))
+    println(chars("hello"))
 }
-
-fn anon(a) -> {return clone(a)}
