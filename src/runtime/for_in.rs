@@ -91,7 +91,7 @@ impl Runtime {
         let iter_val = iter_val!(iter, self, for_in_expr);
 
         // Initialize counter.
-        self.local_stack.push((for_in_expr.name.clone(), self.stack.len()));
+        self.core.local_stack.push((for_in_expr.name.clone(), self.stack.len()));
         self.stack.push(iter_val);
 
         let st = self.stack.len();
@@ -129,7 +129,7 @@ impl Runtime {
         let mut sum = 0.0;
 
         // Initialize counter.
-        self.local_stack.push((for_in_expr.name.clone(), self.stack.len()));
+        self.core.local_stack.push((for_in_expr.name.clone(), self.stack.len()));
         self.stack.push(iter_val);
 
         let st = self.stack.len();
@@ -174,7 +174,7 @@ impl Runtime {
         let mut prod = 1.0;
 
         // Initialize counter.
-        self.local_stack.push((for_in_expr.name.clone(), self.stack.len()));
+        self.core.local_stack.push((for_in_expr.name.clone(), self.stack.len()));
         self.stack.push(iter_val);
 
         let st = self.stack.len();
@@ -219,7 +219,7 @@ impl Runtime {
         let mut min = ::std::f64::NAN;
         let mut sec = None;
         // Initialize counter.
-        self.local_stack.push((for_in_expr.name.clone(), self.stack.len()));
+        self.core.local_stack.push((for_in_expr.name.clone(), self.stack.len()));
         self.stack.push(iter_val);
         let st = self.stack.len();
         let lc = self.local_stack.len();
@@ -280,7 +280,7 @@ impl Runtime {
         let mut max = ::std::f64::NAN;
         let mut sec = None;
         // Initialize counter.
-        self.local_stack.push((for_in_expr.name.clone(), self.stack.len()));
+        self.core.local_stack.push((for_in_expr.name.clone(), self.stack.len()));
         self.stack.push(iter_val);
         let st = self.stack.len();
         let lc = self.local_stack.len();
@@ -341,7 +341,7 @@ impl Runtime {
         let mut any = false;
         let mut sec = None;
         // Initialize counter.
-        self.local_stack.push((for_in_expr.name.clone(), self.stack.len()));
+        self.core.local_stack.push((for_in_expr.name.clone(), self.stack.len()));
         self.stack.push(iter_val);
 
         let st = self.stack.len();
@@ -404,7 +404,7 @@ impl Runtime {
         let mut all = true;
         let mut sec = None;
         // Initialize counter.
-        self.local_stack.push((for_in_expr.name.clone(), self.stack.len()));
+        self.core.local_stack.push((for_in_expr.name.clone(), self.stack.len()));
         self.stack.push(iter_val);
 
         let st = self.stack.len();
@@ -472,7 +472,7 @@ impl Runtime {
             let iter_val = iter_val!(iter, rt, for_in_expr);
 
             // Initialize counter.
-            rt.local_stack.push((for_in_expr.name.clone(), rt.stack.len()));
+            rt.core.local_stack.push((for_in_expr.name.clone(), rt.stack.len()));
             rt.stack.push(iter_val);
 
             let st = rt.stack.len();
@@ -598,7 +598,7 @@ impl Runtime {
         let iter_val = iter_val!(iter, self, for_in_expr);
 
         // Initialize counter.
-        self.local_stack.push((for_in_expr.name.clone(), self.stack.len()));
+        self.core.local_stack.push((for_in_expr.name.clone(), self.stack.len()));
         self.stack.push(iter_val);
 
         let st = self.stack.len();

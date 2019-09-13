@@ -81,7 +81,11 @@ macro_rules! dyon_fn {
 macro_rules! dyon_obj {
     ($t:tt { $($f:tt),* }) => {
         dyon_macro_items!{
-            impl $crate::embed::PopVariable for $t {
+            impl $crate::embed::VariableType<$crate::Runtime> for $t {
+                type Variable = $crate::Variable;
+            }
+
+            impl $crate::embed::PopVariable<$crate::Runtime> for $t {
                 fn pop_var(rt: &$crate::Runtime, var: &$crate::Variable) -> Result<Self, String> {
                     use dyon::embed::obj_field;
                     let var = rt.resolve(var);
@@ -97,7 +101,7 @@ macro_rules! dyon_obj {
                 }
             }
 
-            impl $crate::embed::PushVariable for $t {
+            impl $crate::embed::PushVariable<$crate::Runtime> for $t {
                 fn push_var(&self) -> $crate::Variable {
                     use std::sync::Arc;
                     use std::collections::HashMap;

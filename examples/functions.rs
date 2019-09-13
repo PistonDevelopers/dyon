@@ -2,7 +2,10 @@
 extern crate dyon;
 
 use std::sync::Arc;
-use dyon::{RustObject, Vec4, Mat4};
+use dyon::{
+    RustObject, Vec4, Mat4, RuntimeExt,
+    RuntimeErrorHandling, RuntimeResolveReference
+};
 
 fn main() {
     use dyon::{error, Runtime};

@@ -2,7 +2,11 @@
 extern crate dyon;
 
 use std::sync::Arc;
-use dyon::{load_str, error, Call, Module, Dfn, Lt, Type, Runtime, RustObject};
+use dyon::{
+    load_str, error, Call, Module,
+    Dfn, Lt, Type, Runtime, RuntimeExt, RustObject,
+    RuntimeResolveReference, RuntimeErrorHandling
+};
 
 fn main() {
     let mut module = Module::new();

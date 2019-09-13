@@ -3,9 +3,11 @@ Evaluate grab expressions and return closure where grab expressions
 are constants.
 */
 
+use dyon_core::{Flow, Side, RuntimeEval};
+
 use std::sync::Arc;
 use ast;
-use runtime::{Flow, Runtime, Side};
+use runtime::Runtime;
 use Variable;
 
 #[derive(Debug)]

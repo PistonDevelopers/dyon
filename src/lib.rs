@@ -19,6 +19,8 @@ extern crate reqwest;
 #[macro_use]
 extern crate lazy_static;
 extern crate vecmath;
+#[macro_use]
+extern crate dyon_core;
 
 use std::any::Any;
 use std::fmt;
@@ -36,8 +38,6 @@ pub mod embed;
 mod ty;
 mod link;
 pub mod macros;
-mod vec4;
-mod mat4;
 mod write;
 
 mod grab;
@@ -47,11 +47,14 @@ pub use runtime::Runtime;
 pub use prelude::{Lt, Prelude, Dfn};
 pub use ty::Type;
 pub use link::Link;
-pub use vec4::Vec4;
-pub use mat4::Mat4;
-
-/// A common error message when there is no value on the stack.
-pub const TINVOTS: &str = "There is no value on the stack";
+pub use dyon_core::{
+    Vec4,
+    Mat4,
+    RuntimeExt,
+    RuntimeErrorHandling,
+    RuntimeResolveReference,
+    TINVOTS
+};
 
 /// Type alias for Dyon arrays.
 pub type Array = Arc<Vec<Variable>>;
@@ -68,6 +71,11 @@ pub struct Error {
     /// Extra information to help debug error.
     /// Stores error messages for all `?` operators.
     pub trace: Vec<String>,
+}
+
+impl dyon_core::ErrorCore for Error {
+    type Variable = Variable;
+    fn message(&self) -> &Variable {&self.message}
 }
 
 /// Stores a thread handle.
@@ -123,9 +131,7 @@ impl fmt::Debug for Thread {
     }
 }
 
-/// Prevents unsafe references from being accessed outside library.
-#[derive(Debug, Clone)]
-pub struct UnsafeRef(*mut Variable);
+unsafe_ref!{Variable}
 
 /// Stores closure environment.
 #[derive(Clone)]
@@ -187,6 +193,64 @@ pub enum Variable {
 /// The lack of `UnsafeRef` variant when sending across threads is guaranteed at language level.
 /// The interior of `UnsafeRef` can not be accessed outside this library.
 unsafe impl Send for Variable {}
+
+impl dyon_core::VariableCore for Variable {
+    type Error = Error;
+    type InnerOption = Box<Variable>;
+    type InnerOk = Box<Variable>;
+    type InnerErr = Box<Error>;
+    type RustObject = RustObject;
+    fn error(self) -> Error {Error { message: self, trace: vec![] }}
+    fn f64(val: f64) -> Variable {Self::f64(val)}
+    fn bool(val: bool) -> Variable {Self::bool(val)}
+    fn str(val: Arc<String>) -> Variable {Self::Text(val)}
+    fn rust_object(val: RustObject) -> Variable {Self::RustObject(val)}
+    fn typeof_var(&self) -> Arc<String> {self.typeof_var()}
+    fn deep_clone(&self, stack: &[Variable]) -> Variable {self.deep_clone(stack)}
+    fn array(arr: Vec<Variable>) -> Variable {Variable::Array(Arc::new(arr))}
+    fn result(res: Result<Variable, Error>) -> Variable {
+        Variable::Result(res.map(|v| Box::new(v)).map_err(|err| Box::new(err)))
+    }
+    fn option(val: Option<Variable>) -> Variable {
+        Variable::Option(val.map(|v| Box::new(v)))
+    }
+    fn mat4(val: [[f32; 4]; 4]) -> Variable {
+        Variable::Mat4(Box::new(val))
+    }
+    fn vec4(val: [f32; 4]) -> Variable {
+        Variable::Vec4(val)
+    }
+    fn get_bool(&self) -> Option<bool> {
+        if let Variable::Bool(v, _) = *self {Some(v)} else {None}
+    }
+    fn get_f64(&self) -> Option<f64> {
+        if let Variable::F64(v, _) = *self {Some(v)} else {None}
+    }
+    fn get_str(&self) -> Option<&Arc<String>> {
+        if let Variable::Text(ref s) = *self {Some(s)} else {None}
+    }
+    fn get_array(&self) -> Option<&Vec<Variable>> {
+        if let Variable::Array(ref arr) = *self {Some(arr)} else {None}
+    }
+    fn get_option(&self) -> Option<&Option<Box<Variable>>> {
+        if let Variable::Option(ref opt) = *self {Some(opt)} else {None}
+    }
+    fn get_result(&self) -> Option<&Result<Box<Variable>, Box<Error>>> {
+        if let Variable::Result(ref res) = *self {Some(res)} else {None}
+    }
+    fn get_rust_object(&self) -> Option<&RustObject> {
+        if let Variable::RustObject(ref res) = *self {Some(res)} else {None}
+    }
+    fn get_vec4(&self) -> Option<&[f32; 4]> {
+        if let Variable::Vec4(ref v) = *self {Some(v)} else {None}
+    }
+    fn get_mat4(&self) -> Option<&[[f32; 4]; 4]> {
+        if let Variable::Mat4(ref m) = *self {Some(m)} else {None}
+    }
+    fn get_ref(&self) -> Option<usize> {
+        if let Variable::Ref(v) = *self {Some(v)} else {None}
+    }
+}
 
 impl Variable {
     /// Creates a variable of type `f64`.
@@ -286,52 +350,9 @@ impl PartialEq for Variable {
     }
 }
 
-/// Refers to a function.
-#[derive(Clone, Copy, Debug)]
-pub enum FnIndex {
-    /// No function.
-    None,
-    /// Relative to function you call from.
-    Loaded(isize),
-    /// External function with no return value.
-    ExternalVoid(FnExternalRef),
-    /// Extern function with return value.
-    ExternalReturn(FnExternalRef),
-}
-
-/// Used to store direct reference to external function.
-#[derive(Copy)]
-pub struct FnExternalRef(pub fn(&mut Runtime) -> Result<(), String>);
-
-impl Clone for FnExternalRef {
-    fn clone(&self) -> FnExternalRef {
-        *self
-    }
-}
-
-impl fmt::Debug for FnExternalRef {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "FnExternalRef")
-    }
-}
-
-struct FnExternal {
-    namespace: Arc<Vec<Arc<String>>>,
-    name: Arc<String>,
-    f: fn(&mut Runtime) -> Result<(), String>,
-    p: Dfn,
-}
-
-impl Clone for FnExternal {
-    fn clone(&self) -> FnExternal {
-        FnExternal {
-            namespace: self.namespace.clone(),
-            name: self.name.clone(),
-            f: self.f,
-            p: self.p.clone(),
-        }
-    }
-}
+fn_index!{}
+fn_external_ref!{Runtime}
+fn_external!{Runtime}
 
 /// Stores functions for a Dyon module.
 #[derive(Clone)]
@@ -651,7 +672,7 @@ impl Call {
     }
 
     /// Push value to argument list.
-    pub fn arg<T: embed::PushVariable>(mut self, val: T) -> Self {
+    pub fn arg<T: embed::PushVariable<Runtime, Variable = Variable>>(mut self, val: T) -> Self {
         self.args.push(val.push_var());
         self
     }
@@ -674,7 +695,9 @@ impl Call {
     }
 
     /// Run call with return value.
-    pub fn run_ret<T: embed::PopVariable>(&self, runtime: &mut Runtime, module: &Arc<Module>) -> Result<T, String> {
+    pub fn run_ret<T>(&self, runtime: &mut Runtime, module: &Arc<Module>) -> Result<T, String>
+        where T: embed::PopVariable<Runtime, Variable = Variable>
+    {
         let val = runtime.call_str_ret(&self.name, &self.args, module)?;
         T::pop_var(runtime, runtime.resolve(&val))
     }

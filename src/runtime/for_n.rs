@@ -118,7 +118,7 @@ impl Runtime {
         let end = end!(self, for_n_expr);
 
         // Initialize counter.
-        self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
+        self.core.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
         self.stack.push(Variable::f64(start));
 
         let st = self.stack.len();
@@ -153,7 +153,7 @@ impl Runtime {
         let end = end!(self, for_n_expr);
 
         // Initialize counter.
-        self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
+        self.core.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
         self.stack.push(Variable::f64(start));
 
         let st = self.stack.len();
@@ -198,7 +198,7 @@ impl Runtime {
         let end = end!(self, for_n_expr);
 
         // Initialize counter.
-        self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
+        self.core.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
         self.stack.push(Variable::f64(start));
 
         let st = self.stack.len();
@@ -244,7 +244,7 @@ impl Runtime {
         let mut min = ::std::f64::NAN;
         let mut sec = None;
         // Initialize counter.
-        self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
+        self.core.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
         self.stack.push(Variable::f64(start));
         let st = self.stack.len();
         let lc = self.local_stack.len();
@@ -303,7 +303,7 @@ impl Runtime {
         let mut max = ::std::f64::NAN;
         let mut sec = None;
         // Initialize counter.
-        self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
+        self.core.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
         self.stack.push(Variable::f64(start));
 
         let st = self.stack.len();
@@ -363,7 +363,7 @@ impl Runtime {
         let mut any = false;
         let mut sec = None;
         // Initialize counter.
-        self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
+        self.core.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
         self.stack.push(Variable::f64(start));
 
         let st = self.stack.len();
@@ -424,7 +424,7 @@ impl Runtime {
         let mut all = true;
         let mut sec = None;
         // Initialize counter.
-        self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
+        self.core.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
         self.stack.push(Variable::f64(start));
 
         let st = self.stack.len();
@@ -490,7 +490,7 @@ impl Runtime {
             let end = end!(rt, for_n_expr);
 
             // Initialize counter.
-            rt.local_stack.push((for_n_expr.name.clone(), rt.stack.len()));
+            rt.core.local_stack.push((for_n_expr.name.clone(), rt.stack.len()));
             rt.stack.push(Variable::f64(start));
 
             let st = rt.stack.len();
@@ -594,7 +594,7 @@ impl Runtime {
         let end = end!(self, for_n_expr);
 
         // Initialize counter.
-        self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
+        self.core.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
         self.stack.push(Variable::f64(start));
 
         let st = self.stack.len();
@@ -633,7 +633,7 @@ impl Runtime {
         let end = end!(self, for_n_expr);
 
         // Initialize counter.
-        self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
+        self.core.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
         self.stack.push(Variable::f64(start));
 
         let st = self.stack.len();
@@ -682,7 +682,7 @@ impl Runtime {
         let end = end!(self, for_n_expr);
 
         // Initialize counter.
-        self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
+        self.core.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
         self.stack.push(Variable::f64(start));
 
         let st = self.stack.len();

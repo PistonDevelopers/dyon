@@ -1,5 +1,16 @@
 //! Dyon runtime.
 
+use dyon_core::{
+    stack_trace,
+    Call,
+    Flow,
+    RuntimeCore,
+    RuntimeErrorHandling,
+    RuntimeEval,
+    RuntimeResolveReference,
+    Side
+};
+
 use std::sync::Arc;
 use std::cell::Cell;
 use std::collections::HashMap;
@@ -7,7 +18,6 @@ use rand;
 use range::Range;
 
 use ast;
-use embed;
 
 use FnIndex;
 use Module;
@@ -17,43 +27,7 @@ use TINVOTS;
 
 mod for_n;
 mod for_in;
-
-/// Which side an expression is evaluated.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Side {
-    /// Whether to insert key in object when missing.
-    LeftInsert(bool),
-    /// Evaluating right side of assignment.
-    Right
-}
-
-/// Stores return flow, used to continue executing, return, break out of loop or continue loop.
-#[derive(Debug)]
-pub enum Flow {
-    /// Continues execution.
-    Continue,
-    /// Return from function.
-    Return,
-    /// Break loop, with optional label.
-    Break(Option<Arc<String>>),
-    /// Continue loop, with optional label.
-    ContinueLoop(Option<Arc<String>>),
-}
-
-/// Stores function calls.
-#[derive(Debug)]
-pub struct Call {
-    // was .0
-    fn_name: Arc<String>,
-    /// The index of the relative function in module.
-    pub(crate) index: usize,
-    file: Option<Arc<String>>,
-    // was .1
-    stack_len: usize,
-    // was .2
-    local_len: usize,
-    current_len: usize,
-}
+mod eval;
 
 lazy_static! {
     pub(crate) static ref TEXT_TYPE: Arc<String> = Arc::new("string".into());
@@ -75,21 +49,22 @@ lazy_static! {
     pub(crate) static ref IN_TYPE: Arc<String> = Arc::new("in".into());
 }
 
+impl std::ops::Deref for Runtime {
+    type Target = RuntimeCore<Module, Variable>;
+    fn deref(&self) -> &Self::Target {&self.core}
+}
+
+impl std::ops::DerefMut for Runtime {
+    fn deref_mut(&mut self) -> &mut Self::Target {&mut self.core}
+}
+
 /// Stores data needed for running a Dyon program.
 pub struct Runtime {
-    /// Stores the current module in use.
-    pub module: Arc<Module>,
-    /// Stores variables on the stack.
-    pub stack: Vec<Variable>,
-    /// name, file, stack_len, local_len.
-    pub call_stack: Vec<Call>,
-    /// Stores stack of locals.
-    pub local_stack: Vec<(Arc<String>, usize)>,
-    /// Stores stack of current objects.
+    /// Stores runtime core.
     ///
-    /// When a current object is used, the runtime searches backwards
-    /// until it finds the last current variable with the name.
-    pub current_stack: Vec<(Arc<String>, usize)>,
+    /// Just by adding this field, the Dyon-Core auto impls
+    /// a lot of useful methods lifted to `Runtime`.
+    pub core: RuntimeCore<Module, Variable>,
     ret: Arc<String>,
     pub(crate) rng: rand::rngs::StdRng,
     /// External functions can choose to report an error on an argument.
@@ -98,14 +73,6 @@ pub struct Runtime {
 
 impl Default for Runtime {
     fn default() -> Runtime {Runtime::new()}
-}
-
-#[inline(always)]
-fn resolve<'a>(stack: &'a [Variable], var: &'a Variable) -> &'a Variable {
-    match *var {
-        Variable::Ref(ind) => &stack[ind],
-        _ => var
-    }
 }
 
 // Looks up an item from a variable property.
@@ -302,109 +269,17 @@ impl Runtime {
         use rand::FromEntropy;
 
         Runtime {
-            module: Arc::new(Module::empty()),
-            stack: vec![],
-            call_stack: vec![],
-            local_stack: vec![],
-            current_stack: vec![],
+            core: RuntimeCore {
+                module: Arc::new(Module::empty()),
+                stack: vec![],
+                call_stack: vec![],
+                local_stack: vec![],
+                current_stack: vec![],
+            },
             ret: Arc::new("return".into()),
             rng: rand::rngs::StdRng::from_entropy(),
             arg_err_index: Cell::new(None),
         }
-    }
-
-    /// Pops variable from stack.
-    pub fn pop<T: embed::PopVariable>(&mut self) -> Result<T, String> {
-        let v = self.stack.pop().unwrap_or_else(|| panic!(TINVOTS));
-        T::pop_var(self, self.resolve(&v))
-    }
-
-    /// Pops 4D vector from stack.
-    pub fn pop_vec4<T: embed::ConvertVec4>(&mut self) -> Result<T, String> {
-        let v = self.stack.pop().unwrap_or_else(|| panic!(TINVOTS));
-        match self.resolve(&v) {
-            &Variable::Vec4(val) => Ok(T::from(val)),
-            x => Err(self.expected(x, "vec4"))
-        }
-    }
-
-    /// Pops 4D matrix from stack.
-    pub fn pop_mat4<T: embed::ConvertMat4>(&mut self) -> Result<T, String> {
-        let v = self.stack.pop().unwrap_or_else(|| panic!(TINVOTS));
-        match self.resolve(&v) {
-            &Variable::Mat4(ref val) => Ok(T::from(**val)),
-            x => Err(self.expected(x, "mat4"))
-        }
-    }
-
-    /// Gets variable.
-    pub fn var<T: embed::PopVariable>(&self, var: &Variable) -> Result<T, String> {
-        T::pop_var(self, self.resolve(&var))
-    }
-
-    /// Gets Current Object variable from the stack for Current Objects
-    /// by finding the corresponding entry in the normal stack.
-    /// If the Current Object can't be found in the stack of current objects,
-    /// the error ("Could not find current variable `{}`", name) is thrown.
-    ///
-    /// ##Examples
-    ///
-    /// Dyon code:
-    /// ```text
-    /// ~ entity := 42
-    /// teleport()
-    /// ```
-    /// Rust code:
-    /// ```rust
-    /// use dyon::Runtime;
-    ///
-    /// fn teleport(rt: &mut Runtime) -> Result<(), String> {
-    ///     let current_entity_id = rt.current_object::<u32>("entity")?;
-    ///     assert_eq!(current_entity_id, 42);
-    ///     Ok(())
-    /// }
-    /// ```
-    pub fn current_object<T: embed::PopVariable>(&self, name: &str) -> Result<T, String> {
-        let current_object_index = self.current_stack
-            .iter()
-            .rev()
-            .find(|(name_found, _)| **name_found == name)
-            .map(|x| x.1)
-            .ok_or(format!("Could not find current variable `{}`", name))
-            ?;
-
-        T::pop_var(self, self.resolve(&self.stack[current_object_index]))
-    }
-
-    /// Gets 4D vector.
-    pub fn var_vec4<T: embed::ConvertVec4>(&self, var: &Variable) -> Result<T, String> {
-        match self.resolve(&var) {
-            &Variable::Vec4(val) => Ok(T::from(val)),
-            x => Err(self.expected(x, "vec4"))
-        }
-    }
-
-    /// Gets 4D matrix.
-    pub fn var_mat4<T: embed::ConvertMat4>(&self, var: &Variable) -> Result<T, String> {
-        match self.resolve(&var) {
-            &Variable::Mat4(ref val) => Ok(T::from(**val)),
-            x => Err(self.expected(x, "mat4"))
-        }
-    }
-
-    /// Push value to stack.
-    pub fn push<T: embed::PushVariable>(&mut self, val: T) {
-        self.stack.push(val.push_var())
-    }
-
-    /// Push Vec4 to stack.
-    pub fn push_vec4<T: embed::ConvertVec4>(&mut self, val: T) {
-        self.stack.push(Variable::Vec4(val.to()))
-    }
-
-    /// Push Mat4 to stack.
-    pub fn push_mat4<T: embed::ConvertMat4>(&mut self, val: T) {
-        self.stack.push(Variable::Mat4(Box::new(val.to())))
     }
 
     /// Pushes Rust object to stack.
@@ -423,51 +298,6 @@ impl Runtime {
         self.expected(var, ty)
     }
 
-    /// Generates error message that a certain type was expected.
-    pub fn expected(&self, var: &Variable, ty: &str) -> String {
-        let found_ty = var.typeof_var();
-        format!("{}\nExpected `{}`, found `{}`", self.stack_trace(), ty, found_ty)
-    }
-
-    /// Resolves a variable reference if any, getting a pointer to the variable on the stack.
-    #[inline(always)]
-    pub fn resolve<'a>(&'a self, var: &'a Variable) -> &'a Variable {
-        resolve(&self.stack, var)
-    }
-
-    #[inline(always)]
-    fn push_fn(
-        &mut self,
-        name: Arc<String>,
-        index: usize,
-        file: Option<Arc<String>>,
-        st: usize,
-        lc: usize,
-        cu: usize,
-    ) {
-        self.call_stack.push(Call {
-            fn_name: name,
-            index,
-            file,
-            stack_len: st,
-            local_len: lc,
-            current_len: cu,
-        });
-    }
-    fn pop_fn(&mut self, name: Arc<String>) {
-        match self.call_stack.pop() {
-            None => panic!("Did not call `{}`", name),
-            Some(Call { fn_name, stack_len: st, local_len: lc, current_len: cu, .. }) => {
-                if name != fn_name {
-                    panic!("Calling `{}`, did not call `{}`", fn_name, name);
-                }
-                self.stack.truncate(st);
-                self.local_stack.truncate(lc);
-                self.current_stack.truncate(cu);
-            }
-        }
-    }
-
     pub(crate) fn expression_module(
         &mut self,
         expr: &ast::Expression,
@@ -479,83 +309,6 @@ impl Runtime {
         let res = self.expression(expr, side);
         self.module = old_module;
         res
-    }
-
-    pub(crate) fn expression(
-        &mut self,
-        expr: &ast::Expression,
-        side: Side,
-    ) -> Result<(Option<Variable>, Flow), String> {
-        use ast::Expression::*;
-
-        match *expr {
-            Link(ref link) => self.link(link),
-            Object(ref obj) => self.object(obj),
-            Array(ref arr) => self.array(arr),
-            ArrayFill(ref array_fill) => self.array_fill(array_fill),
-            Block(ref block) => self.block(block),
-            Return(ref ret) => {
-                let x = match self.expression(ret, Side::Right)? {
-                    (Some(x), Flow::Continue) => x,
-                    (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-                    _ => return Err(self.module.error(expr.source_range(),
-                                    &format!("{}\nExpected something",
-                                        self.stack_trace()), self))
-                };
-                Ok((Some(x), Flow::Return))
-            }
-            ReturnVoid(_) => Ok((None, Flow::Return)),
-            Break(ref b) => Ok((None, Flow::Break(b.label.clone()))),
-            Continue(ref b) => Ok((None, Flow::ContinueLoop(b.label.clone()))),
-            Go(ref go) => self.go(go),
-            Call(ref call) => {
-                let loader = false;
-                self.call_internal(call, loader)
-            }
-            Item(ref item) => self.item(item, side),
-            Norm(ref norm) => self.norm(norm, side),
-            UnOp(ref unop) => self.unop(unop, side),
-            BinOp(ref binop) => self.binop(binop, side),
-            Assign(ref assign) => self.assign(assign.op, &assign.left, &assign.right),
-            Vec4(ref vec4) => self.vec4(vec4, side),
-            Mat4(ref mat4) => self.mat4(mat4, side),
-            For(ref for_expr) => self.for_expr(for_expr),
-            ForN(ref for_n_expr) => self.for_n_expr(for_n_expr),
-            ForIn(ref for_in_expr) => self.for_in_expr(for_in_expr),
-            Sum(ref for_n_expr) => self.sum_n_expr(for_n_expr),
-            SumIn(ref sum_in_expr) => self.sum_in_expr(sum_in_expr),
-            SumVec4(ref for_n_expr) => self.sum_vec4_n_expr(for_n_expr),
-            Prod(ref for_n_expr) => self.prod_n_expr(for_n_expr),
-            ProdIn(ref for_in_expr) => self.prod_in_expr(for_in_expr),
-            ProdVec4(ref for_n_expr) => self.prod_vec4_n_expr(for_n_expr),
-            Min(ref for_n_expr) => self.min_n_expr(for_n_expr),
-            MinIn(ref for_in_expr) => self.min_in_expr(for_in_expr),
-            Max(ref for_n_expr) => self.max_n_expr(for_n_expr),
-            MaxIn(ref for_in_expr) => self.max_in_expr(for_in_expr),
-            Sift(ref for_n_expr) => self.sift_n_expr(for_n_expr),
-            SiftIn(ref for_in_expr) => self.sift_in_expr(for_in_expr),
-            Any(ref for_n_expr) => self.any_n_expr(for_n_expr),
-            AnyIn(ref for_in_expr) => self.any_in_expr(for_in_expr),
-            All(ref for_n_expr) => self.all_n_expr(for_n_expr),
-            AllIn(ref for_in_expr) => self.all_in_expr(for_in_expr),
-            LinkFor(ref for_n_expr) => self.link_for_n_expr(for_n_expr),
-            LinkIn(ref for_in_expr) => self.link_for_in_expr(for_in_expr),
-            If(ref if_expr) => self.if_expr(if_expr),
-            Compare(ref compare) => self.compare(compare),
-            Variable(ref range_var) => Ok((Some(range_var.1.clone()), Flow::Continue)),
-            Try(ref expr) => self.try(expr, side),
-            Swizzle(ref sw) => {
-                let flow = self.swizzle(sw)?;
-                Ok((None, flow))
-            }
-            Closure(ref closure) => self.closure(closure),
-            CallClosure(ref call) => self.call_closure(call),
-            Grab(ref expr) => Err(self.module.error(expr.source_range,
-                    &format!("{}\n`grab` expressions must be inside a closure",
-                        self.stack_trace()), self)),
-            TryExpr(ref try_expr) => self.try_expr(try_expr),
-            In(ref in_expr) => self.in_expr(in_expr),
-        }
     }
 
     fn in_expr(&mut self, in_expr: &ast::In)
@@ -584,7 +337,7 @@ impl Runtime {
     }
 
     fn try_expr(&mut self, try_expr: &ast::TryExpr) -> Result<(Option<Variable>, Flow), String> {
-        use Error;
+        use dyon_core::VariableCore;
 
         let cs = self.call_stack.len();
         let st = self.stack.len();
@@ -592,7 +345,7 @@ impl Runtime {
         let cu = self.current_stack.len();
         match self.expression(&try_expr.expr, Side::Right) {
             Ok((Some(x), Flow::Continue)) => Ok((
-                Some(Variable::Result(Ok(Box::new(x)))),
+                Some(Variable::result(Ok(x))),
                 Flow::Continue
             )),
             Ok((None, Flow::Continue)) => Err(self.module.error(try_expr.source_range,
@@ -604,11 +357,7 @@ impl Runtime {
                 self.local_stack.truncate(lc);
                 self.current_stack.truncate(cu);
                 Ok((
-                    Some(Variable::Result(Err(Box::new(Error {
-                        message: Variable::Text(Arc::new(err)),
-                        trace: vec![],
-                    }
-                    )))),
+                    Some(Variable::error_msg(err)),
                     Flow::Continue
                 ))
             }
@@ -863,20 +612,22 @@ impl Runtime {
 
         let last_call = self.call_stack.last().unwrap();
         let new_rt = Runtime {
-            module: self.module.clone(),
-            stack,
-            local_stack: vec![],
-            current_stack: vec![],
             // Add last call because of loaded functions
             // use relative index to the function it is calling from.
-            call_stack: vec![Call {
-                fn_name: last_call.fn_name.clone(),
-                index: last_call.index,
-                file: last_call.file.clone(),
-                stack_len: 0,
-                local_len: 0,
-                current_len: 0,
-            }],
+            core: RuntimeCore {
+                module: self.module.clone(),
+                stack,
+                call_stack: vec![Call {
+                    fn_name: last_call.fn_name.clone(),
+                    index: last_call.index,
+                    file: last_call.file.clone(),
+                    stack_len: 0,
+                    local_len: 0,
+                    current_len: 0,
+                }],
+                local_stack: vec![],
+                current_stack: vec![],
+            },
             rng: self.rng.clone(),
             ret: self.ret.clone(),
             arg_err_index: Cell::new(None),
@@ -956,7 +707,7 @@ impl Runtime {
                     }
                 }
                 if let Some(ind) = res {
-                    self.local_stack.push((current.name.clone(), self.stack.len()));
+                    self.core.local_stack.push((current.name.clone(), self.stack.len()));
                     self.stack.push(Variable::Ref(ind));
                 } else {
                     return Err(self.module.error(call.source_range, &format!(
@@ -968,7 +719,7 @@ impl Runtime {
 
         self.push_fn(call.item.name.clone(), env.relative, Some(f.file.clone()), st, lc, cu);
         if f.returns() {
-            self.local_stack.push((self.ret.clone(), st - 1));
+            self.core.local_stack.push((self.ret.clone(), st - 1));
         }
         for (i, arg) in f.args.iter().enumerate() {
             // Do not resolve locals to keep fixed length from end of stack.
@@ -1115,7 +866,7 @@ impl Runtime {
                 let new_index = (f_index + relative as isize) as usize;
                 // Copy the module to avoid problems with borrow checker.
                 let mod_copy = self.module.clone();
-                let ref f = mod_copy.functions[new_index].clone();
+                let ref f = mod_copy.functions[new_index];
                 if call.arg_len() != f.args.len() {
                     return Err(self.module.error(call.source_range,
                         &format!("{}\nExpected {} arguments but found {}",
@@ -1156,7 +907,7 @@ impl Runtime {
                             }
                         }
                         if let Some(ind) = res {
-                            self.local_stack.push((current.name.clone(), self.stack.len()));
+                            self.core.local_stack.push((current.name.clone(), self.stack.len()));
                             self.stack.push(Variable::Ref(ind));
                         } else {
                             return Err(self.module.error(call.source_range, &format!(
@@ -1196,7 +947,7 @@ impl Runtime {
 
                 self.push_fn(call.name.clone(), new_index, Some(f.file.clone()), st, lc, cu);
                 if f.returns() {
-                    self.local_stack.push((self.ret.clone(), st - 1));
+                    self.core.local_stack.push((self.ret.clone(), st - 1));
                 }
                 for (i, arg) in f.args.iter().enumerate() {
                     // Do not resolve locals to keep fixed length from end of stack.
@@ -1969,9 +1720,9 @@ impl Runtime {
                             _ => panic!("Expected unsafe reference")
                         }
                     } else {
-                        self.local_stack.push((item.name.clone(), self.stack.len()));
+                        self.core.local_stack.push((item.name.clone(), self.stack.len()));
                         if item.current {
-                            self.current_stack.push((item.name.clone(), self.stack.len()));
+                            self.core.current_stack.push((item.name.clone(), self.stack.len()));
                         }
                         self.stack.push(v);
                     }
@@ -2107,13 +1858,13 @@ impl Runtime {
                 let v = match Runtime::try_msg(&self.stack[stack_id]) {
                     Some(v) => v,
                     None => {
-                        return Err(self.module.error(item.source_range,
+                        return Err(self.core.module.error(item.source_range,
                             &format!("{}\nExpected `ok(_)`, `err(_)`, `bool`, `f64`",
                                 self.stack_trace()), self));
                     }
                 };
-                return try(&mut self.stack, &self.call_stack, v,
-                           item.source_range, &self.module);
+                return try(&mut self.core.stack, &self.core.call_stack, v,
+                           item.source_range, &self.core.module);
             } else {
                 return Ok((Some(Variable::Ref(stack_id)), Flow::Continue));
             }
@@ -2133,8 +1884,7 @@ impl Runtime {
             }
         }
         let &mut Runtime {
-            ref mut stack,
-            ref mut call_stack,
+            core: RuntimeCore {ref mut stack, ref mut call_stack, ref module, ..},
             ..
         } = self;
         let mut expr_j = 0;
@@ -2147,7 +1897,7 @@ impl Runtime {
             let item_len = item.ids.len();
             // Get the first variable (a.x).y
             let mut var: *mut Variable = item_lookup(
-                &self.module,
+                &module,
                 &mut stack[stack_id],
                 stack,
                 call_stack,
@@ -2163,7 +1913,7 @@ impl Runtime {
                 let v = unsafe {match Runtime::try_msg(&*var) {
                     Some(v) => v,
                     None => {
-                        return Err(self.module.error_fnindex(item.ids[0].source_range(),
+                        return Err(module.error_fnindex(item.ids[0].source_range(),
                             &format!("{}\nExpected `ok(_)` or `err(_)`",
                                 stack_trace(call_stack)),
                                 call_stack.last().unwrap().index));
@@ -2177,7 +1927,7 @@ impl Runtime {
                     Err(ref err) => {
                         let call = call_stack.last().unwrap();
                         if call.stack_len == 0 {
-                            return Err(self.module.error_fnindex(
+                            return Err(module.error_fnindex(
                                 item.ids[0].source_range(),
                                 &format!("{}\nRequires `->` on function `{}`",
                                 stack_trace(call_stack),
@@ -2186,7 +1936,7 @@ impl Runtime {
                         }
                         if let Variable::Return = stack[call.stack_len - 1] {}
                         else {
-                            return Err(self.module.error_fnindex(
+                            return Err(module.error_fnindex(
                                 item.ids[0].source_range(),
                                 &format!("{}\nRequires `->` on function `{}`",
                                 stack_trace(call_stack),
@@ -2198,7 +1948,7 @@ impl Runtime {
                             None => "".into(),
                             Some(f) => format!(" ({})", f)
                         };
-                        err.trace.push(self.module.error_fnindex(
+                        err.trace.push(module.error_fnindex(
                             item.ids[0].source_range(),
                             &format!("In function `{}`{}",
                                 &call.fn_name, file),
@@ -2210,7 +1960,7 @@ impl Runtime {
             // Get the rest of the variables.
             for (i, prop) in item.ids[1..].iter().enumerate() {
                 var = item_lookup(
-                    &self.module,
+                    &module,
                     unsafe { &mut *var },
                     stack,
                     call_stack,
@@ -2228,7 +1978,7 @@ impl Runtime {
                     let v = unsafe {match Runtime::try_msg(&*var) {
                         Some(v) => v,
                         None => {
-                            return Err(self.module.error_fnindex(prop.source_range(),
+                            return Err(module.error_fnindex(prop.source_range(),
                                 &format!("{}\nExpected `ok(_)`, `err(_)`, `bool`, `f64`",
                                     stack_trace(call_stack)),
                                     call_stack.last().unwrap().index));
@@ -2242,7 +1992,7 @@ impl Runtime {
                         Err(ref err) => {
                             let call = call_stack.last().unwrap();
                             if call.stack_len == 0 {
-                                return Err(self.module.error_fnindex(
+                                return Err(module.error_fnindex(
                                     prop.source_range(),
                                     &format!("{}\nRequires `->` on function `{}`",
                                         stack_trace(call_stack),
@@ -2251,7 +2001,7 @@ impl Runtime {
                             }
                             if let Variable::Return = stack[call.stack_len - 1] {}
                             else {
-                                return Err(self.module.error_fnindex(
+                                return Err(module.error_fnindex(
                                     prop.source_range(),
                                     &format!("{}\nRequires `->` on function `{}`",
                                         stack_trace(call_stack),
@@ -2263,7 +2013,7 @@ impl Runtime {
                                 None => "".into(),
                                 Some(f) => format!(" ({})", f)
                             };
-                            err.trace.push(self.module.error_fnindex(
+                            err.trace.push(module.error_fnindex(
                                 prop.source_range(),
                                 &format!("In function `{}`{}",
                                     &call.fn_name, file),
@@ -2978,21 +2728,4 @@ impl Runtime {
 
         Ok((Some(v), Flow::Continue))
     }
-    pub(crate) fn stack_trace(&self) -> String {
-        stack_trace(&self.call_stack)
-    }
-}
-
-fn stack_trace(call_stack: &[Call]) -> String {
-    let mut s = String::new();
-    for call in call_stack.iter() {
-        s.push_str(&call.fn_name);
-        if let Some(ref file) = call.file {
-            s.push_str(" (");
-            s.push_str(file);
-            s.push(')');
-        }
-        s.push('\n')
-    }
-    s
 }

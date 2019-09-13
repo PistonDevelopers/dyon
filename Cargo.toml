@@ -11,6 +11,7 @@ homepage = "https://github.com/pistondevelopers/dyon"
 exclude = ["images/*"]
 
 [dependencies]
+dyon_core = {path = "dyon_core", version = "0.1.0"}
 piston_meta = "1.0.0"
 range = "1.0.0"
 rand = "0.6.1"
