@@ -23,7 +23,7 @@ pub enum Type {
     /// 4D matrix type.
     Mat4,
     /// String/text type.
-    Text,
+    Str,
     /// Link type.
     Link,
     /// Array type.
@@ -59,7 +59,7 @@ impl Type {
             F64 => "f64".into(),
             Vec4 => "vec4".into(),
             Mat4 => "mat4".into(),
-            Text => "str".into(),
+            Str => "str".into(),
             Link => "link".into(),
             Array(ref ty) => {
                 if let Any = **ty {
@@ -300,7 +300,7 @@ impl Type {
                 Some(Secret(Box::new(F64))),
             (&Secret(ref a), &F64) if **a == Type::F64 => Some(Secret(Box::new(F64))),
             (&F64, &Secret(ref b)) if **b == Type::F64 => Some(F64),
-            (&Text, &Text) => Some(Text),
+            (&Str, &Str) => Some(Str),
             (&Vec4, &F64) => Some(Vec4),
             (&F64, &Vec4) => Some(Vec4),
             (&Vec4, &Vec4) => Some(Vec4),
@@ -419,7 +419,7 @@ impl Type {
                 ty = Some(Type::Secret(Box::new(Type::F64)));
             } else if let Ok((range, _)) = convert.meta_bool("str") {
                 convert.update(range);
-                ty = Some(Type::Text);
+                ty = Some(Type::Str);
             } else if let Ok((range, _)) = convert.meta_bool("vec4") {
                 convert.update(range);
                 ty = Some(Type::Vec4);

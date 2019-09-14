@@ -398,7 +398,7 @@ pub fn convert_meta_data(
                     }
                     "text" => {
                         let i = *parents.last().unwrap();
-                        nodes[i].ty = Some(Type::Text);
+                        nodes[i].ty = Some(Type::Str);
                     }
                     "color" => {
                         let i = *parents.last().unwrap();
