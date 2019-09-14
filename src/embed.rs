@@ -72,7 +72,7 @@ impl PopVariable for bool {
 
 impl PopVariable for String {
     fn pop_var(rt: &Runtime, var: &Variable) -> Result<Self, String> {
-        if let Variable::Text(ref s) = *var {
+        if let Variable::Str(ref s) = *var {
             Ok((&**s).clone())
         } else {
             Err(rt.expected(var, "string"))
@@ -82,7 +82,7 @@ impl PopVariable for String {
 
 impl PopVariable for Arc<String> {
     fn pop_var(rt: &Runtime, var: &Variable) -> Result<Self, String> {
-        if let Variable::Text(ref s) = *var {
+        if let Variable::Str(ref s) = *var {
             Ok(s.clone())
         } else {
             Err(rt.expected(var, "string"))
@@ -285,15 +285,15 @@ impl PushVariable for f64 {
 }
 
 impl PushVariable for str {
-    fn push_var(&self) -> Variable { Variable::Text(Arc::new(self.into())) }
+    fn push_var(&self) -> Variable { Variable::Str(Arc::new(self.into())) }
 }
 
 impl PushVariable for String {
-    fn push_var(&self) -> Variable { Variable::Text(Arc::new(self.clone())) }
+    fn push_var(&self) -> Variable { Variable::Str(Arc::new(self.clone())) }
 }
 
 impl PushVariable for Arc<String> {
-    fn push_var(&self) -> Variable { Variable::Text(self.clone()) }
+    fn push_var(&self) -> Variable { Variable::Str(self.clone()) }
 }
 
 impl<T: PushVariable> PushVariable for Option<T> {

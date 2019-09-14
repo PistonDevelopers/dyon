@@ -139,7 +139,7 @@ fn item_lookup(
                                 id
                             };
                         match stack[id] {
-                            Variable::Text(ref id) => {
+                            Variable::Str(ref id) => {
                                 *expr_j += 1;
                                 id.clone()
                             }
@@ -598,7 +598,7 @@ impl Runtime {
                 self.current_stack.truncate(cu);
                 Ok((
                     Some(Variable::Result(Err(Box::new(Error {
-                        message: Variable::Text(Arc::new(err)),
+                        message: Variable::Str(Arc::new(err)),
                         trace: vec![],
                     }
                     )))),
@@ -644,7 +644,7 @@ impl Runtime {
                 match *opt {
                     Some(ref some) => Ok(some.clone()),
                     None => Err(Box::new(Error {
-                        message: Variable::Text(Arc::new(
+                        message: Variable::Str(Arc::new(
                             "Expected `some(_)`, found `none()`"
                             .into())),
                         trace: vec![]
@@ -653,7 +653,7 @@ impl Runtime {
             }
             Variable::Bool(true, None) => {
                 Err(Box::new(Error {
-                    message: Variable::Text(Arc::new(
+                    message: Variable::Str(Arc::new(
                         "This does not make sense, perhaps an array is empty?"
                         .into())),
                     trace: vec![]
@@ -661,7 +661,7 @@ impl Runtime {
             }
             Variable::Bool(false, _) => {
                 Err(Box::new(Error {
-                    message: Variable::Text(Arc::new(
+                    message: Variable::Str(Arc::new(
                         "Must be `true` to have meaning, try add or remove `!`"
                         .into())),
                     trace: vec![]
@@ -670,7 +670,7 @@ impl Runtime {
             Variable::Bool(true, ref sec) => {
                 match *sec {
                     None => Err(Box::new(Error {
-                        message: Variable::Text(Arc::new(
+                        message: Variable::Str(Arc::new(
                             "Expected `some(_)`, found `none()`"
                             .into())),
                         trace: vec![]
@@ -683,14 +683,14 @@ impl Runtime {
             Variable::F64(val, ref sec) => {
                 if val.is_nan() {
                     Err(Box::new(Error {
-                        message: Variable::Text(Arc::new(
+                        message: Variable::Str(Arc::new(
                             "Expected number, found `NaN`"
                             .into())),
                         trace: vec![]
                     }))
                 } else if sec.is_none() {
                     Err(Box::new(Error {
-                        message: Variable::Text(Arc::new(
+                        message: Variable::Str(Arc::new(
                             "This does not make sense, perhaps an array is empty?"
                             .into())),
                         trace: vec![]
@@ -1613,10 +1613,10 @@ impl Runtime {
                         };
                     }
                 }
-                Variable::Text(ref b) => {
+                Variable::Str(ref b) => {
                     unsafe {
                         match *r.0 {
-                            Variable::Text(ref mut n) => {
+                            Variable::Str(ref mut n) => {
                                 match op {
                                     Set => *n = b.clone(),
                                     Add => Arc::make_mut(n).push_str(b),
@@ -1625,7 +1625,7 @@ impl Runtime {
                             }
                             Variable::Return => {
                                 if let Set = op {
-                                    *r.0 = Variable::Text(b.clone())
+                                    *r.0 = Variable::Str(b.clone())
                                 } else {
                                     return self.err(left.source_range(),
                                                     "Return has no value")
@@ -1633,7 +1633,7 @@ impl Runtime {
                             }
                             Variable::Link(ref mut n) => {
                                 if let Add = op {
-                                    n.push(&Variable::Text(b.clone()))?;
+                                    n.push(&Variable::Str(b.clone()))?;
                                 } else {
                                     return self.err(left.source_range(),
                                         "Can not use this assignment \
@@ -2163,7 +2163,7 @@ impl Runtime {
                         NotEqual => a != b
                     }, sec.clone()))
                 }
-                (&Variable::Text(ref b), &Variable::Text(ref a)) => {
+                (&Variable::Str(ref b), &Variable::Str(ref a)) => {
                     Ok(Variable::bool(match compare.op {
                         Less => a < b,
                         LessOrEqual => a <= b,
@@ -2733,19 +2733,19 @@ impl Runtime {
                             binop.op.symbol_bool()), self))
                 }, sec.clone())
             }
-            (&Variable::Text(ref a), &Variable::Text(ref b)) => {
+            (&Variable::Str(ref a), &Variable::Str(ref b)) => {
                 match binop.op {
                     Add => {
                         let mut res = String::with_capacity(a.len() + b.len());
                         res.push_str(a);
                         res.push_str(b);
-                        Variable::Text(Arc::new(res))
+                        Variable::Str(Arc::new(res))
                     }
                     _ => return self.err(binop.source_range,
                                          "This operation can not be used with strings")
                 }
             }
-            (&Variable::Text(_), _) =>
+            (&Variable::Str(_), _) =>
                 return self.err(binop.source_range,
                                 "The right argument must be a string. \
                                 Try the `str` function"),

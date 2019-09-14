@@ -622,7 +622,7 @@ pub(crate) fn read_line(rt: &mut Runtime) -> Result<(), String> {
     rt.push(if let Some(error) = error {
         return Err(error.description().into())
     } else {
-        Variable::Text(Arc::new(input))
+        Variable::Str(Arc::new(input))
     });
     Ok(())
 }
@@ -672,7 +672,7 @@ pub(crate) fn json_string(rt: &mut Runtime) -> Result<(), String> {
     let v = rt.stack.pop().expect(TINVOTS);
     let mut buf: Vec<u8> = vec![];
     write_variable(&mut buf, rt, rt.resolve(&v), EscapeString::Json, 0).unwrap();
-    rt.stack.push(Variable::Text(Arc::new(String::from_utf8(buf).unwrap())));
+    rt.stack.push(Variable::Str(Arc::new(String::from_utf8(buf).unwrap())));
     Ok(())
 }
 
@@ -731,8 +731,8 @@ pub(crate) fn _typeof(rt: &mut Runtime) -> Result<(), String> {
     use crate::Variable::*;
 
     let v = rt.stack.pop().expect(TINVOTS);
-    let t = Variable::Text(match *rt.resolve(&v) {
-        Text(_) => TEXT_TYPE.clone(),
+    let t = Variable::Str(match *rt.resolve(&v) {
+        Str(_) => TEXT_TYPE.clone(),
         F64(_, _) => F64_TYPE.clone(),
         Vec4(_) => VEC4_TYPE.clone(),
         Mat4(_) => MAT4_TYPE.clone(),
@@ -771,14 +771,14 @@ pub(crate) fn load(rt: &mut Runtime) -> Result<(), String> {
 
     let v = rt.stack.pop().expect(TINVOTS);
     let v = match rt.resolve(&v) {
-        &Variable::Text(ref text) => {
+        &Variable::Str(ref text) => {
             let mut m = Module::empty();
             for f in &rt.module.ext_prelude {
                 m.add(f.name.clone(), f.f, f.p.clone());
             }
             if let Err(err) = load(text, &mut m) {
                 Variable::Result(Err(Box::new(Error {
-                    message: Variable::Text(Arc::new(format!("When attempting to load module:\n{}", err))),
+                    message: Variable::Str(Arc::new(format!("When attempting to load module:\n{}", err))),
                     trace: vec![]
                 })))
             } else {
@@ -834,10 +834,10 @@ pub(crate) fn load__source_imports(rt: &mut Runtime) -> Result<(), String> {
         x => return Err(rt.expected_arg(1, x, "[Module]"))
     }
     let v = match rt.resolve(&source) {
-        &Variable::Text(ref text) => {
+        &Variable::Str(ref text) => {
             if let Err(err) = load(text, &mut new_module) {
                 Variable::Result(Err(Box::new(Error {
-                    message: Variable::Text(Arc::new(
+                    message: Variable::Str(Arc::new(
                         format!("When attempting to load module:\n{}", err))),
                     trace: vec![]
                 })))
@@ -857,12 +857,12 @@ pub(crate) fn module__in_string_imports(rt: &mut Runtime) -> Result<(), String> 
     let modules = rt.stack.pop().expect(TINVOTS);
     let source = rt.stack.pop().expect(TINVOTS);
     let source = match rt.resolve(&source) {
-        &Variable::Text(ref t) => t.clone(),
+        &Variable::Str(ref t) => t.clone(),
         x => return Err(rt.expected_arg(1, x, "str"))
     };
     let name = rt.stack.pop().expect(TINVOTS);
     let name = match rt.resolve(&name) {
-        &Variable::Text(ref t) => t.clone(),
+        &Variable::Str(ref t) => t.clone(),
         x => return Err(rt.expected_arg(0, x, "str"))
     };
     let mut new_module = Module::empty();
@@ -901,7 +901,7 @@ pub(crate) fn module__in_string_imports(rt: &mut Runtime) -> Result<(), String> 
     }
     let v = if let Err(err) = load_str(&name, source, &mut new_module) {
             Variable::Result(Err(Box::new(Error {
-                message: Variable::Text(Arc::new(
+                message: Variable::Str(Arc::new(
                     format!("When attempting to load module:\n{}", err))),
                 trace: vec![]
             })))
@@ -921,7 +921,7 @@ pub(crate) fn _call(rt: &mut Runtime) -> Result<(), String> {
     let fn_name = rt.stack.pop().expect(TINVOTS);
     let call_module = rt.stack.pop().expect(TINVOTS);
     let fn_name = match rt.resolve(&fn_name) {
-        &Variable::Text(ref text) => text.clone(),
+        &Variable::Str(ref text) => text.clone(),
         x => return Err(rt.expected_arg(1, x, "text"))
     };
     let args = match rt.resolve(&args) {
@@ -993,7 +993,7 @@ pub(crate) fn call_ret(rt: &mut Runtime) -> Result<(), String> {
         x => return Err(rt.expected_arg(2, x, "array"))
     };
     let fn_name = match rt.resolve(&fn_name) {
-        &Variable::Text(ref text) => text.clone(),
+        &Variable::Str(ref text) => text.clone(),
         x => return Err(rt.expected_arg(1, x, "text"))
     };
     let x = rt.resolve(&call_module);
@@ -1241,7 +1241,7 @@ dyon_fn!{fn load__meta_file(meta: Arc<String>, file: Arc<String>) -> Variable {
     Variable::Result(match res {
         Ok(res) => Ok(Box::new(Variable::Array(Arc::new(res)))),
         Err(err) => Err(Box::new(Error {
-            message: Variable::Text(Arc::new(err)),
+            message: Variable::Str(Arc::new(err)),
             trace: vec![]
         }))
     })
@@ -1252,7 +1252,7 @@ dyon_fn!{fn load__meta_url(meta: Arc<String>, url: Arc<String>) -> Variable {
     Variable::Result(match res {
         Ok(res) => Ok(Box::new(Variable::Array(Arc::new(res)))),
         Err(err) => Err(Box::new(Error {
-            message: Variable::Text(Arc::new(err)),
+            message: Variable::Str(Arc::new(err)),
             trace: vec![]
         }))
     })
@@ -1266,7 +1266,7 @@ dyon_fn!{fn syntax__in_string(name: Arc<String>, text: Arc<String>) -> Variable 
     Variable::Result(match res {
         Ok(res) => Ok(Box::new(Variable::RustObject(Arc::new(Mutex::new(Arc::new(res)))))),
         Err(err) => Err(Box::new(Error {
-            message: Variable::Text(Arc::new(err)),
+            message: Variable::Str(Arc::new(err)),
             trace: vec![]
         }))
     })
@@ -1277,12 +1277,12 @@ pub(crate) fn meta__syntax_in_string(rt: &mut Runtime) -> Result<(), String> {
 
     let text = rt.stack.pop().expect(TINVOTS);
     let text = match rt.resolve(&text) {
-        &Variable::Text(ref t) => t.clone(),
+        &Variable::Str(ref t) => t.clone(),
         x => return Err(rt.expected_arg(2, x, "str"))
     };
     let name = rt.stack.pop().expect(TINVOTS);
     let name = match rt.resolve(&name) {
-        &Variable::Text(ref t) => t.clone(),
+        &Variable::Str(ref t) => t.clone(),
         x => return Err(rt.expected_arg(1, x, "str"))
     };
     let syntax_var = rt.stack.pop().expect(TINVOTS);
@@ -1299,7 +1299,7 @@ pub(crate) fn meta__syntax_in_string(rt: &mut Runtime) -> Result<(), String> {
     let v = Variable::Result(match res {
         Ok(res) => Ok(Box::new(Variable::Array(Arc::new(res)))),
         Err(err) => Err(Box::new(Error {
-            message: Variable::Text(Arc::new(err)),
+            message: Variable::Str(Arc::new(err)),
             trace: vec![]
         }))
     });
@@ -1310,9 +1310,9 @@ pub(crate) fn meta__syntax_in_string(rt: &mut Runtime) -> Result<(), String> {
 dyon_fn!{fn download__url_file(url: Arc<String>, file: Arc<String>) -> Variable {
     let res = meta::download_url_to_file(&**url, &**file);
     Variable::Result(match res {
-        Ok(res) => Ok(Box::new(Variable::Text(Arc::new(res)))),
+        Ok(res) => Ok(Box::new(Variable::Str(Arc::new(res)))),
         Err(err) => Err(Box::new(Error {
-            message: Variable::Text(Arc::new(err)),
+            message: Variable::Str(Arc::new(err)),
             trace: vec![]
         }))
     })
@@ -1327,15 +1327,15 @@ dyon_fn!{fn save__string_file(text: Arc<String>, file: Arc<String>) -> Variable 
     Variable::Result(match File::create(&**file) {
         Ok(mut f) => {
             match f.write_all(text.as_bytes()) {
-                Ok(_) => Ok(Box::new(Variable::Text(file))),
+                Ok(_) => Ok(Box::new(Variable::Str(file))),
                 Err(err) => Err(Box::new(Error {
-                    message: Variable::Text(Arc::new(err.description().into())),
+                    message: Variable::Str(Arc::new(err.description().into())),
                     trace: vec![]
                 }))
             }
         }
         Err(err) => Err(Box::new(Error {
-            message: Variable::Text(Arc::new(err.description().into())),
+            message: Variable::Str(Arc::new(err.description().into())),
             trace: vec![]
         }))
     })
@@ -1357,18 +1357,18 @@ dyon_fn!{fn load_string__file(file: Arc<String>) -> Variable {
             let mut s = String::new();
             match f.read_to_string(&mut s) {
                 Ok(_) => {
-                    Ok(Box::new(Variable::Text(Arc::new(s))))
+                    Ok(Box::new(Variable::Str(Arc::new(s))))
                 }
                 Err(err) => {
                     Err(Box::new(Error {
-                        message: Variable::Text(Arc::new(err.description().into())),
+                        message: Variable::Str(Arc::new(err.description().into())),
                         trace: vec![]
                     }))
                 }
             }
         }
         Err(err) => Err(Box::new(Error {
-            message: Variable::Text(Arc::new(err.description().into())),
+            message: Variable::Str(Arc::new(err.description().into())),
             trace: vec![]
         }))
     })
@@ -1382,11 +1382,11 @@ pub(crate) fn load_string__file(_: &mut Runtime) -> Result<(), String> {
 dyon_fn!{fn load_string__url(url: Arc<String>) -> Variable {
     Variable::Result(match meta::load_text_file_from_url(&**url) {
         Ok(s) => {
-            Ok(Box::new(Variable::Text(Arc::new(s))))
+            Ok(Box::new(Variable::Str(Arc::new(s))))
         }
         Err(err) => {
             Err(Box::new(Error {
-                message: Variable::Text(Arc::new(err)),
+                message: Variable::Str(Arc::new(err)),
                 trace: vec![]
             }))
         }
@@ -1403,12 +1403,12 @@ pub(crate) fn join__thread(rt: &mut Runtime) -> Result<(), String> {
                     Ok(res) => match res {
                         Ok(res) => Ok(Box::new(res)),
                         Err(err) => Err(Box::new(Error {
-                            message: Variable::Text(Arc::new(err)),
+                            message: Variable::Str(Arc::new(err)),
                             trace: vec![]
                         }))
                     },
                     Err(_err) => Err(Box::new(Error {
-                        message: Variable::Text(Arc::new(
+                        message: Variable::Str(Arc::new(
                             "Thread did not exit successfully".into())),
                         trace: vec![]
                     }))
@@ -1416,7 +1416,7 @@ pub(crate) fn join__thread(rt: &mut Runtime) -> Result<(), String> {
             }
             Err(err) => {
                 Err(Box::new(Error {
-                    message: Variable::Text(Arc::new(err)),
+                    message: Variable::Str(Arc::new(err)),
                     trace: vec![]
                 }))
             }
@@ -1432,7 +1432,7 @@ dyon_fn!{fn load_data__file(file: Arc<String>) -> Variable {
     let res = match data::load_file(&file) {
         Ok(data) => Ok(Box::new(data)),
         Err(err) => Err(Box::new(Error {
-            message: Variable::Text(Arc::new(format!(
+            message: Variable::Str(Arc::new(format!(
                         "Error loading data from file `{}`:\n{}",
                         file, err))),
             trace: vec![]
@@ -1447,7 +1447,7 @@ dyon_fn!{fn load_data__string(text: Arc<String>) -> Variable {
     let res = match data::load_data(&text) {
         Ok(data) => Ok(Box::new(data)),
         Err(err) => Err(Box::new(Error {
-            message: Variable::Text(Arc::new(format!(
+            message: Variable::Str(Arc::new(format!(
                         "Error loading data from string `{}`:\n{}",
                         text, err))),
             trace: vec![]
@@ -1460,7 +1460,7 @@ pub(crate) fn args_os(rt: &mut Runtime) -> Result<(), String> {
     let mut arr: Vec<Variable> = vec![];
     for arg in ::std::env::args_os() {
         if let Ok(t) = arg.into_string() {
-            arr.push(Variable::Text(Arc::new(t)))
+            arr.push(Variable::Str(Arc::new(t)))
         } else {
             return Err("Invalid unicode in os argument".into());
         }
@@ -1478,7 +1478,7 @@ pub(crate) fn save__data_file(rt: &mut Runtime) -> Result<(), String> {
 
     let file = rt.stack.pop().expect(TINVOTS);
     let file = match rt.resolve(&file) {
-        &Variable::Text(ref t) => t.clone(),
+        &Variable::Str(ref t) => t.clone(),
         x => return Err(rt.expected_arg(1, x, "str"))
     };
     let data = rt.stack.pop().expect(TINVOTS);
@@ -1494,10 +1494,10 @@ pub(crate) fn save__data_file(rt: &mut Runtime) -> Result<(), String> {
         }
     };
     let res = match write_variable(&mut f, rt, &data, EscapeString::Json, 0) {
-        Ok(()) => Ok(Box::new(Variable::Text(file.clone()))),
+        Ok(()) => Ok(Box::new(Variable::Str(file.clone()))),
         Err(err) => {
             Err(Box::new(::Error {
-                message: Variable::Text(Arc::new(format!(
+                message: Variable::Str(Arc::new(format!(
                             "Error when writing to file `{}`:\n{}",
                             file, err.description()))),
                 trace: vec![]
@@ -1527,7 +1527,7 @@ pub(crate) fn json_from_meta_data(rt: &mut Runtime) -> Result<(), String> {
         }
         x => return Err(rt.expected_arg(0, x, "array"))
     };
-    rt.stack.push(Variable::Text(Arc::new(json)));
+    rt.stack.push(Variable::Str(Arc::new(json)));
     Ok(())
 }
 
@@ -1536,7 +1536,7 @@ pub(crate) fn errstr__string_start_len_msg(rt: &mut Runtime) -> Result<(), Strin
 
     let msg = rt.stack.pop().expect(TINVOTS);
     let msg = match rt.resolve(&msg) {
-        &Variable::Text(ref t) => t.clone(),
+        &Variable::Str(ref t) => t.clone(),
         x => return Err(rt.expected_arg(3, x, "str"))
     };
     let len = rt.stack.pop().expect(TINVOTS);
@@ -1551,7 +1551,7 @@ pub(crate) fn errstr__string_start_len_msg(rt: &mut Runtime) -> Result<(), Strin
     };
     let source = rt.stack.pop().expect(TINVOTS);
     let source = match rt.resolve(&source) {
-        &Variable::Text(ref t) => t.clone(),
+        &Variable::Str(ref t) => t.clone(),
         x => return Err(rt.expected_arg(0, x, "str"))
     };
 
@@ -1559,14 +1559,14 @@ pub(crate) fn errstr__string_start_len_msg(rt: &mut Runtime) -> Result<(), Strin
     ParseErrorHandler::new(&source)
         .write_msg(&mut buf, Range::new(start, len), &msg)
         .unwrap();
-    rt.stack.push(Variable::Text(Arc::new(String::from_utf8(buf).unwrap())));
+    rt.stack.push(Variable::Str(Arc::new(String::from_utf8(buf).unwrap())));
     Ok(())
 }
 
 pub(crate) fn has(rt: &mut Runtime) -> Result<(), String> {
     let key = rt.stack.pop().expect(TINVOTS);
     let key = match rt.resolve(&key) {
-        &Variable::Text(ref t) => t.clone(),
+        &Variable::Str(ref t) => t.clone(),
         x => return Err(rt.expected_arg(1, x, "str"))
     };
     let obj = rt.stack.pop().expect(TINVOTS);
@@ -1582,7 +1582,7 @@ pub(crate) fn keys(rt: &mut Runtime) -> Result<(), String> {
     let obj = rt.stack.pop().expect(TINVOTS);
     let res = Variable::Array(Arc::new(match rt.resolve(&obj) {
         &Variable::Object(ref obj) => {
-            obj.keys().map(|k| Variable::Text(k.clone())).collect()
+            obj.keys().map(|k| Variable::Str(k.clone())).collect()
         }
         x => return Err(rt.expected_arg(0, x, "object"))
     }));
@@ -1593,14 +1593,14 @@ pub(crate) fn keys(rt: &mut Runtime) -> Result<(), String> {
 pub(crate) fn chars(rt: &mut Runtime) -> Result<(), String> {
     let t = rt.stack.pop().expect(TINVOTS);
     let t = match rt.resolve(&t) {
-        &Variable::Text(ref t) => t.clone(),
+        &Variable::Str(ref t) => t.clone(),
         x => return Err(rt.expected_arg(0, x, "str"))
     };
     let res = t.chars()
         .map(|ch| {
             let mut s = String::new();
             s.push(ch);
-            Variable::Text(Arc::new(s))
+            Variable::Str(Arc::new(s))
         })
         .collect::<Vec<_>>();
     rt.stack.push(Variable::Array(Arc::new(res)));

@@ -63,7 +63,7 @@ fn min_ref(v: &Variable, min: &mut Option<usize>) {
         F64(_, _) => {}
         Vec4(_) => {}
         Mat4(_) => {}
-        Text(_) => {}
+        Str(_) => {}
         Link(_) => {}
         UnsafeRef(_) => {}
         RustObject(_) => {}

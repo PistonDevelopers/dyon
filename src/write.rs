@@ -20,7 +20,7 @@ pub(crate) fn write_variable<W>(
     where W: io::Write
 {
     match *v {
-        Variable::Text(ref t) => {
+        Variable::Str(ref t) => {
             match escape_string {
                 EscapeString::Json => {
                     json::write_string(w, t)?;

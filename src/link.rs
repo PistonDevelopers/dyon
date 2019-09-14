@@ -39,7 +39,7 @@ impl Block {
                 Variable::f64(f64::from_bits(self.data[k]))
             }
             STR => {
-                Variable::Text(unsafe {
+                Variable::Str(unsafe {
                     transmute::<&u64, &Arc<String>>(&self.data[k])
                 }.clone())
             }
@@ -70,7 +70,7 @@ impl Block {
                 self.tys[i] |= F64 << (j * 2);
                 self.data[k] = unsafe { transmute::<f64, u64>(val) };
             }
-            Variable::Text(ref s) => {
+            Variable::Str(ref s) => {
                 // Reset bits.
                 self.tys[i] &= !(0x3 << (j * 2));
                 // Sets new bits.
@@ -253,7 +253,7 @@ impl Link {
         match *v {
             Bool(_, _) |
             F64(_, _) |
-            Text(_) => {
+            Str(_) => {
                 if !self.slices.is_empty() {
                     let last = self.slices.last_mut().unwrap();
                     if (last.end as usize) < BLOCK_SIZE {

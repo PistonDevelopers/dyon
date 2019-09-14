@@ -1109,7 +1109,7 @@ impl Expression {
                 convert.update(range);
                 result = Some(Expression::Variable(Box::new((
                     convert.source(start).unwrap(),
-                    Variable::Text(val)
+                    Variable::Str(val)
                 ))));
             } else if let Ok((range, val)) = convert.meta_f64("num") {
                 convert.update(range);
