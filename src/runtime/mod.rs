@@ -18,6 +18,8 @@ use TINVOTS;
 mod for_n;
 mod for_in;
 
+type FlowResult = Result<(Option<Variable>, Flow), String>;
+
 /// Which side an expression is evaluated.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Side {
@@ -468,12 +470,11 @@ impl Runtime {
         }
     }
 
-    pub(crate) fn expression_module(
-        &mut self,
+    pub(crate) fn expression_module(&mut self,
         expr: &ast::Expression,
         side: Side,
         module: &Arc<Module>
-    ) -> Result<(Option<Variable>, Flow), String> {
+    ) -> FlowResult {
         use std::mem::replace;
         let old_module = replace(&mut self.module, module.clone());
         let res = self.expression(expr, side);
@@ -481,11 +482,7 @@ impl Runtime {
         res
     }
 
-    pub(crate) fn expression(
-        &mut self,
-        expr: &ast::Expression,
-        side: Side,
-    ) -> Result<(Option<Variable>, Flow), String> {
+    pub(crate) fn expression(&mut self, expr: &ast::Expression, side: Side) -> FlowResult {
         use ast::Expression::*;
 
         match *expr {
@@ -558,8 +555,7 @@ impl Runtime {
         }
     }
 
-    fn in_expr(&mut self, in_expr: &ast::In)
-    -> Result<(Option<Variable>, Flow), String> {
+    fn in_expr(&mut self, in_expr: &ast::In) -> FlowResult {
         use std::sync::mpsc::channel;
         use std::sync::Mutex;
         use std::sync::atomic::Ordering;
@@ -583,7 +579,7 @@ impl Runtime {
         }
     }
 
-    fn try_expr(&mut self, try_expr: &ast::TryExpr) -> Result<(Option<Variable>, Flow), String> {
+    fn try_expr(&mut self, try_expr: &ast::TryExpr) -> FlowResult {
         use Error;
 
         let cs = self.call_stack.len();
@@ -615,7 +611,7 @@ impl Runtime {
         }
     }
 
-    fn closure(&mut self, closure: &ast::Closure) -> Result<(Option<Variable>, Flow), String> {
+    fn closure(&mut self, closure: &ast::Closure) -> FlowResult {
         use grab::{self, Grabbed};
         use ClosureEnvironment;
 
@@ -712,11 +708,7 @@ impl Runtime {
         })
     }
 
-    fn try(
-        &mut self,
-        expr: &ast::Expression,
-        side: Side
-    ) -> Result<(Option<Variable>, Flow), String> {
+    fn try(&mut self, expr: &ast::Expression, side: Side) -> FlowResult {
         let v = match self.expression(expr, side)? {
             (Some(x), Flow::Continue) => x,
             (x, Flow::Return) => { return Ok((x, Flow::Return)); }
@@ -805,7 +797,7 @@ impl Runtime {
         }
     }
 
-    fn block(&mut self, block: &ast::Block) -> Result<(Option<Variable>, Flow), String> {
+    fn block(&mut self, block: &ast::Block) -> FlowResult {
         let mut expect = None;
         let st = self.stack.len();
         let lc = self.local_stack.len();
@@ -829,7 +821,7 @@ impl Runtime {
     }
 
     /// Start a new thread and return the handle.
-    pub fn go(&mut self, go: &ast::Go) -> Result<(Option<Variable>, Flow), String> {
+    pub fn go(&mut self, go: &ast::Go) -> FlowResult {
         use std::thread::{self, JoinHandle};
         use Thread;
 
@@ -897,10 +889,7 @@ impl Runtime {
     }
 
     /// Call closure.
-    pub fn call_closure(
-        &mut self,
-        call: &ast::CallClosure,
-    ) -> Result<(Option<Variable>, Flow), String> {
+    pub fn call_closure(&mut self, call: &ast::CallClosure) -> FlowResult {
         // Find item.
         let item = match self.item(&call.item, Side::Right)? {
             (Some(x), Flow::Continue) => x,
@@ -1037,11 +1026,7 @@ impl Runtime {
     }
 
     /// Called from the outside, e.g. a loader script by `call` or `call_ret` intrinsic.
-    pub fn call(
-        &mut self,
-        call: &ast::Call,
-        module: &Arc<Module>
-    ) -> Result<(Option<Variable>, Flow), String> {
+    pub fn call(&mut self, call: &ast::Call, module: &Arc<Module>) -> FlowResult {
         use std::mem::replace;
         let old_module = replace(&mut self.module, module.clone());
         let res = self.call_internal(call, true);
@@ -1054,11 +1039,7 @@ impl Runtime {
     /// call stack.
     ///
     /// The `loader` flag is set to `true` when called from the outside.
-    fn call_internal(
-        &mut self,
-        call: &ast::Call,
-        loader: bool,
-    ) -> Result<(Option<Variable>, Flow), String> {
+    fn call_internal(&mut self, call: &ast::Call, loader: bool) -> FlowResult {
         use FnExternalRef;
 
         match call.f_index.get() {
@@ -1282,8 +1263,7 @@ impl Runtime {
     }
 
     /// Calls function by name.
-    pub fn call_str(
-        &mut self,
+    pub fn call_str(&mut self,
         function: &str,
         args: &[Variable],
         module: &Arc<Module>
@@ -1368,7 +1348,7 @@ impl Runtime {
         Ok(Flow::Continue)
     }
 
-    fn link(&mut self, link: &ast::Link) -> Result<(Option<Variable>, Flow), String> {
+    fn link(&mut self, link: &ast::Link) -> FlowResult {
         use Link;
 
         Ok((Some(if link.items.is_empty() {
@@ -1400,7 +1380,7 @@ impl Runtime {
         }), Flow::Continue))
     }
 
-    fn object(&mut self, obj: &ast::Object) -> Result<(Option<Variable>, Flow), String> {
+    fn object(&mut self, obj: &ast::Object) -> FlowResult {
         let mut object: HashMap<_, _> = HashMap::new();
         for &(ref key, ref expr) in &obj.key_values {
             let x = match self.expression(expr, Side::Right)? {
@@ -1420,10 +1400,7 @@ impl Runtime {
         Ok((Some(Variable::Object(Arc::new(object))), Flow::Continue))
     }
 
-    fn array(
-        &mut self,
-        arr: &ast::Array,
-    ) -> Result<(Option<Variable>, Flow), String> {
+    fn array(&mut self, arr: &ast::Array) -> FlowResult {
         let mut array: Vec<Variable> = Vec::new();
         for item in &arr.items {
             array.push(match self.expression(item, Side::Right)? {
@@ -1437,10 +1414,7 @@ impl Runtime {
         Ok((Some(Variable::Array(Arc::new(array))), Flow::Continue))
     }
 
-    fn array_fill(
-        &mut self,
-        array_fill: &ast::ArrayFill,
-    ) -> Result<(Option<Variable>, Flow), String> {
+    fn array_fill(&mut self, array_fill: &ast::ArrayFill) -> FlowResult {
         let fill = match self.expression(&array_fill.fill, Side::Right)? {
             (x, Flow::Return) => return Ok((x, Flow::Return)),
             (Some(x), Flow::Continue) => x,
@@ -1471,7 +1445,7 @@ impl Runtime {
         op: ast::AssignOp,
         left: &ast::Expression,
         right: &ast::Expression
-    ) -> Result<(Option<Variable>, Flow), String> {
+    ) -> FlowResult {
         use ast::AssignOp::*;
         use ast::Expression;
 
@@ -1986,11 +1960,7 @@ impl Runtime {
     // `insert` is true for `:=` and false for `=`.
     // This works only on objects, but does not have to check since it is
     // ignored for arrays.
-    fn item(
-        &mut self,
-        item: &ast::Item,
-        side: Side,
-    ) -> Result<(Option<Variable>, Flow), String> {
+    fn item(&mut self, item: &ast::Item, side: Side) -> FlowResult {
         use Error;
 
         #[inline(always)]
@@ -2000,7 +1970,7 @@ impl Runtime {
             v: Result<Box<Variable>, Box<Error>>,
             source_range: Range,
             module: &Module
-        ) -> Result<(Option<Variable>, Flow), String> {
+        ) -> FlowResult {
             match v {
                 Ok(ok) => Ok((Some(*ok), Flow::Continue)),
                 Err(mut err) => {
@@ -2283,10 +2253,7 @@ impl Runtime {
         Ok((Some(v), Flow::Continue))
     }
 
-    fn compare(
-        &mut self,
-        compare: &ast::Compare
-    ) -> Result<(Option<Variable>, Flow), String> {
+    fn compare(&mut self, compare: &ast::Compare) -> FlowResult {
         fn sub_compare(
             rt: &Runtime,
             compare: &ast::Compare,
@@ -2449,7 +2416,7 @@ impl Runtime {
     fn if_expr(
         &mut self,
         if_expr: &ast::If
-    ) -> Result<(Option<Variable>, Flow), String> {
+    ) -> FlowResult {
         let cond = match self.expression(&if_expr.cond, Side::Right)? {
             (Some(x), Flow::Continue) => x,
             (x, Flow::Return) => { return Ok((x, Flow::Return)); }
@@ -2493,7 +2460,7 @@ impl Runtime {
             Ok((None, Flow::Continue))
         }
     }
-    fn for_expr(&mut self, for_expr: &ast::For) -> Result<(Option<Variable>, Flow), String> {
+    fn for_expr(&mut self, for_expr: &ast::For) -> FlowResult {
         let prev_st = self.stack.len();
         let prev_lc = self.local_stack.len();
         match self.expression(&for_expr.init, Side::Right)? {
@@ -2573,11 +2540,7 @@ impl Runtime {
         self.local_stack.truncate(prev_lc);
         Ok((None, flow))
     }
-    fn vec4(
-        &mut self,
-        vec4: &ast::Vec4,
-        side: Side
-    ) -> Result<(Option<Variable>, Flow), String> {
+    fn vec4(&mut self, vec4: &ast::Vec4, side: Side) -> FlowResult {
         let st = self.stack.len();
         for expr in &vec4.args {
             match self.expression(expr, side)? {
@@ -2617,11 +2580,7 @@ impl Runtime {
         };
         Ok((Some(Variable::Vec4([x as f32, y as f32, z as f32, w as f32])), Flow::Continue))
     }
-    fn mat4(
-        &mut self,
-        mat4: &ast::Mat4,
-        side: Side
-    ) -> Result<(Option<Variable>, Flow), String> {
+    fn mat4(&mut self, mat4: &ast::Mat4, side: Side) -> FlowResult {
         for expr in &mat4.args {
             match self.expression(expr, side)? {
                 (None, Flow::Continue) => {}
@@ -2663,11 +2622,7 @@ impl Runtime {
             [x[3], y[3], z[3], w[3]],
         ]))), Flow::Continue))
     }
-    fn norm(
-        &mut self,
-        norm: &ast::Norm,
-        side: Side,
-    ) -> Result<(Option<Variable>, Flow), String> {
+    fn norm(&mut self, norm: &ast::Norm, side: Side) -> FlowResult {
         let val = match self.expression(&norm.expr, side)? {
             (Some(x), Flow::Continue) => x,
             (x, Flow::Return) => return Ok((x, Flow::Return)),
@@ -2684,11 +2639,7 @@ impl Runtime {
         };
         Ok((Some(v), Flow::Continue))
     }
-    fn unop(
-        &mut self,
-        unop: &ast::UnOpExpression,
-        side: Side
-    ) -> Result<(Option<Variable>, Flow), String> {
+    fn unop(&mut self, unop: &ast::UnOpExpression, side: Side) -> FlowResult {
         let val = match self.expression(&unop.expr, side)? {
             (Some(x), Flow::Continue) => x,
             (x, Flow::Return) => return Ok((x, Flow::Return)),
@@ -2739,11 +2690,7 @@ impl Runtime {
         };
         Ok((Some(v), Flow::Continue))
     }
-    fn binop(
-        &mut self,
-        binop: &ast::BinOpExpression,
-        side: Side
-    ) -> Result<(Option<Variable>, Flow), String> {
+    fn binop(&mut self, binop: &ast::BinOpExpression, side: Side) -> FlowResult {
         use ast::BinOp::*;
 
         let left = match self.expression(&binop.left, side)? {
@@ -2978,9 +2925,7 @@ impl Runtime {
 
         Ok((Some(v), Flow::Continue))
     }
-    pub(crate) fn stack_trace(&self) -> String {
-        stack_trace(&self.call_stack)
-    }
+    pub(crate) fn stack_trace(&self) -> String {stack_trace(&self.call_stack)}
 }
 
 fn stack_trace(call_stack: &[Call]) -> String {
