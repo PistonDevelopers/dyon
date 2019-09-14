@@ -214,10 +214,6 @@ fn infer_expr(
             let right = infer_expr(&cmp_expr.right, name, decls);
             if right.is_some() { return right; }
         }
-        Norm(ref norm) => {
-            let res = infer_expr(&norm.expr, name, decls);
-            if res.is_some() { return res; }
-        }
         UnOp(ref unop_expr) => {
             let res = infer_expr(&unop_expr.expr, name, decls);
             if res.is_some() { return res; }

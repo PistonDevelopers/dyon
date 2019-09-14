@@ -1003,8 +1003,6 @@ pub enum Expression {
     Compare(Box<Compare>),
     /// Unary operator expression.
     UnOp(Box<UnOpExpression>),
-    /// Vector normal, e.g `|v|`.
-    Norm(Box<Norm>),
     /// Variable.
     ///
     /// This means it contains no members that depends on other expressions.
@@ -1104,7 +1102,7 @@ impl Expression {
             } else if let Ok((range, val)) = Norm::from_meta_data(
                     file, source, convert, ignored) {
                 convert.update(range);
-                result = Some(Expression::Norm(Box::new(val)));
+                result = Some(val.into_call_expr());
             } else if let Ok((range, val)) = convert.meta_string("text") {
                 convert.update(range);
                 result = Some(Expression::Variable(Box::new((
@@ -1363,7 +1361,6 @@ impl Expression {
             LinkIn(ref for_in_expr) => for_in_expr.source_range,
             If(ref if_expr) => if_expr.source_range,
             Compare(ref comp) => comp.source_range,
-            Norm(ref norm) => norm.source_range,
             UnOp(ref unop) => unop.source_range,
             Variable(ref range_var) => range_var.0,
             Try(ref expr) => expr.source_range(),
@@ -1465,8 +1462,6 @@ impl Expression {
                 if_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             Compare(ref comp) =>
                 comp.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            Norm(ref norm) =>
-                norm.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             UnOp(ref unop) =>
                 unop.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             Variable(_) => {}
@@ -2874,17 +2869,15 @@ impl Norm {
         }))
     }
 
-    fn resolve_locals(
-        &self,
-        relative: usize,
-        stack: &mut Vec<Option<Arc<String>>>,
-        closure_stack: &mut Vec<usize>,
-        module: &Module,
-        use_lookup: &UseLookup,
-    ) {
-        let st = stack.len();
-        self.expr.resolve_locals(relative, stack, closure_stack, module, use_lookup);
-        stack.truncate(st);
+    fn into_call_expr(self) -> Expression {
+        Expression::Call(Box::new(Call {
+            alias: None,
+            args: vec![self.expr],
+            custom_source: None,
+            f_index: Cell::new(FnIndex::None),
+            name: Arc::new("norm".into()),
+            source_range: self.source_range,
+        }))
     }
 }
 

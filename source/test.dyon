@@ -1,6 +1,6 @@
+norm(x: f64) = x+1
+
 fn main() {
-    a := try {
-        println("hi")
-    }
-    println(a)
+    a := \(x: f64) = |x|
+    println(\a(2))
 }

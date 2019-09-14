@@ -28,6 +28,21 @@ pub fn check(
     let mut nodes: Vec<Node> = vec![];
     convert_meta_data(&mut nodes, data)?;
 
+    // Rewrite graph for syntax sugar that corresponds to function calls.
+    for i in 0..nodes.len() {
+        match nodes[i].kind {
+            Kind::Norm => {
+                if nodes[i].children.len() == 1 {
+                    nodes[i].kind = Kind::Call;
+                    nodes[i].names.push(Arc::new("norm".into()));
+                    let ch = nodes[i].children[0];
+                    nodes[ch].kind = Kind::CallArg;
+                }
+            }
+            _ => {}
+        }
+    }
+
     // Add mutability information to function names.
     for i in 0..nodes.len() {
         match nodes[i].kind {

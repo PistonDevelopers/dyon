@@ -323,7 +323,6 @@ pub fn convert_meta_data(
                     Kind::Object => Some(Type::object()),
                     Kind::Sift | Kind::SiftIn => Some(Type::array()),
                     Kind::Sum | Kind::SumIn | Kind::Prod | Kind::ProdIn => Some(Type::F64),
-                    Kind::Norm => Some(Type::F64),
                     Kind::Swizzle => Some(Type::F64),
                     Kind::Link | Kind::LinkFor => Some(Type::Link),
                     Kind::Any | Kind::AnyIn | Kind::All | Kind::AllIn =>

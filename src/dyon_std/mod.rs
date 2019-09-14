@@ -18,6 +18,7 @@ dyon_fn!{fn x(v: Vec4) -> f64 {f64::from(v.0[0])}}
 dyon_fn!{fn y(v: Vec4) -> f64 {f64::from(v.0[1])}}
 dyon_fn!{fn z(v: Vec4) -> f64 {f64::from(v.0[2])}}
 dyon_fn!{fn w(v: Vec4) -> f64 {f64::from(v.0[3])}}
+dyon_fn!{fn norm(v: Vec4) -> f32 {vecmath::vec4_len(v.0)}}
 
 pub(crate) fn s(rt: &mut Runtime) -> Result<(), String> {
     let ind: f64 = rt.pop().expect(TINVOTS);
