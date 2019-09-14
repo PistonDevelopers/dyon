@@ -158,7 +158,7 @@ pub enum Variable {
     /// 4D matrix.
     Mat4(Box<[[f32; 4]; 4]>),
     /// Text.
-    Text(Arc<String>),
+    Str(Arc<String>),
     /// Array.
     Array(Array),
     /// Object.
@@ -205,7 +205,7 @@ impl Variable {
         use Variable::*;
 
         match *self {
-            Text(_) => TEXT_TYPE.clone(),
+            Str(_) => TEXT_TYPE.clone(),
             F64(_, _) => F64_TYPE.clone(),
             Vec4(_) => VEC4_TYPE.clone(),
             Mat4(_) => MAT4_TYPE.clone(),
@@ -234,7 +234,7 @@ impl Variable {
             Mat4(_) => self.clone(),
             Return => self.clone(),
             Bool(_, _) => self.clone(),
-            Text(_) => self.clone(),
+            Str(_) => self.clone(),
             Object(ref obj) => {
                 let mut res = obj.clone();
                 for val in Arc::make_mut(&mut res).values_mut() {
@@ -275,7 +275,7 @@ impl PartialEq for Variable {
             (&Variable::Return, _) => false,
             (&Variable::Bool(a, _), &Variable::Bool(b, _)) => a == b,
             (&Variable::F64(a, _), &Variable::F64(b, _)) => a == b,
-            (&Variable::Text(ref a), &Variable::Text(ref b)) => a == b,
+            (&Variable::Str(ref a), &Variable::Str(ref b)) => a == b,
             (&Variable::Object(ref a), &Variable::Object(ref b)) => a == b,
             (&Variable::Array(ref a), &Variable::Array(ref b)) => a == b,
             (&Variable::Ref(_), _) => false,

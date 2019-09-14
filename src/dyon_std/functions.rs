@@ -19,27 +19,27 @@ pub fn list_functions(module: &Module) -> Vec<Variable> {
     let loaded: Arc<String> = Arc::new("loaded".into());
     for f in &*module.ext_prelude {
         let mut obj = HashMap::new();
-        obj.insert(name.clone(), Variable::Text(f.name.clone()));
-        obj.insert(returns.clone(), Variable::Text(Arc::new(f.p.ret.description())));
-        obj.insert(ty.clone(), Variable::Text(external.clone()));
+        obj.insert(name.clone(), Variable::Str(f.name.clone()));
+        obj.insert(returns.clone(), Variable::Str(Arc::new(f.p.ret.description())));
+        obj.insert(ty.clone(), Variable::Str(external.clone()));
         let mut args = vec![];
         for (i, lt) in f.p.lts.iter().enumerate() {
             let mut obj_arg = HashMap::new();
             obj_arg.insert(name.clone(),
-                Variable::Text(Arc::new(format!("arg{}", i))));
+                Variable::Str(Arc::new(format!("arg{}", i))));
             obj_arg.insert(lifetime.clone(), match *lt {
                 Lt::Default => Variable::Option(None),
                 Lt::Arg(ind) => Variable::Option(Some(
-                        Box::new(Variable::Text(
+                        Box::new(Variable::Str(
                             Arc::new(format!("arg{}", ind))
                         ))
                     )),
                 Lt::Return => Variable::Option(Some(
-                        Box::new(Variable::Text(ret_lifetime.clone()))
+                        Box::new(Variable::Str(ret_lifetime.clone()))
                     )),
             });
             obj_arg.insert(takes.clone(),
-                Variable::Text(Arc::new(f.p.tys[i].description())));
+                Variable::Str(Arc::new(f.p.tys[i].description())));
             args.push(Variable::Object(Arc::new(obj_arg)));
         }
         obj.insert(arguments.clone(), Variable::Array(Arc::new(args)));
@@ -47,24 +47,24 @@ pub fn list_functions(module: &Module) -> Vec<Variable> {
     }
     for f in &module.functions {
         let mut obj = HashMap::new();
-        obj.insert(name.clone(), Variable::Text(f.name.clone()));
-        obj.insert(returns.clone(), Variable::Text(Arc::new(f.ret.description())));
-        obj.insert(ty.clone(), Variable::Text(loaded.clone()));
+        obj.insert(name.clone(), Variable::Str(f.name.clone()));
+        obj.insert(returns.clone(), Variable::Str(Arc::new(f.ret.description())));
+        obj.insert(ty.clone(), Variable::Str(loaded.clone()));
         let mut args = vec![];
         for arg in &f.args {
             let mut obj_arg = HashMap::new();
             obj_arg.insert(name.clone(),
-                Variable::Text(arg.name.clone()));
+                Variable::Str(arg.name.clone()));
             obj_arg.insert(lifetime.clone(),
                 match arg.lifetime {
                     None => Variable::Option(None),
                     Some(ref lt) => Variable::Option(Some(Box::new(
-                            Variable::Text(lt.clone())
+                            Variable::Str(lt.clone())
                         )))
                 }
             );
             obj_arg.insert(takes.clone(),
-                Variable::Text(Arc::new(arg.ty.description())));
+                Variable::Str(Arc::new(arg.ty.description())));
             args.push(Variable::Object(Arc::new(obj_arg)));
         }
         obj.insert(arguments.clone(), Variable::Array(Arc::new(args)));
@@ -75,7 +75,7 @@ pub fn list_functions(module: &Module) -> Vec<Variable> {
         match (a, b) {
             (&Variable::Object(ref a), &Variable::Object(ref b)) => {
                 match (&a[&name], &b[&name]) {
-                    (&Variable::Text(ref a), &Variable::Text(ref b)) => {
+                    (&Variable::Str(ref a), &Variable::Str(ref b)) => {
                         a.cmp(b)
                     }
                     _ => panic!("Expected two strings")

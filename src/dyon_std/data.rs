@@ -89,7 +89,7 @@ fn expr(
         match read.parse_string(range.length) {
             Ok(s) => {
                 *read = read.consume(range.length);
-                return Ok(Variable::Text(
+                return Ok(Variable::Str(
                     if let Some(s) = strings.get(&s) {
                         s.clone()
                     } else {
