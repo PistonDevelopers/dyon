@@ -202,7 +202,13 @@ fn write_expr<W: io::Write>(
         E::Object(ref obj) => write_obj(w, rt, obj, tabs)?,
         E::Array(ref arr) => write_arr(w, rt, arr, tabs)?,
         E::ArrayFill(ref arr_fill) => write_arr_fill(w, rt, arr_fill, tabs)?,
-        E::Call(ref call) => write_call(w, rt, call, tabs)?,
+        E::Call(ref call) => {
+            if &**call.name == "norm" && call.args.len() == 1 {
+                write_norm(w, rt, &call.args[0], tabs)?
+            } else {
+                write_call(w, rt, call, tabs)?
+            }
+        }
         E::Return(ref expr) => {
             write!(w, "return ")?;
             write_expr(w, rt, expr, tabs)?;
@@ -313,7 +319,6 @@ fn write_expr<W: io::Write>(
             write_for_in(w, rt, for_in, tabs)?;
         }
         E::If(ref if_expr) => write_if(w, rt, if_expr, tabs)?,
-        E::Norm(ref norm) => write_norm(w, rt, norm, tabs)?,
         E::UnOp(ref unop) => write_unop(w, rt, unop, tabs)?,
         E::Try(ref expr) => {
             write_expr(w, rt, expr, tabs)?;
@@ -329,6 +334,18 @@ fn write_expr<W: io::Write>(
         }
         // x => panic!("Unimplemented `{:#?}`", x),
     }
+    Ok(())
+}
+
+fn write_norm<W: io::Write>(
+    w: &mut W,
+    rt: &Runtime,
+    expr: &ast::Expression,
+    tabs: u32
+) -> Result<(), io::Error> {
+    write!(w, "|")?;
+    write_expr(w, rt, &expr, tabs)?;
+    write!(w, "|")?;
     Ok(())
 }
 
@@ -403,18 +420,6 @@ fn write_binop<W: io::Write>(
     if right_needs_parens {
         write!(w, ")")?;
     }
-    Ok(())
-}
-
-fn write_norm<W: io::Write>(
-    w: &mut W,
-    rt: &Runtime,
-    norm: &ast::Norm,
-    tabs: u32
-) -> Result<(), io::Error> {
-    write!(w, "|")?;
-    write_expr(w, rt, &norm.expr, tabs)?;
-    write!(w, "|")?;
     Ok(())
 }
 

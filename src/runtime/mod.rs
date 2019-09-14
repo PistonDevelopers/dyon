@@ -512,7 +512,6 @@ impl Runtime {
                 self.call_internal(call, loader)
             }
             Item(ref item) => self.item(item, side),
-            Norm(ref norm) => self.norm(norm, side),
             UnOp(ref unop) => self.unop(unop, side),
             BinOp(ref binop) => self.binop(binop, side),
             Assign(ref assign) => self.assign(assign.op, &assign.left, &assign.right),
@@ -2482,20 +2481,6 @@ impl Runtime {
             [x[2], y[2], z[2], w[2]],
             [x[3], y[3], z[3], w[3]],
         ]))), Flow::Continue))
-    }
-    fn norm(&mut self, norm: &ast::Norm, side: Side) -> FlowResult {
-        let val = match self.expression(&norm.expr, side)? {
-            (Some(x), Flow::Continue) => x,
-            (x, Flow::Return) => return Ok((x, Flow::Return)),
-            _ => return self.err(norm.source_range, "Expected something from unary argument")
-        };
-        let v = match *self.resolve(&val) {
-            Variable::Vec4(b) => {
-                Variable::f64(f64::from(b[0] * b[0] + b[1] * b[1] + b[2] * b[2]).sqrt())
-            }
-            ref x => return self.err(norm.source_range, &self.expected(x, "vec4"))
-        };
-        Ok((Some(v), Flow::Continue))
     }
     fn unop(&mut self, unop: &ast::UnOpExpression, side: Side) -> FlowResult {
         let val = match self.expression(&unop.expr, side)? {

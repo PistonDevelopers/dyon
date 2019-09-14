@@ -365,6 +365,7 @@ impl Module {
         m.add_str("y", y, Dfn::nl(vec![Vec4], F64));
         m.add_str("z", z, Dfn::nl(vec![Vec4], F64));
         m.add_str("w", w, Dfn::nl(vec![Vec4], F64));
+        m.add_str("norm", norm, Dfn::nl(vec![Vec4], F64));
         m.add_str("det", det, Dfn::nl(vec![Mat4], F64));
         m.add_str("inv", inv, Dfn::nl(vec![Mat4], Mat4));
         m.add_str("mov", mov, Dfn::nl(vec![Vec4], Mat4));
