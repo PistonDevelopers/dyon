@@ -1115,7 +1115,7 @@ impl Runtime {
                 let new_index = (f_index + relative as isize) as usize;
                 // Copy the module to avoid problems with borrow checker.
                 let mod_copy = self.module.clone();
-                let ref f = mod_copy.functions[new_index].clone();
+                let ref f = mod_copy.functions[new_index];
                 if call.arg_len() != f.args.len() {
                     return Err(self.module.error(call.source_range,
                         &format!("{}\nExpected {} arguments but found {}",
