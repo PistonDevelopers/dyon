@@ -22,7 +22,7 @@ fn load_module() -> Option<dyon::Module> {
     module.add_str("say_hello", say_hello, Dfn::nl(vec![], Void));
     module.add_str("homer", homer, Dfn::nl(vec![], Any));
     module.add_str("age", age, Dfn::nl(vec![Any], Any));
-    module.add_str("mr", mr, Dfn::nl(vec![Text; 2], Text));
+    module.add_str("mr", mr, Dfn::nl(vec![Str; 2], Str));
     module.add_str("origo", origo, Dfn::nl(vec![], Object));
     module.add_str("id", id, Dfn::nl(vec![], Mat4));
 
