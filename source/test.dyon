@@ -1,3 +1,6 @@
 fn main() {
-    println(chars("hello"))
+    a := try {
+        println("hi")
+    }
+    println(a)
 }
