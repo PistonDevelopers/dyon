@@ -102,6 +102,9 @@ pub enum Kind {
     Grab,
     TryExpr,
     In,
+    Ty,
+    TyArg,
+    TyRet,
 }
 
 impl Kind {
@@ -210,6 +213,9 @@ impl Kind {
             "grab" => Kind::Grab,
             "try_expr" => Kind::TryExpr,
             "in" => Kind::In,
+            "ty" => Kind::Ty,
+            "ty_arg" => Kind::TyArg,
+            "ty_ret" => Kind::TyRet,
             _ => return None
         })
     }

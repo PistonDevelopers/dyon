@@ -46,12 +46,23 @@ use ast::UseLookup;
 /// After type propagation, all blocks in the `if` expression should have some type information,
 /// but no further propagation is necessary, so it only need to check for consistency.
 pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> Result<(), Range<String>> {
+    // Keep an extra todo-list for nodes that are affected by type refinement.
+    let mut todo: Vec<usize> = vec![];
     // Type propagation.
     let mut changed;
     loop {
         changed = false;
+        // Prepare todo-list for binary search.
+        todo.sort();
+        todo.dedup();
+        // Keep track of the old length of the todo-list,
+        // in order to separate tasks already done from new tasks.
+        let todo_len = todo.len();
         'node: for i in 0..nodes.len() {
-            if nodes[i].ty.is_some() { continue; }
+            if nodes[i].ty.is_some() {
+                // Check if this node has been affected by type refinement.
+                if todo[..todo_len].binary_search(&i).is_err() {continue}
+            }
             let kind = nodes[i].kind;
             let mut this_ty = None;
             match kind {
@@ -179,8 +190,51 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
                 }
                 Kind::Call => {
                     if let Some(decl) = nodes[i].declaration {
-                        if let Some(ref ty) = nodes[decl].ty {
-                            this_ty = Some(ty.clone());
+                        if nodes[i].ty.is_none() ||
+                           !nodes[i].ty.as_ref().unwrap().is_concrete() ||
+                           todo.binary_search(&i).is_ok() {
+                            // Refine types using extra type information.
+                            let mut found = false;
+                            for &ty in nodes[decl].children.iter()
+                                .filter(|&&ty| nodes[ty].kind == Kind::Ty)
+                            {
+                                let mut all = true;
+                                for (arg_expr, &ty_arg) in nodes[i].children.iter()
+                                    .filter(|&&arg| nodes[arg].kind == Kind::CallArg &&
+                                                    !nodes[arg].children.is_empty())
+                                    .map(|&arg| nodes[arg].children[0])
+                                    .zip(nodes[ty].children.iter()
+                                        .filter(|&&ty_arg| nodes[ty_arg].kind == Kind::TyArg))
+                                {
+                                    let found_arg = if let (&Some(ref a), &Some(ref b)) =
+                                        (&nodes[arg_expr].ty, &nodes[ty_arg].ty) {a.goes_with(b)}
+                                        else {false};
+                                    if !found_arg {
+                                        all = false;
+                                        break;
+                                    }
+                                }
+                                if all {
+                                    if let Some(&ind) = nodes[ty].children.iter()
+                                        .filter(|&&ty| nodes[ty].kind == Kind::TyRet)
+                                        .next() {
+                                        this_ty = nodes[ind].ty.clone();
+                                        found = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            if !found {
+                                // Delay completion of this call until extra type information matches.
+                                todo.push(i)
+                            }
+                        }
+
+                        // If the type has not been refined, fall back to default type signature.
+                        if this_ty.is_none() && nodes[i].ty.is_none() {
+                            if let Some(ref ty) = nodes[decl].ty {
+                                this_ty = Some(ty.clone());
+                            }
                         }
                     } else if let Some(ref alias) = nodes[i].alias {
                         use ast::FnAlias;
@@ -519,10 +573,32 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
                 _ => {}
             }
             if this_ty.is_some() {
+                if let (&Some(ref old_ty), &Some(ref new_ty)) =
+                    (&nodes[i].ty, &this_ty) {
+                    if old_ty != new_ty {
+                        // If type was refined, propagate changes to parent and children
+                        // that are not of concrete types.
+                        if let Some(parent) = nodes[i].parent {
+                            if nodes[parent].ty.as_ref().map(|t| t.is_concrete()) != Some(true) {
+                                todo.push(parent);
+                            }
+                        }
+                        for &j in &nodes[i].children {
+                            if nodes[j].ty.as_ref().map(|t| t.is_concrete()) != Some(true) {
+                                todo.push(j);
+                            }
+                        }
+                    }
+                }
                 nodes[i].ty = this_ty;
                 changed = true;
             }
         }
+        // Remove old tasks.
+        for i in (0..todo_len).rev() {todo.swap_remove(i);}
+        // There must be a change to continue checking,
+        // even with type refinement, because the todo-list
+        // waits for other changes to happen.
         if !changed { break; }
     }
 

@@ -138,6 +138,33 @@ impl Type {
         }
     }
 
+    /// Returns `true` if the type is concrete.
+    pub fn is_concrete(&self) -> bool {
+        match *self {
+            Type::Unreachable |
+            Type::Void |
+            Type::Bool |
+            Type::F64 |
+            Type::Vec4 |
+            Type::Mat4 |
+            Type::Str |
+            Type::Link |
+            Type::Object => true,
+            Type::Array(ref t) |
+            Type::Option(ref t) |
+            Type::Result(ref t) |
+            Type::Secret(ref t) |
+            Type::Thread(ref t) |
+            Type::In(ref t) |
+            Type::AdHoc(_, ref t) => t.is_concrete(),
+            Type::Closure(ref dfn) => {
+                dfn.tys.iter().all(|ty| ty.is_concrete()) &&
+                dfn.ret.is_concrete()
+            }
+            Type::Any => false,
+        }
+    }
+
     /// Returns an array type with an `any` as inner type.
     pub fn array() -> Type {Type::Array(Box::new(Type::Any))}
 

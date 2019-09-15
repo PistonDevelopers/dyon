@@ -416,6 +416,11 @@ impl Function {
                 convert.update(range);
                 expr = Some(val);
                 ret = Some(Type::Any);
+            } else if let Ok(_) = convert.start_node("ty") {
+                // Ignore extra type information,
+                // since this is only used by type checker.
+                let range = convert.ignore();
+                convert.update(range);
             } else {
                 let range = convert.ignore();
                 convert.update(range);

@@ -17,9 +17,10 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\\"
     ["fn" .w! .."("!:"name" ?w "(" ?w args ?w ")" ?w ?currents ?w {
             ["->":"returns" ?w ?type:"ret_type"]
             !"->":!"returns"
-        } ?w block:"block"]
+        } ?w block:"block" ?.l([?w ty:"ty" ?w])]
     [.."("!:"name" ?w "(" ?w args ?w ")" ?w ?currents ?w "=" ?w expr:"expr"]
 }
+4 ty = ["(" ?w .s?.(, type:"ty_arg") ?w ")" .w? "->" ?w type:"ty_ret"]
 4 args = .s?.(, arg:"arg")
 5 arg = [?"mut":"mut" ?w .._seps!:"name" ?[?w ":" ?w
          ?["'" ?w .._seps!:"lifetime"] ?w ?type:"type"]]
