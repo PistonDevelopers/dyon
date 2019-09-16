@@ -286,6 +286,28 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
                             this_ty = Some(Type::Void);
                             Some(right_ty.clone())
                         }
+                        (&Some(ref left_ty), &Some(ref right_ty)) => {
+                            if right_ty.goes_with(left_ty) {
+                                if !nodes[left].children.is_empty() {
+                                    // Tell the item that it needs refinement.
+                                    let it = nodes[left].children[0];
+                                    todo.push(it);
+                                    // Tell all nodes that uses the item as declaration that
+                                    // they need refinement.
+                                    for j in it+1..nodes.len() {
+                                        if let Some(decl) = nodes[j].declaration {
+                                            if decl == it {todo.push(j)}
+                                        }
+                                    }
+                                }
+                                this_ty = Some(Type::Void);
+                                Some(right_ty.clone())
+                            } else {
+                                // TODO: Type conflict between left and refined right.
+                                //       Might be caught by later rules.
+                                continue
+                            }
+                        }
                         _ => { continue }
                     };
                     changed = true;
@@ -576,10 +598,12 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
                 if let (&Some(ref old_ty), &Some(ref new_ty)) =
                     (&nodes[i].ty, &this_ty) {
                     if old_ty != new_ty {
-                        // If type was refined, propagate changes to parent and children
-                        // that are not of concrete types.
+                        // If type was refined, propagate changes to parent.
                         if let Some(parent) = nodes[i].parent {
-                            if nodes[parent].ty.as_ref().map(|t| t.is_concrete()) != Some(true) {
+                            // If the type of the parent is not set,
+                            // then there is no need to add it to the todo-list,
+                            // since it will be covered by the default loop.
+                            if nodes[parent].ty.is_some() {
                                 todo.push(parent);
                             }
                         }
