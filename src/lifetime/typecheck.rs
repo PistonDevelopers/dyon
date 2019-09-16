@@ -190,44 +190,40 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
                 }
                 Kind::Call => {
                     if let Some(decl) = nodes[i].declaration {
-                        if nodes[i].ty.is_none() ||
-                           !nodes[i].ty.as_ref().unwrap().is_concrete() ||
-                           todo.binary_search(&i).is_ok() {
-                            // Refine types using extra type information.
-                            let mut found = false;
-                            for &ty in nodes[decl].children.iter()
-                                .filter(|&&ty| nodes[ty].kind == Kind::Ty)
+                        // Refine types using extra type information.
+                        let mut found = false;
+                        for &ty in nodes[decl].children.iter()
+                            .filter(|&&ty| nodes[ty].kind == Kind::Ty)
+                        {
+                            let mut all = true;
+                            for (arg_expr, &ty_arg) in nodes[i].children.iter()
+                                .filter(|&&arg| nodes[arg].kind == Kind::CallArg &&
+                                                !nodes[arg].children.is_empty())
+                                .map(|&arg| nodes[arg].children[0])
+                                .zip(nodes[ty].children.iter()
+                                    .filter(|&&ty_arg| nodes[ty_arg].kind == Kind::TyArg))
                             {
-                                let mut all = true;
-                                for (arg_expr, &ty_arg) in nodes[i].children.iter()
-                                    .filter(|&&arg| nodes[arg].kind == Kind::CallArg &&
-                                                    !nodes[arg].children.is_empty())
-                                    .map(|&arg| nodes[arg].children[0])
-                                    .zip(nodes[ty].children.iter()
-                                        .filter(|&&ty_arg| nodes[ty_arg].kind == Kind::TyArg))
-                                {
-                                    let found_arg = if let (&Some(ref a), &Some(ref b)) =
-                                        (&nodes[arg_expr].ty, &nodes[ty_arg].ty) {a.goes_with(b)}
-                                        else {false};
-                                    if !found_arg {
-                                        all = false;
-                                        break;
-                                    }
-                                }
-                                if all {
-                                    if let Some(&ind) = nodes[ty].children.iter()
-                                        .filter(|&&ty| nodes[ty].kind == Kind::TyRet)
-                                        .next() {
-                                        this_ty = nodes[ind].ty.clone();
-                                        found = true;
-                                        break;
-                                    }
+                                let found_arg = if let (&Some(ref a), &Some(ref b)) =
+                                    (&nodes[arg_expr].ty, &nodes[ty_arg].ty) {a.goes_with(b)}
+                                    else {false};
+                                if !found_arg {
+                                    all = false;
+                                    break;
                                 }
                             }
-                            if !found {
-                                // Delay completion of this call until extra type information matches.
-                                todo.push(i)
+                            if all {
+                                if let Some(&ind) = nodes[ty].children.iter()
+                                    .filter(|&&ty| nodes[ty].kind == Kind::TyRet)
+                                    .next() {
+                                    this_ty = nodes[ind].ty.clone();
+                                    found = true;
+                                    break;
+                                }
                             }
+                        }
+                        if !found {
+                            // Delay completion of this call until extra type information matches.
+                            todo.push(i);
                         }
 
                         // If the type has not been refined, fall back to default type signature.

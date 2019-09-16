@@ -1,0 +1,23 @@
+// Turn a name string into a hero object.
+fn hero(name: str) -> {} {return clone({name: name})}
+// Simple refinement types are specified after function declaration.
+// This provides the type checker with extra type information.
+//
+// Refine `Super str` to `SuperHero {}` object.
+(Super str) -> SuperHero {}
+// Refine `Duper str` to `DuperHero {}` object.
+(Duper str) -> DuperHero {}
+
+// Create ad-hoc type `Super str`.
+fn new_super(name: str) -> Super str {return clone(name)}
+// Create ad-hoc type `Duper str`.
+fn new_duper(name: str) -> Duper str {return clone(name)}
+
+// Check for ad-hoc type `SuperHero`.
+fn check_super_hero(_: SuperHero) {}
+// Check for ad-hoc type `DuperHero`.
+fn check_duper_hero(_: DuperHero) {}
+
+fn main() {
+    check_duper_hero(hero(new_super("Mr. X")))
+}
