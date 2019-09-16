@@ -583,11 +583,6 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
                                 todo.push(parent);
                             }
                         }
-                        for &j in &nodes[i].children {
-                            if nodes[j].ty.as_ref().map(|t| t.is_concrete()) != Some(true) {
-                                todo.push(j);
-                            }
-                        }
                     }
                 }
                 nodes[i].ty = this_ty;
