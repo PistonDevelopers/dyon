@@ -192,7 +192,7 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
                     if let Some(decl) = nodes[i].declaration {
                         // Refine types using extra type information.
                         let mut found = false;
-                        for &ty in nodes[decl].children.iter()
+                        'outer: for &ty in nodes[decl].children.iter()
                             .filter(|&&ty| nodes[ty].kind == Kind::Ty)
                         {
                             let mut all = true;
@@ -204,7 +204,12 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
                                     .filter(|&&ty_arg| nodes[ty_arg].kind == Kind::TyArg))
                             {
                                 let found_arg = if let (&Some(ref a), &Some(ref b)) =
-                                    (&nodes[arg_expr].ty, &nodes[ty_arg].ty) {a.goes_with(b)}
+                                    (&nodes[arg_expr].ty, &nodes[ty_arg].ty) {
+                                        if a.goes_with(b) {
+                                            if a.ambiguous(b) {break 'outer}
+                                            true
+                                        } else {false}
+                                    }
                                     else {false};
                                 if !found_arg {
                                     all = false;

@@ -138,33 +138,6 @@ impl Type {
         }
     }
 
-    /// Returns `true` if the type is concrete.
-    pub fn is_concrete(&self) -> bool {
-        match *self {
-            Type::Unreachable |
-            Type::Void |
-            Type::Bool |
-            Type::F64 |
-            Type::Vec4 |
-            Type::Mat4 |
-            Type::Str |
-            Type::Link |
-            Type::Object => true,
-            Type::Array(ref t) |
-            Type::Option(ref t) |
-            Type::Result(ref t) |
-            Type::Secret(ref t) |
-            Type::Thread(ref t) |
-            Type::In(ref t) |
-            Type::AdHoc(_, ref t) => t.is_concrete(),
-            Type::Closure(ref dfn) => {
-                dfn.tys.iter().all(|ty| ty.is_concrete()) &&
-                dfn.ret.is_concrete()
-            }
-            Type::Any => false,
-        }
-    }
-
     /// Returns an array type with an `any` as inner type.
     pub fn array() -> Type {Type::Array(Box::new(Type::Any))}
 
@@ -182,6 +155,21 @@ impl Type {
 
     /// Returns an in-type with an `any` as inner type.
     pub fn in_ty() -> Type {Type::In(Box::new(Type::Any))}
+
+    /// Returns `true` if a type is ambiguous relative to a refinement type.
+    ///
+    /// For example, the type `str` is ambiguous with ad-hoc type `Foo str`.
+    /// If more was known about the `str` type with further refinement,
+    /// then it might turn out to be `Bar str` which would not go with `Foo str`.
+    pub fn ambiguous(&self, refine: &Type) -> bool {
+        use self::Type::*;
+
+        match (self, refine) {
+            (&AdHoc(ref xa, ref xb), &AdHoc(ref ya, ref yb)) if xa == ya => xb.ambiguous(yb),
+            (x, &AdHoc(_, ref y)) if x.goes_with(y) => true,
+            _ => false
+        }
+    }
 
     /// Returns `true` if a type goes with another type (directional check).
     ///
@@ -290,7 +278,7 @@ impl Type {
                     ty.goes_with(other)
                 }
             }
-            // Bool, F64, Text, Vec4, AdHoc.
+            // Bool, F64, Text, Vec4.
             x if x == other => { true }
             _ if *other == Type::Any => { true }
             _ => { false }
