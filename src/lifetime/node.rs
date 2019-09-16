@@ -333,7 +333,9 @@ pub fn convert_meta_data(
                     Kind::TyArg | Kind::TyRet => {
                         // Parse extra type information.
                         let convert = Convert::new(&data[i..]);
-                        if let Ok((_, val)) = Type::from_meta_data(kind_name, convert, ignored) {
+                        if let Ok((range, val)) = Type::from_meta_data(kind_name, convert, ignored) {
+                            // Skip content of type meta data until end node.
+                            skip = Some(range.next_offset() + i - 1);
                             Some(val)
                         } else {
                             None
