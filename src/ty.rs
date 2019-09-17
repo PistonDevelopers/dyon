@@ -171,6 +171,7 @@ impl Type {
             (&Bool, &Any) => true,
             (&F64, &Any) => true,
             (&Str, &Any) => true,
+            (&Vec4, &Any) => true,
             (&Mat4, &Any) => true,
             _ => false
         }
