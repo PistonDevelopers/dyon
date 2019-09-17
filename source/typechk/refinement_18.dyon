@@ -1,0 +1,7 @@
+fn check_link(_: link) {}
+fn foo(a) -> {return clone(a)}
+([]) -> [link]
+
+fn main() {
+    check_link(foo([link {"hi"}]))
+}

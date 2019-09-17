@@ -173,6 +173,7 @@ impl Type {
             (&Str, &Any) => true,
             (&Vec4, &Any) => true,
             (&Mat4, &Any) => true,
+            (&Link, &Any) => true,
             _ => false
         }
     }
