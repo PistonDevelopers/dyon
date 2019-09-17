@@ -46,8 +46,13 @@ use ast::UseLookup;
 /// After type propagation, all blocks in the `if` expression should have some type information,
 /// but no further propagation is necessary, so it only need to check for consistency.
 pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> Result<(), Range<String>> {
+    use std::collections::HashMap;
+
     // Keep an extra todo-list for nodes that are affected by type refinement.
     let mut todo: Vec<usize> = vec![];
+    // Keep an extra delay-errors map for nodes that should not report an error after all,
+    // if the type refined turned out to match.
+    let mut delay_errs: HashMap<usize, Range<String>> = HashMap::new();
     // Type propagation.
     let mut changed;
     loop {
@@ -93,6 +98,11 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
                     let ch = nodes[i].children[0];
                     let expr_type = nodes[ch].ty.as_ref().map(|ty| nodes[i].inner_type(&ty));
                     if let Some(parent) = nodes[i].parent {
+                        // Remove previous delay errors.
+                        if delay_errs.contains_key(&i) {
+                            delay_errs.remove(&i);
+                        }
+
                         // Take into account swizzling for the declared argument position.
                         let j = {
                             let mut sum = 0;
@@ -146,10 +156,13 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
                                 match (&expr_type, &nodes[arg].ty) {
                                     (&Some(ref ch_ty), &Some(ref arg_ty)) => {
                                         if !arg_ty.goes_with(ch_ty) {
-                                            return Err(nodes[i].source.wrap(
-                                                format!("Type mismatch (#100):\n\
-                                                    Expected `{}`, found `{}`",
-                                                    arg_ty.description(), ch_ty.description())));
+                                            if !delay_errs.contains_key(&i) {
+                                                delay_errs.insert(i, nodes[i].source.wrap(
+                                                    format!("Type mismatch (#100):\n\
+                                                        Expected `{}`, found `{}`",
+                                                        arg_ty.description(), ch_ty.description())));
+                                            }
+                                            continue 'node;
                                         }
                                     }
                                     (&None, _) | (_, &None) => {}
@@ -205,7 +218,7 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
                             {
                                 let found_arg = if let (&Some(ref a), &Some(ref b)) =
                                     (&nodes[arg_expr].ty, &nodes[ty_arg].ty) {
-                                        if a.goes_with(b) {
+                                        if b.goes_with(a) {
                                             if a.ambiguous(b) {break 'outer}
                                             true
                                         } else {false}
@@ -614,12 +627,18 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
                 changed = true;
             }
         }
+
         // Remove old tasks.
         for i in (0..todo_len).rev() {todo.swap_remove(i);}
         // There must be a change to continue checking,
         // even with type refinement, because the todo-list
         // waits for other changes to happen.
         if !changed { break; }
+    }
+
+    // Report one delayed error, if any.
+    if delay_errs.len() > 0 {
+        return Err(delay_errs.values().next().unwrap().clone())
     }
 
     // After type propagation.
