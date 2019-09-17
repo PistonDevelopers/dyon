@@ -267,18 +267,13 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
                         if nodes[item].item_ids() { continue 'node; }
                         if let Some(decl) = nodes[item].declaration {
                             if let Some(ref ty) = nodes[decl].ty {
-                                match *ty {
-                                    Type::Closure(ref ty) => {
-                                        this_ty = Some(ty.ret.clone());
-                                    }
-                                    Type::Any => {
-                                        this_ty = Some(Type::Any);
-                                    }
-                                    _ => return Err(nodes[item].source.wrap(
+                                if let Some(ty) = ty.closure_ret_ty() {
+                                    this_ty = Some(ty);
+                                } else {
+                                    return Err(nodes[item].source.wrap(
                                             format!("Type mismatch (#250):\n\
                                                 Expected `closure`, found `{}`",
-                                                ty.description()),
-                                    ))
+                                                ty.description())))
                                 }
                             }
                         }

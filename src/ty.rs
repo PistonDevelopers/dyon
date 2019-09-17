@@ -187,6 +187,18 @@ impl Type {
         }
     }
 
+    /// Returns `true` if the type can be a closure, `false` otherwise.
+    pub fn closure_ret_ty(&self) -> Option<Type> {
+        use self::Type::*;
+
+        match *self {
+            Closure(ref ty) => Some(ty.ret.clone()),
+            AdHoc(_, ref x) => x.closure_ret_ty(),
+            Any => Some(Type::Any),
+            _ => None
+        }
+    }
+
     /// Returns `true` if a type goes with another type (directional check).
     ///
     /// - `bool` (argument) goes with `sec[bool]` (value)
