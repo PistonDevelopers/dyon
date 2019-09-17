@@ -229,6 +229,9 @@ fn min(array: [f64]) -> f64 { ... }
 /// Returns NaN if array is empty.
 fn max(array: [f64]) -> f64 { ... }
 
+/// Returns the length of 4D vector.
+fn norm(v: vec4) -> f64 { ... }
+
 /// Returns x component of 4D vector.
 fn x(v: vec4) -> f64 { ... }
 
