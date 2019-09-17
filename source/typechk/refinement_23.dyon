@@ -1,0 +1,8 @@
+fn check(_: f64) {}
+fn foo(a) -> {return clone(a)}
+(res[f64]) -> res[f64]
+fn bar(a: res[f64]) -> res {return clone(a)}
+
+fn main() {
+    check(foo(bar(ok(1))))
+}
