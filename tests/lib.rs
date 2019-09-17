@@ -234,6 +234,8 @@ fn test_typechk() {
     test_src("source/typechk/refinement_11.dyon");
     test_fail_src("source/typechk/refinement_12.dyon");
     test_src("source/typechk/refinement_13.dyon");
+    test_fail_src("source/typechk/refinement_14.dyon");
+    test_src("source/typechk/refinement_15.dyon");
 }
 
 #[test]
