@@ -1,0 +1,7 @@
+fn check_bool(_: bool) {}
+fn foo(a) -> {return clone(a)}
+([]) -> [bool]
+
+fn main() {
+    check_bool(foo([true, true, false]))
+}

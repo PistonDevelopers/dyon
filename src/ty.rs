@@ -168,6 +168,7 @@ impl Type {
             (&AdHoc(ref xa, ref xb), &AdHoc(ref ya, ref yb)) if xa == ya => xb.ambiguous(yb),
             (&AdHoc(_, ref x), y) if x.goes_with(y) => true,
             (&Array(ref x), &Array(ref y)) if x.ambiguous(y) => true,
+            (&Bool, &Any) => true,
             (&F64, &Any) => true,
             _ => false
         }

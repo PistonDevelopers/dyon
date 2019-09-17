@@ -1,0 +1,11 @@
+fn check_bool(_: bool) {}
+fn foo(a) -> {return clone(a)}
+([bool]) -> [bool]
+fn bar(a: [bool]) -> [] {return clone(a)}
+
+fn main() {
+    // `bar` returns an ambiguous array type `[]`,
+    // so `foo` should not refine type type,
+    // which should make `check_bool` not detect a type error.
+    check_bool(foo(bar([true, true, false])))
+}
