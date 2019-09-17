@@ -391,7 +391,7 @@ pub fn check(
                         nodes[f].name().expect("Expected name"))))
                 }
             }
-        } else {
+        } else if let Some(ref ret_type) = nodes[f].ty {
             let n = function_args[i];
             for &ch in &nodes[f].children {
                 if nodes[ch].kind == Kind::Ty {
@@ -417,6 +417,14 @@ pub fn check(
                                 arg += 1;
                             }
                             count += 1;
+                        } else if nodes[ty_ch].kind == Kind::TyRet {
+                            if let Some(ref ty_ret) = nodes[ty_ch].ty {
+                                if !ret_type.goes_with(ty_ret) {
+                                    return Err(nodes[ty_ch].source.wrap(
+                                        format!("The type `{}` does not work with `{}`",
+                                                ty_ret.description(), ret_type.description())))
+                                }
+                            }
                         }
                     }
                     if count != n {
