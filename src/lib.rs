@@ -361,6 +361,7 @@ impl Module {
         use dyon_std::*;
 
         let mut m = Module::empty();
+        m.ns("std");
         m.add_str("x", x, Dfn::nl(vec![Vec4], F64));
         m.add_str("y", y, Dfn::nl(vec![Vec4], F64));
         m.add_str("z", z, Dfn::nl(vec![Vec4], F64));
@@ -524,6 +525,7 @@ impl Module {
         m.add_str("wait_next", wait_next, Dfn::nl(vec![Type::in_ty()], Any));
         m.add_str("next", next, Dfn::nl(vec![Type::in_ty()], Type::option()));
 
+        m.no_ns();
         m
     }
 
