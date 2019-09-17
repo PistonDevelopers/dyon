@@ -1,0 +1,7 @@
+fn check_f64(_: f64) {}
+fn foo(a) -> {return clone(a)}
+([]) -> [f64]
+
+fn main() {
+    check_f64(foo([1, 2, 3]))
+}

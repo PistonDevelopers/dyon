@@ -219,7 +219,7 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
                                 let found_arg = if let (&Some(ref a), &Some(ref b)) =
                                     (&nodes[arg_expr].ty, &nodes[ty_arg].ty) {
                                         if b.goes_with(a) {
-                                            if a.ambiguous(b) {break 'outer}
+                                            if b.ambiguous(a) {break 'outer}
                                             true
                                         } else {false}
                                     }

@@ -228,6 +228,8 @@ fn test_typechk() {
     test_src("source/typechk/refinement_5.dyon");
     test_src("source/typechk/refinement_6.dyon");
     test_fail_src("source/typechk/refinement_7.dyon");
+    test_fail_src("source/typechk/refinement_8.dyon");
+    test_src("source/typechk/refinement_9.dyon");
 }
 
 #[test]

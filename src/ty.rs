@@ -156,17 +156,19 @@ impl Type {
     /// Returns an in-type with an `any` as inner type.
     pub fn in_ty() -> Type {Type::In(Box::new(Type::Any))}
 
-    /// Returns `true` if a type is ambiguous relative to a refinement type.
+    /// Returns `true` if a type is ambiguous relative to a refinement type (directional check).
     ///
-    /// For example, the type `str` is ambiguous with ad-hoc type `Foo str`.
+    /// For example, the type ad-hoc type `Foo str` is ambiguous with type `str`.
     /// If more was known about the `str` type with further refinement,
-    /// then it might turn out to be `Bar str` which would not go with `Foo str`.
+    /// then it might turn out to be `Bar str`, which triggers a collision.
     pub fn ambiguous(&self, refine: &Type) -> bool {
         use self::Type::*;
 
         match (self, refine) {
             (&AdHoc(ref xa, ref xb), &AdHoc(ref ya, ref yb)) if xa == ya => xb.ambiguous(yb),
-            (x, &AdHoc(_, ref y)) if x.goes_with(y) => true,
+            (&AdHoc(_, ref x), y) if x.goes_with(y) => true,
+            (&Array(ref x), &Array(ref y)) if x.ambiguous(y) => true,
+            (&F64, &Any) => true,
             _ => false
         }
     }
