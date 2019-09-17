@@ -396,8 +396,26 @@ pub fn check(
             for &ch in &nodes[f].children {
                 if nodes[ch].kind == Kind::Ty {
                     let mut count = 0;
-                    for &ty_ch in &nodes[ch].children {
+                    let mut arg = 0;
+                    for &ty_ch in nodes[ch].children.iter() {
                         if nodes[ty_ch].kind == Kind::TyArg {
+                            if arg < n {
+                                if let Some(ref ty_arg_ty) = nodes[ty_ch].ty {
+                                    while nodes[nodes[f].children[arg]].kind != Kind::Arg {
+                                        arg += 1;
+                                    }
+                                    if arg < n {
+                                        if let Some(ref arg_ty) = nodes[nodes[f].children[arg]].ty {
+                                            if !arg_ty.goes_with(ty_arg_ty) {
+                                                return Err(nodes[ty_ch].source.wrap(
+                                                    format!("The type `{}` does not work with `{}`",
+                                                            ty_arg_ty.description(), arg_ty.description())))
+                                            }
+                                        }
+                                    }
+                                }
+                                arg += 1;
+                            }
                             count += 1;
                         }
                     }

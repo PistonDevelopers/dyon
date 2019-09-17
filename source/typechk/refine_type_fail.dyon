@@ -1,0 +1,5 @@
+fn foo(a: bool) -> {return clone(a)}
+(str) -> bool
+
+fn main() {
+}
