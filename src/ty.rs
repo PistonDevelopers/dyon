@@ -170,6 +170,7 @@ impl Type {
             (&Array(ref x), &Array(ref y)) if x.ambiguous(y) => true,
             (&Bool, &Any) => true,
             (&F64, &Any) => true,
+            (&Str, &Any) => true,
             _ => false
         }
     }
