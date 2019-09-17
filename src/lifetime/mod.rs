@@ -204,6 +204,19 @@ pub fn check(
         .map(|(i, _)| i)
         .collect();
 
+    // Check that functions with extra type information returns something.
+    for &f in &functions {
+        if nodes[f].ty == Some(Type::Void) {
+            for &ch in &nodes[f].children {
+                if nodes[ch].kind == Kind::Ty {
+                    return Err(nodes[ch].source.wrap(
+                        format!("`{}` has extra type information but does not return anything",
+                        nodes[f].name().expect("Expected name"))))
+                }
+            }
+        }
+    }
+
     // Link items to their declaration.
     for &i in &items {
         // When `return` is used as variable one does not need to link.
