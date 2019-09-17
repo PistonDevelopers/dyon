@@ -87,8 +87,9 @@ pub fn check(
     let functions: Vec<usize> = nodes.iter().enumerate()
         .filter(|&(_, n)| n.kind == Kind::Fn).map(|(i, _)| i).collect();
 
-    // Stores functions arguments with same index as `functions`.
-    let mut function_args = Vec::with_capacity(functions.len());
+    // Stores number of functions arguments with same index as `functions`.
+    // To look up number of arguments, use `.enumerate()` on the loop.
+    let mut function_args: Vec<usize> = Vec::with_capacity(functions.len());
 
     // Collect indices to call nodes.
     let calls: Vec<usize> = nodes.iter().enumerate()
@@ -203,19 +204,6 @@ pub fn check(
         })
         .map(|(i, _)| i)
         .collect();
-
-    // Check that functions with extra type information returns something.
-    for &f in &functions {
-        if nodes[f].ty == Some(Type::Void) {
-            for &ch in &nodes[f].children {
-                if nodes[ch].kind == Kind::Ty {
-                    return Err(nodes[ch].source.wrap(
-                        format!("`{}` has extra type information but does not return anything",
-                        nodes[f].name().expect("Expected name"))))
-                }
-            }
-        }
-    }
 
     // Link items to their declaration.
     for &i in &items {
@@ -391,6 +379,36 @@ pub fn check(
             n += 1;
         }
         function_args.push(n);
+    }
+
+    // Check extra type information.
+    for (i, &f) in functions.iter().enumerate() {
+        if nodes[f].ty == Some(Type::Void) {
+            for &ch in &nodes[f].children {
+                if nodes[ch].kind == Kind::Ty {
+                    return Err(nodes[ch].source.wrap(
+                        format!("`{}` has extra type information but does not return anything",
+                        nodes[f].name().expect("Expected name"))))
+                }
+            }
+        } else {
+            let n = function_args[i];
+            for &ch in &nodes[f].children {
+                if nodes[ch].kind == Kind::Ty {
+                    let mut count = 0;
+                    for &ty_ch in &nodes[ch].children {
+                        if nodes[ty_ch].kind == Kind::TyArg {
+                            count += 1;
+                        }
+                    }
+                    if count != n {
+                        return Err(nodes[ch].source.wrap(
+                            format!("Expected {} number of arguments, found {}",
+                                    n, count)))
+                    }
+                }
+            }
+        }
     }
 
     // Check for duplicate functions and build name to index map.
