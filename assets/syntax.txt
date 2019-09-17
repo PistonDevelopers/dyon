@@ -214,7 +214,7 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\\"
     ["in" ?w "[" ?w type:"in" ?w "]"]
     "in":"in_any"
     closure_type:"closure_type"
-    [.._seps!:"ad_hoc" ?[?w type:"ad_hoc_ty"]]
+    [!"sec" .._seps!:"ad_hoc" ?[?w type:"ad_hoc_ty"]]
 }
 101 closure_type = ["\\(" ?w .s?.(, type:"cl_arg") ?w ")"
     ?w "->" ?w type:"cl_ret"]

@@ -135,6 +135,7 @@ fn test_syntax() {
     test_fail_src("source/syntax/div_fail_1.dyon");
     test_src("source/syntax/continue_call.dyon");
     test_src("source/syntax/mat4_1.dyon");
+    test_fail_src("source/syntax/secret_fail.dyon");
 }
 
 #[test]
