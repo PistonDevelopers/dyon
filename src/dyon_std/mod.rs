@@ -24,6 +24,23 @@ pub(crate) fn not(rt: &mut Runtime) -> Result<(), String> {
     Ok(())
 }
 
+pub(crate) fn neg(rt: &mut Runtime) -> Result<(), String> {
+    let n = rt.stack.pop().expect(TINVOTS);
+    let n = match *rt.resolve(&n) {
+        Variable::F64(v, ref sec) => Variable::F64(-v, sec.clone()),
+        Variable::Vec4(v) => Variable::Vec4([-v[0], -v[1], -v[2], -v[3]]),
+        Variable::Mat4(ref m) => Variable::Mat4(Box::new([
+                [-m[0][0], -m[0][1], -m[0][2], -m[0][3]],
+                [-m[1][0], -m[1][1], -m[1][2], -m[1][3]],
+                [-m[2][0], -m[2][1], -m[2][2], -m[2][3]],
+                [-m[3][0], -m[3][1], -m[3][2], -m[3][3]],
+            ])),
+        ref x => return Err(rt.expected_arg(0, x, "f64, vec4 or mat4"))
+    };
+    rt.stack.push(n);
+    Ok(())
+}
+
 dyon_fn!{fn x(v: Vec4) -> f64 {f64::from(v.0[0])}}
 dyon_fn!{fn y(v: Vec4) -> f64 {f64::from(v.0[1])}}
 dyon_fn!{fn z(v: Vec4) -> f64 {f64::from(v.0[2])}}
