@@ -536,7 +536,7 @@ impl Type {
                 convert.update(range);
                 let range = convert.end_node("closure_type")?;
                 convert.update(range);
-                ty = Some(Type::Closure(Box::new(Dfn { lts, tys, ret })));
+                ty = Some(Type::Closure(Box::new(Dfn { lts, tys, ret, ext: vec![] })));
             } else {
                 let range = convert.ignore();
                 convert.update(range);

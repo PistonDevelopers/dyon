@@ -485,28 +485,33 @@ impl Module {
         m.add_str("push_ref(mut,_)", push_ref, Dfn {
             lts: vec![Lt::Default, Lt::Arg(0)],
             tys: vec![Type::array(), Any],
-            ret: Void
+            ret: Void,
+            ext: vec![],
         });
         m.add_str("insert_ref(mut,_,_)", insert_ref, Dfn {
             lts: vec![Lt::Default, Lt::Default, Lt::Arg(0)],
             tys: vec![Type::array(), F64, Any],
-            ret: Void
+            ret: Void,
+            ext: vec![],
         });
         m.add_str("push(mut,_)", push, Dfn::nl(vec![Type::array(), Any], Void));
         m.add_str("insert(mut,_,_)", insert, Dfn {
             lts: vec![Lt::Default; 3],
             tys: vec![Type::array(), F64, Any],
-            ret: Void
+            ret: Void,
+            ext: vec![],
         });
         m.add_str("pop(mut)", pop, Dfn {
             lts: vec![Lt::Return],
             tys: vec![Type::array()],
-            ret: Any
+            ret: Any,
+            ext: vec![],
         });
         m.add_str("remove(mut,_)", remove, Dfn {
             lts: vec![Lt::Return, Lt::Default],
             tys: vec![Type::array(), F64],
-            ret: Any
+            ret: Any,
+            ext: vec![],
         });
         m.add_str("reverse(mut)", reverse, Dfn::nl(vec![Type::array()], Void));
         m.add_str("clear(mut)", clear, Dfn::nl(vec![Type::array()], Void));

@@ -32,15 +32,18 @@ pub struct Dfn {
     pub tys: Vec<Type>,
     /// Return type of function.
     pub ret: Type,
+    /// Extra type information.
+    pub ext: Vec<(Vec<Type>, Type)>,
 }
 
 impl Dfn {
-    /// Creates a new function signature with no lifetime.
+    /// Creates a new function signature with no lifetime or refinement.
     pub fn nl(args: Vec<Type>, ret: Type) -> Dfn {
         Dfn {
             lts: vec![Lt::Default; args.len()],
             tys: args,
-            ret
+            ret,
+            ext: vec![],
         }
     }
 
@@ -70,6 +73,7 @@ impl Dfn {
             lts,
             tys,
             ret: f.ret.clone(),
+            ext: vec![],
         }
     }
 

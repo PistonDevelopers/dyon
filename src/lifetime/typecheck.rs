@@ -627,7 +627,8 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
                         this_ty = Some(Type::Closure(Box::new(Dfn {
                             lts,
                             tys,
-                            ret: ret.unwrap()
+                            ret: ret.unwrap(),
+                            ext: vec![],
                         })));
                     }
                 }
