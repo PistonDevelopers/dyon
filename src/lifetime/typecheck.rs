@@ -219,10 +219,30 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
                         // External functions are treated as loaded in prelude.
                         if let Some(&FnAlias::Loaded(f)) = use_lookup.aliases.get(alias)
                         .and_then(|map| map.get(nodes[i].name().unwrap())) {
-                            this_ty = Some(prelude.list[f].ret.clone());
+                            let f = &prelude.list[f];
+                            if f.ext.len() == 0 {
+                                this_ty = Some(f.ret.clone());
+                            } else {
+                                refine::prelude(i, f, nodes, &mut todo, &mut this_ty)?;
+
+                                // If the type has not been refined, fall back to default type signature.
+                                if this_ty.is_none() && nodes[i].ty.is_none() {
+                                    this_ty = Some(f.ret.clone());
+                                }
+                            }
                         }
                     } else if let Some(&f) = prelude.functions.get(nodes[i].name().unwrap()) {
-                        this_ty = Some(prelude.list[f].ret.clone());
+                        let f = &prelude.list[f];
+                        if f.ext.len() == 0 {
+                            this_ty = Some(f.ret.clone());
+                        } else {
+                            refine::prelude(i, f, nodes, &mut todo, &mut this_ty)?;
+
+                            // If the type has not been refined, fall back to default type signature.
+                            if this_ty.is_none() && nodes[i].ty.is_none() {
+                                this_ty = Some(f.ret.clone());
+                            }
+                        }
                     }
                 }
                 Kind::CallClosure => {
