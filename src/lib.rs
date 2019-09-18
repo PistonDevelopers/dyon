@@ -54,6 +54,7 @@ pub use mat4::Mat4;
 pub const TINVOTS: &str = "There is no value on the stack";
 
 lazy_static!{
+    pub(crate) static ref DOT: Arc<String> = Arc::new("dot".into());
     pub(crate) static ref NOT: Arc<String> = Arc::new("not".into());
     pub(crate) static ref NEG: Arc<String> = Arc::new("neg".into());
     pub(crate) static ref NORM: Arc<String> = Arc::new("norm".into());
@@ -375,6 +376,16 @@ impl Module {
                 (vec![F64], F64),
                 (vec![Vec4], Vec4),
                 (vec![Mat4], Mat4),
+            ]
+        });
+        m.add_str("dot", dot, Dfn {
+            lts: vec![Lt::Default; 2],
+            tys: vec![Any; 2],
+            ret: F64,
+            ext: vec![
+                (vec![Vec4, Vec4], F64),
+                (vec![Vec4, F64], F64),
+                (vec![F64, Vec4], F64),
             ]
         });
         m.add_str("x", x, Dfn::nl(vec![Vec4], F64));

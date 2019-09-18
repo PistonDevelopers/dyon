@@ -41,6 +41,22 @@ pub(crate) fn neg(rt: &mut Runtime) -> Result<(), String> {
     Ok(())
 }
 
+pub(crate) fn dot(rt: &mut Runtime) -> Result<(), String> {
+    let b = rt.stack.pop().expect(TINVOTS);
+    let a = rt.stack.pop().expect(TINVOTS);
+    let r = match (rt.resolve(&a), rt.resolve(&b)) {
+        (&Variable::Vec4(a), &Variable::Vec4(b)) => vecmath::vec4_dot(a, b) as f64,
+        (&Variable::Vec4(a), &Variable::F64(b, _)) |
+        (&Variable::F64(b, _), &Variable::Vec4(a)) => {
+            let b = b as f32;
+            (a[0] * b + a[1] * b + a[2] * b + a[3] * b) as f64
+        }
+        _ => return Err("Expected (vec4, vec4), (vec4, f64) or (f64, vec4)".into())
+    };
+    rt.stack.push(Variable::f64(r));
+    Ok(())
+}
+
 dyon_fn!{fn x(v: Vec4) -> f64 {f64::from(v.0[0])}}
 dyon_fn!{fn y(v: Vec4) -> f64 {f64::from(v.0[1])}}
 dyon_fn!{fn z(v: Vec4) -> f64 {f64::from(v.0[2])}}

@@ -1888,12 +1888,12 @@ impl Add {
             let op = self.ops.pop().unwrap();
             let last = self.items.pop().unwrap();
             let source_range = self.source_range;
-            Expression::BinOp(Box::new(BinOpExpression {
+            BinOpExpression {
                 op,
                 left: self.into_expression(),
                 right: last,
                 source_range
-            }))
+            }.into_expression()
         }
     }
 }
@@ -1982,12 +1982,12 @@ impl Mul {
             let op = self.ops.pop().expect("Expected a binary operation");
             let last = self.items.pop().expect("Expected argument");
             let source_range = self.source_range;
-            Expression::BinOp(Box::new(BinOpExpression {
+            BinOpExpression {
                 op,
                 left: self.into_expression(),
                 right: last,
                 source_range,
-            }))
+            }.into_expression()
         }
     }
 }
@@ -2902,6 +2902,20 @@ impl BinOpExpression {
         stack.truncate(st);
         self.right.resolve_locals(relative, stack, closure_stack, module, use_lookup);
         stack.truncate(st);
+    }
+
+    fn into_expression(self) -> Expression {
+        match self.op {
+            BinOp::Dot => Expression::Call(Box::new(Call {
+                alias: None,
+                name: crate::DOT.clone(),
+                args: vec![self.left, self.right],
+                custom_source: None,
+                f_index: Cell::new(FnIndex::None),
+                source_range: self.source_range,
+            })),
+            _ => Expression::BinOp(Box::new(self))
+        }
     }
 }
 

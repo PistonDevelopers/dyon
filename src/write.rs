@@ -194,7 +194,7 @@ fn write_expr<W: io::Write>(
     use ast::Expression as E;
 
     match *expr {
-        E::BinOp(ref binop) => write_binop(w, rt, binop, tabs)?,
+        E::BinOp(ref binop) => write_binop(w, rt, binop.op, &binop.left, &binop.right, tabs)?,
         E::Item(ref item) => write_item(w, rt, item, tabs)?,
         E::Variable(ref range_var) =>
             write_variable(w, rt, &range_var.1, EscapeString::Json, tabs)?,
@@ -209,6 +209,8 @@ fn write_expr<W: io::Write>(
                 write_not(w, rt, &call.args[0], tabs)?
             } else if &**call.name == "neg" && call.args.len() == 1 {
                 write_neg(w, rt, &call.args[0], tabs)?
+            } else if &**call.name == "dot" && call.args.len() == 2 {
+                write_binop(w, rt, ast::BinOp::Dot, &call.args[0], &call.args[1], tabs)?
             } else {
                 write_call(w, rt, call, tabs)?
             }
@@ -402,24 +404,26 @@ fn binop_needs_parens(op: ast::BinOp, expr: &ast::Expression, right: bool) -> bo
 fn write_binop<W: io::Write>(
     w: &mut W,
     rt: &Runtime,
-    binop: &ast::BinOpExpression,
+    op: ast::BinOp,
+    left: &ast::Expression,
+    right: &ast::Expression,
     tabs: u32,
 ) -> Result<(), io::Error> {
-    let left_needs_parens = binop_needs_parens(binop.op, &binop.left, false);
-    let right_needs_parens = binop_needs_parens(binop.op, &binop.right, true);
+    let left_needs_parens = binop_needs_parens(op, left, false);
+    let right_needs_parens = binop_needs_parens(op, right, true);
 
     if left_needs_parens {
         write!(w, "(")?;
     }
-    write_expr(w, rt, &binop.left, tabs)?;
+    write_expr(w, rt, left, tabs)?;
     if left_needs_parens {
         write!(w, ")")?;
     }
-    write!(w, " {} ", binop.op.symbol())?;
+    write!(w, " {} ", op.symbol())?;
     if right_needs_parens {
         write!(w, "(")?;
     }
-    write_expr(w, rt, &binop.right, tabs)?;
+    write_expr(w, rt, right, tabs)?;
     if right_needs_parens {
         write!(w, ")")?;
     }

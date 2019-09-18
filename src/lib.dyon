@@ -241,6 +241,12 @@ fn neg(v: any) -> any { ... }
     (vec4) -> vec4
     (mat4) -> mat4
 
+/// Returns dot product.
+fn dot(a: any, b: any) -> f64 { ... }
+    (vec4, vec4) -> vec4
+    (vec4, f64) -> vec4
+    (f64, vec4) -> vec4
+
 /// Returns x component of 4D vector.
 fn x(v: vec4) -> f64 { ... }
 
