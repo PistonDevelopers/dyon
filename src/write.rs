@@ -205,6 +205,8 @@ fn write_expr<W: io::Write>(
         E::Call(ref call) => {
             if &**call.name == "norm" && call.args.len() == 1 {
                 write_norm(w, rt, &call.args[0], tabs)?
+            } else if &**call.name == "not" && call.args.len() == 1 {
+                write_not(w, rt, &call.args[0], tabs)?
             } else {
                 write_call(w, rt, call, tabs)?
             }
@@ -421,6 +423,16 @@ fn write_binop<W: io::Write>(
         write!(w, ")")?;
     }
     Ok(())
+}
+
+fn write_not<W: io::Write>(
+    w: &mut W,
+    rt: &Runtime,
+    expr: &ast::Expression,
+    tabs: u32,
+) -> Result<(), io::Error> {
+    write!(w, "!")?;
+    write_expr(w, rt, &expr, tabs)
 }
 
 fn write_unop<W: io::Write>(
