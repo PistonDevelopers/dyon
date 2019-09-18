@@ -92,7 +92,6 @@ pub struct Runtime {
     /// When a current object is used, the runtime searches backwards
     /// until it finds the last current variable with the name.
     pub current_stack: Vec<(Arc<String>, usize)>,
-    ret: Arc<String>,
     pub(crate) rng: rand::rngs::StdRng,
     /// External functions can choose to report an error on an argument.
     pub arg_err_index: Cell<Option<usize>>,
@@ -309,7 +308,6 @@ impl Runtime {
             call_stack: vec![],
             local_stack: vec![],
             current_stack: vec![],
-            ret: Arc::new("return".into()),
             rng: rand::rngs::StdRng::from_entropy(),
             arg_err_index: Cell::new(None),
         }
@@ -857,7 +855,6 @@ impl Runtime {
                 current_len: 0,
             }],
             rng: self.rng.clone(),
-            ret: self.ret.clone(),
             arg_err_index: Cell::new(None),
         };
         let handle: JoinHandle<Result<Variable, String>> = thread::spawn(move || {
@@ -941,7 +938,8 @@ impl Runtime {
 
         self.push_fn(call.item.name.clone(), env.relative, Some(f.file.clone()), st, lc, cu);
         if f.returns() {
-            self.local_stack.push((self.ret.clone(), st - 1));
+            // Use return type because it has the same name.
+            self.local_stack.push((RETURN_TYPE.clone(), st - 1));
         }
         for (i, arg) in f.args.iter().enumerate() {
             // Do not resolve locals to keep fixed length from end of stack.
@@ -1154,7 +1152,8 @@ impl Runtime {
 
                 self.push_fn(call.name.clone(), new_index, Some(f.file.clone()), st, lc, cu);
                 if f.returns() {
-                    self.local_stack.push((self.ret.clone(), st - 1));
+                    // Use return type because it has same name.
+                    self.local_stack.push((RETURN_TYPE.clone(), st - 1));
                 }
                 for (i, arg) in f.args.iter().enumerate() {
                     // Do not resolve locals to keep fixed length from end of stack.
