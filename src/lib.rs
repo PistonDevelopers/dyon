@@ -362,6 +362,7 @@ impl Module {
 
         let mut m = Module::empty();
         m.ns("std");
+        m.add_str("not", not, Dfn::nl(vec![Bool], Bool));
         m.add_str("x", x, Dfn::nl(vec![Vec4], F64));
         m.add_str("y", y, Dfn::nl(vec![Vec4], F64));
         m.add_str("z", z, Dfn::nl(vec![Vec4], F64));

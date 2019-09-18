@@ -14,6 +14,16 @@ const HTTP_SUPPORT_DISABLED: &'static str = "Http support is disabled";
 #[cfg(not(feature = "file"))]
 const FILE_SUPPORT_DISABLED: &'static str = "File support is disabled";
 
+pub(crate) fn not(rt: &mut Runtime) -> Result<(), String> {
+    let b = rt.stack.pop().expect(TINVOTS);
+    let b = match *rt.resolve(&b) {
+        Variable::Bool(ref b, ref sec) => Variable::Bool(!b, sec.clone()),
+        ref x => return Err(rt.expected_arg(0, x, "bool"))
+    };
+    rt.stack.push(b);
+    Ok(())
+}
+
 dyon_fn!{fn x(v: Vec4) -> f64 {f64::from(v.0[0])}}
 dyon_fn!{fn y(v: Vec4) -> f64 {f64::from(v.0[1])}}
 dyon_fn!{fn z(v: Vec4) -> f64 {f64::from(v.0[2])}}
