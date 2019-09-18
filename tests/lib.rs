@@ -254,6 +254,9 @@ fn test_typechk() {
     test_fail_src("source/typechk/refine_type_fail.dyon");
     test_fail_src("source/typechk/refine_type_fail_2.dyon");
     test_src("source/typechk/closure_ad_hoc.dyon");
+    test_fail_src("source/typechk/refine_closed_fail_1.dyon");
+    test_fail_src("source/typechk/refine_closed_fail_2.dyon");
+    test_src("source/typechk/refine_closed_pass_1.dyon");
 }
 
 #[test]

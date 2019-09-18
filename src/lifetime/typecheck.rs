@@ -205,9 +205,12 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
                     if let Some(decl) = nodes[i].declaration {
                         // Refine types using extra type information.
                         let mut found = false;
+                        let mut ambiguous = false;
+                        let mut count = 0;
                         'outer: for &ty in nodes[decl].children.iter()
                             .filter(|&&ty| nodes[ty].kind == Kind::Ty)
                         {
+                            count += 1;
                             let mut all = true;
                             for (arg_expr, &ty_arg) in nodes[i].children.iter()
                                 .filter(|&&arg| nodes[arg].kind == Kind::CallArg &&
@@ -216,10 +219,17 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
                                 .zip(nodes[ty].children.iter()
                                     .filter(|&&ty_arg| nodes[ty_arg].kind == Kind::TyArg))
                             {
+                                if nodes[arg_expr].ty.is_none() {
+                                    ambiguous = true;
+                                    break 'outer;
+                                }
                                 let found_arg = if let (&Some(ref a), &Some(ref b)) =
                                     (&nodes[arg_expr].ty, &nodes[ty_arg].ty) {
                                         if b.goes_with(a) {
-                                            if b.ambiguous(a) {break 'outer}
+                                            if b.ambiguous(a) {
+                                                ambiguous = true;
+                                                break 'outer;
+                                            }
                                             true
                                         } else {false}
                                     }
@@ -240,8 +250,28 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
                             }
                         }
                         if !found {
-                            // Delay completion of this call until extra type information matches.
-                            todo.push(i);
+                            if ambiguous {
+                                // Delay completion of this call until extra type information matches.
+                                todo.push(i);
+                            } else if count > 0 {
+                                use std::io::Write;
+
+                                let mut buf: Vec<u8> = vec![];
+                                write!(&mut buf, "Type mismatch (#230):\nThe argument type `").unwrap();
+                                for (i, arg) in nodes[i].children.iter()
+                                    .filter(|&&arg| nodes[arg].kind == Kind::CallArg &&
+                                                    !nodes[arg].children.is_empty())
+                                    .map(|&arg| nodes[arg].children[0])
+                                    .enumerate() {
+                                    if let Some(ref arg_ty) = nodes[arg].ty {
+                                        if i != 0 {write!(&mut buf, ", ").unwrap()};
+                                        write!(&mut buf, "{}", arg_ty.description()).unwrap();
+                                    }
+                                }
+                                write!(&mut buf, "` does not work with `{}`",
+                                       nodes[i].name().expect("Expected name")).unwrap();
+                                return Err(nodes[i].source.wrap(String::from_utf8(buf).unwrap()))
+                            }
                         }
 
                         // If the type has not been refined, fall back to default type signature.
