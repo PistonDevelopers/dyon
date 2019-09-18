@@ -54,6 +54,13 @@ impl Node {
         else { Some(&self.names[0]) }
     }
 
+    pub fn rewrite_unop(i: usize, name: Arc<String>, nodes: &mut [Node]) {
+        nodes[i].kind = Kind::Call;
+        nodes[i].names.push(name);
+        let ch = nodes[i].children[0];
+        nodes[ch].kind = Kind::CallArg;
+    }
+
     #[allow(dead_code)]
     pub fn print(&self, nodes: &[Node], indent: u32) {
         for _ in 0..indent { print!(" ") }
@@ -210,11 +217,6 @@ impl Node {
                 (Kind::CallClosure, Kind::Item) => { continue }
                 (_, Kind::Item) => {}
                 (_, Kind::Norm) => {}
-                (_, Kind::UnOp) => {
-                    // The result of all unary operators does not depend
-                    // on the lifetime of the argument.
-                    continue
-                }
                 (_, Kind::Compare) => {
                     // The result of all compare operators does not depend
                     // on the lifetime of the arguments.

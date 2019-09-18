@@ -231,7 +231,7 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\\"
 203 / = [wn "/":"/" !"/" ?w]
 204 % = [wn "%":"%" ?w]
 205 pow = [lexpr:"base" wn {"^" "⊻" ["xor" w]} ?w lexpr:"exp"]
-206 mul = .s!({* / %} {unop_neg:"unop" pow:"pow" lexpr:"val"})
+206 mul = .s!({* / %} {unop_neg:"neg" pow:"pow" lexpr:"val"})
 207 mul_expr = {mul:"mul"}
 208 add = .s!({+ -} mul_expr:"expr")
 

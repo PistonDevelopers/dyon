@@ -207,6 +207,8 @@ fn write_expr<W: io::Write>(
                 write_norm(w, rt, &call.args[0], tabs)?
             } else if &**call.name == "not" && call.args.len() == 1 {
                 write_not(w, rt, &call.args[0], tabs)?
+            } else if &**call.name == "neg" && call.args.len() == 1 {
+                write_neg(w, rt, &call.args[0], tabs)?
             } else {
                 write_call(w, rt, call, tabs)?
             }
@@ -321,7 +323,6 @@ fn write_expr<W: io::Write>(
             write_for_in(w, rt, for_in, tabs)?;
         }
         E::If(ref if_expr) => write_if(w, rt, if_expr, tabs)?,
-        E::UnOp(ref unop) => write_unop(w, rt, unop, tabs)?,
         E::Try(ref expr) => {
             write_expr(w, rt, expr, tabs)?;
             write!(w, "?")?;
@@ -435,25 +436,14 @@ fn write_not<W: io::Write>(
     write_expr(w, rt, &expr, tabs)
 }
 
-fn write_unop<W: io::Write>(
+fn write_neg<W: io::Write>(
     w: &mut W,
     rt: &Runtime,
-    unop: &ast::UnOpExpression,
+    expr: &ast::Expression,
     tabs: u32,
 ) -> Result<(), io::Error> {
-    use ast::UnOp::*;
-
-    match unop.op {
-        Not => {
-            write!(w, "!")?;
-            write_expr(w, rt, &unop.expr, tabs)?;
-        }
-        Neg => {
-            write!(w, "-")?;
-            write_expr(w, rt, &unop.expr, tabs)?;
-        }
-    }
-    Ok(())
+    write!(w, "-")?;
+    write_expr(w, rt, &expr, tabs)
 }
 
 fn write_item<W: io::Write>(

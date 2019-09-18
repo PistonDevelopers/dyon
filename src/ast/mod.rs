@@ -1006,8 +1006,6 @@ pub enum Expression {
     If(Box<If>),
     /// Compare expression.
     Compare(Box<Compare>),
-    /// Unary operator expression.
-    UnOp(Box<UnOpExpression>),
     /// Variable.
     ///
     /// This means it contains no members that depends on other expressions.
@@ -1366,7 +1364,6 @@ impl Expression {
             LinkIn(ref for_in_expr) => for_in_expr.source_range,
             If(ref if_expr) => if_expr.source_range,
             Compare(ref comp) => comp.source_range,
-            UnOp(ref unop) => unop.source_range,
             Variable(ref range_var) => range_var.0,
             Try(ref expr) => expr.source_range(),
             Swizzle(ref swizzle) => swizzle.source_range,
@@ -1467,8 +1464,6 @@ impl Expression {
                 if_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             Compare(ref comp) =>
                 comp.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            UnOp(ref unop) =>
-                unop.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             Variable(_) => {}
             Try(ref expr) =>
                 expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
@@ -1932,9 +1927,9 @@ impl Mul {
                 convert.update(range);
                 break;
             } else if let Ok((range, val)) = UnOpExpression::from_meta_data(
-                    "unop", file, source, convert, ignored) {
+                    "neg", file, source, convert, ignored) {
                 convert.update(range);
-                items.push(Expression::UnOp(Box::new(val)));
+                items.push(val.into_expression());
             } else if let Ok((range, val)) = Pow::from_meta_data(
                     file, source, convert, ignored) {
                 convert.update(range);
@@ -2973,30 +2968,18 @@ impl UnOpExpression {
     }
 
     fn into_expression(self) -> Expression {
-        match self.op {
-            UnOp::Not => Expression::Call(Box::new(Call {
-                alias: None,
-                name: Arc::new("not".into()),
-                args: vec![self.expr],
-                custom_source: None,
-                f_index: Cell::new(FnIndex::None),
-                source_range: self.source_range
-            })),
-            UnOp::Neg => Expression::UnOp(Box::new(self))
-        }
-    }
-
-    fn resolve_locals(
-        &self,
-        relative: usize,
-        stack: &mut Vec<Option<Arc<String>>>,
-        closure_stack: &mut Vec<usize>,
-        module: &Module,
-        use_lookup: &UseLookup,
-    ) {
-        let st = stack.len();
-        self.expr.resolve_locals(relative, stack, closure_stack, module, use_lookup);
-        stack.truncate(st);
+        let name = match self.op {
+            UnOp::Not => "not",
+            UnOp::Neg => "neg"
+        };
+        Expression::Call(Box::new(Call {
+            alias: None,
+            name: Arc::new(name.into()),
+            args: vec![self.expr],
+            custom_source: None,
+            f_index: Cell::new(FnIndex::None),
+            source_range: self.source_range
+        }))
     }
 }
 

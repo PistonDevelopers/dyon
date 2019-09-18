@@ -367,7 +367,7 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
                 }
                 Kind::Return | Kind::Val | Kind::Expr | Kind::Cond |
                 Kind::Exp | Kind::Base | Kind::Left | Kind::Right |
-                Kind::ElseIfCond | Kind::UnOp | Kind::Grab
+                Kind::ElseIfCond | Kind::Grab
                  => {
                      // TODO: Report error for expected unary operator.
                     if nodes[i].children.is_empty() { continue 'node; }

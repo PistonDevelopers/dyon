@@ -512,7 +512,6 @@ impl Runtime {
                 self.call_internal(call, loader)
             }
             Item(ref item) => self.item(item, side),
-            UnOp(ref unop) => self.unop(unop, side),
             BinOp(ref binop) => self.binop(binop, side),
             Assign(ref assign) => self.assign(assign.op, &assign.left, &assign.right),
             Vec4(ref vec4) => self.vec4(vec4, side),
@@ -2481,41 +2480,6 @@ impl Runtime {
             [x[2], y[2], z[2], w[2]],
             [x[3], y[3], z[3], w[3]],
         ]))), Flow::Continue))
-    }
-    fn unop(&mut self, unop: &ast::UnOpExpression, side: Side) -> FlowResult {
-        let val = match self.expression(&unop.expr, side)? {
-            (Some(x), Flow::Continue) => x,
-            (x, Flow::Return) => return Ok((x, Flow::Return)),
-            _ => return self.err(unop.source_range, "Expected something from unary argument")
-        };
-        let v = match *self.resolve(&val) {
-            Variable::F64(v, ref sec) => {
-                Variable::F64(match unop.op {
-                    ast::UnOp::Neg => -v,
-                    _ => return self.err(unop.source_range, "Unknown number unary operator")
-                }, sec.clone())
-            }
-            Variable::Vec4(v) => {
-                Variable::Vec4(match unop.op {
-                    ast::UnOp::Neg => [-v[0], -v[1], -v[2], -v[3]],
-                    _ => return self.err(unop.source_range, "Unknown vec4 unary operator")
-                })
-            }
-            Variable::Mat4(ref m) => {
-                match unop.op {
-                    ast::UnOp::Neg => Variable::Mat4(Box::new([
-                            [-m[0][0], -m[0][1], -m[0][2], -m[0][3]],
-                            [-m[1][0], -m[1][1], -m[1][2], -m[1][3]],
-                            [-m[2][0], -m[2][1], -m[2][2], -m[2][3]],
-                            [-m[3][0], -m[3][1], -m[3][2], -m[3][3]],
-                        ])),
-                    _ => return self.err(unop.source_range, "Unknown mat4 unary operator")
-                }
-            }
-            _ => return self.err(unop.source_range,
-                "Invalid type for unary operator, expected f64, vec4 or mat4")
-        };
-        Ok((Some(v), Flow::Continue))
     }
     fn binop(&mut self, binop: &ast::BinOpExpression, side: Side) -> FlowResult {
         use ast::BinOp::*;

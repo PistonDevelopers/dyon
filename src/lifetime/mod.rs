@@ -30,24 +30,13 @@ pub fn check(
 
     // Rewrite graph for syntax sugar that corresponds to function calls.
     for i in 0..nodes.len() {
-        match nodes[i].kind {
-            Kind::Norm => {
-                if nodes[i].children.len() == 1 {
-                    nodes[i].kind = Kind::Call;
-                    nodes[i].names.push(Arc::new("norm".into()));
-                    let ch = nodes[i].children[0];
-                    nodes[ch].kind = Kind::CallArg;
-                }
-            }
-            Kind::Not => {
-                if nodes[i].children.len() == 1 {
-                    nodes[i].kind = Kind::Call;
-                    nodes[i].names.push(Arc::new("not".into()));
-                    let ch = nodes[i].children[0];
-                    nodes[ch].kind = Kind::CallArg;
-                }
-            }
-            _ => {}
+        if nodes[i].children.len() == 1 {
+            Node::rewrite_unop(i, match nodes[i].kind {
+                Kind::Norm => Arc::new("norm".into()),
+                Kind::Not => Arc::new("not".into()),
+                Kind::Neg => Arc::new("neg".into()),
+                _ => continue
+            }, &mut nodes)
         }
     }
 

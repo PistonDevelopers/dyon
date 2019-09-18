@@ -300,16 +300,6 @@ pub fn grab_expr(
             }
             x => x,
         },
-        E::UnOp(ref unop) => {
-            Ok((Grabbed::Expression(E::UnOp(Box::new(ast::UnOpExpression {
-                op: unop.op,
-                expr: match grab_expr(level, rt, &unop.expr, side) {
-                    Ok((Grabbed::Expression(x), Flow::Continue)) => x,
-                    x => return x,
-                },
-                source_range: unop.source_range,
-            }))), Flow::Continue))
-        }
         E::Vec4(ref vec4) => {
             Ok((Grabbed::Expression(E::Vec4(Box::new(ast::Vec4 {
                 args: {

@@ -21,7 +21,6 @@ use super::{
     Link,
     Object,
     Swizzle,
-    UnOpExpression,
     Vec4,
     Mat4,
     TryExpr,
@@ -325,13 +324,6 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
                 left: number(&cmp_expr.left, name, val),
                 right: number(&cmp_expr.right, name, val),
                 source_range: cmp_expr.source_range,
-            }))
-        }
-        E::UnOp(ref unop_expr) => {
-            E::UnOp(Box::new(UnOpExpression {
-                op: unop_expr.op,
-                expr: number(&unop_expr.expr, name, val),
-                source_range: unop_expr.source_range,
             }))
         }
         E::Variable(_) => expr.clone(),
