@@ -232,6 +232,9 @@ fn max(array: [f64]) -> f64 { ... }
 /// Returns the length of 4D vector.
 fn norm(v: vec4) -> f64 { ... }
 
+/// Logical NOT.
+fn not(b: bool) -> bool { ... }
+
 /// Returns x component of 4D vector.
 fn x(v: vec4) -> f64 { ... }
 
