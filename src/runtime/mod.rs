@@ -2489,12 +2489,6 @@ impl Runtime {
             _ => return self.err(unop.source_range, "Expected something from unary argument")
         };
         let v = match *self.resolve(&val) {
-            Variable::Bool(b, ref sec) => {
-                Variable::Bool(match unop.op {
-                    ast::UnOp::Not => !b,
-                    _ => return self.err(unop.source_range, "Unknown boolean unary operator")
-                }, sec.clone())
-            }
             Variable::F64(v, ref sec) => {
                 Variable::F64(match unop.op {
                     ast::UnOp::Neg => -v,
@@ -2519,7 +2513,7 @@ impl Runtime {
                 }
             }
             _ => return self.err(unop.source_range,
-                "Invalid type for unary operator, expected bool, f64, vec4 or mat4")
+                "Invalid type for unary operator, expected f64, vec4 or mat4")
         };
         Ok((Some(v), Flow::Continue))
     }

@@ -1095,7 +1095,7 @@ impl Expression {
             } else if let Ok((range, val)) = UnOpExpression::from_meta_data(
                     file, source, convert, ignored) {
                 convert.update(range);
-                result = Some(Expression::UnOp(Box::new(val)));
+                result = Some(val.into_expression());
             } else if let Ok((range, val)) = Mul::from_meta_data(
                     file, source, convert, ignored) {
                 convert.update(range);
@@ -2970,6 +2970,20 @@ impl UnOpExpression {
             expr,
             source_range: convert.source(start).unwrap()
         }))
+    }
+
+    fn into_expression(self) -> Expression {
+        match self.op {
+            UnOp::Not => Expression::Call(Box::new(Call {
+                alias: None,
+                name: Arc::new("not".into()),
+                args: vec![self.expr],
+                custom_source: None,
+                f_index: Cell::new(FnIndex::None),
+                source_range: self.source_range
+            })),
+            UnOp::Neg => Expression::UnOp(Box::new(self))
+        }
     }
 
     fn resolve_locals(
