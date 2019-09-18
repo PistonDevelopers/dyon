@@ -235,6 +235,12 @@ fn norm(v: vec4) -> f64 { ... }
 /// Logical NOT.
 fn not(b: bool) -> bool { ... }
 
+/// Negation.
+fn neg(v: any) -> any { ... }
+    (f64) -> f64
+    (vec4) -> vec4
+    (mat4) -> mat4
+
 /// Returns x component of 4D vector.
 fn x(v: vec4) -> f64 { ... }
 
