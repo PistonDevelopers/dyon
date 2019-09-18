@@ -479,7 +479,8 @@ impl Function {
         let mut stack: Vec<Option<Arc<String>>> = vec![];
         let mut closure_stack: Vec<usize> = vec![];
         if self.returns() {
-            stack.push(Some(Arc::new("return".into())));
+            // Use return type because it has the same name.
+            stack.push(Some(crate::runtime::RETURN_TYPE.clone()));
         }
         for arg in &self.args {
             stack.push(Some(arg.name.clone()));
@@ -589,7 +590,8 @@ impl Closure {
         let cs = closure_stack.len();
         closure_stack.push(stack.len());
         if self.returns() {
-            stack.push(Some(Arc::new("return".into())));
+            // Use return type because it has the same name.
+            stack.push(Some(crate::runtime::RETURN_TYPE.clone()));
         }
         for arg in &self.args {
             stack.push(Some(arg.name.clone()));
@@ -2790,7 +2792,8 @@ impl CallClosure {
         let st = stack.len();
         self.item.resolve_locals(relative, stack, closure_stack, module, use_lookup);
         // All closures must return a value.
-        stack.push(Some(Arc::new("return".into())));
+        // Use return type because it has the same name.
+        stack.push(Some(crate::runtime::RETURN_TYPE.clone()));
         for arg in &self.args {
             let arg_st = stack.len();
             arg.resolve_locals(relative, stack, closure_stack, module, use_lookup);
@@ -2875,7 +2878,7 @@ impl Norm {
             args: vec![self.expr],
             custom_source: None,
             f_index: Cell::new(FnIndex::None),
-            name: Arc::new("norm".into()),
+            name: crate::NORM.clone(),
             source_range: self.source_range,
         }))
     }
@@ -2969,12 +2972,12 @@ impl UnOpExpression {
 
     fn into_expression(self) -> Expression {
         let name = match self.op {
-            UnOp::Not => "not",
-            UnOp::Neg => "neg"
+            UnOp::Not => crate::NOT.clone(),
+            UnOp::Neg => crate::NEG.clone()
         };
         Expression::Call(Box::new(Call {
             alias: None,
-            name: Arc::new(name.into()),
+            name: name,
             args: vec![self.expr],
             custom_source: None,
             f_index: Cell::new(FnIndex::None),

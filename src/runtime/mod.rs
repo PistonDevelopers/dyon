@@ -75,6 +75,7 @@ lazy_static! {
     pub(crate) static ref THREAD_TYPE: Arc<String> = Arc::new("thread".into());
     pub(crate) static ref CLOSURE_TYPE: Arc<String> = Arc::new("closure".into());
     pub(crate) static ref IN_TYPE: Arc<String> = Arc::new("in".into());
+    pub(crate) static ref MAIN: Arc<String> = Arc::new("main".into());
 }
 
 /// Stores data needed for running a Dyon program.
@@ -746,7 +747,7 @@ impl Runtime {
         use std::mem::replace;
 
         let old_module = replace(&mut self.module, module.clone());
-        let name: Arc<String> = Arc::new("main".into());
+        let name: Arc<String> = MAIN.clone();
         let call = ast::Call {
             alias: None,
             name: name.clone(),

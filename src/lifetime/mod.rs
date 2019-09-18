@@ -32,9 +32,9 @@ pub fn check(
     for i in 0..nodes.len() {
         if nodes[i].children.len() == 1 {
             Node::rewrite_unop(i, match nodes[i].kind {
-                Kind::Norm => Arc::new("norm".into()),
-                Kind::Not => Arc::new("not".into()),
-                Kind::Neg => Arc::new("neg".into()),
+                Kind::Norm => crate::NORM.clone(),
+                Kind::Not => crate::NOT.clone(),
+                Kind::Neg => crate::NEG.clone(),
                 _ => continue
             }, &mut nodes)
         }

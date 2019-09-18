@@ -53,6 +53,12 @@ pub use mat4::Mat4;
 /// A common error message when there is no value on the stack.
 pub const TINVOTS: &str = "There is no value on the stack";
 
+lazy_static!{
+    pub(crate) static ref NOT: Arc<String> = Arc::new("not".into());
+    pub(crate) static ref NEG: Arc<String> = Arc::new("neg".into());
+    pub(crate) static ref NORM: Arc<String> = Arc::new("norm".into());
+}
+
 /// Type alias for Dyon arrays.
 pub type Array = Arc<Vec<Variable>>;
 /// Type alias for Dyon objects.
