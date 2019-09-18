@@ -98,8 +98,8 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\\"
                ?[, arg_expr:"z" ?[, arg_expr:"w"]] ?,]
 26 text = .t?:"text"
 27 bool = [{"true":"bool" "false":!"bool"} !.._seps!]
-28 unop_not = [{"!":"!" "¬":"!"} ?w lexpr:"expr"]
-29 unop_neg = ["-":"-" ?w mul_expr:"expr"]
+28 unop_not = [{"!" "¬"} ?w lexpr:"expr"]
+29 unop_neg = ["-" ?w mul_expr:"expr"]
 30 norm = ["|" ?w expr:"expr" ?w "|"]
 31 item = [?"~":"current" ?w .._seps!:"name" ?[wn "?":"try_item"]
     ?item_extra:"item_extra"]

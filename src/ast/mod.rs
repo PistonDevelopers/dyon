@@ -1095,7 +1095,7 @@ impl Expression {
             } else if let Ok((range, val)) = UnOpExpression::from_meta_data(
                     "not", file, source, convert, ignored) {
                 convert.update(range);
-                result = Some(val.into_expression());
+                result = Some(val);
             } else if let Ok((range, val)) = Mul::from_meta_data(
                     file, source, convert, ignored) {
                 convert.update(range);
@@ -1931,7 +1931,7 @@ impl Mul {
             } else if let Ok((range, val)) = UnOpExpression::from_meta_data(
                     "neg", file, source, convert, ignored) {
                 convert.update(range);
-                items.push(val.into_expression());
+                items.push(val);
             } else if let Ok((range, val)) = Pow::from_meta_data(
                     file, source, convert, ignored) {
                 convert.update(range);
@@ -2122,15 +2122,6 @@ impl BinOp {
             BinOp::Pow => 3,
         }
     }
-}
-
-/// Unary operator.
-#[derive(Debug, Copy, Clone)]
-pub enum UnOp {
-    /// Logical not.
-    Not,
-    /// Negation.
-    Neg,
 }
 
 /// An item id.
@@ -2915,15 +2906,7 @@ impl BinOpExpression {
 }
 
 /// Unary operator expression.
-#[derive(Debug, Clone)]
-pub struct UnOpExpression {
-    /// Unary operator.
-    pub op: UnOp,
-    /// Expression argument.
-    pub expr: Expression,
-    /// The range in source.
-    pub source_range: Range,
-}
+pub struct UnOpExpression;
 
 impl UnOpExpression {
     /// Creates unary operator expression from meta data.
@@ -2933,23 +2916,16 @@ impl UnOpExpression {
         source: &Arc<String>,
         mut convert: Convert,
         ignored: &mut Vec<Range>)
-    -> Result<(Range, UnOpExpression), ()> {
+    -> Result<(Range, Expression), ()> {
         let start = convert;
         let start_range = convert.start_node(node)?;
         convert.update(start_range);
 
-        let mut unop: Option<UnOp> = None;
         let mut expr: Option<Expression> = None;
         loop {
             if let Ok(range) = convert.end_node(node) {
                 convert.update(range);
                 break;
-            } else if let Ok((range, _)) = convert.meta_bool("!") {
-                convert.update(range);
-                unop = Some(UnOp::Not);
-            } else if let Ok((range, _)) = convert.meta_bool("-") {
-                convert.update(range);
-                unop = Some(UnOp::Neg);
             } else if let Ok((range, val)) = Expression::from_meta_data(
                 file, source, "expr", convert, ignored) {
                 convert.update(range);
@@ -2961,27 +2937,21 @@ impl UnOpExpression {
             }
         }
 
-        let unop = unop.ok_or(())?;
         let expr = expr.ok_or(())?;
-        Ok((convert.subtract(start), UnOpExpression {
-            op: unop,
-            expr,
-            source_range: convert.source(start).unwrap()
-        }))
-    }
-
-    fn into_expression(self) -> Expression {
-        let name = match self.op {
-            UnOp::Not => crate::NOT.clone(),
-            UnOp::Neg => crate::NEG.clone()
-        };
-        Expression::Call(Box::new(Call {
-            alias: None,
-            name: name,
-            args: vec![self.expr],
-            custom_source: None,
-            f_index: Cell::new(FnIndex::None),
-            source_range: self.source_range
+        Ok((convert.subtract(start), {
+            let name = match node {
+                "not" => crate::NOT.clone(),
+                "neg" => crate::NEG.clone(),
+                _ => return Err(())
+            };
+            Expression::Call(Box::new(Call {
+                alias: None,
+                name: name,
+                args: vec![expr],
+                custom_source: None,
+                f_index: Cell::new(FnIndex::None),
+                source_range: convert.source(start).unwrap()
+            }))
         }))
     }
 }
