@@ -155,7 +155,7 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\\"
 64 , = [?w "," ?w]
 65 arr = {array:"array" array_fill:"array_fill"}
 66 items = {mat4:"mat4" vec4:"vec4" link:"link" grab:"grab" try_expr:"try_expr"
-            ["(" ?w expr ?w ")"] unop_not:"unop" norm:"norm"
+            ["(" ?w expr ?w ")"] unop_not:"not" norm:"norm"
             text go:"go"
             call_closure:"call_closure" named_call_closure:"named_call_closure"
             call:"call" named_call:"named_call"

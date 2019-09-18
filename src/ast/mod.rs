@@ -1093,7 +1093,7 @@ impl Expression {
                 convert.update(range);
                 result = Some(val.into_expression());
             } else if let Ok((range, val)) = UnOpExpression::from_meta_data(
-                    file, source, convert, ignored) {
+                    "not", file, source, convert, ignored) {
                 convert.update(range);
                 result = Some(val.into_expression());
             } else if let Ok((range, val)) = Mul::from_meta_data(
@@ -1932,7 +1932,7 @@ impl Mul {
                 convert.update(range);
                 break;
             } else if let Ok((range, val)) = UnOpExpression::from_meta_data(
-                    file, source, convert, ignored) {
+                    "unop", file, source, convert, ignored) {
                 convert.update(range);
                 items.push(Expression::UnOp(Box::new(val)));
             } else if let Ok((range, val)) = Pow::from_meta_data(
@@ -2930,13 +2930,13 @@ pub struct UnOpExpression {
 impl UnOpExpression {
     /// Creates unary operator expression from meta data.
     pub fn from_meta_data(
+        node: &str,
         file: &Arc<String>,
         source: &Arc<String>,
         mut convert: Convert,
         ignored: &mut Vec<Range>)
     -> Result<(Range, UnOpExpression), ()> {
         let start = convert;
-        let node = "unop";
         let start_range = convert.start_node(node)?;
         convert.update(start_range);
 

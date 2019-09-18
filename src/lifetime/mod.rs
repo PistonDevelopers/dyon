@@ -39,6 +39,14 @@ pub fn check(
                     nodes[ch].kind = Kind::CallArg;
                 }
             }
+            Kind::Not => {
+                if nodes[i].children.len() == 1 {
+                    nodes[i].kind = Kind::Call;
+                    nodes[i].names.push(Arc::new("not".into()));
+                    let ch = nodes[i].children[0];
+                    nodes[ch].kind = Kind::CallArg;
+                }
+            }
             _ => {}
         }
     }
