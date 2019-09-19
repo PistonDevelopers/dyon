@@ -19,6 +19,7 @@ extern crate reqwest;
 #[macro_use]
 extern crate lazy_static;
 extern crate vecmath;
+extern crate tree_mem_sort;
 
 use std::any::Any;
 use std::fmt;
