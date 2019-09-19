@@ -18,6 +18,7 @@ mod kind;
 mod node;
 mod lt;
 mod typecheck;
+mod normalize;
 
 /// Checks lifetime constraints and does type checking.
 /// Returns refined return types of functions to put in AST.
@@ -28,17 +29,82 @@ pub fn check(
     let mut nodes: Vec<Node> = vec![];
     convert_meta_data(&mut nodes, data)?;
 
+    // Rewrite multiple binary operators into nested ones.
+    for i in 0..nodes.len() {
+        if nodes[i].binops.len() <= 1 {continue};
+        
+        let new_child = nodes.len();
+        let mut parent = nodes[i].parent;
+        for n in (2..nodes[i].children.len()).rev() {
+            // The right argument of the last call
+            // is the last item among the children.
+            // The left argument of the last call
+            // is the result of the recursion.
+            // The last call gets at the top.
+            // This means that it gets pushed first.
+            // The left argument points to the next node to be pushed,
+            // except the last push which points to original node for reuse.
+            let id = nodes.len();
+            let right = nodes[i].children[n];
+            nodes[right].parent = Some(id);
+            nodes.push(Node {
+                kind: nodes[i].kind,
+                names: vec![],
+                ty: None,
+                declaration: None,
+                alias: None,
+                mutable: false,
+                try: false,
+                grab_level: 0,
+                source: nodes[i].source,
+                start: nodes[i].start,
+                end: nodes[i].end,
+                lifetime: None,
+                op: None,
+                binops: vec![nodes[i].binops[n-1]],
+                lts: vec![],
+                parent,
+                children: vec![
+                    if n == 2 {i} else {id + 1},
+                    right
+                ]
+            });
+            parent = Some(id);
+        }
+
+        // Remove all children from original node except the two first.
+        nodes[i].children.truncate(2);
+        // Remove all binary operators from original node except the first.
+        nodes[i].binops.truncate(1);
+        if let Some(old_parent) = nodes[i].parent {
+            // Find the node among the children of the parent,
+            // but do not rely on binary search because it might be unsorted.
+            // Unsorted children is due to possible inference from other rewrites.
+            for j in 0..nodes[old_parent].children.len() {
+                if nodes[old_parent].children[j] == i {
+                    nodes[old_parent].children[j] = new_child;
+                    break;
+                }
+            }
+        }
+        // Change parent of original node.
+        nodes[i].parent = parent;
+    }
+
     // Rewrite graph for syntax sugar that corresponds to function calls.
     for i in 0..nodes.len() {
         if nodes[i].children.len() == 1 {
-            Node::rewrite_unop(i, match nodes[i].kind {
-                Kind::Norm => crate::NORM.clone(),
-                Kind::Not => crate::NOT.clone(),
-                Kind::Neg => crate::NEG.clone(),
-                _ => continue
-            }, &mut nodes)
+            match nodes[i].kind {
+                Kind::Norm => Node::rewrite_unop(i, crate::NORM.clone(), &mut nodes),
+                Kind::Not => Node::rewrite_unop(i, crate::NOT.clone(), &mut nodes),
+                Kind::Neg => Node::rewrite_unop(i, crate::NEG.clone(), &mut nodes),
+                _ => {}
+            }
         }
     }
+
+    // After graph rewrite, the graph might be unnormalized.
+    normalize::fix(&mut nodes);
 
     // Add mutability information to function names.
     for i in 0..nodes.len() {
