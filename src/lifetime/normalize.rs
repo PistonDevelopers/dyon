@@ -3,6 +3,16 @@ use super::*;
 /// Normalize directed acyclic graph such that all children are sorted in memory,
 /// and no child is stored before its parent.
 pub fn fix(nodes: &mut [Node]) {
+    sort(nodes, |n| &mut n.parent, |n| &mut n.children)
+}
+
+/// Performs in-memory topological sort on a directed acyclic graph where
+/// order is determined by every child being greater than their parent,
+/// and every sibling being greater than previous siblings.
+pub fn sort<T, P, C>(nodes: &mut [T], parent: P, children: C)
+    where P: Fn(&mut T) -> &mut Option<usize>,
+          C: Fn(&mut T) -> &mut [usize]
+{
     // This problem can be solving efficiently using Group Theory.
     // This avoid the need for cloning nodes into a new array,
     // while performing the minimum work to get a normalized graph.
@@ -17,16 +27,17 @@ pub fn fix(nodes: &mut [Node]) {
     loop {
         let mut changed = false;
         for i in 0..nodes.len() {
-            for j in 0..nodes[i].children.len() {
-                let a = nodes[i].children[j];
+            let children = children(&mut nodes[i]);
+            for j in 0..children.len() {
+                let a = children[j];
                 // Store child after its parent.
                 if gen[i] > gen[a] {
                     gen.swap(i, a);
                     changed = true;
                 }
                 // Check all pairs of children.
-                for k in j+1..nodes[i].children.len() {
-                    let b = nodes[i].children[k];
+                for k in j+1..children.len() {
+                    let b = children[k];
 
                     // Store children in sorted order.
                     if gen[a] > gen[b] {
@@ -43,8 +54,9 @@ pub fn fix(nodes: &mut [Node]) {
     // Do this before performing the actual swapping,
     // since the generator maps from old indices to new indices.
     for i in 0..nodes.len() {
-        nodes[i].parent = nodes[i].parent.map(|p| gen[p]);
-        for ch in &mut nodes[i].children {*ch = gen[*ch]}
+        let p = parent(&mut nodes[i]);
+        *p = p.map(|p| gen[p]);
+        for ch in children(&mut nodes[i]) {*ch = gen[*ch]}
     }
 
     // Swap nodes using the group generator as guide.
