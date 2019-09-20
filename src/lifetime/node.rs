@@ -61,14 +61,60 @@ impl Node {
         nodes[ch].kind = Kind::CallArg;
     }
 
-    pub fn rewrite_binop(i: usize, name: Arc<String>, nodes: &mut [Node]) {
+    pub fn rewrite_binop(i: usize, name: Arc<String>, nodes: &mut Vec<Node>) {
         nodes[i].kind = Kind::Call;
         nodes[i].names.push(name);
         nodes[i].binops.clear();
-        let left = nodes[i].children[0];
-        let right = nodes[i].children[1];
-        nodes[left].kind = Kind::CallArg;
-        nodes[right].kind = Kind::CallArg;
+
+        let old_left = nodes[i].children[0];
+        let old_right = nodes[i].children[1];
+
+        let left = nodes.len();
+        nodes.push(Node {
+            kind: Kind::CallArg,
+            names: vec![],
+            ty: None,
+            declaration: None,
+            alias: None,
+            mutable: false,
+            try: false,
+            grab_level: 0,
+            source: nodes[old_left].source,
+            start: nodes[old_left].start,
+            end: nodes[old_left].end,
+            lifetime: None,
+            op: None,
+            binops: vec![],
+            lts: vec![],
+            parent: Some(i),
+            children: vec![old_left],
+        });
+        let right = nodes.len();
+        nodes.push(Node {
+            kind: Kind::CallArg,
+            names: vec![],
+            ty: None,
+            declaration: None,
+            alias: None,
+            mutable: false,
+            try: false,
+            grab_level: 0,
+            source: nodes[old_right].source,
+            start: nodes[old_right].start,
+            end: nodes[old_right].end,
+            lifetime: None,
+            op: None,
+            binops: vec![],
+            lts: vec![],
+            parent: Some(i),
+            children: vec![old_right],
+        });
+
+        nodes[old_left].parent = Some(left);
+        nodes[old_right].parent = Some(right);
+
+        nodes[i].children[0] = left;
+        nodes[i].children[1] = right;
     }
 
     #[allow(dead_code)]
@@ -515,6 +561,18 @@ pub fn convert_meta_data(
                     "&&" => {
                         let i = *parents.last().unwrap();
                         nodes[i].binops.push(BinOp::AndAlso);
+                    }
+                    "+" => {
+                        let i = *parents.last().unwrap();
+                        nodes[i].binops.push(BinOp::Add);
+                    }
+                    "-" => {
+                        let i = *parents.last().unwrap();
+                        nodes[i].binops.push(BinOp::Sub);
+                    }
+                    "||" => {
+                        let i = *parents.last().unwrap();
+                        nodes[i].binops.push(BinOp::OrElse);
                     }
                     _ => {}
                 }

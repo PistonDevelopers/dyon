@@ -14,6 +14,58 @@ const HTTP_SUPPORT_DISABLED: &'static str = "Http support is disabled";
 #[cfg(not(feature = "file"))]
 const FILE_SUPPORT_DISABLED: &'static str = "File support is disabled";
 
+pub(crate) fn add(rt: &mut Runtime) -> Result<(), String> {
+    let b = rt.stack.pop().expect(TINVOTS);
+    let a = rt.stack.pop().expect(TINVOTS);
+    let r = match (rt.resolve(&a), rt.resolve(&b)) {
+        (&Variable::F64(a, ref sec), &Variable::F64(b, _)) =>
+            Variable::F64(a + b, sec.clone()),
+        (&Variable::Vec4(a), &Variable::Vec4(b)) =>
+            Variable::Vec4(vecmath::vec4_add(a, b)),
+        (&Variable::Vec4(a), &Variable::F64(b, _)) => {
+            let b = b as f32;
+            Variable::Vec4([a[0] + b, a[1] + b, a[2] + b, a[3] + b])
+        }
+        (&Variable::F64(a, _), &Variable::Vec4(b)) => {
+            let a = a as f32;
+            Variable::Vec4([a + b[0], a + b[1], a + b[2], a + b[3]])
+        }
+        (&Variable::Mat4(ref a), &Variable::Mat4(ref b)) =>
+            Variable::Mat4(Box::new(vecmath::mat4_add(**a, **b))),
+        (&Variable::F64(a, _), &Variable::Mat4(ref b)) => {
+            let a = a as f32;
+            Variable::Mat4(Box::new([
+                    [b[0][0] + a, b[0][1] + a, b[0][2] + a, b[0][3] + a],
+                    [b[1][0] + a, b[1][1] + a, b[1][2] + a, b[1][3] + a],
+                    [b[2][0] + a, b[2][1] + a, b[2][2] + a, b[2][3] + a],
+                    [b[3][0] + a, b[3][1] + a, b[3][2] + a, b[3][3] + a]
+                ]))
+        }
+        (&Variable::Mat4(ref b), &Variable::F64(a, _)) => {
+            let a = a as f32;
+            Variable::Mat4(Box::new([
+                    [b[0][0] + a, b[0][1] + a, b[0][2] + a, b[0][3] + a],
+                    [b[1][0] + a, b[1][1] + a, b[1][2] + a, b[1][3] + a],
+                    [b[2][0] + a, b[2][1] + a, b[2][2] + a, b[2][3] + a],
+                    [b[3][0] + a, b[3][1] + a, b[3][2] + a, b[3][3] + a]
+                ]))
+        }
+        (&Variable::Bool(a, ref sec), &Variable::Bool(b, _)) =>
+            Variable::Bool(a || b, sec.clone()),
+        (&Variable::Str(ref a), &Variable::Str(ref b)) => {
+            let mut res = String::with_capacity(a.len() + b.len());
+            res.push_str(a);
+            res.push_str(b);
+            Variable::Str(Arc::new(res))
+        }
+        (&Variable::Link(ref a), &Variable::Link(ref b)) =>
+            Variable::Link(Box::new(a.add(b))),
+        _ => return Err("Expected `f64`, `vec4`, `mat4`, `bool`, `str` or `link`".into())
+    };
+    rt.stack.push(r);
+    Ok(())
+}
+
 pub(crate) fn not(rt: &mut Runtime) -> Result<(), String> {
     let b = rt.stack.pop().expect(TINVOTS);
     let b = match *rt.resolve(&b) {

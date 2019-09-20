@@ -55,6 +55,7 @@ pub use mat4::Mat4;
 pub const TINVOTS: &str = "There is no value on the stack";
 
 lazy_static!{
+    pub(crate) static ref ADD: Arc<String> = Arc::new("add".into());
     pub(crate) static ref DOT: Arc<String> = Arc::new("dot".into());
     pub(crate) static ref CROSS: Arc<String> = Arc::new("cross".into());
     pub(crate) static ref NOT: Arc<String> = Arc::new("not".into());
@@ -371,6 +372,23 @@ impl Module {
 
         let mut m = Module::empty();
         m.ns("std");
+        m.add_str("add", add, Dfn {
+            lts: vec![Lt::Default; 2],
+            tys: vec![Any; 2],
+            ret: Any,
+            ext: vec![
+                (vec![F64, F64], F64),
+                (vec![Vec4, Vec4], Vec4),
+                (vec![Vec4, F64], Vec4),
+                (vec![F64, Vec4], Vec4),
+                (vec![Mat4, Mat4], Mat4),
+                (vec![F64, Mat4], Mat4),
+                (vec![Mat4, F64], Mat4),
+                (vec![Bool, Bool], Bool),
+                (vec![Str, Str], Str),
+                (vec![Link, Link], Link),
+            ]
+        });
         m.add_str("not", not, Dfn::nl(vec![Bool], Bool));
         m.add_str("neg", neg, Dfn{
             lts: vec![Lt::Default], tys: vec![Any], ret: Any,

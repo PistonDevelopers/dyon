@@ -104,6 +104,7 @@ pub fn check(
             use ast::BinOp::*;
 
             match nodes[i].binops[0] {
+                Add => Node::rewrite_binop(i, crate::ADD.clone(), &mut nodes),
                 Dot => Node::rewrite_binop(i, crate::DOT.clone(), &mut nodes),
                 Cross => Node::rewrite_binop(i, crate::CROSS.clone(), &mut nodes),
                 _ => {}
