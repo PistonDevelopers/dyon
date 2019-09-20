@@ -57,6 +57,12 @@ pub(crate) fn dot(rt: &mut Runtime) -> Result<(), String> {
     Ok(())
 }
 
+dyon_fn!{fn cross(a: Vec4, b: Vec4) -> Vec4 {
+    Vec4([a.0[1] * b.0[2] - a.0[2] * b.0[1],
+          a.0[2] * b.0[0] - a.0[0] * b.0[2],
+          a.0[0] * b.0[1] - a.0[1] * b.0[0], 0.0])
+}}
+
 dyon_fn!{fn x(v: Vec4) -> f64 {f64::from(v.0[0])}}
 dyon_fn!{fn y(v: Vec4) -> f64 {f64::from(v.0[1])}}
 dyon_fn!{fn z(v: Vec4) -> f64 {f64::from(v.0[2])}}

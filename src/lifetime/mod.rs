@@ -100,11 +100,12 @@ pub fn check(
                 Kind::Neg => Node::rewrite_unop(i, crate::NEG.clone(), &mut nodes),
                 _ => {}
             }
-        } else if nodes[i].binops.len() == 1 {
+        } else if nodes[i].binops.len() == 1 && nodes[i].children.len() == 2 {
             use ast::BinOp::*;
 
             match nodes[i].binops[0] {
                 Dot => Node::rewrite_binop(i, crate::DOT.clone(), &mut nodes),
+                Cross => Node::rewrite_binop(i, crate::CROSS.clone(), &mut nodes),
                 _ => {}
             }
         }

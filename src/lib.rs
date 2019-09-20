@@ -56,6 +56,7 @@ pub const TINVOTS: &str = "There is no value on the stack";
 
 lazy_static!{
     pub(crate) static ref DOT: Arc<String> = Arc::new("dot".into());
+    pub(crate) static ref CROSS: Arc<String> = Arc::new("cross".into());
     pub(crate) static ref NOT: Arc<String> = Arc::new("not".into());
     pub(crate) static ref NEG: Arc<String> = Arc::new("neg".into());
     pub(crate) static ref NORM: Arc<String> = Arc::new("norm".into());
@@ -389,6 +390,7 @@ impl Module {
                 (vec![F64, Vec4], F64),
             ]
         });
+        m.add_str("cross", cross, Dfn::nl(vec![Vec4, Vec4], Vec4));
         m.add_str("x", x, Dfn::nl(vec![Vec4], F64));
         m.add_str("y", y, Dfn::nl(vec![Vec4], F64));
         m.add_str("z", z, Dfn::nl(vec![Vec4], F64));

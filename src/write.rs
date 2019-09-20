@@ -211,6 +211,8 @@ fn write_expr<W: io::Write>(
                 write_neg(w, rt, &call.args[0], tabs)?
             } else if &**call.name == "dot" && call.args.len() == 2 {
                 write_binop(w, rt, ast::BinOp::Dot, &call.args[0], &call.args[1], tabs)?
+            } else if &**call.name == "cross" && call.args.len() == 2 {
+                write_binop(w, rt, ast::BinOp::Cross, &call.args[0], &call.args[1], tabs)?
             } else {
                 write_call(w, rt, call, tabs)?
             }
