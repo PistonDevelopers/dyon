@@ -61,6 +61,16 @@ impl Node {
         nodes[ch].kind = Kind::CallArg;
     }
 
+    pub fn rewrite_binop(i: usize, name: Arc<String>, nodes: &mut [Node]) {
+        nodes[i].kind = Kind::Call;
+        nodes[i].names.push(name);
+        nodes[i].binops.clear();
+        let left = nodes[i].children[0];
+        let right = nodes[i].children[1];
+        nodes[left].kind = Kind::CallArg;
+        nodes[right].kind = Kind::CallArg;
+    }
+
     #[allow(dead_code)]
     pub fn print(&self, nodes: &[Node], indent: u32) {
         for _ in 0..indent { print!(" ") }
@@ -252,7 +262,8 @@ impl Node {
                     // The result of array fill does not depend on `n`.
                     continue
                 }
-                (Kind::Call, Kind::CallArg) | (Kind::CallClosure, Kind::CallArg) => {
+                (Kind::Call, Kind::CallArg) | (Kind::CallClosure, Kind::CallArg) |
+                (Kind::CallArg, Kind::CallArg) => {
                     // If there is no return lifetime on the declared argument,
                     // there is no need to check it, because the computed value
                     // does not depend on the lifetime of that argument.

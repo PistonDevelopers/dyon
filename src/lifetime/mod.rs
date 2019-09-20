@@ -32,7 +32,7 @@ pub fn check(
     // Rewrite multiple binary operators into nested ones.
     for i in 0..nodes.len() {
         if nodes[i].binops.len() <= 1 {continue};
-        
+
         let new_child = nodes.len();
         let mut parent = nodes[i].parent;
         for n in (2..nodes[i].children.len()).rev() {
@@ -98,6 +98,13 @@ pub fn check(
                 Kind::Norm => Node::rewrite_unop(i, crate::NORM.clone(), &mut nodes),
                 Kind::Not => Node::rewrite_unop(i, crate::NOT.clone(), &mut nodes),
                 Kind::Neg => Node::rewrite_unop(i, crate::NEG.clone(), &mut nodes),
+                _ => {}
+            }
+        } else if nodes[i].binops.len() == 1 {
+            use ast::BinOp::*;
+
+            match nodes[i].binops[0] {
+                Dot => Node::rewrite_binop(i, crate::DOT.clone(), &mut nodes),
                 _ => {}
             }
         }
