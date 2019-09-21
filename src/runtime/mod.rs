@@ -2511,52 +2511,10 @@ impl Runtime {
             _ => return self.err(binop.source_range, "Expected something from right argument")
         };
         let v = match (self.resolve(&left), self.resolve(&right)) {
-            (&Variable::F64(a, ref sec), &Variable::F64(b, _)) => {
-                Variable::F64(match binop.op {
-                    Pow => a.powf(b),
-                    _ => return Err(self.module.error(binop.source_range,
-                        &format!("{}\nUnknown number operator `{:?}`",
-                            self.stack_trace(),
-                            binop.op.symbol()), self))
-                }, sec.clone())
-            }
-            (&Variable::Vec4(a), &Variable::Vec4(b)) => {
-                match binop.op {
-                    Pow => Variable::Vec4([a[0].powf(b[0]), a[1].powf(b[1]),
-                                           a[2].powf(b[2]), a[3].powf(b[3])]),
-                    _ => return Err(self.module.error(binop.source_range,
-                        &format!("{}\nUnknown operator `{:?}` for `vec4` and `vec4`",
-                            self.stack_trace(),
-                            binop.op.symbol_bool()), self)),
-                }
-            }
-            (&Variable::Vec4(a), &Variable::F64(b, _)) => {
-                let b = b as f32;
-                match binop.op {
-                    Pow => Variable::Vec4([a[0].powf(b), a[1].powf(b),
-                                           a[2].powf(b), a[3].powf(b)]),
-                    _ => return Err(self.module.error(binop.source_range,
-                        &format!("{}\nUnknown operator `{:?}` for `vec4` and `f64`",
-                            self.stack_trace(),
-                            binop.op.symbol_bool()), self)),
-                }
-            }
-            (&Variable::F64(a, _), &Variable::Vec4(b)) => {
-                let a = a as f32;
-                match binop.op {
-                    Pow => Variable::Vec4([a.powf(b[0]), a.powf(b[1]),
-                                           a.powf(b[2]), a.powf(b[3])]),
-                    _ => return Err(self.module.error(binop.source_range,
-                        &format!("{}\nUnknown operator `{:?}` for `f64` and `vec4`",
-                            self.stack_trace(),
-                            binop.op.symbol_bool()), self)),
-                }
-            }
             (&Variable::Bool(a, ref sec), &Variable::Bool(b, _)) => {
                 Variable::Bool(match binop.op {
                     OrElse => a || b,
                     AndAlso => a && b,
-                    Pow => a ^ b,
                     _ => return Err(self.module.error(binop.source_range,
                         &format!("{}\nUnknown boolean operator `{:?}`",
                             self.stack_trace(),

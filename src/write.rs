@@ -223,6 +223,8 @@ fn write_expr<W: io::Write>(
                 write_binop(w, rt, ast::BinOp::Div, &call.args[0], &call.args[1], tabs)?
             } else if &**call.name == "rem" && call.args.len() == 2 {
                 write_binop(w, rt, ast::BinOp::Rem, &call.args[0], &call.args[1], tabs)?
+            } else if &**call.name == "pow" && call.args.len() == 2 {
+                write_binop(w, rt, ast::BinOp::Pow, &call.args[0], &call.args[1], tabs)?
             } else {
                 write_call(w, rt, call, tabs)?
             }

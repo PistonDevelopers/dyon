@@ -109,6 +109,7 @@ pub fn check(
                 Mul => Node::rewrite_binop(i, crate::MUL.clone(), &mut nodes),
                 Div => Node::rewrite_binop(i, crate::DIV.clone(), &mut nodes),
                 Rem => Node::rewrite_binop(i, crate::REM.clone(), &mut nodes),
+                Pow => Node::rewrite_binop(i, crate::POW.clone(), &mut nodes),
                 Dot => Node::rewrite_binop(i, crate::DOT.clone(), &mut nodes),
                 Cross => Node::rewrite_binop(i, crate::CROSS.clone(), &mut nodes),
                 _ => {}

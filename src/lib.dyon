@@ -281,6 +281,14 @@ fn rem(a: any, b: any) -> any { ... }
     (vec4, f64) -> vec4
     (f64, vec4) -> vec4
 
+/// Power operator.
+fn pow(a: any, b: any) -> any { ... }
+    (f64, f64) -> f64
+    (vec4, vec4) -> vec4
+    (vec4, f64) -> vec4
+    (f64, vec4) -> vec4
+    all T { (T bool, T bool) -> T bool }
+
 /// Returns the length of 4D vector.
 fn norm(v: vec4) -> f64 { ... }
 

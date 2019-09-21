@@ -2051,12 +2051,12 @@ impl Pow {
     }
 
     fn into_expression(self) -> Expression {
-        Expression::BinOp(Box::new(BinOpExpression {
+        BinOpExpression {
                 op: BinOp::Pow,
                 left: self.base,
                 right: self.exp,
                 source_range: self.source_range,
-        }))
+        }.into_expression()
     }
 }
 
@@ -2941,6 +2941,14 @@ impl BinOpExpression {
             BinOp::Rem => Expression::Call(Box::new(Call {
                 alias: None,
                 name: crate::REM.clone(),
+                args: vec![self.left, self.right],
+                custom_source: None,
+                f_index: Cell::new(FnIndex::None),
+                source_range: self.source_range,
+            })),
+            BinOp::Pow => Expression::Call(Box::new(Call {
+                alias: None,
+                name: crate::POW.clone(),
                 args: vec![self.left, self.right],
                 custom_source: None,
                 f_index: Cell::new(FnIndex::None),
