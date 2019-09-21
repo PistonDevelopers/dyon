@@ -1,0 +1,11 @@
+fn foo(a: any, b: any) -> any {return a + b}
+    all T { (T f64, T f64) -> T f64 }
+
+fn km(a: f64) -> km f64 {return clone(a)}
+
+fn check_km(a: km f64) {}
+
+fn main() {
+    // Allow no ad-hoc type before the first one.
+    check_km(foo(2, km(3)))
+}

@@ -1,6 +1,8 @@
 use super::*;
 use prelude::Dfn;
 
+use std::sync::Arc;
+
 fn report(
     i: usize,
     found: bool,
@@ -52,6 +54,7 @@ pub(crate) fn declaration(
     {
         count += 1;
         let mut all = true;
+        let mut ty_vars: Vec<Option<Arc<String>>> = vec![None; nodes[ty].names.len()];
         for (arg_expr, &ty_arg) in nodes[i].children.iter()
             .filter(|&&arg| nodes[arg].kind == Kind::CallArg &&
                             !nodes[arg].children.is_empty())
@@ -65,6 +68,8 @@ pub(crate) fn declaration(
             }
             let found_arg = if let (&Some(ref a), &Some(ref b)) =
                 (&nodes[arg_expr].ty, &nodes[ty_arg].ty) {
+                    let b = b.bind_ty_vars(a, &nodes[ty].names, &mut ty_vars)
+                        .map_err(|err| nodes[arg_expr].source.wrap(err))?;
                     if b.goes_with(a) {
                         if b.ambiguous(a) {
                             ambiguous = true;
@@ -83,7 +88,18 @@ pub(crate) fn declaration(
             if let Some(&ind) = nodes[ty].children.iter()
                 .filter(|&&ty| nodes[ty].kind == Kind::TyRet)
                 .next() {
-                *this_ty = nodes[ind].ty.clone();
+
+                let mut new_ty = nodes[ind].ty.clone();
+                if let Some(ref mut new_ty) = new_ty {
+                    for i in 0..nodes[ty].names.len() {
+                        if let Some(ref val) = ty_vars[i] {
+                            new_ty.insert_var(&nodes[ty].names[i], val);
+                        } else {
+                            new_ty.insert_none_var(&nodes[ty].names[i]);
+                        }
+                    }
+                }
+                *this_ty = new_ty;
                 found = true;
                 break;
             }
@@ -106,17 +122,20 @@ pub(crate) fn prelude(
     let mut ambiguous = false;
     'outer: for ty in &f.ext {
         let mut all = true;
+        let mut ty_vars: Vec<Option<Arc<String>>> = vec![None; ty.0.len()];
         for (arg_expr, ty_arg) in nodes[i].children.iter()
             .filter(|&&arg| nodes[arg].kind == Kind::CallArg &&
                             !nodes[arg].children.is_empty())
             .map(|&arg| nodes[arg].children[0])
-            .zip(ty.0.iter())
+            .zip(ty.1.iter())
         {
             if nodes[arg_expr].ty.is_none() {
                 ambiguous = true;
                 break 'outer;
             }
             let found_arg = if let Some(ref a) = nodes[arg_expr].ty {
+                    let ty_arg = ty_arg.bind_ty_vars(a, &ty.0, &mut ty_vars)
+                        .map_err(|err| nodes[arg_expr].source.wrap(err))?;
                     if ty_arg.goes_with(a) {
                         if ty_arg.ambiguous(a) {
                             ambiguous = true;
@@ -132,7 +151,16 @@ pub(crate) fn prelude(
             }
         }
         if all {
-            *this_ty = Some(ty.1.clone());
+            let mut new_ty = ty.2.clone();
+            for i in 0..ty.0.len() {
+                if let Some(ref val) = ty_vars[i] {
+                    new_ty.insert_var(&ty.0[i], val);
+                } else {
+                    new_ty.insert_none_var(&ty.0[i]);
+                }
+            }
+
+            *this_ty = Some(new_ty);
             found = true;
             break;
         }

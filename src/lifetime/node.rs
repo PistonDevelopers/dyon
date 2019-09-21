@@ -473,6 +473,11 @@ pub fn convert_meta_data(
                         let i = *parents.last().unwrap();
                         nodes[i].ty = Some(Type::Vec4);
                     }
+                    "ty_var" => {
+                        // Use names as a way of storing type variables.
+                        let i = *parents.last().unwrap();
+                        nodes[i].names.push(val.clone());
+                    }
                     _ => {}
                 }
             }

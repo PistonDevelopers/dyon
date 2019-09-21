@@ -1,0 +1,8 @@
+fn foo(a: any, b: any) -> any {return a + b}
+    all T { (T f64, T f64) -> T f64 }
+
+fn check_f64(a: f64) {}
+
+fn main() {
+    check_f64(foo(2, 3))
+}

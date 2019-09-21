@@ -33,7 +33,9 @@ pub struct Dfn {
     /// Return type of function.
     pub ret: Type,
     /// Extra type information.
-    pub ext: Vec<(Vec<Type>, Type)>,
+    ///
+    /// Stores type variables, argument types, return type.
+    pub ext: Vec<(Vec<Arc<String>>, Vec<Type>, Type)>,
 }
 
 impl Dfn {

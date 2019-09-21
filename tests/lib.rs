@@ -257,6 +257,13 @@ fn test_typechk() {
     test_fail_src("source/typechk/refine_closed_fail_1.dyon");
     test_fail_src("source/typechk/refine_closed_fail_2.dyon");
     test_src("source/typechk/refine_closed_pass_1.dyon");
+    test_src("source/typechk/refine_quantifier_pass_1.dyon");
+    test_src("source/typechk/refine_quantifier_pass_2.dyon");
+    test_src("source/typechk/refine_quantifier_pass_3.dyon");
+    test_src("source/typechk/refine_quantifier_pass_4.dyon");
+    test_src("source/typechk/refine_quantifier_pass_5.dyon");
+    test_fail_src("source/typechk/refine_quantifier_fail_1.dyon");
+    test_fail_src("source/typechk/refine_quantifier_fail_2.dyon");
 }
 
 #[test]

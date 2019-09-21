@@ -47,6 +47,17 @@ pub enum Type {
 }
 
 impl Type {
+    /// Returns an extension quantified over ad-hoc types.
+    ///
+    /// For example, `(vec4, vec4) -> vec4` becomes `all T { (T vec4, T vec4) -> T vec4 }`.
+    pub fn all_ext(args: Vec<Type>, ret: Type) -> (Vec<Arc<String>>, Vec<Type>, Type) {
+        use crate::T;
+        use Type::AdHoc;
+
+        (vec![T.clone()], args.into_iter().map(|arg| AdHoc(T.clone(), Box::new(arg))).collect(),
+         AdHoc(T.clone(), Box::new(ret)))
+    }
+
     /// Returns description of the type.
     pub fn description(&self) -> String {
         use Type::*;
@@ -155,6 +166,85 @@ impl Type {
 
     /// Returns an in-type with an `any` as inner type.
     pub fn in_ty() -> Type {Type::In(Box::new(Type::Any))}
+
+    /// Binds refinement type variables.
+    ///
+    /// Returns the type argument to compare to.
+    pub fn bind_ty_vars(
+        &self,
+        refine: &Type,
+        names: &[Arc<String>],
+        ty_vars: &mut Vec<Option<Arc<String>>>
+    ) -> Result<Type, String> {
+        if names.len() == 0 {return Ok(self.clone())};
+        match (self, refine) {
+            (&Type::AdHoc(ref a_name, ref a_inner_ty),
+             &Type::AdHoc(ref b_name, ref b_inner_ty)) => {
+                for i in 0..names.len() {
+                    if a_name == &names[i] {
+                        let new_inner = a_inner_ty.bind_ty_vars(b_inner_ty, names, ty_vars)?;
+                        if let Some(ref existing_name) = ty_vars[i] {
+                            if existing_name != b_name &&
+                               new_inner.goes_with(b_inner_ty) &&
+                               !new_inner.ambiguous(b_inner_ty)
+                             {
+                                return Err(format!("Type mismatch (#1500): Expected `{}`, found `{}`",
+                                                   existing_name, b_name))
+                            } else {
+                                return Ok(Type::AdHoc(existing_name.clone(),
+                                          Box::new(new_inner)))
+                            }
+                        } else {
+                            ty_vars[i] = Some(b_name.clone());
+                            return Ok(Type::AdHoc(b_name.clone(),
+                                      Box::new(a_inner_ty.bind_ty_vars(b_inner_ty, names, ty_vars)?)))
+                        }
+                    }
+                }
+                Ok(Type::AdHoc(a_name.clone(),
+                   Box::new(a_inner_ty.bind_ty_vars(b_inner_ty, names, ty_vars)?)))
+            }
+            (&Type::AdHoc(ref a_name, ref a_inner_ty), ref b) => {
+                for i in 0..names.len() {
+                    if a_name == &names[i] {
+                        let new_inner = a_inner_ty.bind_ty_vars(refine, names, ty_vars)?;
+                        if let Some(ref n) = ty_vars[i] {
+                            if new_inner.goes_with(b) && !new_inner.ambiguous(b) {
+                                return Err(format!(
+                                "Type mismatch (#1600): Expected `{}`, found no ad-hoc type", n))
+                            }
+                        } else {break}
+                    }
+                }
+                a_inner_ty.bind_ty_vars(refine, names, ty_vars)
+            }
+            _ => Ok(self.clone())
+        }
+    }
+
+    /// Inserts variable name, replacing ad-hoc type name.
+    pub fn insert_var(&mut self, name: &Arc<String>, val: &Arc<String>) {
+        match *self {
+            Type::AdHoc(ref mut n, ref mut inner_ty) => {
+                if n == name {
+                    *n = val.clone();
+                }
+                inner_ty.insert_var(name, val)
+            }
+            _ => {}
+        }
+    }
+
+    /// Inserts a none ad-hoc variable.
+    pub fn insert_none_var(&mut self, name: &Arc<String>) {
+        match *self {
+            Type::AdHoc(_, ref mut inner_ty) => {
+                inner_ty.insert_none_var(name);
+                *self = (**inner_ty).clone();
+            }
+            _ => {}
+        }
+    }
 
     /// Returns `true` if a type to be refined is ambiguous relative to this type (directional check).
     ///

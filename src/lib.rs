@@ -61,6 +61,7 @@ lazy_static!{
     pub(crate) static ref NOT: Arc<String> = Arc::new("not".into());
     pub(crate) static ref NEG: Arc<String> = Arc::new("neg".into());
     pub(crate) static ref NORM: Arc<String> = Arc::new("norm".into());
+    pub(crate) static ref T: Arc<String> = Arc::new("T".into());
 }
 
 /// Type alias for Dyon arrays.
@@ -377,25 +378,25 @@ impl Module {
             tys: vec![Any; 2],
             ret: Any,
             ext: vec![
-                (vec![F64, F64], F64),
-                (vec![Vec4, Vec4], Vec4),
-                (vec![Vec4, F64], Vec4),
-                (vec![F64, Vec4], Vec4),
-                (vec![Mat4, Mat4], Mat4),
-                (vec![F64, Mat4], Mat4),
-                (vec![Mat4, F64], Mat4),
-                (vec![Bool, Bool], Bool),
-                (vec![Str, Str], Str),
-                (vec![Link, Link], Link),
+                Type::all_ext(vec![F64, F64], F64),
+                Type::all_ext(vec![Vec4, Vec4], Vec4),
+                Type::all_ext(vec![Vec4, F64], Vec4),
+                Type::all_ext(vec![F64, Vec4], Vec4),
+                Type::all_ext(vec![Mat4, Mat4], Mat4),
+                Type::all_ext(vec![F64, Mat4], Mat4),
+                Type::all_ext(vec![Mat4, F64], Mat4),
+                Type::all_ext(vec![Bool, Bool], Bool),
+                Type::all_ext(vec![Str, Str], Str),
+                Type::all_ext(vec![Link, Link], Link),
             ]
         });
         m.add_str("not", not, Dfn::nl(vec![Bool], Bool));
         m.add_str("neg", neg, Dfn{
             lts: vec![Lt::Default], tys: vec![Any], ret: Any,
             ext: vec![
-                (vec![F64], F64),
-                (vec![Vec4], Vec4),
-                (vec![Mat4], Mat4),
+                (vec![], vec![F64], F64),
+                (vec![], vec![Vec4], Vec4),
+                (vec![], vec![Mat4], Mat4),
             ]
         });
         m.add_str("dot", dot, Dfn {
@@ -403,9 +404,9 @@ impl Module {
             tys: vec![Any; 2],
             ret: F64,
             ext: vec![
-                (vec![Vec4, Vec4], F64),
-                (vec![Vec4, F64], F64),
-                (vec![F64, Vec4], F64),
+                (vec![], vec![Vec4, Vec4], F64),
+                (vec![], vec![Vec4, F64], F64),
+                (vec![], vec![F64, Vec4], F64),
             ]
         });
         m.add_str("cross", cross, Dfn::nl(vec![Vec4, Vec4], Vec4));
