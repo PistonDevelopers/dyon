@@ -255,6 +255,18 @@ fn sub(a: any, b: any) -> any { ... }
     all T { (T mat4, T f64) -> T mat4 }
     all T { (T bool, T bool) -> T bool }
 
+/// Multiplication.
+fn mul(a: any, b: any) -> any { ... }
+    (f64, f64) -> f64
+    (vec4, vec4) -> vec4
+    (vec4, f64) -> vec4
+    (f64, vec4) -> vec4
+    (mat4, mat4) -> mat4
+    (f64, mat4) -> mat4
+    (mat4, f64) -> mat4
+    (mat4, vec4) -> vec4
+    all T { (T bool, T bool) -> T bool }
+
 /// Returns the length of 4D vector.
 fn norm(v: vec4) -> f64 { ... }
 

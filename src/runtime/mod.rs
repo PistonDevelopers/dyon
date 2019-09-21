@@ -2513,7 +2513,6 @@ impl Runtime {
         let v = match (self.resolve(&left), self.resolve(&right)) {
             (&Variable::F64(a, ref sec), &Variable::F64(b, _)) => {
                 Variable::F64(match binop.op {
-                    Mul => a * b,
                     Div => a / b,
                     Rem => a % b,
                     Pow => a.powf(b),
@@ -2525,7 +2524,6 @@ impl Runtime {
             }
             (&Variable::Vec4(a), &Variable::Vec4(b)) => {
                 match binop.op {
-                    Mul => Variable::Vec4([a[0] * b[0], a[1] * b[1], a[2] * b[2], a[3] * b[3]]),
                     Div => Variable::Vec4([a[0] / b[0], a[1] / b[1], a[2] / b[2], a[3] / b[3]]),
                     Rem => Variable::Vec4([a[0] % b[0], a[1] % b[1], a[2] % b[2], a[3] % b[3]]),
                     Pow => Variable::Vec4([a[0].powf(b[0]), a[1].powf(b[1]),
@@ -2539,7 +2537,6 @@ impl Runtime {
             (&Variable::Vec4(a), &Variable::F64(b, _)) => {
                 let b = b as f32;
                 match binop.op {
-                    Mul => Variable::Vec4([a[0] * b, a[1] * b, a[2] * b, a[3] * b]),
                     Div => Variable::Vec4([a[0] / b, a[1] / b, a[2] / b, a[3] / b]),
                     Rem => Variable::Vec4([a[0] % b, a[1] % b, a[2] % b, a[3] % b]),
                     Pow => Variable::Vec4([a[0].powf(b), a[1].powf(b),
@@ -2553,7 +2550,6 @@ impl Runtime {
             (&Variable::F64(a, _), &Variable::Vec4(b)) => {
                 let a = a as f32;
                 match binop.op {
-                    Mul => Variable::Vec4([a * b[0], a * b[1], a * b[2], a * b[3]]),
                     Div => Variable::Vec4([a / b[0], a / b[1], a / b[2], a / b[3]]),
                     Rem => Variable::Vec4([a % b[0], a % b[1], a % b[2], a % b[3]]),
                     Pow => Variable::Vec4([a.powf(b[0]), a.powf(b[1]),
@@ -2564,62 +2560,10 @@ impl Runtime {
                             binop.op.symbol_bool()), self)),
                 }
             }
-            (&Variable::Mat4(ref a), &Variable::Mat4(ref b)) => {
-                use vecmath::col_mat4_mul;
-
-                match binop.op {
-                    Mul => Variable::Mat4(Box::new(col_mat4_mul(**a, **b))),
-                    _ => return Err(self.module.error(binop.source_range,
-                        &format!("{}\nUnknown operator `{:?}` for `mat4` and `mat4`",
-                            self.stack_trace(),
-                            binop.op.symbol_bool()), self)),
-                }
-            }
-            (&Variable::F64(a, _), &Variable::Mat4(ref b)) => {
-                let a = a as f32;
-                match binop.op {
-                    Mul => Variable::Mat4(Box::new([
-                            [b[0][0] * a, b[0][1] * a, b[0][2] * a, b[0][3] * a],
-                            [b[1][0] * a, b[1][1] * a, b[1][2] * a, b[1][3] * a],
-                            [b[2][0] * a, b[2][1] * a, b[2][2] * a, b[2][3] * a],
-                            [b[3][0] * a, b[3][1] * a, b[3][2] * a, b[3][3] * a]
-                        ])),
-                    _ => return Err(self.module.error(binop.source_range,
-                        &format!("{}\nUnknown operator `{:?}` for `f64` and `mat4`",
-                            self.stack_trace(),
-                            binop.op.symbol_bool()), self)),
-                }
-            }
-            (&Variable::Mat4(ref b), &Variable::F64(a, _)) => {
-                let a = a as f32;
-                match binop.op {
-                    Mul => Variable::Mat4(Box::new([
-                            [b[0][0] * a, b[0][1] * a, b[0][2] * a, b[0][3] * a],
-                            [b[1][0] * a, b[1][1] * a, b[1][2] * a, b[1][3] * a],
-                            [b[2][0] * a, b[2][1] * a, b[2][2] * a, b[2][3] * a],
-                            [b[3][0] * a, b[3][1] * a, b[3][2] * a, b[3][3] * a]
-                        ])),
-                    _ => return Err(self.module.error(binop.source_range,
-                        &format!("{}\nUnknown operator `{:?}` for `f64` and `mat4`",
-                            self.stack_trace(),
-                            binop.op.symbol_bool()), self)),
-                }
-            }
-            (&Variable::Mat4(ref a), &Variable::Vec4(b)) => {
-                use vecmath::col_mat4_transform;
-
-                match binop.op {
-                    Mul => Variable::Vec4(col_mat4_transform(**a, b)),
-                    _ => return Err(self.module.error(binop.source_range,
-                        &format!("{}\nUnknown operator `{:?}` for `mat4` and `vec4`",
-                            self.stack_trace(),
-                            binop.op.symbol_bool()), self)),
-                }
-            }
             (&Variable::Bool(a, ref sec), &Variable::Bool(b, _)) => {
                 Variable::Bool(match binop.op {
                     OrElse => a || b,
-                    Mul | AndAlso => a && b,
+                    AndAlso => a && b,
                     Pow => a ^ b,
                     _ => return Err(self.module.error(binop.source_range,
                         &format!("{}\nUnknown boolean operator `{:?}`",

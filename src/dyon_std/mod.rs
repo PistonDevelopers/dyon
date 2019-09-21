@@ -22,25 +22,12 @@ pub(crate) fn add(rt: &mut Runtime) -> Result<(), String> {
     let r = match (rt.resolve(&a), rt.resolve(&b)) {
         (&F64(a, ref sec), &F64(b, _)) => F64(a + b, sec.clone()),
         (&Vec4(a), &Vec4(b)) => Vec4(vecmath::vec4_add(a, b)),
-        (&Vec4(a), &F64(b, _)) => {
+        (&Vec4(a), &F64(b, _)) | (&F64(b, _), &Vec4(a)) => {
             let b = b as f32;
             Vec4([a[0] + b, a[1] + b, a[2] + b, a[3] + b])
         }
-        (&F64(a, _), &Vec4(b)) => {
-            let a = a as f32;
-            Vec4([a + b[0], a + b[1], a + b[2], a + b[3]])
-        }
         (&Mat4(ref a), &Mat4(ref b)) => Mat4(Box::new(vecmath::mat4_add(**a, **b))),
-        (&F64(a, _), &Mat4(ref b)) => {
-            let a = a as f32;
-            Mat4(Box::new([
-                    [b[0][0] + a, b[0][1] + a, b[0][2] + a, b[0][3] + a],
-                    [b[1][0] + a, b[1][1] + a, b[1][2] + a, b[1][3] + a],
-                    [b[2][0] + a, b[2][1] + a, b[2][2] + a, b[2][3] + a],
-                    [b[3][0] + a, b[3][1] + a, b[3][2] + a, b[3][3] + a]
-                ]))
-        }
-        (&Mat4(ref b), &F64(a, _)) => {
+        (&F64(a, _), &Mat4(ref b)) | (&Mat4(ref b), &F64(a, _)) => {
             let a = a as f32;
             Mat4(Box::new([
                     [b[0][0] + a, b[0][1] + a, b[0][2] + a, b[0][3] + a],
@@ -99,7 +86,37 @@ pub(crate) fn sub(rt: &mut Runtime) -> Result<(), String> {
                 ]))
         }
         (&Bool(a, ref sec), &Bool(b, _)) => Bool(a && !b, sec.clone()),
-        _ => return Err("Expected `f64` or `vec4`".into())
+        _ => return Err("Expected `f64`, `vec4`, `mat4` or `bool`".into())
+    };
+    rt.stack.push(r);
+    Ok(())
+}
+
+pub(crate) fn mul(rt: &mut Runtime) -> Result<(), String> {
+    use Variable::*;
+
+    let b = rt.stack.pop().expect(TINVOTS);
+    let a = rt.stack.pop().expect(TINVOTS);
+    let r = match (rt.resolve(&a), rt.resolve(&b)) {
+        (&F64(a, ref sec), &F64(b, _)) => F64(a * b, sec.clone()),
+        (&Vec4(a), &Vec4(b)) => Vec4(vecmath::vec4_mul(a, b)),
+        (&Vec4(a), &F64(b, _)) | (&F64(b, _), &Vec4(a)) => {
+            let b = b as f32;
+            Vec4([a[0] * b, a[1] * b, a[2] * b, a[3] * b])
+        }
+        (&Mat4(ref a), &Mat4(ref b)) => Mat4(Box::new(vecmath::col_mat4_mul(**a, **b))),
+        (&F64(a, _), &Mat4(ref b)) | (&Mat4(ref b), &F64(a, _)) => {
+            let a = a as f32;
+            Mat4(Box::new([
+                    [b[0][0] * a, b[0][1] * a, b[0][2] * a, b[0][3] * a],
+                    [b[1][0] * a, b[1][1] * a, b[1][2] * a, b[1][3] * a],
+                    [b[2][0] * a, b[2][1] * a, b[2][2] * a, b[2][3] * a],
+                    [b[3][0] * a, b[3][1] * a, b[3][2] * a, b[3][3] * a]
+                ]))
+        }
+        (&Mat4(ref a), &Vec4(b)) => Vec4(vecmath::col_mat4_transform(**a, b)),
+        (&Bool(a, ref sec), &Bool(b, _)) => Bool(a && b, sec.clone()),
+        _ => return Err("Expected `f64`, `vec4`, `mat4` or `bool`".into())
     };
     rt.stack.push(r);
     Ok(())

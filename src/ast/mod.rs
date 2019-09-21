@@ -2922,6 +2922,14 @@ impl BinOpExpression {
                 f_index: Cell::new(FnIndex::None),
                 source_range: self.source_range,
             })),
+            BinOp::Mul => Expression::Call(Box::new(Call {
+                alias: None,
+                name: crate::MUL.clone(),
+                args: vec![self.left, self.right],
+                custom_source: None,
+                f_index: Cell::new(FnIndex::None),
+                source_range: self.source_range,
+            })),
             BinOp::Dot => Expression::Call(Box::new(Call {
                 alias: None,
                 name: crate::DOT.clone(),
