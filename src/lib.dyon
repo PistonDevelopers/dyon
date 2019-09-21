@@ -267,6 +267,13 @@ fn mul(a: any, b: any) -> any { ... }
     (mat4, vec4) -> vec4
     all T { (T bool, T bool) -> T bool }
 
+/// Division.
+fn div(a: any, b: any) -> any { ... }
+    (f64, f64) -> f64
+    (vec4, vec4) -> vec4
+    (vec4, f64) -> vec4
+    (f64, vec4) -> vec4
+
 /// Returns the length of 4D vector.
 fn norm(v: vec4) -> f64 { ... }
 

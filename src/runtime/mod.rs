@@ -2513,7 +2513,6 @@ impl Runtime {
         let v = match (self.resolve(&left), self.resolve(&right)) {
             (&Variable::F64(a, ref sec), &Variable::F64(b, _)) => {
                 Variable::F64(match binop.op {
-                    Div => a / b,
                     Rem => a % b,
                     Pow => a.powf(b),
                     _ => return Err(self.module.error(binop.source_range,
@@ -2524,7 +2523,6 @@ impl Runtime {
             }
             (&Variable::Vec4(a), &Variable::Vec4(b)) => {
                 match binop.op {
-                    Div => Variable::Vec4([a[0] / b[0], a[1] / b[1], a[2] / b[2], a[3] / b[3]]),
                     Rem => Variable::Vec4([a[0] % b[0], a[1] % b[1], a[2] % b[2], a[3] % b[3]]),
                     Pow => Variable::Vec4([a[0].powf(b[0]), a[1].powf(b[1]),
                                            a[2].powf(b[2]), a[3].powf(b[3])]),
@@ -2537,7 +2535,6 @@ impl Runtime {
             (&Variable::Vec4(a), &Variable::F64(b, _)) => {
                 let b = b as f32;
                 match binop.op {
-                    Div => Variable::Vec4([a[0] / b, a[1] / b, a[2] / b, a[3] / b]),
                     Rem => Variable::Vec4([a[0] % b, a[1] % b, a[2] % b, a[3] % b]),
                     Pow => Variable::Vec4([a[0].powf(b), a[1].powf(b),
                                            a[2].powf(b), a[3].powf(b)]),
@@ -2550,7 +2547,6 @@ impl Runtime {
             (&Variable::F64(a, _), &Variable::Vec4(b)) => {
                 let a = a as f32;
                 match binop.op {
-                    Div => Variable::Vec4([a / b[0], a / b[1], a / b[2], a / b[3]]),
                     Rem => Variable::Vec4([a % b[0], a % b[1], a % b[2], a % b[3]]),
                     Pow => Variable::Vec4([a.powf(b[0]), a.powf(b[1]),
                                            a.powf(b[2]), a.powf(b[3])]),
