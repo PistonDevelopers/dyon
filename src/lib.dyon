@@ -274,6 +274,13 @@ fn div(a: any, b: any) -> any { ... }
     (vec4, f64) -> vec4
     (f64, vec4) -> vec4
 
+/// Division reminder.
+fn rem(a: any, b: any) -> any { ... }
+    (f64, f64) -> f64
+    (vec4, vec4) -> vec4
+    (vec4, f64) -> vec4
+    (f64, vec4) -> vec4
+
 /// Returns the length of 4D vector.
 fn norm(v: vec4) -> f64 { ... }
 

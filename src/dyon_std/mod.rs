@@ -144,6 +144,28 @@ pub(crate) fn div(rt: &mut Runtime) -> Result<(), String> {
     Ok(())
 }
 
+pub(crate) fn rem(rt: &mut Runtime) -> Result<(), String> {
+    use Variable::*;
+
+    let b = rt.stack.pop().expect(TINVOTS);
+    let a = rt.stack.pop().expect(TINVOTS);
+    let r = match (rt.resolve(&a), rt.resolve(&b)) {
+        (&F64(a, ref sec), &F64(b, _)) => F64(a % b, sec.clone()),
+        (&Vec4(a), &Vec4(b)) => Vec4([a[0] % b[0], a[1] % b[1], a[2] % b[2], a[3] % b[3]]),
+        (&Vec4(a), &F64(b, _)) => {
+            let b = b as f32;
+            Vec4([a[0] % b, a[1] % b, a[2] % b, a[3] % b])
+        }
+        (&F64(a, _), &Vec4(b)) => {
+            let a = a as f32;
+            Vec4([a % b[0], a % b[1], a % b[2], a % b[3]])
+        }
+        _ => return Err("Expected `f64` or `vec4`".into())
+    };
+    rt.stack.push(r);
+    Ok(())
+}
+
 pub(crate) fn not(rt: &mut Runtime) -> Result<(), String> {
     let b = rt.stack.pop().expect(TINVOTS);
     let b = match *rt.resolve(&b) {

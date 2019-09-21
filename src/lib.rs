@@ -59,6 +59,7 @@ lazy_static!{
     pub(crate) static ref SUB: Arc<String> = Arc::new("sub".into());
     pub(crate) static ref MUL: Arc<String> = Arc::new("mul".into());
     pub(crate) static ref DIV: Arc<String> = Arc::new("div".into());
+    pub(crate) static ref REM: Arc<String> = Arc::new("rem".into());
     pub(crate) static ref DOT: Arc<String> = Arc::new("dot".into());
     pub(crate) static ref CROSS: Arc<String> = Arc::new("cross".into());
     pub(crate) static ref NOT: Arc<String> = Arc::new("not".into());
@@ -425,6 +426,17 @@ impl Module {
             ]
         });
         m.add_str("div", div, Dfn {
+            lts: vec![Lt::Default; 2],
+            tys: vec![Any; 2],
+            ret: Any,
+            ext: vec![
+                (vec![], vec![F64, F64], F64),
+                (vec![], vec![Vec4, Vec4], Vec4),
+                (vec![], vec![Vec4, F64], Vec4),
+                (vec![], vec![F64, Vec4], Vec4),
+            ]
+        });
+        m.add_str("rem", rem, Dfn {
             lts: vec![Lt::Default; 2],
             tys: vec![Any; 2],
             ret: Any,
