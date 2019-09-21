@@ -213,6 +213,10 @@ fn write_expr<W: io::Write>(
                 write_binop(w, rt, ast::BinOp::Dot, &call.args[0], &call.args[1], tabs)?
             } else if &**call.name == "cross" && call.args.len() == 2 {
                 write_binop(w, rt, ast::BinOp::Cross, &call.args[0], &call.args[1], tabs)?
+            } else if &**call.name == "add" && call.args.len() == 2 {
+                write_binop(w, rt, ast::BinOp::Add, &call.args[0], &call.args[1], tabs)?
+            } else if &**call.name == "sub" && call.args.len() == 2 {
+                write_binop(w, rt, ast::BinOp::Sub, &call.args[0], &call.args[1], tabs)?
             } else {
                 write_call(w, rt, call, tabs)?
             }

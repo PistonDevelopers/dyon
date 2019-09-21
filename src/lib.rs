@@ -56,6 +56,7 @@ pub const TINVOTS: &str = "There is no value on the stack";
 
 lazy_static!{
     pub(crate) static ref ADD: Arc<String> = Arc::new("add".into());
+    pub(crate) static ref SUB: Arc<String> = Arc::new("sub".into());
     pub(crate) static ref DOT: Arc<String> = Arc::new("dot".into());
     pub(crate) static ref CROSS: Arc<String> = Arc::new("cross".into());
     pub(crate) static ref NOT: Arc<String> = Arc::new("not".into());
@@ -388,6 +389,21 @@ impl Module {
                 Type::all_ext(vec![Bool, Bool], Bool),
                 Type::all_ext(vec![Str, Str], Str),
                 Type::all_ext(vec![Link, Link], Link),
+            ]
+        });
+        m.add_str("sub", sub, Dfn {
+            lts: vec![Lt::Default; 2],
+            tys: vec![Any; 2],
+            ret: Any,
+            ext: vec![
+                Type::all_ext(vec![F64, F64], F64),
+                Type::all_ext(vec![Vec4, Vec4], Vec4),
+                Type::all_ext(vec![Vec4, F64], Vec4),
+                Type::all_ext(vec![F64, Vec4], Vec4),
+                Type::all_ext(vec![Mat4, Mat4], Mat4),
+                Type::all_ext(vec![F64, Mat4], Mat4),
+                Type::all_ext(vec![Mat4, F64], Mat4),
+                Type::all_ext(vec![Bool, Bool], Bool),
             ]
         });
         m.add_str("not", not, Dfn::nl(vec![Bool], Bool));

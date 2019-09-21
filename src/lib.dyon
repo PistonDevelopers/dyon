@@ -1,3 +1,5 @@
+ns std
+
 /// Returns an array of derived information for the truth value of `var`.
 /// This can be used with the value of `∃`/`any` and `∀`/`all` loops.
 fn why(var: sec[bool]) -> [any] { ... }
@@ -241,6 +243,17 @@ fn add(a: any, b: any) -> any { ... }
     all T { (T bool, T bool) -> T bool }
     all T { (T str, T str) -> T str }
     all T { (T link, T link) -> T link }
+
+/// Subtraction.
+fn sub(a: any, b: any) -> any { ... }
+    all T { (T f64, T f64) -> T f64 }
+    all T { (T vec4, T vec4) -> T vec4 }
+    all T { (T vec4, T f64) -> T vec4 }
+    all T { (T f64, T vec4) -> T vec4 }
+    all T { (T mat4, T mat4) -> T mat4 }
+    all T { (T f64, T mat4) -> T mat4 }
+    all T { (T mat4, T f64) -> T mat4 }
+    all T { (T bool, T bool) -> T bool }
 
 /// Returns the length of 4D vector.
 fn norm(v: vec4) -> f64 { ... }

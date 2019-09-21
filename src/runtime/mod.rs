@@ -2513,7 +2513,6 @@ impl Runtime {
         let v = match (self.resolve(&left), self.resolve(&right)) {
             (&Variable::F64(a, ref sec), &Variable::F64(b, _)) => {
                 Variable::F64(match binop.op {
-                    Sub => a - b,
                     Mul => a * b,
                     Div => a / b,
                     Rem => a % b,
@@ -2526,7 +2525,6 @@ impl Runtime {
             }
             (&Variable::Vec4(a), &Variable::Vec4(b)) => {
                 match binop.op {
-                    Sub => Variable::Vec4([a[0] - b[0], a[1] - b[1], a[2] - b[2], a[3] - b[3]]),
                     Mul => Variable::Vec4([a[0] * b[0], a[1] * b[1], a[2] * b[2], a[3] * b[3]]),
                     Div => Variable::Vec4([a[0] / b[0], a[1] / b[1], a[2] / b[2], a[3] / b[3]]),
                     Rem => Variable::Vec4([a[0] % b[0], a[1] % b[1], a[2] % b[2], a[3] % b[3]]),
@@ -2541,7 +2539,6 @@ impl Runtime {
             (&Variable::Vec4(a), &Variable::F64(b, _)) => {
                 let b = b as f32;
                 match binop.op {
-                    Sub => Variable::Vec4([a[0] - b, a[1] - b, a[2] - b, a[3] - b]),
                     Mul => Variable::Vec4([a[0] * b, a[1] * b, a[2] * b, a[3] * b]),
                     Div => Variable::Vec4([a[0] / b, a[1] / b, a[2] / b, a[3] / b]),
                     Rem => Variable::Vec4([a[0] % b, a[1] % b, a[2] % b, a[3] % b]),
@@ -2556,7 +2553,6 @@ impl Runtime {
             (&Variable::F64(a, _), &Variable::Vec4(b)) => {
                 let a = a as f32;
                 match binop.op {
-                    Sub => Variable::Vec4([a - b[0], a - b[1], a - b[2], a - b[3]]),
                     Mul => Variable::Vec4([a * b[0], a * b[1], a * b[2], a * b[3]]),
                     Div => Variable::Vec4([a / b[0], a / b[1], a / b[2], a / b[3]]),
                     Rem => Variable::Vec4([a % b[0], a % b[1], a % b[2], a % b[3]]),
@@ -2569,10 +2565,9 @@ impl Runtime {
                 }
             }
             (&Variable::Mat4(ref a), &Variable::Mat4(ref b)) => {
-                use vecmath::{mat4_sub, col_mat4_mul};
+                use vecmath::col_mat4_mul;
 
                 match binop.op {
-                    Sub => Variable::Mat4(Box::new(mat4_sub(**a, **b))),
                     Mul => Variable::Mat4(Box::new(col_mat4_mul(**a, **b))),
                     _ => return Err(self.module.error(binop.source_range,
                         &format!("{}\nUnknown operator `{:?}` for `mat4` and `mat4`",
@@ -2583,12 +2578,6 @@ impl Runtime {
             (&Variable::F64(a, _), &Variable::Mat4(ref b)) => {
                 let a = a as f32;
                 match binop.op {
-                    Sub => Variable::Mat4(Box::new([
-                            [a - b[0][0], a - b[0][1], a - b[0][2], a - b[0][3]],
-                            [a - b[1][0], a - b[1][1], a - b[1][2], a - b[1][3]],
-                            [a - b[2][0], a - b[2][1], a - b[2][2], a - b[2][3]],
-                            [a - b[3][0], a - b[3][1], a - b[3][2], a - b[3][3]]
-                        ])),
                     Mul => Variable::Mat4(Box::new([
                             [b[0][0] * a, b[0][1] * a, b[0][2] * a, b[0][3] * a],
                             [b[1][0] * a, b[1][1] * a, b[1][2] * a, b[1][3] * a],
@@ -2604,12 +2593,6 @@ impl Runtime {
             (&Variable::Mat4(ref b), &Variable::F64(a, _)) => {
                 let a = a as f32;
                 match binop.op {
-                    Sub => Variable::Mat4(Box::new([
-                            [b[0][0] - a, b[0][1] - a, b[0][2] - a, b[0][3] - a],
-                            [b[1][0] - a, b[1][1] - a, b[1][2] - a, b[1][3] - a],
-                            [b[2][0] - a, b[2][1] - a, b[2][2] - a, b[2][3] - a],
-                            [b[3][0] - a, b[3][1] - a, b[3][2] - a, b[3][3] - a]
-                        ])),
                     Mul => Variable::Mat4(Box::new([
                             [b[0][0] * a, b[0][1] * a, b[0][2] * a, b[0][3] * a],
                             [b[1][0] * a, b[1][1] * a, b[1][2] * a, b[1][3] * a],
@@ -2636,8 +2619,6 @@ impl Runtime {
             (&Variable::Bool(a, ref sec), &Variable::Bool(b, _)) => {
                 Variable::Bool(match binop.op {
                     OrElse => a || b,
-                    // Boolean subtraction with lazy precedence.
-                    Sub => a && !b,
                     Mul | AndAlso => a && b,
                     Pow => a ^ b,
                     _ => return Err(self.module.error(binop.source_range,
