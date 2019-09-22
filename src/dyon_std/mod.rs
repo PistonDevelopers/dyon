@@ -833,7 +833,7 @@ pub(crate) fn swap(rt: &mut Runtime) -> Result<Option<Variable>, String> {
     Ok(None)
 }
 
-pub(crate) fn read_line(rt: &mut Runtime) -> Result<Option<Variable>, String> {
+pub(crate) fn read_line(_rt: &mut Runtime) -> Result<Option<Variable>, String> {
     use std::io::{self, Write};
     use std::error::Error;
 
@@ -1661,7 +1661,7 @@ dyon_fn!{fn load_data__string(text: Arc<String>) -> Variable {
     Variable::Result(res)
 }}
 
-pub(crate) fn args_os(rt: &mut Runtime) -> Result<Option<Variable>, String> {
+pub(crate) fn args_os(_rt: &mut Runtime) -> Result<Option<Variable>, String> {
     let mut arr: Vec<Variable> = vec![];
     for arg in ::std::env::args_os() {
         if let Ok(t) = arg.into_string() {

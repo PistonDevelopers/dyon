@@ -3,7 +3,6 @@ use std::sync::Arc;
 use piston_meta::bootstrap::Convert;
 use range::Range;
 use Dfn;
-use ast::BinOp;
 
 /// Stores a Dyon type.
 #[derive(Debug, Clone, PartialEq)]
@@ -404,46 +403,6 @@ impl Type {
         }
     }
 
-    /// Infers type from the `+` operator.
-    pub fn add(&self, other: &Type) -> Option<Type> {
-        use self::Type::*;
-
-        match (self, other) {
-            (&AdHoc(ref name, ref ty), &AdHoc(ref other_name, ref other_ty)) => {
-                if name != other_name { return None; }
-                if !ty.goes_with(other_ty) { return None; }
-                if let Some(new_ty) = ty.add(other_ty) {
-                    Some(AdHoc(name.clone(), Box::new(new_ty)))
-                } else {
-                    None
-                }
-            }
-            (&Void, _) | (_, &Void) => None,
-            (&Array(_), _) | (_, &Array(_)) => None,
-            (&Bool, &Bool) => Some(Bool),
-            (&Secret(ref a), &Secret(ref b))
-            if **a == Type::Bool && **b == Type::Bool =>
-                Some(Secret(Box::new(Bool))),
-            (&Secret(ref a), &Bool) if **a == Type::Bool => Some(Secret(Box::new(Bool))),
-            (&Bool, &Secret(ref b)) if **b == Type::Bool => Some(Bool),
-            (&F64, &F64) => Some(F64),
-            (&Mat4, &Mat4) => Some(Mat4),
-            (&F64, &Mat4) | (&Mat4, &F64) => Some(Mat4),
-            (&Secret(ref a), &Secret(ref b))
-            if **a == Type::F64 && **b == Type::F64 =>
-                Some(Secret(Box::new(F64))),
-            (&Secret(ref a), &F64) if **a == Type::F64 => Some(Secret(Box::new(F64))),
-            (&F64, &Secret(ref b)) if **b == Type::F64 => Some(F64),
-            (&Str, &Str) => Some(Str),
-            (&Vec4, &F64) => Some(Vec4),
-            (&F64, &Vec4) => Some(Vec4),
-            (&Vec4, &Vec4) => Some(Vec4),
-            (&Any, x) if x != &Type::Void => Some(Any),
-            (x, &Any) if x != &Type::Void => Some(Any),
-            _ => None
-        }
-    }
-
     /// Infers type from the `+=` operator.
     pub fn add_assign(&self, other: &Type) -> bool {
         use self::Type::*;
@@ -457,70 +416,6 @@ impl Type {
             (&AdHoc(_, _), _) | (_, &AdHoc(_, _)) => false,
             (&Void, _) | (_, &Void) => false,
             _ => true
-        }
-    }
-
-    /// Infers type from the `*` binary operator.
-    pub fn mul(&self, other: &Type, binop: BinOp) -> Option<Type> {
-        use self::Type::*;
-
-        match (self, other) {
-            (&Void, _) | (_, &Void) => None,
-            (&Array(_), _) | (_, &Array(_)) => None,
-            (&Bool, &Bool) => Some(Bool),
-            (&Secret(ref a), &Secret(ref b))
-            if **a == Type::Bool && **b == Type::Bool =>
-                Some(Secret(Box::new(Bool))),
-            (&Secret(ref a), &Bool) if **a == Type::Bool => Some(Secret(Box::new(Bool))),
-            (&Bool, &Secret(ref b)) if **b == Type::Bool => Some(Bool),
-            (&F64, &F64) => Some(F64),
-            (&Mat4, &Mat4) => Some(Mat4),
-            (&F64, &Mat4) | (&Mat4, &F64) => Some(Mat4),
-            (&Mat4, &Vec4) => Some(Vec4),
-            (&Secret(ref a), &Secret(ref b))
-            if **a == Type::F64 && **b == Type::F64 =>
-                Some(Secret(Box::new(F64))),
-            (&Secret(ref a), &F64) if **a == Type::F64 => Some(Secret(Box::new(F64))),
-            (&F64, &Secret(ref b)) if **b == Type::F64 => Some(F64),
-            (&Vec4, &F64) => Some(Vec4),
-            (&F64, &Vec4) => Some(Vec4),
-            (&Vec4, &Vec4) => {
-                if let BinOp::Dot = binop {
-                    Some(F64)
-                } else {
-                    Some(Vec4)
-                }
-            }
-            (&Any, x) if x != &Type::Void => Some(Any),
-            (x, &Any) if x != &Type::Void => Some(Any),
-            _ => None
-        }
-    }
-
-    /// Infers type from the `^` binary operator.
-    pub fn pow(&self, other: &Type) -> Option<Type> {
-        use self::Type::*;
-
-        match (self, other) {
-            (&Void, _) | (_, &Void) => None,
-            (&Array(_), _) | (_, &Array(_)) => None,
-            (&Bool, &Bool) => Some(Bool),
-            (&Secret(ref a), &Secret(ref b))
-            if **a == Type::Bool && **b == Type::Bool =>
-                Some(Secret(Box::new(Bool))),
-            (&Secret(ref a), &Bool) if **a == Type::Bool => Some(Secret(Box::new(Bool))),
-            (&Bool, &Secret(ref b)) if **b == Type::Bool => Some(Bool),
-            (&F64, &F64) => Some(F64),
-            (&Secret(ref a), &Secret(ref b))
-            if **a == Type::F64 && **b == Type::F64 =>
-                Some(Secret(Box::new(F64))),
-            (&Secret(ref a), &F64) if **a == Type::F64 => Some(Secret(Box::new(F64))),
-            (&F64, &Secret(ref b)) if **b == Type::F64 => Some(F64),
-            (&Vec4, &F64) | (&F64, &Vec4) => Some(Vec4),
-            (&Vec4, &Vec4) => Some(Vec4),
-            (&Any, x) if x != &Type::Void => Some(Any),
-            (x, &Any) if x != &Type::Void => Some(Any),
-            _ => None
         }
     }
 
