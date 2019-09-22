@@ -24,51 +24,49 @@ macro_rules! dyon_fn_pop {
 macro_rules! dyon_fn {
     (fn $name:ident () -> $rt:ty $b:block) => {
         #[allow(non_snake_case)]
-        pub fn $name(rt: &mut $crate::Runtime) -> Result<(), String> {
+        pub fn $name(_rt: &mut $crate::Runtime) -> Result<Option<$crate::Variable>, String> {
             fn inner() -> $rt {
                 $b
             }
 
-            rt.push(inner());
-            Ok(())
+            Ok(Some($crate::embed::PushVariable::push_var(&inner())))
         }
     };
     (fn $name:ident ($($arg:tt : $t:ty),+) -> $rt:ty $b:block) => {
         dyon_macro_items!{
             #[allow(non_snake_case)]
-            pub fn $name(rt: &mut $crate::Runtime) -> Result<(), String> {
+            pub fn $name(rt: &mut $crate::Runtime) -> Result<Option<$crate::Variable>, String> {
                 fn inner($($arg: $t),+) -> $rt {
                     $b
                 }
 
                 dyon_fn_pop!(rt $($arg: $t),+);
-                rt.push(inner($($arg),+));
-                Ok(())
+                Ok(Some($crate::embed::PushVariable::push_var(&inner($($arg),+))))
             }
         }
     };
     (fn $name:ident () $b:block) => {
         #[allow(non_snake_case)]
-        pub fn $name(_: &mut $crate::Runtime) -> Result<(), String> {
+        pub fn $name(_: &mut $crate::Runtime) -> Result<Option<$crate::Variable>, String> {
             fn inner() {
                 $b
             }
 
             inner();
-            Ok(())
+            Ok(None)
         }
     };
     (fn $name:ident ($($arg:tt : $t:ty),+) $b:block) => {
         dyon_macro_items!{
             #[allow(non_snake_case)]
-            pub fn $name(rt: &mut $crate::Runtime) -> Result<(), String> {
+            pub fn $name(rt: &mut $crate::Runtime) -> Result<Option<$crate::Variable>, String> {
                 fn inner($($arg: $t),+) {
                     $b
                 }
 
                 dyon_fn_pop!(rt $($arg: $t),+);
                 inner($($arg),+);
-                Ok(())
+                Ok(None)
             }
         }
     };

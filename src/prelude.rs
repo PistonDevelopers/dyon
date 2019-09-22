@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use ast;
 use Module;
 use Type;
+use Lazy;
 
 /// Argument lifetime constraint.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -36,6 +37,8 @@ pub struct Dfn {
     ///
     /// Stores type variables, argument types, return type.
     pub ext: Vec<(Vec<Arc<String>>, Vec<Type>, Type)>,
+    /// Stores lazy invariants.
+    pub lazy: &'static [&'static [Lazy]],
 }
 
 impl Dfn {
@@ -46,6 +49,7 @@ impl Dfn {
             tys: args,
             ret,
             ext: vec![],
+            lazy: crate::LAZY_NO,
         }
     }
 
@@ -76,6 +80,7 @@ impl Dfn {
             tys,
             ret: f.ret.clone(),
             ext: vec![],
+            lazy: crate::LAZY_NO,
         }
     }
 

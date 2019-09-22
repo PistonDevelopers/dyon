@@ -50,12 +50,6 @@ fn infer_expr(
             let res = infer_item(item, name, decls);
             if res.is_some() { return res; }
         }
-        BinOp(ref binop_expr) => {
-            let left = infer_expr(&binop_expr.left, name, decls);
-            if left.is_some() { return left; }
-            let right = infer_expr(&binop_expr.right, name, decls);
-            if right.is_some() { return right; }
-        }
         Assign(ref assign_expr) => {
             let left = infer_expr(&assign_expr.left, name, decls);
             if left.is_some() { return left; }

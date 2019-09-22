@@ -272,6 +272,7 @@ impl Type {
             (&Option(_), &Any) => true,
             (&Result(_), &Any) => true,
             (&Thread(_), &Any) => true,
+            (&Secret(_), &Any) => true,
             (&In(_), &Any) => true,
             _ => false
         }
@@ -626,7 +627,9 @@ impl Type {
                 convert.update(range);
                 let range = convert.end_node("closure_type")?;
                 convert.update(range);
-                ty = Some(Type::Closure(Box::new(Dfn { lts, tys, ret, ext: vec![] })));
+                ty = Some(Type::Closure(Box::new(
+                    Dfn { lts, tys, ret, ext: vec![], lazy: crate::LAZY_NO }
+                )));
             } else {
                 let range = convert.ignore();
                 convert.update(range);

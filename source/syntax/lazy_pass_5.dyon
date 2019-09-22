@@ -1,0 +1,8 @@
+fn foo(a: res[str] => ok(_), b: str) -> str {return unwrap_or(a, b)}
+
+fn main() {
+    println(foo(ok("hi"), {
+        println("this is a test")
+        "hello"
+    }))
+}

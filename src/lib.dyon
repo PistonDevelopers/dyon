@@ -1,5 +1,15 @@
 ns std
 
+/// Lazy AND (`&&`).
+fn and_also(a: bool => false, b: bool) -> any { ... }
+    (sec[bool], bool) -> sec[bool]
+    (bool, bool) -> bool
+
+/// Lazy OR (`||`).
+fn or_else(a: bool => true, b: bool) -> any { ... }
+    (sec[bool], bool) -> sec[bool]
+    (bool, bool) -> bool
+
 /// Returns an array of derived information for the truth value of `var`.
 /// This can be used with the value of `∃`/`any` and `∀`/`all` loops.
 fn why(var: sec[bool]) -> [any] { ... }
@@ -209,7 +219,11 @@ fn unwrap(var: any) -> any { ... }
 fn unwrap_err(var: any) -> any { ... }
 
 /// Unwraps value or using a default.
-fn unwrap_or(var: any, def: any) -> any { ... }
+///
+/// This function uses a lazy invariant in the first argument.
+/// This means that if the lazy invariant matches,
+/// the second argument is not evaluated.
+fn unwrap_or(var: any => ok(_) | some(_), def: any) -> any { ... }
 
 /// Creates `ok(var)` variant of option values.
 fn ok(var: any) -> res[any] { ... }

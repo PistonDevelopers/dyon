@@ -50,11 +50,14 @@ pub use ty::Type;
 pub use link::Link;
 pub use vec4::Vec4;
 pub use mat4::Mat4;
+pub use ast::Lazy;
 
 /// A common error message when there is no value on the stack.
 pub const TINVOTS: &str = "There is no value on the stack";
 
 lazy_static!{
+    pub(crate) static ref AND_ALSO: Arc<String> = Arc::new("and_also".into());
+    pub(crate) static ref OR_ELSE: Arc<String> = Arc::new("or_else".into());
     pub(crate) static ref ADD: Arc<String> = Arc::new("add".into());
     pub(crate) static ref SUB: Arc<String> = Arc::new("sub".into());
     pub(crate) static ref MUL: Arc<String> = Arc::new("mul".into());
@@ -68,6 +71,18 @@ lazy_static!{
     pub(crate) static ref NORM: Arc<String> = Arc::new("norm".into());
     pub(crate) static ref T: Arc<String> = Arc::new("T".into());
 }
+
+/// Type alias for lazy invariants of external functions.
+pub type LazyInvariant = &'static [&'static [Lazy]];
+
+/// Lazy invariant to unwrap first argument.
+pub static LAZY_UNWRAP_OR: LazyInvariant = &[&[Lazy::UnwrapOk, Lazy::UnwrapSome]];
+/// Lazy invariant for `&&`.
+pub static LAZY_AND: LazyInvariant = &[&[Lazy::Variable(Variable::Bool(false, None))]];
+/// Lazy invariant for `||`.
+pub static LAZY_OR: LazyInvariant = &[&[Lazy::Variable(Variable::Bool(true, None))]];
+/// Lazy invariant that no arguments have lazy invariants.
+pub static LAZY_NO: LazyInvariant = &[];
 
 /// Type alias for Dyon arrays.
 pub type Array = Arc<Vec<Variable>>;
@@ -313,11 +328,13 @@ pub enum FnIndex {
     ExternalVoid(FnExternalRef),
     /// Extern function with return value.
     ExternalReturn(FnExternalRef),
+    /// Extern function with return value and lazy invariant.
+    ExternalLazy(FnExternalRef, LazyInvariant),
 }
 
 /// Used to store direct reference to external function.
 #[derive(Copy)]
-pub struct FnExternalRef(pub fn(&mut Runtime) -> Result<(), String>);
+pub struct FnExternalRef(pub fn(&mut Runtime) -> Result<Option<Variable>, String>);
 
 impl Clone for FnExternalRef {
     fn clone(&self) -> FnExternalRef {
@@ -334,7 +351,7 @@ impl fmt::Debug for FnExternalRef {
 struct FnExternal {
     namespace: Arc<Vec<Arc<String>>>,
     name: Arc<String>,
-    f: fn(&mut Runtime) -> Result<(), String>,
+    f: fn(&mut Runtime) -> Result<Option<Variable>, String>,
     p: Dfn,
 }
 
@@ -378,6 +395,26 @@ impl Module {
 
         let mut m = Module::empty();
         m.ns("std");
+        m.add_str("and_also", and_also, Dfn {
+            lts: vec![Lt::Default; 2],
+            tys: vec![Bool, Bool],
+            ret: Any,
+            ext: vec![
+                (vec![], vec![Secret(Box::new(Bool)), Bool], Secret(Box::new(Bool))),
+                (vec![], vec![Bool; 2], Bool)
+            ],
+            lazy: LAZY_AND
+        });
+        m.add_str("or_else", or_else, Dfn {
+            lts: vec![Lt::Default; 2],
+            tys: vec![Bool, Bool],
+            ret: Any,
+            ext: vec![
+                (vec![], vec![Secret(Box::new(Bool)), Bool], Secret(Box::new(Bool))),
+                (vec![], vec![Bool; 2], Bool)
+            ],
+            lazy: LAZY_OR
+        });
         m.add_str("add", add, Dfn {
             lts: vec![Lt::Default; 2],
             tys: vec![Any; 2],
@@ -393,7 +430,8 @@ impl Module {
                 Type::all_ext(vec![Bool, Bool], Bool),
                 Type::all_ext(vec![Str, Str], Str),
                 Type::all_ext(vec![Link, Link], Link),
-            ]
+            ],
+            lazy: LAZY_NO
         });
         m.add_str("sub", sub, Dfn {
             lts: vec![Lt::Default; 2],
@@ -408,7 +446,8 @@ impl Module {
                 Type::all_ext(vec![F64, Mat4], Mat4),
                 Type::all_ext(vec![Mat4, F64], Mat4),
                 Type::all_ext(vec![Bool, Bool], Bool),
-            ]
+            ],
+            lazy: LAZY_NO
         });
         m.add_str("mul", mul, Dfn {
             lts: vec![Lt::Default; 2],
@@ -424,7 +463,8 @@ impl Module {
                 (vec![], vec![Mat4, F64], Mat4),
                 (vec![], vec![Mat4, Vec4], Vec4),
                 Type::all_ext(vec![Bool, Bool], Bool),
-            ]
+            ],
+            lazy: LAZY_NO
         });
         m.add_str("div", div, Dfn {
             lts: vec![Lt::Default; 2],
@@ -435,7 +475,8 @@ impl Module {
                 (vec![], vec![Vec4, Vec4], Vec4),
                 (vec![], vec![Vec4, F64], Vec4),
                 (vec![], vec![F64, Vec4], Vec4),
-            ]
+            ],
+            lazy: LAZY_NO
         });
         m.add_str("rem", rem, Dfn {
             lts: vec![Lt::Default; 2],
@@ -446,7 +487,8 @@ impl Module {
                 (vec![], vec![Vec4, Vec4], Vec4),
                 (vec![], vec![Vec4, F64], Vec4),
                 (vec![], vec![F64, Vec4], Vec4),
-            ]
+            ],
+            lazy: LAZY_NO
         });
         m.add_str("pow", pow, Dfn {
             lts: vec![Lt::Default; 2],
@@ -458,7 +500,8 @@ impl Module {
                 (vec![], vec![Vec4, F64], Vec4),
                 (vec![], vec![F64, Vec4], Vec4),
                 Type::all_ext(vec![Bool, Bool], Bool),
-            ]
+            ],
+            lazy: LAZY_NO
         });
         m.add_str("not", not, Dfn::nl(vec![Bool], Bool));
         m.add_str("neg", neg, Dfn{
@@ -467,7 +510,8 @@ impl Module {
                 (vec![], vec![F64], F64),
                 (vec![], vec![Vec4], Vec4),
                 (vec![], vec![Mat4], Mat4),
-            ]
+            ],
+            lazy: LAZY_NO
         });
         m.add_str("dot", dot, Dfn {
             lts: vec![Lt::Default; 2],
@@ -477,7 +521,8 @@ impl Module {
                 (vec![], vec![Vec4, Vec4], F64),
                 (vec![], vec![Vec4, F64], F64),
                 (vec![], vec![F64, Vec4], F64),
-            ]
+            ],
+            lazy: LAZY_NO
         });
         m.add_str("cross", cross, Dfn::nl(vec![Vec4, Vec4], Vec4));
         m.add_str("x", x, Dfn::nl(vec![Vec4], F64));
@@ -603,12 +648,14 @@ impl Module {
             tys: vec![Type::array(), Any],
             ret: Void,
             ext: vec![],
+            lazy: LAZY_NO
         });
         m.add_str("insert_ref(mut,_,_)", insert_ref, Dfn {
             lts: vec![Lt::Default, Lt::Default, Lt::Arg(0)],
             tys: vec![Type::array(), F64, Any],
             ret: Void,
             ext: vec![],
+            lazy: LAZY_NO
         });
         m.add_str("push(mut,_)", push, Dfn::nl(vec![Type::array(), Any], Void));
         m.add_str("insert(mut,_,_)", insert, Dfn {
@@ -616,23 +663,32 @@ impl Module {
             tys: vec![Type::array(), F64, Any],
             ret: Void,
             ext: vec![],
+            lazy: LAZY_NO
         });
         m.add_str("pop(mut)", pop, Dfn {
             lts: vec![Lt::Return],
             tys: vec![Type::array()],
             ret: Any,
             ext: vec![],
+            lazy: LAZY_NO
         });
         m.add_str("remove(mut,_)", remove, Dfn {
             lts: vec![Lt::Return, Lt::Default],
             tys: vec![Type::array(), F64],
             ret: Any,
             ext: vec![],
+            lazy: LAZY_NO
         });
         m.add_str("reverse(mut)", reverse, Dfn::nl(vec![Type::array()], Void));
         m.add_str("clear(mut)", clear, Dfn::nl(vec![Type::array()], Void));
         m.add_str("swap(mut,_,_)", swap, Dfn::nl(vec![Type::array(), F64, F64], Void));
-        m.add_str("unwrap_or", unwrap_or, Dfn::nl(vec![Any; 2], Any));
+        m.add_str("unwrap_or", unwrap_or, Dfn {
+            lts: vec![Lt::Default; 2],
+            tys: vec![Any; 2],
+            ret: Any,
+            ext: vec![],
+            lazy: LAZY_UNWRAP_OR
+        });
         m.add_str("unwrap_err", unwrap_err, Dfn::nl(vec![Any], Any));
         m.add_str("meta__syntax_in_string",
             meta__syntax_in_string, Dfn::nl(vec![Any, Str, Str],
@@ -679,7 +735,11 @@ impl Module {
         for f in self.ext_prelude.iter().rev() {
             if &f.name == name {
                 return if f.p.returns() {
-                    FnIndex::ExternalReturn(FnExternalRef(f.f))
+                    if f.p.lazy == LAZY_NO {
+                        FnIndex::ExternalReturn(FnExternalRef(f.f))
+                    } else {
+                        FnIndex::ExternalLazy(FnExternalRef(f.f), f.p.lazy)
+                    }
                 } else {
                     FnIndex::ExternalVoid(FnExternalRef(f.f))
                 };
@@ -716,7 +776,7 @@ impl Module {
     pub fn add(
         &mut self,
         name: Arc<String>,
-        f: fn(&mut Runtime) -> Result<(), String>,
+        f: fn(&mut Runtime) -> Result<Option<Variable>, String>,
         prelude_function: Dfn
     ) {
         self.ext_prelude.push(FnExternal {
@@ -731,7 +791,7 @@ impl Module {
     pub fn add_str(
         &mut self,
         name: &str,
-        f: fn(&mut Runtime) -> Result<(), String>,
+        f: fn(&mut Runtime) -> Result<Option<Variable>, String>,
         prelude_function: Dfn
     ) {
         self.ext_prelude.push(FnExternal {

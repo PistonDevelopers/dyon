@@ -178,11 +178,14 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
                                     let f = &prelude.list[f];
                                     if let Some(ref ty) = expr_type {
                                         if !f.tys[j].goes_with(ty) {
-                                            return Err(nodes[i].source.wrap(
-                                                format!("Type mismatch (#150):\n\
-                                                    Expected `{}`, found `{}`",
-                                                    f.tys[j].description(), ty.description())
-                                            ))
+                                            if !delay_errs.contains_key(&i) {
+                                                delay_errs.insert(i, nodes[i].source.wrap(
+                                                    format!("Type mismatch (#150):\n\
+                                                        Expected `{}`, found `{}`",
+                                                        f.tys[j].description(), ty.description())
+                                                ));
+                                            }
+                                            continue 'node;
                                         }
                                     }
                                 }
@@ -191,11 +194,14 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
                                 let f = &prelude.list[f];
                                 if let Some(ref ty) = expr_type {
                                     if !f.tys[j].goes_with(ty) {
-                                        return Err(nodes[i].source.wrap(
-                                            format!("Type mismatch (#200):\n\
-                                                Expected `{}`, found `{}`",
-                                                f.tys[j].description(), ty.description())
-                                        ))
+                                        if !delay_errs.contains_key(&i) {
+                                            delay_errs.insert(i, nodes[i].source.wrap(
+                                                format!("Type mismatch (#200):\n\
+                                                    Expected `{}`, found `{}`",
+                                                    f.tys[j].description(), ty.description())
+                                            ));
+                                        }
+                                        continue 'node;
                                     }
                                 }
                             }
@@ -350,7 +356,7 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
                 }
                 Kind::Return | Kind::Val | Kind::Expr | Kind::Cond |
                 Kind::Exp | Kind::Base | Kind::Left | Kind::Right |
-                Kind::ElseIfCond | Kind::Grab
+                Kind::ElseIfCond | Kind::Grab | Kind::Add | Kind::Mul | Kind::Pow
                  => {
                      // TODO: Report error for expected unary operator.
                     if nodes[i].children.is_empty() { continue 'node; }
@@ -394,89 +400,6 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
                     } else {
                         // Propagate type.
                         this_ty = Some(nodes[i].inner_type(&ty));
-                    }
-                }
-                Kind::Add => {
-                    // Require type to be inferred from all children.
-                    let mut it_ty: Option<Type> = None;
-                    for &ch in &nodes[i].children {
-                        if nodes[ch].item_ids() { continue 'node; }
-                        if let Some(ref ty) = nodes[ch].ty {
-                            it_ty = if let Some(ref it) = it_ty {
-                                match it.add(ty) {
-                                    None => return Err(nodes[ch].source.wrap(
-                                        format!("Type mismatch (#400):\n\
-                                            Binary operator can not be used with `{}` and `{}`",
-                                            it.description(), ty.description()))),
-                                    x => x
-                                }
-                            } else {
-                                Some(ty.clone())
-                            }
-                        } else {
-                            continue 'node;
-                        }
-                    }
-                    this_ty = it_ty;
-                }
-                Kind::Mul => {
-                    if nodes[i].binops.len() + 1 != nodes[i].children.len() {
-                        return Err(nodes[i].source.wrap(
-                            "Type mismatch (#450):\n\
-                            Missing binary operator for node when converting meta data".to_string()
-                        ))
-                    }
-
-                    // Require type to be inferred from all children.
-                    let mut bin_ind = 0;
-                    let mut it_ty: Option<Type> = None;
-                    for &ch in &nodes[i].children {
-                        if nodes[ch].item_ids() { continue 'node; }
-                        if let Some(ref ty) = nodes[ch].ty {
-                            it_ty = if let Some(ref it) = it_ty {
-                                match it.mul(ty, nodes[i].binops[bin_ind]) {
-                                    None => return Err(nodes[ch].source.wrap(
-                                        format!("Type mismatch (#500):\n\
-                                            Binary operator can not be used with `{}` and `{}`",
-                                            it.description(), ty.description()))),
-                                    x => {
-                                        bin_ind += 1;
-                                        x
-                                    }
-                                }
-                            } else {
-                                Some(ty.clone())
-                            }
-                        } else {
-                            continue 'node;
-                        }
-                    }
-                    this_ty = it_ty;
-                }
-                Kind::Pow => {
-                    let base = match nodes[i].find_child_by_kind(nodes, Kind::Base) {
-                        None => continue 'node,
-                        Some(x) => x
-                    };
-                    let exp = match nodes[i].find_child_by_kind(nodes, Kind::Exp) {
-                        None => continue 'node,
-                        Some(x) => x
-                    };
-                    if nodes[base].item_ids() || nodes[exp].item_ids() {
-                        continue 'node;
-                    }
-                    if let Some(ref base_ty) = nodes[base].ty {
-                        if let Some(ref exp_ty) = nodes[exp].ty {
-                            if let Some(ty) = base_ty.pow(exp_ty) {
-                                this_ty = Some(ty);
-                            } else {
-                                return Err(nodes[i].source.wrap(
-                                    format!("Type mismatch (#600):\n\
-                                        Binary operator can not be used \
-                                             with `{}` and `{}`", base_ty.description(),
-                                             exp_ty.description())));
-                            }
-                        }
                     }
                 }
                 Kind::Compare => {
@@ -582,6 +505,7 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
                             tys,
                             ret: ret.unwrap(),
                             ext: vec![],
+                            lazy: crate::LAZY_NO,
                         })));
                     }
                 }

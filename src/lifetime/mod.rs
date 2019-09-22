@@ -102,18 +102,21 @@ pub fn check(
             }
         } else if nodes[i].binops.len() == 1 && nodes[i].children.len() == 2 {
             use ast::BinOp::*;
-
-            match nodes[i].binops[0] {
-                Add => Node::rewrite_binop(i, crate::ADD.clone(), &mut nodes),
-                Sub => Node::rewrite_binop(i, crate::SUB.clone(), &mut nodes),
-                Mul => Node::rewrite_binop(i, crate::MUL.clone(), &mut nodes),
-                Div => Node::rewrite_binop(i, crate::DIV.clone(), &mut nodes),
-                Rem => Node::rewrite_binop(i, crate::REM.clone(), &mut nodes),
-                Pow => Node::rewrite_binop(i, crate::POW.clone(), &mut nodes),
-                Dot => Node::rewrite_binop(i, crate::DOT.clone(), &mut nodes),
-                Cross => Node::rewrite_binop(i, crate::CROSS.clone(), &mut nodes),
-                _ => {}
-            }
+            
+            Node::rewrite_binop(i, match nodes[i].binops[0] {
+                Add => crate::ADD.clone(),
+                Sub => crate::SUB.clone(),
+                Mul => crate::MUL.clone(),
+                Div => crate::DIV.clone(),
+                Rem => crate::REM.clone(),
+                Pow => crate::POW.clone(),
+                Dot => crate::DOT.clone(),
+                Cross => crate::CROSS.clone(),
+                AndAlso => crate::AND_ALSO.clone(),
+                OrElse => crate::OR_ELSE.clone(),
+            }, &mut nodes);
+        } else if nodes[i].kind == Kind::Pow && nodes[i].children.len() == 2 {
+            Node::rewrite_binop(i, crate::POW.clone(), &mut nodes);
         }
     }
 

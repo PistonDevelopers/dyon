@@ -136,6 +136,14 @@ fn test_syntax() {
     test_src("source/syntax/continue_call.dyon");
     test_src("source/syntax/mat4_1.dyon");
     test_fail_src("source/syntax/secret_fail.dyon");
+    test_src("source/syntax/lazy_pass_1.dyon");
+    test_src("source/syntax/lazy_pass_2.dyon");
+    test_src("source/syntax/lazy_pass_3.dyon");
+    test_src("source/syntax/lazy_pass_4.dyon");
+    test_src("source/syntax/lazy_pass_5.dyon");
+    test_src("source/syntax/lazy_pass_6.dyon");
+    test_src("source/syntax/lazy_pass_7.dyon");
+    test_src("source/syntax/lazy_pass_8.dyon");
 }
 
 #[test]

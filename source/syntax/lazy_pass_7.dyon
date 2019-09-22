@@ -1,0 +1,12 @@
+fn foo(a: res[str] => err(_), b: str) -> any {
+    return if is_err(a) {unwrap_err(a)}
+           else {clone(b)}
+}
+
+fn main() {
+    a := err("hi")
+    println(foo(a, {
+        println("this is a test")
+        "hello"
+    }))
+}

@@ -194,7 +194,6 @@ fn write_expr<W: io::Write>(
     use ast::Expression as E;
 
     match *expr {
-        E::BinOp(ref binop) => write_binop(w, rt, binop.op, &binop.left, &binop.right, tabs)?,
         E::Item(ref item) => write_item(w, rt, item, tabs)?,
         E::Variable(ref range_var) =>
             write_variable(w, rt, &range_var.1, EscapeString::Json, tabs)?,
@@ -209,22 +208,8 @@ fn write_expr<W: io::Write>(
                 write_not(w, rt, &call.args[0], tabs)?
             } else if &**call.name == "neg" && call.args.len() == 1 {
                 write_neg(w, rt, &call.args[0], tabs)?
-            } else if &**call.name == "dot" && call.args.len() == 2 {
-                write_binop(w, rt, ast::BinOp::Dot, &call.args[0], &call.args[1], tabs)?
-            } else if &**call.name == "cross" && call.args.len() == 2 {
-                write_binop(w, rt, ast::BinOp::Cross, &call.args[0], &call.args[1], tabs)?
-            } else if &**call.name == "add" && call.args.len() == 2 {
-                write_binop(w, rt, ast::BinOp::Add, &call.args[0], &call.args[1], tabs)?
-            } else if &**call.name == "sub" && call.args.len() == 2 {
-                write_binop(w, rt, ast::BinOp::Sub, &call.args[0], &call.args[1], tabs)?
-            } else if &**call.name == "mul" && call.args.len() == 2 {
-                write_binop(w, rt, ast::BinOp::Mul, &call.args[0], &call.args[1], tabs)?
-            } else if &**call.name == "div" && call.args.len() == 2 {
-                write_binop(w, rt, ast::BinOp::Div, &call.args[0], &call.args[1], tabs)?
-            } else if &**call.name == "rem" && call.args.len() == 2 {
-                write_binop(w, rt, ast::BinOp::Rem, &call.args[0], &call.args[1], tabs)?
-            } else if &**call.name == "pow" && call.args.len() == 2 {
-                write_binop(w, rt, ast::BinOp::Pow, &call.args[0], &call.args[1], tabs)?
+            } else if let Some(op) = standard_binop(call) {
+                write_binop(w, rt, op, &call.args[0], &call.args[1], tabs)?
             } else {
                 write_call(w, rt, call, tabs)?
             }
@@ -402,14 +387,16 @@ fn binop_needs_parens(op: ast::BinOp, expr: &ast::Expression, right: bool) -> bo
 
     match *expr {
         E::Compare(_) => true,
-        E::BinOp(ref binop) => {
-            match (op.precedence(), binop.op.precedence()) {
-                (3, _) => true,
-                (2, 1) => true,
-                (2, 2) if right => true,
-                (1, 1) if right => true,
-                _ => false
-            }
+        E::Call(ref call) => {
+            if let Some(binop_op) = standard_binop(call) {
+                match (op.precedence(), binop_op.precedence()) {
+                    (3, _) => true,
+                    (2, 1) => true,
+                    (2, 2) if right => true,
+                    (1, 1) if right => true,
+                    _ => false
+                }
+            } else {false}
         }
         _ => false
     }
@@ -726,11 +713,31 @@ fn write_for<W: io::Write>(
     Ok(())
 }
 
+fn standard_binop(call: &ast::Call) -> Option<ast::BinOp> {
+    use ast::BinOp::*;
+
+    if call.args.len() != 2 {return None};
+
+    Some(match &**call.name {
+        "dot" => Dot,
+        "cross" => Cross,
+        "add" => Add,
+        "sub" => Sub,
+        "mul" => Mul,
+        "div" => Div,
+        "rem" => Rem,
+        "pow" => Pow,
+        "and_also" => AndAlso,
+        "or_else" => OrElse,
+        _ => return None
+    })
+}
+
 fn compare_needs_parent(expr: &ast::Expression) -> bool {
     use ast::Expression as E;
 
     match *expr {
-        E::BinOp(_) => true,
+        E::Call(ref call) => standard_binop(call).is_some(),
         _ => false
     }
 }

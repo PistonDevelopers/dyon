@@ -6,7 +6,6 @@ use super::{
     ArrayFill,
     Assign,
     Block,
-    BinOpExpression,
     Call,
     CallClosure,
     Compare,
@@ -42,14 +41,6 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
             E::Link(Box::new(Link {
                 items: new_items,
                 source_range: link_expr.source_range,
-            }))
-        }
-        E::BinOp(ref bin_op_expr) => {
-            E::BinOp(Box::new(BinOpExpression {
-                op: bin_op_expr.op,
-                left: number(&bin_op_expr.left, name, val),
-                right: number(&bin_op_expr.right, name, val),
-                source_range: bin_op_expr.source_range,
             }))
         }
         E::Item(ref item) => {

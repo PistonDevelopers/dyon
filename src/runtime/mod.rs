@@ -98,6 +98,8 @@ pub struct Runtime {
     pub arg_err_index: Cell<Option<usize>>,
 }
 
+unsafe impl Send for Runtime {}
+
 impl Default for Runtime {
     fn default() -> Runtime {Runtime::new()}
 }
@@ -511,7 +513,6 @@ impl Runtime {
                 self.call_internal(call, loader)
             }
             Item(ref item) => self.item(item, side),
-            BinOp(ref binop) => self.binop(binop, side),
             Assign(ref assign) => self.assign(assign.op, &assign.left, &assign.right),
             Vec4(ref vec4) => self.vec4(vec4, side),
             Mat4(ref mat4) => self.mat4(mat4, side),
@@ -1053,7 +1054,7 @@ impl Runtime {
                                         Expression did not return a value.")
                     };
                 }
-                (f)(self).map_err(|err| {
+                if let Some(x) = (f)(self).map_err(|err| {
                     let range = if let Some(ind) = self.arg_err_index.get() {
                         self.arg_err_index.set(None);
                         call.args[ind].source_range()
@@ -1061,8 +1062,64 @@ impl Runtime {
                         call.source_range
                     };
                     self.module.error(range, &err, self)
-                })?;
-                Ok((Some(self.stack.pop().expect(TINVOTS)), Flow::Continue))
+                })? {
+                    Ok((Some(x), Flow::Continue))
+                } else {
+                    Ok((Some(self.stack.pop().expect(TINVOTS)), Flow::Continue))
+                }
+            }
+            FnIndex::ExternalLazy(FnExternalRef(f), lazy) => {
+                for (i, arg) in call.args.iter().enumerate() {
+                    match self.expression(arg, Side::Right)? {
+                        (Some(x), Flow::Continue) => {
+                            use ast::Lazy;
+                            // Return immediately if equal to lazy invariant.
+                            if let Some(&ls) = lazy.get(i) {
+                                for lazy in ls {
+                                    match *lazy {
+                                        Lazy::Variable(ref val) => {
+                                            if self.resolve(&x) == val {return Ok((Some(x), Flow::Continue))}
+                                        }
+                                        Lazy::UnwrapOk => {
+                                            if let &Variable::Result(Ok(ref x)) = self.resolve(&x) {
+                                                return Ok((Some((**x).clone()), Flow::Continue))
+                                            }
+                                        }
+                                        Lazy::UnwrapErr => {
+                                            if let &Variable::Result(Err(ref x)) = self.resolve(&x) {
+                                                return Ok((Some(x.message.clone()), Flow::Continue))
+                                            }
+                                        }
+                                        Lazy::UnwrapSome => {
+                                            if let &Variable::Option(Some(ref x)) = self.resolve(&x) {
+                                                return Ok((Some((**x).clone()), Flow::Continue))
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            self.stack.push(x)
+                        }
+                        (x, Flow::Return) => { return Ok((x, Flow::Return)); }
+                        _ => return self.err(arg.source_range(),
+                                        "Expected something. \
+                                        Expression did not return a value.")
+                    };
+                }
+                if let Some(x) = (f)(self).map_err(|err| {
+                    let range = if let Some(ind) = self.arg_err_index.get() {
+                        self.arg_err_index.set(None);
+                        call.args[ind].source_range()
+                    } else {
+                        call.source_range
+                    };
+                    self.module.error(range, &err, self)
+                })? {
+                    Ok((Some(x), Flow::Continue))
+                } else {
+                    Ok((Some(self.stack.pop().expect(TINVOTS)), Flow::Continue))
+                }
             }
             FnIndex::Loaded(f_index) => {
                 use std::sync::atomic::Ordering;
@@ -1091,9 +1148,36 @@ impl Runtime {
                 let lc = self.local_stack.len();
                 let cu = self.current_stack.len();
 
-                for arg in &call.args {
+                for (i, arg) in call.args.iter().enumerate() {
                     match self.expression(arg, Side::Right)? {
-                        (Some(x), Flow::Continue) => self.stack.push(x),
+                        (Some(x), Flow::Continue) => {
+                            use ast::Lazy;
+                            // Return immediately if equal to lazy invariant.
+                            for lazy in &f.args[i].lazy {
+                                match *lazy {
+                                    Lazy::Variable(ref val) => {
+                                        if self.resolve(&x) == val {return Ok((Some(x), Flow::Continue))}
+                                    }
+                                    Lazy::UnwrapOk => {
+                                        if let &Variable::Result(Ok(ref x)) = self.resolve(&x) {
+                                            return Ok((Some((**x).clone()), Flow::Continue))
+                                        }
+                                    }
+                                    Lazy::UnwrapErr => {
+                                        if let &Variable::Result(Err(ref x)) = self.resolve(&x) {
+                                            return Ok((Some(x.message.clone()), Flow::Continue))
+                                        }
+                                    }
+                                    Lazy::UnwrapSome => {
+                                        if let &Variable::Option(Some(ref x)) = self.resolve(&x) {
+                                            return Ok((Some((**x).clone()), Flow::Continue))
+                                        }
+                                    }
+                                }
+                            }
+
+                            self.stack.push(x)
+                        }
                         (None, Flow::Continue) => {}
                         (x, Flow::Return) => { return Ok((x, Flow::Return)); }
                         _ => return self.err(arg.source_range(),
@@ -2481,55 +2565,7 @@ impl Runtime {
             [x[3], y[3], z[3], w[3]],
         ]))), Flow::Continue))
     }
-    fn binop(&mut self, binop: &ast::BinOpExpression, side: Side) -> FlowResult {
-        use ast::BinOp::*;
 
-        let left = match self.expression(&binop.left, side)? {
-            (Some(x), Flow::Continue) => x,
-            (x, Flow::Return) => return Ok((x, Flow::Return)),
-            _ => return self.err(binop.source_range, "Expected something from left argument")
-        };
-
-        // Check lazy boolean expressions.
-        match binop.op {
-            OrElse => {
-                if let Variable::Bool(true, ref sec) = *self.resolve(&left) {
-                    return Ok((Some(Variable::Bool(true, sec.clone())), Flow::Continue));
-                }
-            }
-            AndAlso => {
-                if let Variable::Bool(false, ref sec) = *self.resolve(&left) {
-                    return Ok((Some(Variable::Bool(false, sec.clone())), Flow::Continue));
-                }
-            }
-            _ => {}
-        }
-
-        let right = match self.expression(&binop.right, side)? {
-            (Some(x), Flow::Continue) => x,
-            (x, Flow::Return) => return Ok((x, Flow::Return)),
-            _ => return self.err(binop.source_range, "Expected something from right argument")
-        };
-        let v = match (self.resolve(&left), self.resolve(&right)) {
-            (&Variable::Bool(a, ref sec), &Variable::Bool(b, _)) => {
-                Variable::Bool(match binop.op {
-                    OrElse => a || b,
-                    AndAlso => a && b,
-                    _ => return Err(self.module.error(binop.source_range,
-                        &format!("{}\nUnknown boolean operator `{:?}`",
-                            self.stack_trace(),
-                            binop.op.symbol_bool()), self))
-                }, sec.clone())
-            }
-            _ => return Err(self.module.error(binop.source_range, &format!(
-                "{}\nInvalid type for binary operator `{:?}`, \
-                expected numbers, vec4s, bools or strings",
-                self.stack_trace(),
-                binop.op.symbol()), self))
-        };
-
-        Ok((Some(v), Flow::Continue))
-    }
     pub(crate) fn stack_trace(&self) -> String {stack_trace(&self.call_stack)}
 }
 

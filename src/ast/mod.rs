@@ -393,7 +393,7 @@ impl Function {
                 convert.update(range);
                 name = Some(val);
             } else if let Ok((range, val)) = Arg::from_meta_data(
-                    convert, ignored) {
+                    file, source, convert, ignored) {
                 convert.update(range);
                 args.push(val);
             } else if let Ok((range, val)) = Current::from_meta_data(
@@ -534,7 +534,7 @@ impl Closure {
                 convert.update(range);
                 break;
             } else if let Ok((range, val)) = Arg::from_meta_data(
-                    convert, ignored) {
+                    file, source, convert, ignored) {
                 convert.update(range);
                 args.push(val);
             } else if let Ok((range, val)) = Current::from_meta_data(
@@ -746,6 +746,24 @@ impl TryExpr {
     }
 }
 
+/// Lazy invariant.
+#[derive(Debug, Clone, PartialEq)]
+pub enum Lazy {
+    /// Return a variable if result of argument is equal to the variable.
+    Variable(Variable),
+    /// Unwrap the Ok result.
+    UnwrapOk,
+    /// Unwrap the Err result.
+    UnwrapErr,
+    /// Unwrap the Some option.
+    UnwrapSome,
+}
+
+/// This is requires because `UnsafeRef(*mut Variable)` can not be sent across threads.
+/// The lack of `UnsafeRef` variant when sending across threads is guaranteed at language level.
+/// The interior of `UnsafeRef` can not be accessed outside this library.
+unsafe impl Sync for Lazy {}
+
 /// Function argument.
 #[derive(Debug, Clone)]
 pub struct Arg {
@@ -755,6 +773,8 @@ pub struct Arg {
     pub lifetime: Option<Arc<String>>,
     /// The type of the argument.
     pub ty: Type,
+    /// Lazy invariant.
+    pub lazy: Vec<Lazy>,
     /// The range in source.
     pub source_range: Range,
     /// Whether the argument is mutable.
@@ -763,8 +783,12 @@ pub struct Arg {
 
 impl Arg {
     /// Creates function argument from meta data.
-    pub fn from_meta_data(mut convert: Convert, ignored: &mut Vec<Range>)
-    -> Result<(Range, Arg), ()> {
+    pub fn from_meta_data(
+        file: &Arc<String>,
+        source: &Arc<String>,
+        mut convert: Convert,
+        ignored: &mut Vec<Range>
+    ) -> Result<(Range, Arg), ()> {
         let start = convert;
         let node = "arg";
         let start_range = convert.start_node(node)?;
@@ -774,6 +798,7 @@ impl Arg {
         let mut lifetime: Option<Arc<String>> = None;
         let mut ty: Option<Type> = None;
         let mut mutable = false;
+        let mut lazy: Vec<Lazy> = vec![];
         loop {
             if let Ok(range) = convert.end_node(node) {
                 convert.update(range);
@@ -791,6 +816,20 @@ impl Arg {
                     "type", convert, ignored) {
                 convert.update(range);
                 ty = Some(val);
+            } else if let Ok((range, val)) = Grab::from_meta_data(file, source, convert, ignored) {
+                convert.update(range);
+                if let Some(val) = val.precompute() {
+                    lazy.push(Lazy::Variable(val));
+                } else {return Err(())}
+            } else if let Ok((range, _)) = convert.meta_bool("ok(_)") {
+                convert.update(range);
+                lazy.push(Lazy::UnwrapOk);
+            } else if let Ok((range, _)) = convert.meta_bool("err(_)") {
+                convert.update(range);
+                lazy.push(Lazy::UnwrapErr);
+            } else if let Ok((range, _)) = convert.meta_bool("some(_)") {
+                convert.update(range);
+                lazy.push(Lazy::UnwrapSome);
             } else {
                 let range = convert.ignore();
                 convert.update(range);
@@ -807,6 +846,7 @@ impl Arg {
             name,
             lifetime,
             ty,
+            lazy,
             source_range: convert.source(start).unwrap(),
             mutable,
         }))
@@ -954,8 +994,6 @@ pub enum Expression {
     Call(Box<Call>),
     /// Item expression.
     Item(Box<Item>),
-    /// Binary operator expression.
-    BinOp(Box<BinOpExpression>),
     /// Assignment expression.
     Assign(Box<Assign>),
     /// 4D vector expression.
@@ -1339,7 +1377,6 @@ impl Expression {
             Go(ref go) => go.source_range,
             Call(ref call) => call.source_range,
             Item(ref it) => it.source_range,
-            BinOp(ref binop) => binop.source_range,
             Assign(ref assign) => assign.source_range,
             Vec4(ref vec4) => vec4.source_range,
             Mat4(ref mat4) => mat4.source_range,
@@ -1412,8 +1449,6 @@ impl Expression {
                 call.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             Item(ref it) =>
                 it.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            BinOp(ref binop) =>
-                binop.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             Assign(ref assign) =>
                 assign.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             Vec4(ref vec4) =>
@@ -2596,7 +2631,9 @@ impl Call {
                     stack.push(None);
                 }
             }
-            FnIndex::ExternalVoid(_) | FnIndex::ExternalReturn(_) => {
+            FnIndex::ExternalVoid(_) |
+            FnIndex::ExternalReturn(_) |
+            FnIndex::ExternalLazy(_, _) => {
                 // Don't push return since last value in block
                 // is used as return value.
             }
@@ -2889,21 +2926,6 @@ pub struct BinOpExpression {
 }
 
 impl BinOpExpression {
-    fn resolve_locals(
-        &self,
-        relative: usize,
-        stack: &mut Vec<Option<Arc<String>>>,
-        closure_stack: &mut Vec<usize>,
-        module: &Module,
-        use_lookup: &UseLookup,
-    ) {
-        let st = stack.len();
-        self.left.resolve_locals(relative, stack, closure_stack, module, use_lookup);
-        stack.truncate(st);
-        self.right.resolve_locals(relative, stack, closure_stack, module, use_lookup);
-        stack.truncate(st);
-    }
-
     fn into_expression(self) -> Expression {
         match self.op {
             BinOp::Add => Expression::Call(Box::new(Call {
@@ -2970,7 +2992,22 @@ impl BinOpExpression {
                 f_index: Cell::new(FnIndex::None),
                 source_range: self.source_range,
             })),
-            _ => Expression::BinOp(Box::new(self))
+            BinOp::AndAlso => Expression::Call(Box::new(Call {
+                alias: None,
+                name: crate::AND_ALSO.clone(),
+                args: vec![self.left, self.right],
+                custom_source: None,
+                f_index: Cell::new(FnIndex::None),
+                source_range: self.source_range,
+            })),
+            BinOp::OrElse => Expression::Call(Box::new(Call {
+                alias: None,
+                name: crate::OR_ELSE.clone(),
+                args: vec![self.left, self.right],
+                custom_source: None,
+                f_index: Cell::new(FnIndex::None),
+                source_range: self.source_range,
+            })),
         }
     }
 }

@@ -1,0 +1,8 @@
+fn foo(a: bool => false, b: bool) -> bool {return a && b}
+
+fn main() {
+    println(foo(false, {
+        println("this is a test")
+        false
+    }))
+}

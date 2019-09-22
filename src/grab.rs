@@ -56,20 +56,6 @@ pub fn grab_expr(
                     x => return x,
                 }))), Flow::Continue))
         }
-        E::BinOp(ref binop_expr) => {
-            Ok((Grabbed::Expression(E::BinOp(Box::new(ast::BinOpExpression {
-                op: binop_expr.op,
-                left: match grab_expr(level, rt, &binop_expr.left, side) {
-                    Ok((Grabbed::Expression(x), Flow::Continue)) => x,
-                    x => return x,
-                },
-                right: match grab_expr(level, rt, &binop_expr.right, side) {
-                    Ok((Grabbed::Expression(x), Flow::Continue)) => x,
-                    x => return x,
-                },
-                source_range: binop_expr.source_range,
-            }))), Flow::Continue))
-        }
         E::ReturnVoid(_) |
         E::Break(_) |
         E::Continue(_) |
