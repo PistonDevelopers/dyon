@@ -2927,88 +2927,27 @@ pub struct BinOpExpression {
 
 impl BinOpExpression {
     fn into_expression(self) -> Expression {
-        match self.op {
-            BinOp::Add => Expression::Call(Box::new(Call {
-                alias: None,
-                name: crate::ADD.clone(),
-                args: vec![self.left, self.right],
-                custom_source: None,
-                f_index: Cell::new(FnIndex::None),
-                source_range: self.source_range,
-            })),
-            BinOp::Sub => Expression::Call(Box::new(Call {
-                alias: None,
-                name: crate::SUB.clone(),
-                args: vec![self.left, self.right],
-                custom_source: None,
-                f_index: Cell::new(FnIndex::None),
-                source_range: self.source_range,
-            })),
-            BinOp::Mul => Expression::Call(Box::new(Call {
-                alias: None,
-                name: crate::MUL.clone(),
-                args: vec![self.left, self.right],
-                custom_source: None,
-                f_index: Cell::new(FnIndex::None),
-                source_range: self.source_range,
-            })),
-            BinOp::Div => Expression::Call(Box::new(Call {
-                alias: None,
-                name: crate::DIV.clone(),
-                args: vec![self.left, self.right],
-                custom_source: None,
-                f_index: Cell::new(FnIndex::None),
-                source_range: self.source_range,
-            })),
-            BinOp::Rem => Expression::Call(Box::new(Call {
-                alias: None,
-                name: crate::REM.clone(),
-                args: vec![self.left, self.right],
-                custom_source: None,
-                f_index: Cell::new(FnIndex::None),
-                source_range: self.source_range,
-            })),
-            BinOp::Pow => Expression::Call(Box::new(Call {
-                alias: None,
-                name: crate::POW.clone(),
-                args: vec![self.left, self.right],
-                custom_source: None,
-                f_index: Cell::new(FnIndex::None),
-                source_range: self.source_range,
-            })),
-            BinOp::Dot => Expression::Call(Box::new(Call {
-                alias: None,
-                name: crate::DOT.clone(),
-                args: vec![self.left, self.right],
-                custom_source: None,
-                f_index: Cell::new(FnIndex::None),
-                source_range: self.source_range,
-            })),
-            BinOp::Cross => Expression::Call(Box::new(Call {
-                alias: None,
-                name: crate::CROSS.clone(),
-                args: vec![self.left, self.right],
-                custom_source: None,
-                f_index: Cell::new(FnIndex::None),
-                source_range: self.source_range,
-            })),
-            BinOp::AndAlso => Expression::Call(Box::new(Call {
-                alias: None,
-                name: crate::AND_ALSO.clone(),
-                args: vec![self.left, self.right],
-                custom_source: None,
-                f_index: Cell::new(FnIndex::None),
-                source_range: self.source_range,
-            })),
-            BinOp::OrElse => Expression::Call(Box::new(Call {
-                alias: None,
-                name: crate::OR_ELSE.clone(),
-                args: vec![self.left, self.right],
-                custom_source: None,
-                f_index: Cell::new(FnIndex::None),
-                source_range: self.source_range,
-            })),
-        }
+        use self::BinOp::*;
+
+        Expression::Call(Box::new(Call {
+            alias: None,
+            name: match self.op {
+                Add => crate::ADD.clone(),
+                Sub => crate::SUB.clone(),
+                Mul => crate::MUL.clone(),
+                Div => crate::DIV.clone(),
+                Rem => crate::REM.clone(),
+                Pow => crate::POW.clone(),
+                Dot => crate::DOT.clone(),
+                Cross => crate::CROSS.clone(),
+                AndAlso => crate::AND_ALSO.clone(),
+                OrElse => crate::OR_ELSE.clone(),
+            },
+            args: vec![self.left, self.right],
+            custom_source: None,
+            f_index: Cell::new(FnIndex::None),
+            source_range: self.source_range,
+        }))
     }
 }
 
