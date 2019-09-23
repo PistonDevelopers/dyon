@@ -329,9 +329,9 @@ pub enum FnIndex {
     /// External function with no return value.
     ExternalVoid(FnExternalVoidRef),
     /// Extern function with return value.
-    ExternalReturn(FnExternalReturnRef),
+    ExternalReturn(FnReturnRef),
     /// Extern function with return value and lazy invariant.
-    ExternalLazy(FnExternalReturnRef, LazyInvariant),
+    ExternalLazy(FnReturnRef, LazyInvariant),
 }
 
 /// Refers to an external function.
@@ -363,15 +363,15 @@ impl fmt::Debug for FnExt {
 
 /// Used to store direct reference to external function.
 #[derive(Copy)]
-pub struct FnExternalReturnRef(pub fn(&mut Runtime) -> Result<Variable, String>);
+pub struct FnReturnRef(pub fn(&mut Runtime) -> Result<Variable, String>);
 
-impl Clone for FnExternalReturnRef {
-    fn clone(&self) -> FnExternalReturnRef {
+impl Clone for FnReturnRef {
+    fn clone(&self) -> FnReturnRef {
         *self
     }
 }
 
-impl fmt::Debug for FnExternalReturnRef {
+impl fmt::Debug for FnReturnRef {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "FnExternalRef")
     }

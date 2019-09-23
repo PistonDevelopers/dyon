@@ -1020,7 +1020,7 @@ impl Runtime {
     ///
     /// The `loader` flag is set to `true` when called from the outside.
     fn call_internal(&mut self, call: &ast::Call, loader: bool) -> FlowResult {
-        use FnExternalReturnRef;
+        use FnReturnRef;
         use FnExternalVoidRef;
 
         match call.f_index.get() {
@@ -1045,7 +1045,7 @@ impl Runtime {
                 })?;
                 Ok((None, Flow::Continue))
             }
-            FnIndex::ExternalReturn(FnExternalReturnRef(f)) => {
+            FnIndex::ExternalReturn(FnReturnRef(f)) => {
                 for arg in &call.args {
                     match self.expression(arg, Side::Right)? {
                         (Some(x), Flow::Continue) => self.stack.push(x),
@@ -1065,7 +1065,7 @@ impl Runtime {
                     self.module.error(range, &err, self)
                 })?), Flow::Continue))
             }
-            FnIndex::ExternalLazy(FnExternalReturnRef(f), lazy) => {
+            FnIndex::ExternalLazy(FnReturnRef(f), lazy) => {
                 for (i, arg) in call.args.iter().enumerate() {
                     match self.expression(arg, Side::Right)? {
                         (Some(x), Flow::Continue) => {

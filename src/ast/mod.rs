@@ -2607,7 +2607,7 @@ impl Call {
         module: &Module,
         use_lookup: &UseLookup,
     ) {
-        use FnExternalReturnRef;
+        use FnReturnRef;
         use FnExternalVoidRef;
         use FnExt;
 
@@ -2620,7 +2620,7 @@ impl Call {
                         let f = &module.ext_prelude[i];
                         match f.f {
                             FnExt::Void(ff) => FnIndex::ExternalVoid(FnExternalVoidRef(ff)),
-                            FnExt::Return(ff) => FnIndex::ExternalReturn(FnExternalReturnRef(ff)),
+                            FnExt::Return(ff) => FnIndex::ExternalReturn(FnReturnRef(ff)),
                         }
                     }
                 }
@@ -4366,7 +4366,7 @@ impl In {
         module: &Module,
         use_lookup: &UseLookup
     ) {
-        use FnExternalReturnRef;
+        use FnReturnRef;
         use FnExternalVoidRef;
         use FnExt;
 
@@ -4378,7 +4378,7 @@ impl In {
                         let f = &module.ext_prelude[i];
                         match f.f {
                             FnExt::Void(ff) => FnIndex::ExternalVoid(FnExternalVoidRef(ff)),
-                            FnExt::Return(ff) => FnIndex::ExternalReturn(FnExternalReturnRef(ff)),
+                            FnExt::Return(ff) => FnIndex::ExternalReturn(FnReturnRef(ff)),
                         }
                     }
                 }
