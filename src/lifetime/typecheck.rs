@@ -483,7 +483,7 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
                         this_ty = Some(Type::Array(Box::new(ty.clone())));
                     }
                 }
-                Kind::X | Kind::Y | Kind::Z | Kind::W => {
+                Kind::X | Kind::Y | Kind::Z | Kind::W | Kind::N => {
                     if nodes[i].children.is_empty() {
                         todo.push(i);
                         continue 'node;
