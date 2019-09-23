@@ -2640,7 +2640,7 @@ impl Call {
             }
             FnIndex::Void(_) |
             FnIndex::Return(_) |
-            FnIndex::ExternalLazy(_, _) => {
+            FnIndex::Lazy(_, _) => {
                 // Don't push return since last value in block
                 // is used as return value.
             }

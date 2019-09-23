@@ -1191,7 +1191,7 @@ pub(crate) fn _call(rt: &mut Runtime) -> Result<(), String> {
                 FnIndex::None |
                 FnIndex::Void(_) |
                 FnIndex::Return(_) |
-                FnIndex::ExternalLazy(_, _) =>
+                FnIndex::Lazy(_, _) =>
                     return Err(format!("Could not find function `{}`", fn_name))
             }
             // Use empty range instead of `call.source_range` (from when it was intrinsic).
@@ -1260,7 +1260,7 @@ pub(crate) fn call_ret(rt: &mut Runtime) -> Result<Variable, String> {
                 FnIndex::None |
                 FnIndex::Void(_) |
                 FnIndex::Return(_) |
-                FnIndex::ExternalLazy(_, _) =>
+                FnIndex::Lazy(_, _) =>
                     return Err(format!("Could not find function `{}`", fn_name))
             }
             // Use empty range instead of `call.source_range` (from when it was intrinsic).

@@ -1065,7 +1065,7 @@ impl Runtime {
                     self.module.error(range, &err, self)
                 })?), Flow::Continue))
             }
-            FnIndex::ExternalLazy(FnReturnRef(f), lazy) => {
+            FnIndex::Lazy(FnReturnRef(f), lazy) => {
                 for (i, arg) in call.args.iter().enumerate() {
                     match self.expression(arg, Side::Right)? {
                         (Some(x), Flow::Continue) => {

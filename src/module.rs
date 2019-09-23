@@ -377,7 +377,7 @@ impl Module {
                         }
                     } else {
                         if let FnExt::Return(ff) = f.f {
-                            FnIndex::ExternalLazy(FnReturnRef(ff), f.p.lazy)
+                            FnIndex::Lazy(FnReturnRef(ff), f.p.lazy)
                         } else {
                             FnIndex::None
                         }

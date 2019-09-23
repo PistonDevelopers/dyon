@@ -331,7 +331,7 @@ pub enum FnIndex {
     /// Extern function with return value.
     Return(FnReturnRef),
     /// Extern function with return value and lazy invariant.
-    ExternalLazy(FnReturnRef, LazyInvariant),
+    Lazy(FnReturnRef, LazyInvariant),
 }
 
 /// Refers to an external function.
