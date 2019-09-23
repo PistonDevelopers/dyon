@@ -2620,7 +2620,7 @@ impl Call {
                         let f = &module.ext_prelude[i];
                         match f.f {
                             FnExt::Void(ff) => FnIndex::Void(FnVoidRef(ff)),
-                            FnExt::Return(ff) => FnIndex::ExternalReturn(FnReturnRef(ff)),
+                            FnExt::Return(ff) => FnIndex::Return(FnReturnRef(ff)),
                         }
                     }
                 }
@@ -2639,7 +2639,7 @@ impl Call {
                 }
             }
             FnIndex::Void(_) |
-            FnIndex::ExternalReturn(_) |
+            FnIndex::Return(_) |
             FnIndex::ExternalLazy(_, _) => {
                 // Don't push return since last value in block
                 // is used as return value.
@@ -4378,7 +4378,7 @@ impl In {
                         let f = &module.ext_prelude[i];
                         match f.f {
                             FnExt::Void(ff) => FnIndex::Void(FnVoidRef(ff)),
-                            FnExt::Return(ff) => FnIndex::ExternalReturn(FnReturnRef(ff)),
+                            FnExt::Return(ff) => FnIndex::Return(FnReturnRef(ff)),
                         }
                     }
                 }

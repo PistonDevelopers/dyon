@@ -1045,7 +1045,7 @@ impl Runtime {
                 })?;
                 Ok((None, Flow::Continue))
             }
-            FnIndex::ExternalReturn(FnReturnRef(f)) => {
+            FnIndex::Return(FnReturnRef(f)) => {
                 for arg in &call.args {
                     match self.expression(arg, Side::Right)? {
                         (Some(x), Flow::Continue) => self.stack.push(x),

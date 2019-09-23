@@ -329,7 +329,7 @@ pub enum FnIndex {
     /// External function with no return value.
     Void(FnVoidRef),
     /// Extern function with return value.
-    ExternalReturn(FnReturnRef),
+    Return(FnReturnRef),
     /// Extern function with return value and lazy invariant.
     ExternalLazy(FnReturnRef, LazyInvariant),
 }
