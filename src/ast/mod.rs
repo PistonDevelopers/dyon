@@ -2608,7 +2608,7 @@ impl Call {
         use_lookup: &UseLookup,
     ) {
         use FnReturnRef;
-        use FnExternalVoidRef;
+        use FnVoidRef;
         use FnExt;
 
         let st = stack.len();
@@ -2619,7 +2619,7 @@ impl Call {
                     FnAlias::External(i) => {
                         let f = &module.ext_prelude[i];
                         match f.f {
-                            FnExt::Void(ff) => FnIndex::ExternalVoid(FnExternalVoidRef(ff)),
+                            FnExt::Void(ff) => FnIndex::ExternalVoid(FnVoidRef(ff)),
                             FnExt::Return(ff) => FnIndex::ExternalReturn(FnReturnRef(ff)),
                         }
                     }
@@ -4367,7 +4367,7 @@ impl In {
         use_lookup: &UseLookup
     ) {
         use FnReturnRef;
-        use FnExternalVoidRef;
+        use FnVoidRef;
         use FnExt;
 
         let f_index = if let Some(ref alias) = self.alias {
@@ -4377,7 +4377,7 @@ impl In {
                     FnAlias::External(i) => {
                         let f = &module.ext_prelude[i];
                         match f.f {
-                            FnExt::Void(ff) => FnIndex::ExternalVoid(FnExternalVoidRef(ff)),
+                            FnExt::Void(ff) => FnIndex::ExternalVoid(FnVoidRef(ff)),
                             FnExt::Return(ff) => FnIndex::ExternalReturn(FnReturnRef(ff)),
                         }
                     }

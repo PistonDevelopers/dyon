@@ -384,7 +384,7 @@ impl Module {
                     }
                 } else {
                     if let FnExt::Void(ff) = f.f {
-                        FnIndex::ExternalVoid(FnExternalVoidRef(ff))
+                        FnIndex::ExternalVoid(FnVoidRef(ff))
                     } else {
                         FnIndex::None
                     }

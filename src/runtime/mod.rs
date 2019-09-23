@@ -1021,10 +1021,10 @@ impl Runtime {
     /// The `loader` flag is set to `true` when called from the outside.
     fn call_internal(&mut self, call: &ast::Call, loader: bool) -> FlowResult {
         use FnReturnRef;
-        use FnExternalVoidRef;
+        use FnVoidRef;
 
         match call.f_index.get() {
-            FnIndex::ExternalVoid(FnExternalVoidRef(f)) => {
+            FnIndex::ExternalVoid(FnVoidRef(f)) => {
                 for arg in &call.args {
                     match self.expression(arg, Side::Right)? {
                         (Some(x), Flow::Continue) => self.stack.push(x),
