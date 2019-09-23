@@ -370,12 +370,24 @@ impl Module {
             if &f.name == name {
                 return if f.p.returns() {
                     if f.p.lazy == LAZY_NO {
-                        FnIndex::ExternalReturn(FnExternalRef(f.f))
+                        if let FnExt::Return(ff) = f.f {
+                            FnIndex::ExternalReturn(FnExternalReturnRef(ff))
+                        } else {
+                            FnIndex::None
+                        }
                     } else {
-                        FnIndex::ExternalLazy(FnExternalRef(f.f), f.p.lazy)
+                        if let FnExt::Return(ff) = f.f {
+                            FnIndex::ExternalLazy(FnExternalReturnRef(ff), f.p.lazy)
+                        } else {
+                            FnIndex::None
+                        }
                     }
                 } else {
-                    FnIndex::ExternalVoid(FnExternalRef(f.f))
+                    if let FnExt::Void(ff) = f.f {
+                        FnIndex::ExternalVoid(FnExternalVoidRef(ff))
+                    } else {
+                        FnIndex::None
+                    }
                 };
             }
         }
@@ -407,31 +419,35 @@ impl Module {
     }
 
     /// Adds a new external prelude function.
-    pub fn add(
+    pub fn add<T>(
         &mut self,
         name: Arc<String>,
-        f: fn(&mut Runtime) -> Result<Option<Variable>, String>,
+        f: fn(&mut Runtime) -> T,
         prelude_function: Dfn
-    ) {
+    )
+        where fn(&mut Runtime) -> T: Into<FnExt>
+    {
         self.ext_prelude.push(FnExternal {
             namespace: self.register_namespace.clone(),
             name: name.clone(),
-            f,
+            f: f.into(),
             p: prelude_function,
         });
     }
 
     /// Adds a new external prelude function.
-    pub fn add_str(
+    pub fn add_str<T>(
         &mut self,
         name: &str,
-        f: fn(&mut Runtime) -> Result<Option<Variable>, String>,
+        f: fn(&mut Runtime) -> T,
         prelude_function: Dfn
-    ) {
+    )
+        where fn(&mut Runtime) -> T: Into<FnExt>
+    {
         self.ext_prelude.push(FnExternal {
             namespace: self.register_namespace.clone(),
             name: Arc::new(name.into()),
-            f,
+            f: f.into(),
             p: prelude_function,
         });
     }

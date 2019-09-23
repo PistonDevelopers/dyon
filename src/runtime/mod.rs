@@ -1020,10 +1020,11 @@ impl Runtime {
     ///
     /// The `loader` flag is set to `true` when called from the outside.
     fn call_internal(&mut self, call: &ast::Call, loader: bool) -> FlowResult {
-        use FnExternalRef;
+        use FnExternalReturnRef;
+        use FnExternalVoidRef;
 
         match call.f_index.get() {
-            FnIndex::ExternalVoid(FnExternalRef(f)) => {
+            FnIndex::ExternalVoid(FnExternalVoidRef(f)) => {
                 for arg in &call.args {
                     match self.expression(arg, Side::Right)? {
                         (Some(x), Flow::Continue) => self.stack.push(x),
@@ -1044,7 +1045,7 @@ impl Runtime {
                 })?;
                 Ok((None, Flow::Continue))
             }
-            FnIndex::ExternalReturn(FnExternalRef(f)) => {
+            FnIndex::ExternalReturn(FnExternalReturnRef(f)) => {
                 for arg in &call.args {
                     match self.expression(arg, Side::Right)? {
                         (Some(x), Flow::Continue) => self.stack.push(x),
@@ -1054,7 +1055,7 @@ impl Runtime {
                                         Expression did not return a value.")
                     };
                 }
-                if let Some(x) = (f)(self).map_err(|err| {
+                Ok((Some((f)(self).map_err(|err| {
                     let range = if let Some(ind) = self.arg_err_index.get() {
                         self.arg_err_index.set(None);
                         call.args[ind].source_range()
@@ -1062,13 +1063,9 @@ impl Runtime {
                         call.source_range
                     };
                     self.module.error(range, &err, self)
-                })? {
-                    Ok((Some(x), Flow::Continue))
-                } else {
-                    Ok((Some(self.stack.pop().expect(TINVOTS)), Flow::Continue))
-                }
+                })?), Flow::Continue))
             }
-            FnIndex::ExternalLazy(FnExternalRef(f), lazy) => {
+            FnIndex::ExternalLazy(FnExternalReturnRef(f), lazy) => {
                 for (i, arg) in call.args.iter().enumerate() {
                     match self.expression(arg, Side::Right)? {
                         (Some(x), Flow::Continue) => {
@@ -1107,7 +1104,7 @@ impl Runtime {
                                         Expression did not return a value.")
                     };
                 }
-                if let Some(x) = (f)(self).map_err(|err| {
+                Ok((Some((f)(self).map_err(|err| {
                     let range = if let Some(ind) = self.arg_err_index.get() {
                         self.arg_err_index.set(None);
                         call.args[ind].source_range()
@@ -1115,11 +1112,7 @@ impl Runtime {
                         call.source_range
                     };
                     self.module.error(range, &err, self)
-                })? {
-                    Ok((Some(x), Flow::Continue))
-                } else {
-                    Ok((Some(self.stack.pop().expect(TINVOTS)), Flow::Continue))
-                }
+                })?), Flow::Continue))
             }
             FnIndex::Loaded(f_index) => {
                 use std::sync::atomic::Ordering;

@@ -2607,7 +2607,9 @@ impl Call {
         module: &Module,
         use_lookup: &UseLookup,
     ) {
-        use FnExternalRef;
+        use FnExternalReturnRef;
+        use FnExternalVoidRef;
+        use FnExt;
 
         let st = stack.len();
         let f_index = if let Some(ref alias) = self.alias {
@@ -2616,10 +2618,9 @@ impl Call {
                     FnAlias::Loaded(i) => FnIndex::Loaded(i as isize - relative as isize),
                     FnAlias::External(i) => {
                         let f = &module.ext_prelude[i];
-                        if let Type::Void = f.p.ret {
-                            FnIndex::ExternalVoid(FnExternalRef(f.f))
-                        } else {
-                            FnIndex::ExternalReturn(FnExternalRef(f.f))
+                        match f.f {
+                            FnExt::Void(ff) => FnIndex::ExternalVoid(FnExternalVoidRef(ff)),
+                            FnExt::Return(ff) => FnIndex::ExternalReturn(FnExternalReturnRef(ff)),
                         }
                     }
                 }
@@ -4365,7 +4366,9 @@ impl In {
         module: &Module,
         use_lookup: &UseLookup
     ) {
-        use FnExternalRef;
+        use FnExternalReturnRef;
+        use FnExternalVoidRef;
+        use FnExt;
 
         let f_index = if let Some(ref alias) = self.alias {
             if let Some(&i) = use_lookup.aliases.get(alias).and_then(|map| map.get(&self.name)) {
@@ -4373,10 +4376,9 @@ impl In {
                     FnAlias::Loaded(i) => FnIndex::Loaded(i as isize - relative as isize),
                     FnAlias::External(i) => {
                         let f = &module.ext_prelude[i];
-                        if let Type::Void = f.p.ret {
-                            FnIndex::ExternalVoid(FnExternalRef(f.f))
-                        } else {
-                            FnIndex::ExternalReturn(FnExternalRef(f.f))
+                        match f.f {
+                            FnExt::Void(ff) => FnIndex::ExternalVoid(FnExternalVoidRef(ff)),
+                            FnExt::Return(ff) => FnIndex::ExternalReturn(FnExternalReturnRef(ff)),
                         }
                     }
                 }

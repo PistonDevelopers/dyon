@@ -327,24 +327,67 @@ pub enum FnIndex {
     /// Relative to function you call from.
     Loaded(isize),
     /// External function with no return value.
-    ExternalVoid(FnExternalRef),
+    ExternalVoid(FnExternalVoidRef),
     /// Extern function with return value.
-    ExternalReturn(FnExternalRef),
+    ExternalReturn(FnExternalReturnRef),
     /// Extern function with return value and lazy invariant.
-    ExternalLazy(FnExternalRef, LazyInvariant),
+    ExternalLazy(FnExternalReturnRef, LazyInvariant),
+}
+
+/// Refers to an external function.
+#[derive(Clone, Copy)]
+pub enum FnExt {
+    /// External function with no return value.
+    Void(fn(&mut Runtime) -> Result<(), String>),
+    /// External function with return value.
+    Return(fn(&mut Runtime) -> Result<Variable, String>),
+}
+
+impl From<fn(&mut Runtime) -> Result<(), String>> for FnExt {
+    fn from(val: fn(&mut Runtime) -> Result<(), String>) -> Self {
+        FnExt::Void(val)
+    }
+}
+
+impl From<fn(&mut Runtime) -> Result<Variable, String>> for FnExt {
+    fn from(val: fn(&mut Runtime) -> Result<Variable, String>) -> Self {
+        FnExt::Return(val)
+    }
+}
+
+impl fmt::Debug for FnExt {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "FnExt")
+    }
 }
 
 /// Used to store direct reference to external function.
 #[derive(Copy)]
-pub struct FnExternalRef(pub fn(&mut Runtime) -> Result<Option<Variable>, String>);
+pub struct FnExternalReturnRef(pub fn(&mut Runtime) -> Result<Variable, String>);
 
-impl Clone for FnExternalRef {
-    fn clone(&self) -> FnExternalRef {
+impl Clone for FnExternalReturnRef {
+    fn clone(&self) -> FnExternalReturnRef {
         *self
     }
 }
 
-impl fmt::Debug for FnExternalRef {
+impl fmt::Debug for FnExternalReturnRef {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "FnExternalRef")
+    }
+}
+
+/// Used to store direct reference to external function that does not return anything.
+#[derive(Copy)]
+pub struct FnExternalVoidRef(pub fn(&mut Runtime) -> Result<(), String>);
+
+impl Clone for FnExternalVoidRef {
+    fn clone(&self) -> FnExternalVoidRef {
+        *self
+    }
+}
+
+impl fmt::Debug for FnExternalVoidRef {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "FnExternalRef")
     }
@@ -353,7 +396,7 @@ impl fmt::Debug for FnExternalRef {
 struct FnExternal {
     namespace: Arc<Vec<Arc<String>>>,
     name: Arc<String>,
-    f: fn(&mut Runtime) -> Result<Option<Variable>, String>,
+    f: FnExt,
     p: Dfn,
 }
 
