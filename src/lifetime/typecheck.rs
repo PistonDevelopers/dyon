@@ -64,6 +64,10 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
             let kind = nodes[i].kind;
             let mut this_ty = None;
             match kind {
+                // No further work required for these statements.
+                Kind::Uses |
+                Kind::Start |
+                Kind::End => continue 'node,
                 Kind::Go => {
                     // Infer thread type from function.
                     if !nodes[i].children.is_empty() {
@@ -74,6 +78,10 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
                     }
                 }
                 Kind::Fn => {
+                    if nodes[i].ty.is_some() {
+                        // No further work is required for function.
+                        continue 'node;
+                    }
                     if let Some(ch) = nodes[i].find_child_by_kind(nodes, Kind::Expr) {
                         // If the block is unreachable at the end,
                         // this does not tell anything about the type of the function.
@@ -373,9 +381,8 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
                 Kind::Exp | Kind::Base | Kind::Left | Kind::Right |
                 Kind::ElseIfCond | Kind::Grab | Kind::Add | Kind::Mul | Kind::Pow
                  => {
-                     // TODO: Report error for expected unary operator.
                     if nodes[i].children.is_empty() {
-                        todo.push(i);
+                        // No further work is required.
                         continue 'node;
                     }
                     let ch = nodes[i].children[0];
