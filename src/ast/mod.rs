@@ -345,6 +345,8 @@ pub struct Function {
     pub source: Arc<String>,
     /// Function arguments.
     pub args: Vec<Arg>,
+    /// Lazy invariants.
+    pub lazy_inv: Vec<Vec<Lazy>>,
     /// Current object references.
     pub currents: Vec<Current>,
     /// Function block.
@@ -385,6 +387,7 @@ impl Function {
         let mut block: Option<Block> = None;
         let mut expr: Option<Expression> = None;
         let mut ret: Option<Type> = None;
+        let mut lazy_inv: Vec<Vec<Lazy>> = vec![];
         loop {
             if let Ok(range) = convert.end_node(node) {
                 convert.update(range);
@@ -392,10 +395,11 @@ impl Function {
             } else if let Ok((range, val)) = convert.meta_string("name") {
                 convert.update(range);
                 name = Some(val);
-            } else if let Ok((range, val)) = Arg::from_meta_data(
+            } else if let Ok((range, val, lazy)) = Arg::from_meta_data(
                     file, source, convert, ignored) {
                 convert.update(range);
                 args.push(val);
+                lazy_inv.push(lazy);
             } else if let Ok((range, val)) = Current::from_meta_data(
                     convert, ignored) {
                 convert.update(range);
@@ -453,6 +457,10 @@ impl Function {
             name = Arc::new(name_plus_args);
         }
         let ret = ret.ok_or(())?;
+        // Remove empty lazy invariants.
+        while let Some(true) = lazy_inv.last().map(|lz| lz.len() == 0) {
+            lazy_inv.pop();
+        }
         Ok((convert.subtract(start), Function {
             namespace: namespace.clone(),
             resolved: Arc::new(AtomicBool::new(false)),
@@ -460,6 +468,7 @@ impl Function {
             file: file.clone(),
             source: source.clone(),
             args,
+            lazy_inv,
             currents,
             block,
             ret,
@@ -533,7 +542,7 @@ impl Closure {
             if let Ok(range) = convert.end_node(node) {
                 convert.update(range);
                 break;
-            } else if let Ok((range, val)) = Arg::from_meta_data(
+            } else if let Ok((range, val, _)) = Arg::from_meta_data(
                     file, source, convert, ignored) {
                 convert.update(range);
                 args.push(val);
@@ -773,8 +782,6 @@ pub struct Arg {
     pub lifetime: Option<Arc<String>>,
     /// The type of the argument.
     pub ty: Type,
-    /// Lazy invariant.
-    pub lazy: Vec<Lazy>,
     /// The range in source.
     pub source_range: Range,
     /// Whether the argument is mutable.
@@ -788,7 +795,7 @@ impl Arg {
         source: &Arc<String>,
         mut convert: Convert,
         ignored: &mut Vec<Range>
-    ) -> Result<(Range, Arg), ()> {
+    ) -> Result<(Range, Arg, Vec<Lazy>), ()> {
         let start = convert;
         let node = "arg";
         let start_range = convert.start_node(node)?;
@@ -846,10 +853,9 @@ impl Arg {
             name,
             lifetime,
             ty,
-            lazy,
             source_range: convert.source(start).unwrap(),
             mutable,
-        }))
+        }, lazy))
     }
 }
 

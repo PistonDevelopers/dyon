@@ -1153,24 +1153,26 @@ impl Runtime {
                         (Some(x), Flow::Continue) => {
                             use ast::Lazy;
                             // Return immediately if equal to lazy invariant.
-                            for lazy in &f.args[i].lazy {
-                                match *lazy {
-                                    Lazy::Variable(ref val) => {
-                                        if self.resolve(&x) == val {return Ok((Some(x), Flow::Continue))}
-                                    }
-                                    Lazy::UnwrapOk => {
-                                        if let &Variable::Result(Ok(ref x)) = self.resolve(&x) {
-                                            return Ok((Some((**x).clone()), Flow::Continue))
+                            if let Some(lz) = f.lazy_inv.get(i) {
+                                for lazy in lz {
+                                    match *lazy {
+                                        Lazy::Variable(ref val) => {
+                                            if self.resolve(&x) == val {return Ok((Some(x), Flow::Continue))}
                                         }
-                                    }
-                                    Lazy::UnwrapErr => {
-                                        if let &Variable::Result(Err(ref x)) = self.resolve(&x) {
-                                            return Ok((Some(x.message.clone()), Flow::Continue))
+                                        Lazy::UnwrapOk => {
+                                            if let &Variable::Result(Ok(ref x)) = self.resolve(&x) {
+                                                return Ok((Some((**x).clone()), Flow::Continue))
+                                            }
                                         }
-                                    }
-                                    Lazy::UnwrapSome => {
-                                        if let &Variable::Option(Some(ref x)) = self.resolve(&x) {
-                                            return Ok((Some((**x).clone()), Flow::Continue))
+                                        Lazy::UnwrapErr => {
+                                            if let &Variable::Result(Err(ref x)) = self.resolve(&x) {
+                                                return Ok((Some(x.message.clone()), Flow::Continue))
+                                            }
+                                        }
+                                        Lazy::UnwrapSome => {
+                                            if let &Variable::Option(Some(ref x)) = self.resolve(&x) {
+                                                return Ok((Some((**x).clone()), Flow::Continue))
+                                            }
                                         }
                                     }
                                 }
