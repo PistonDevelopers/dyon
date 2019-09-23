@@ -2619,7 +2619,7 @@ impl Call {
                     FnAlias::External(i) => {
                         let f = &module.ext_prelude[i];
                         match f.f {
-                            FnExt::Void(ff) => FnIndex::ExternalVoid(FnVoidRef(ff)),
+                            FnExt::Void(ff) => FnIndex::Void(FnVoidRef(ff)),
                             FnExt::Return(ff) => FnIndex::ExternalReturn(FnReturnRef(ff)),
                         }
                     }
@@ -2638,7 +2638,7 @@ impl Call {
                     stack.push(None);
                 }
             }
-            FnIndex::ExternalVoid(_) |
+            FnIndex::Void(_) |
             FnIndex::ExternalReturn(_) |
             FnIndex::ExternalLazy(_, _) => {
                 // Don't push return since last value in block
@@ -4377,7 +4377,7 @@ impl In {
                     FnAlias::External(i) => {
                         let f = &module.ext_prelude[i];
                         match f.f {
-                            FnExt::Void(ff) => FnIndex::ExternalVoid(FnVoidRef(ff)),
+                            FnExt::Void(ff) => FnIndex::Void(FnVoidRef(ff)),
                             FnExt::Return(ff) => FnIndex::ExternalReturn(FnReturnRef(ff)),
                         }
                     }

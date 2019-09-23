@@ -1024,7 +1024,7 @@ impl Runtime {
         use FnVoidRef;
 
         match call.f_index.get() {
-            FnIndex::ExternalVoid(FnVoidRef(f)) => {
+            FnIndex::Void(FnVoidRef(f)) => {
                 for arg in &call.args {
                     match self.expression(arg, Side::Right)? {
                         (Some(x), Flow::Continue) => self.stack.push(x),

@@ -327,7 +327,7 @@ pub enum FnIndex {
     /// Relative to function you call from.
     Loaded(isize),
     /// External function with no return value.
-    ExternalVoid(FnVoidRef),
+    Void(FnVoidRef),
     /// Extern function with return value.
     ExternalReturn(FnReturnRef),
     /// Extern function with return value and lazy invariant.

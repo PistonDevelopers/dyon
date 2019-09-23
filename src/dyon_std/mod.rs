@@ -1189,7 +1189,7 @@ pub(crate) fn _call(rt: &mut Runtime) -> Result<(), String> {
                     })?;
                 }
                 FnIndex::None |
-                FnIndex::ExternalVoid(_) |
+                FnIndex::Void(_) |
                 FnIndex::ExternalReturn(_) |
                 FnIndex::ExternalLazy(_, _) =>
                     return Err(format!("Could not find function `{}`", fn_name))
@@ -1258,7 +1258,7 @@ pub(crate) fn call_ret(rt: &mut Runtime) -> Result<Variable, String> {
                     })?;
                 }
                 FnIndex::None |
-                FnIndex::ExternalVoid(_) |
+                FnIndex::Void(_) |
                 FnIndex::ExternalReturn(_) |
                 FnIndex::ExternalLazy(_, _) =>
                     return Err(format!("Could not find function `{}`", fn_name))
