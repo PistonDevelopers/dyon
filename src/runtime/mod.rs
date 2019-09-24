@@ -1124,13 +1124,6 @@ impl Runtime {
                 // Copy the module to avoid problems with borrow checker.
                 let mod_copy = self.module.clone();
                 let ref f = mod_copy.functions[new_index];
-                if call.arg_len() != f.args.len() {
-                    return Err(self.module.error(call.source_range,
-                        &format!("{}\nExpected {} arguments but found {}",
-                        self.stack_trace(),
-                        f.args.len(),
-                        call.arg_len()), self));
-                }
                 // Arguments must be computed.
                 if f.returns() {
                     // Add return value before arguments on the stack.
