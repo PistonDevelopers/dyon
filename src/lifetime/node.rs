@@ -117,6 +117,26 @@ impl Node {
         nodes[i].children[1] = right;
     }
 
+    /// Simplifies a node by linking child with grand-parent.
+    ///
+    /// Removes the node that gets simplified.
+    pub fn simplify(i: usize, nodes: &mut Vec<Node>) {
+        if let Some(parent) = nodes[i].parent {
+            // Link child to grand-parent.
+            let ch = nodes[i].children[0];
+            nodes[ch].parent = Some(parent);
+            for p_ch in &mut nodes[parent].children {
+                if *p_ch == i {
+                    *p_ch = ch;
+                }
+            }
+
+            // Disable this node.
+            nodes[i].parent = None;
+            nodes[i].children.clear();
+        }
+    }
+
     #[allow(dead_code)]
     pub fn print(&self, nodes: &[Node], indent: u32) {
         for _ in 0..indent { print!(" ") }
