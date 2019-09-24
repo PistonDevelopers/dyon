@@ -1050,8 +1050,6 @@ pub enum Expression {
     LinkIn(Box<ForIn>),
     /// If-expression.
     If(Box<If>),
-    /// Compare expression.
-    Compare(Box<Compare>),
     /// Variable.
     ///
     /// This means it contains no members that depends on other expressions.
@@ -1305,7 +1303,7 @@ impl Expression {
             } else if let Ok((range, val)) = Compare::from_meta_data(
                     file, source, convert, ignored) {
                 convert.update(range);
-                result = Some(Expression::Compare(Box::new(val)));
+                result = Some(val.into_expression());
             } else if let Ok((range, _)) = convert.meta_bool("try") {
                 convert.update(range);
                 result = Some(Expression::Try(Box::new(result.unwrap())));
@@ -1408,7 +1406,6 @@ impl Expression {
             LinkFor(ref for_n_expr) => for_n_expr.source_range,
             LinkIn(ref for_in_expr) => for_in_expr.source_range,
             If(ref if_expr) => if_expr.source_range,
-            Compare(ref comp) => comp.source_range,
             Variable(ref range_var) => range_var.0,
             Try(ref expr) => expr.source_range(),
             Swizzle(ref swizzle) => swizzle.source_range,
@@ -1505,8 +1502,6 @@ impl Expression {
                 for_in_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             If(ref if_expr) =>
                 if_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            Compare(ref comp) =>
-                comp.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             Variable(_) => {}
             Try(ref expr) =>
                 expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
@@ -4261,19 +4256,24 @@ impl Compare {
         }))
     }
 
-    fn resolve_locals(
-        &self,
-        relative: usize,
-        stack: &mut Vec<Option<Arc<String>>>,
-        closure_stack: &mut Vec<usize>,
-        module: &Module,
-        use_lookup: &UseLookup,
-    ) {
-        let st = stack.len();
-        self.left.resolve_locals(relative, stack, closure_stack, module, use_lookup);
-        stack.truncate(st);
-        self.right.resolve_locals(relative, stack, closure_stack, module, use_lookup);
-        stack.truncate(st);
+    fn into_expression(self) -> Expression {
+        use self::CompareOp::*;
+
+        Expression::Call(Box::new(Call {
+            alias: None,
+            name: match self.op {
+                Less => crate::LESS.clone(),
+                LessOrEqual => crate::LESS_OR_EQUAL.clone(),
+                Greater => crate::GREATER.clone(),
+                GreaterOrEqual => crate::GREATER_OR_EQUAL.clone(),
+                Equal => crate::EQUAL.clone(),
+                NotEqual => crate::NOT_EQUAL.clone(),
+            },
+            args: vec![self.left, self.right],
+            custom_source: None,
+            f_index: Cell::new(FnIndex::None),
+            source_range: self.source_range,
+        }))
     }
 }
 

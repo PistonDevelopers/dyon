@@ -1,5 +1,47 @@
 ns std
 
+/// Less.
+fn less(a: any, b: any) -> bool { ... }
+    (sec[f64], f64) -> sec[bool]
+    (f64, f64) -> bool
+    (str, str) -> bool
+
+/// Less or equal.
+fn less_or_equal(a: any, b: any) -> bool { ... }
+    (sec[f64], f64) -> sec[bool]
+    (f64, f64) -> bool
+    (str, str) -> bool
+
+/// Greater.
+fn greater(a: any, b: any) -> bool { ... }
+    (sec[f64], f64) -> sec[bool]
+    (f64, f64) -> bool
+    (str, str) -> bool
+
+/// Greater or equal.
+fn greater_or_equal(a: any, b: any) -> bool { ... }
+    (sec[f64], f64) -> sec[bool]
+    (f64, f64) -> bool
+    (str, str) -> bool
+
+/// Equal.
+fn equal(a: any, b: any) -> bool { ... }
+    (sec[f64], f64) -> sec[bool]
+    (f64, f64) -> bool
+    (str, str) -> bool
+    (sec[bool], bool) -> sec[bool]
+    (bool, bool) -> bool
+    (vec4, vec4) -> bool
+    ({}, {}) -> bool
+    ([], []) -> bool
+    (opt, opt) -> bool
+
+/// Not equal.
+fn not_equal(a: any, b: any) -> bool { ... }
+    (sec[f64], f64) -> sec[bool]
+    (f64, f64) -> bool
+    (str, str) -> bool
+
 /// Lazy AND (`&&`).
 fn and_also(a: bool => false, b: bool) -> any { ... }
     (sec[bool], bool) -> sec[bool]

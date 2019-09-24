@@ -101,20 +101,6 @@ pub fn grab_expr(
                 source_range: assign.source_range,
             }))), Flow::Continue))
         },
-        E::Compare(ref compare) => {
-            Ok((Grabbed::Expression(E::Compare(Box::new(ast::Compare {
-                op: compare.op,
-                left: match grab_expr(level, rt, &compare.left, side) {
-                    Ok((Grabbed::Expression(x), Flow::Continue)) => x,
-                    x => return x,
-                },
-                right: match grab_expr(level, rt, &compare.right, side) {
-                    Ok((Grabbed::Expression(x), Flow::Continue)) => x,
-                    x => return x,
-                },
-                source_range: compare.source_range,
-            }))), Flow::Continue))
-        }
         E::If(ref if_expr) => {
             Ok((Grabbed::Expression(E::If(Box::new(ast::If {
                 cond: match grab_expr(level, rt, &if_expr.cond, side) {

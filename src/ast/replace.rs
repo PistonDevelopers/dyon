@@ -8,7 +8,6 @@ use super::{
     Block,
     Call,
     CallClosure,
-    Compare,
     Expression,
     For,
     ForN,
@@ -307,14 +306,6 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
                 else_block: if_expr.else_block.as_ref()
                     .map(|else_block| number_block(else_block, name, val)),
                 source_range: if_expr.source_range,
-            }))
-        }
-        E::Compare(ref cmp_expr) => {
-            E::Compare(Box::new(Compare {
-                op: cmp_expr.op,
-                left: number(&cmp_expr.left, name, val),
-                right: number(&cmp_expr.right, name, val),
-                source_range: cmp_expr.source_range,
             }))
         }
         E::Variable(_) => expr.clone(),

@@ -210,6 +210,8 @@ fn write_expr<W: io::Write>(
                 write_neg(w, rt, &call.args[0], tabs)?
             } else if let Some(op) = standard_binop(call) {
                 write_binop(w, rt, op, &call.args[0], &call.args[1], tabs)?
+            } else if let Some(op) = standard_compare(call) {
+                write_compare(w, rt, op, &call.args[0], &call.args[1], tabs)?
             } else {
                 write_call(w, rt, call, tabs)?
             }
@@ -242,7 +244,6 @@ fn write_expr<W: io::Write>(
         E::Vec4(ref vec4) => write_vec4(w, rt, vec4, tabs)?,
         E::Mat4(ref mat4) => write_mat4(w, rt, mat4, tabs)?,
         E::For(ref f) => write_for(w, rt, f, tabs)?,
-        E::Compare(ref comp) => write_compare(w, rt, comp, tabs)?,
         E::ForN(ref for_n) => {
             write!(w, "for ")?;
             write_for_n(w, rt, for_n, tabs)?;
@@ -386,7 +387,6 @@ fn binop_needs_parens(op: ast::BinOp, expr: &ast::Expression, right: bool) -> bo
     use ast::Expression as E;
 
     match *expr {
-        E::Compare(_) => true,
         E::Call(ref call) => {
             if let Some(binop_op) = standard_binop(call) {
                 match (op.precedence(), binop_op.precedence()) {
@@ -396,6 +396,8 @@ fn binop_needs_parens(op: ast::BinOp, expr: &ast::Expression, right: bool) -> bo
                     (1, 1) if right => true,
                     _ => false
                 }
+            } else if let Some(_) = standard_compare(call) {
+                true
             } else {false}
         }
         _ => false
@@ -733,6 +735,22 @@ fn standard_binop(call: &ast::Call) -> Option<ast::BinOp> {
     })
 }
 
+fn standard_compare(call: &ast::Call) -> Option<ast::CompareOp> {
+    use ast::CompareOp::*;
+
+    if call.args.len() != 2 {return None};
+
+    Some(match &**call.name {
+        "less" => Less,
+        "less_or_equal" => LessOrEqual,
+        "greater" => Greater,
+        "greater_or_equal" => GreaterOrEqual,
+        "equal" => Equal,
+        "not_equal" => NotEqual,
+        _ => return None,
+    })
+}
+
 fn compare_needs_parent(expr: &ast::Expression) -> bool {
     use ast::Expression as E;
 
@@ -745,24 +763,26 @@ fn compare_needs_parent(expr: &ast::Expression) -> bool {
 fn write_compare<W: io::Write>(
     w: &mut W,
     rt: &Runtime,
-    comp: &ast::Compare,
+    op: ast::CompareOp,
+    left: &ast::Expression,
+    right: &ast::Expression,
     tabs: u32,
 ) -> Result<(), io::Error> {
-    let left_needs_parens = compare_needs_parent(&comp.left);
-    let right_needs_parens = compare_needs_parent(&comp.right);
+    let left_needs_parens = compare_needs_parent(left);
+    let right_needs_parens = compare_needs_parent(right);
 
     if left_needs_parens {
         write!(w, "(")?;
     }
-    write_expr(w, rt, &comp.left, tabs)?;
+    write_expr(w, rt, left, tabs)?;
     if left_needs_parens {
         write!(w, ")")?;
     }
-    write!(w, " {} ", comp.op.symbol())?;
+    write!(w, " {} ", op.symbol())?;
     if right_needs_parens {
         write!(w, "(")?;
     }
-    write_expr(w, rt, &comp.right, tabs)?;
+    write_expr(w, rt, right, tabs)?;
     if right_needs_parens {
         write!(w, ")")?;
     }

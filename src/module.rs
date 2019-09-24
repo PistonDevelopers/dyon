@@ -29,6 +29,84 @@ impl Module {
 
         let mut m = Module::empty();
         m.ns("std");
+        m.add_str("less", less, Dfn {
+            lts: vec![Lt::Default; 2],
+            tys: vec![Any, Any],
+            ret: Bool,
+            ext: vec![
+                (vec![], vec![Secret(Box::new(F64)), F64], Secret(Box::new(Bool))),
+                (vec![], vec![F64; 2], Bool),
+                (vec![], vec![Str; 2], Bool),
+            ],
+            lazy: LAZY_NO
+        });
+        m.add_str("less_or_equal", less_or_equal, Dfn {
+            lts: vec![Lt::Default; 2],
+            tys: vec![Any, Any],
+            ret: Bool,
+            ext: vec![
+                (vec![], vec![Secret(Box::new(F64)), F64], Secret(Box::new(Bool))),
+                (vec![], vec![F64; 2], Bool),
+                (vec![], vec![Str; 2], Bool),
+            ],
+            lazy: LAZY_NO
+        });
+        m.add_str("greater", greater, Dfn {
+            lts: vec![Lt::Default; 2],
+            tys: vec![Any, Any],
+            ret: Bool,
+            ext: vec![
+                (vec![], vec![Secret(Box::new(F64)), F64], Secret(Box::new(Bool))),
+                (vec![], vec![F64; 2], Bool),
+                (vec![], vec![Str; 2], Bool),
+            ],
+            lazy: LAZY_NO
+        });
+        m.add_str("greater_or_equal", greater_or_equal, Dfn {
+            lts: vec![Lt::Default; 2],
+            tys: vec![Any, Any],
+            ret: Bool,
+            ext: vec![
+                (vec![], vec![Secret(Box::new(F64)), F64], Secret(Box::new(Bool))),
+                (vec![], vec![F64; 2], Bool),
+                (vec![], vec![Str; 2], Bool),
+            ],
+            lazy: LAZY_NO
+        });
+        m.add_str("equal", equal, Dfn {
+            lts: vec![Lt::Default; 2],
+            tys: vec![Any, Any],
+            ret: Bool,
+            ext: vec![
+                (vec![], vec![Secret(Box::new(F64)), F64], Secret(Box::new(Bool))),
+                (vec![], vec![F64; 2], Bool),
+                (vec![], vec![Str; 2], Bool),
+                (vec![], vec![Secret(Box::new(Bool)), Bool], Secret(Box::new(Bool))),
+                (vec![], vec![Bool; 2], Bool),
+                (vec![], vec![Vec4; 2], Bool),
+                (vec![], vec![Type::object(), Type::object()], Bool),
+                (vec![], vec![Type::array(), Type::array()], Bool),
+                (vec![], vec![Type::option(), Type::option()], Bool),
+            ],
+            lazy: LAZY_NO
+        });
+        m.add_str("not_equal", not_equal, Dfn {
+            lts: vec![Lt::Default; 2],
+            tys: vec![Any, Any],
+            ret: Bool,
+            ext: vec![
+                (vec![], vec![Secret(Box::new(F64)), F64], Secret(Box::new(Bool))),
+                (vec![], vec![F64; 2], Bool),
+                (vec![], vec![Str; 2], Bool),
+                (vec![], vec![Secret(Box::new(Bool)), Bool], Secret(Box::new(Bool))),
+                (vec![], vec![Bool; 2], Bool),
+                (vec![], vec![Vec4; 2], Bool),
+                (vec![], vec![Type::object(), Type::object()], Bool),
+                (vec![], vec![Type::array(), Type::array()], Bool),
+                (vec![], vec![Type::option(), Type::option()], Bool),
+            ],
+            lazy: LAZY_NO
+        });
         m.add_str("and_also", and_also, Dfn {
             lts: vec![Lt::Default; 2],
             tys: vec![Bool, Bool],

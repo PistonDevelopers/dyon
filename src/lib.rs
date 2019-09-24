@@ -58,6 +58,12 @@ pub use module::Module;
 pub const TINVOTS: &str = "There is no value on the stack";
 
 lazy_static!{
+    pub(crate) static ref LESS: Arc<String> = Arc::new("less".into());
+    pub(crate) static ref LESS_OR_EQUAL: Arc<String> = Arc::new("less_or_equal".into());
+    pub(crate) static ref GREATER: Arc<String> = Arc::new("greater".into());
+    pub(crate) static ref GREATER_OR_EQUAL: Arc<String> = Arc::new("greater_or_equal".into());
+    pub(crate) static ref EQUAL: Arc<String> = Arc::new("equal".into());
+    pub(crate) static ref NOT_EQUAL: Arc<String> = Arc::new("not_equal".into());
     pub(crate) static ref AND_ALSO: Arc<String> = Arc::new("and_also".into());
     pub(crate) static ref OR_ELSE: Arc<String> = Arc::new("or_else".into());
     pub(crate) static ref ADD: Arc<String> = Arc::new("add".into());

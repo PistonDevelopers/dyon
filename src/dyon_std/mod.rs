@@ -38,6 +38,89 @@ pub(crate) fn or_else(rt: &mut Runtime) -> Result<Variable, String> {
     Ok(r)
 }
 
+pub(crate) fn less(rt: &mut Runtime) -> Result<Variable, String> {
+    use Variable::*;
+
+    let b = rt.stack.pop().expect(TINVOTS);
+    let a = rt.stack.pop().expect(TINVOTS);
+    let r = match (rt.resolve(&a), rt.resolve(&b)) {
+        (&F64(a, ref sec), &F64(b, _)) => Bool(a < b, sec.clone()),
+        (&Str(ref a), &Str(ref b)) => Variable::bool(a < b),
+        _ => return Err("Expected `f64` or `str`".into())
+    };
+    Ok(r)
+}
+
+pub(crate) fn less_or_equal(rt: &mut Runtime) -> Result<Variable, String> {
+    use Variable::*;
+
+    let b = rt.stack.pop().expect(TINVOTS);
+    let a = rt.stack.pop().expect(TINVOTS);
+    let r = match (rt.resolve(&a), rt.resolve(&b)) {
+        (&F64(a, ref sec), &F64(b, _)) => Bool(a <= b, sec.clone()),
+        (&Str(ref a), &Str(ref b)) => Variable::bool(a <= b),
+        _ => return Err("Expected `f64` or `str`".into())
+    };
+    Ok(r)
+}
+
+pub(crate) fn greater(rt: &mut Runtime) -> Result<Variable, String> {
+    less_or_equal(rt).map(|v| if let Variable::Bool(a, sec) = v {Variable::Bool(!a, sec)} else {
+        panic!("Expected equal to return `bool`")
+    })
+}
+
+pub(crate) fn greater_or_equal(rt: &mut Runtime) -> Result<Variable, String> {
+    less(rt).map(|v| if let Variable::Bool(a, sec) = v {Variable::Bool(!a, sec)} else {
+        panic!("Expected equal to return `bool`")
+    })
+}
+
+pub(crate) fn equal(rt: &mut Runtime) -> Result<Variable, String> {
+    fn sub_eq(a: &Variable, b: &Variable) -> Result<Variable, String> {
+        use Variable::*;
+
+        Ok(match (a, b) {
+            (&F64(a, ref sec), &F64(b, _)) => Bool(a == b, sec.clone()),
+            (&Str(ref a), &Str(ref b)) => Variable::bool(a == b),
+            (&Bool(a, ref sec), &Bool(b, _)) => Bool(a == b, sec.clone()),
+            (&Vec4(a), &Vec4(b)) => Variable::bool(a == b),
+            (&Object(ref a), &Object(ref b)) => {
+                Variable::bool(a.len() == b.len() &&
+                a.iter().all(|a| {
+                    if let Some(b_val) = b.get(a.0) {
+                        if let Ok(Variable::Bool(true, _)) =
+                            sub_eq(&a.1, b_val) {true}
+                        else {false}
+                    } else {false}
+                }))
+            }
+            (&Array(ref a), &Array(ref b)) => {
+                Variable::bool(a.len() == b.len() &&
+                a.iter().zip(b.iter()).all(|(a, b)| {
+                    if let Ok(Variable::Bool(true, _)) =
+                        sub_eq(a, b) {true} else {false}
+                }))
+            }
+            (&Option(None), &Option(None)) => Variable::bool(true),
+            (&Option(None), &Option(_)) => Variable::bool(false),
+            (&Option(_), &Option(None)) => Variable::bool(false),
+            (&Option(Some(ref a)), &Option(Some(ref b))) => sub_eq(a, b)?,
+            _ => return Err("Expected `f64`, `str`, `bool`, `vec4`, `{}`, `[]` or `opt`".into())
+        })
+    }
+
+    let b = rt.stack.pop().expect(TINVOTS);
+    let a = rt.stack.pop().expect(TINVOTS);
+    sub_eq(rt.resolve(&a), rt.resolve(&b))
+}
+
+pub(crate) fn not_equal(rt: &mut Runtime) -> Result<Variable, String> {
+    equal(rt).map(|v| if let Variable::Bool(a, sec) = v {Variable::Bool(!a, sec)} else {
+        panic!("Expected equal to return `bool`")
+    })
+}
+
 pub(crate) fn add(rt: &mut Runtime) -> Result<Variable, String> {
     use Variable::*;
 

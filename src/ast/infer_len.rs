@@ -202,12 +202,6 @@ fn infer_expr(
                 if res.is_some() { return res; }
             }
         }
-        Compare(ref cmp_expr) => {
-            let left = infer_expr(&cmp_expr.left, name, decls);
-            if left.is_some() { return left; }
-            let right = infer_expr(&cmp_expr.right, name, decls);
-            if right.is_some() { return right; }
-        }
         Variable(_) => {}
         Try(ref expr) => {
             let res = infer_expr(expr, name, decls);
