@@ -15,8 +15,7 @@ pub fn check(f: &ast::Function, args: &Array) -> Result<(), String> {
             if let Some(ref lt) = arg.lifetime {
                 if let Variable::Ref(_) = args[i] {
                     if &**lt == "return" { continue; }
-                }
-                else {
+                } else {
                     return Err(format!("Expected reference in argument {}", i));
                 }
                 match map.get(lt) {

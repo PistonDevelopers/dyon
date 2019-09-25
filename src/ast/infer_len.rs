@@ -1,4 +1,3 @@
-use std::cell::Cell;
 use std::sync::Arc;
 
 use FnIndex;
@@ -6,6 +5,7 @@ use super::{
     AssignOp,
     Block,
     Call,
+    CallInfo,
     CallClosure,
     Expression,
     ForN,
@@ -19,14 +19,16 @@ pub fn infer(block: &Block, name: &str) -> Option<Expression> {
     let res = list.map(|item| {
         let source_range = item.source_range;
         Expression::Call(Box::new(Call {
-            alias: None,
-            name: Arc::new("len".into()),
-            f_index: Cell::new(FnIndex::None),
+            f_index: FnIndex::None,
             args: vec![
                 Expression::Item(Box::new(item))
             ],
             custom_source: None,
-            source_range,
+            info: Box::new(CallInfo {
+                alias: None,
+                name: Arc::new("len".into()),
+                source_range,
+            })
         }))
     });
     res
@@ -93,6 +95,10 @@ fn infer_expr(
             let res = infer_call(call, name, decls);
             if res.is_some() { return res; }
         }
+        CallVoid(_) => unimplemented!("`CallVoid` is transformed from `Call` later"),
+        CallReturn(_) => unimplemented!("`CallReturn` is transformed from `Call` later"),
+        CallLazy(_) => unimplemented!("`CallLazy` is transformed from `Call` later"),
+        CallLoaded(_) => unimplemented!("`CallLoaded` is transformed from `Call` later"),
         Vec4(ref vec4_expr) => {
             for expr in &vec4_expr.args {
                 let res = infer_expr(expr, name, decls);

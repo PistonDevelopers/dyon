@@ -51,9 +51,11 @@ pub fn convert(
             break;
         }
     }
-    for (i, f) in module.functions.iter().enumerate() {
-        f.resolve_locals(i, module, &use_lookup);
+    let mut new_functions = module.functions.clone();
+    for i in 0..new_functions.len() {
+        new_functions[i].resolve_locals(i, module, &use_lookup);
     }
+    module.functions = new_functions;
     Ok(())
 }
 
@@ -480,7 +482,7 @@ impl Function {
     /// Returns `true` if the function returns something.
     pub fn returns(&self) -> bool { self.ret != Type::Void }
 
-    fn resolve_locals(&self, relative: usize, module: &Module, use_lookup: &UseLookup) {
+    fn resolve_locals(&mut self, relative: usize, module: &Module, use_lookup: &UseLookup) {
         use std::sync::atomic::Ordering;
 
         // Ensure sequential order just to be safe.
@@ -586,7 +588,7 @@ impl Closure {
     pub fn returns(&self) -> bool { self.ret != Type::Void }
 
     fn resolve_locals(
-        &self,
+        &mut self,
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
@@ -671,7 +673,7 @@ impl Grab {
     }
 
     fn resolve_locals(
-        &self,
+        &mut self,
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
@@ -744,7 +746,7 @@ impl TryExpr {
     }
 
     fn resolve_locals(
-        &self,
+        &mut self,
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
@@ -958,7 +960,7 @@ impl Block {
     }
 
     fn resolve_locals(
-        &self,
+        &mut self,
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
@@ -966,7 +968,7 @@ impl Block {
         use_lookup: &UseLookup,
     ) {
         let st = stack.len();
-        for expr in &self.expressions {
+        for expr in &mut self.expressions {
             expr.resolve_locals(relative, stack, closure_stack, module, use_lookup);
         }
         stack.truncate(st);
@@ -998,6 +1000,14 @@ pub enum Expression {
     Go(Box<Go>),
     /// Call expression.
     Call(Box<Call>),
+    /// Call external function.
+    CallVoid(Box<CallVoid>),
+    /// Call external function that returns something.
+    CallReturn(Box<CallReturn>),
+    /// Call external function with lazy invariant.
+    CallLazy(Box<CallLazy>),
+    /// Call loaded function.
+    CallLoaded(Box<CallLoaded>),
     /// Item expression.
     Item(Box<Item>),
     /// Assignment expression.
@@ -1379,7 +1389,11 @@ impl Expression {
             Continue(ref c) => c.source_range,
             Block(ref bl) => bl.source_range,
             Go(ref go) => go.source_range,
-            Call(ref call) => call.source_range,
+            Call(ref call) => call.info.source_range,
+            CallVoid(ref call) => call.info.source_range,
+            CallReturn(ref call) => call.info.source_range,
+            CallLazy(ref call) => call.info.source_range,
+            CallLoaded(ref call) => call.info.source_range,
             Item(ref it) => it.source_range,
             Assign(ref assign) => assign.source_range,
             Vec4(ref vec4) => vec4.source_range,
@@ -1418,7 +1432,7 @@ impl Expression {
     }
 
     fn resolve_locals(
-        &self,
+        &mut self,
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
@@ -1428,15 +1442,15 @@ impl Expression {
         use self::Expression::*;
 
         match *self {
-            Link(ref link) =>
+            Link(ref mut link) =>
                 link.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            Object(ref obj) =>
+            Object(ref mut obj) =>
                 obj.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            Array(ref arr) =>
+            Array(ref mut arr) =>
                 arr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            ArrayFill(ref arr_fill) =>
+            ArrayFill(ref mut arr_fill) =>
                 arr_fill.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            Return(ref expr) => {
+            Return(ref mut expr) => {
                 let st = stack.len();
                 expr.resolve_locals(relative, stack, closure_stack, module, use_lookup);
                 stack.truncate(st);
@@ -1444,78 +1458,116 @@ impl Expression {
             ReturnVoid(_) => {}
             Break(_) => {}
             Continue(_) => {}
-            Block(ref bl) =>
+            Block(ref mut bl) =>
                 bl.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            Go(ref go) =>
+            Go(ref mut go) =>
                 go.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            Call(ref call) =>
-                call.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            Item(ref it) =>
+            Call(ref mut call) => {
+                call.resolve_locals(relative, stack, closure_stack, module, use_lookup);
+                match call.f_index {
+                    FnIndex::Void(f) => {
+                        *self = Expression::CallVoid(Box::new(self::CallVoid {
+                            args: call.args.clone(),
+                            fun: f,
+                            info: call.info.clone(),
+                        }))
+                    }
+                    FnIndex::Return(f) => {
+                        *self = Expression::CallReturn(Box::new(self::CallReturn {
+                            args: call.args.clone(),
+                            fun: f,
+                            info: call.info.clone(),
+                        }))
+                    }
+                    FnIndex::Lazy(f, lazy_inv) => {
+                        *self = Expression::CallLazy(Box::new(self::CallLazy {
+                            args: call.args.clone(),
+                            fun: f,
+                            lazy_inv,
+                            info: call.info.clone(),
+                        }))
+                    }
+                    FnIndex::Loaded(f) => {
+                        *self = Expression::CallLoaded(Box::new(self::CallLoaded {
+                            args: call.args.clone(),
+                            custom_source: call.custom_source.clone(),
+                            fun: f,
+                            info: call.info.clone(),
+                        }))
+                    }
+                    _ => {}
+                }
+            }
+            CallVoid(_) => unimplemented!("`CallVoid` is transformed from `Call`"),
+            CallReturn(_) => unimplemented!("`CallReturn` is transformed from `Call`"),
+            CallLazy(_) => unimplemented!("`CallLazy` is transformed from `Call`"),
+            CallLoaded(_) => unimplemented!("`CallLoaded` is transform from `Call`"),
+            Item(ref mut it) =>
                 it.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            Assign(ref assign) =>
+            Assign(ref mut assign) =>
                 assign.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            Vec4(ref vec4) =>
+            Vec4(ref mut vec4) =>
                 vec4.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            Mat4(ref mat4) =>
+            Mat4(ref mut mat4) =>
                 mat4.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            For(ref for_expr) =>
+            For(ref mut for_expr) =>
                 for_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            ForN(ref for_n_expr) =>
+            ForN(ref mut for_n_expr) =>
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            ForIn(ref for_n_expr) =>
+            ForIn(ref mut for_n_expr) =>
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            Sum(ref for_n_expr) =>
+            Sum(ref mut for_n_expr) =>
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            SumIn(ref for_in_expr) =>
+            SumIn(ref mut for_in_expr) =>
                 for_in_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            SumVec4(ref for_n_expr) =>
+            SumVec4(ref mut for_n_expr) =>
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            Prod(ref for_n_expr) =>
+            Prod(ref mut for_n_expr) =>
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            ProdIn(ref for_in_expr) =>
+            ProdIn(ref mut for_in_expr) =>
                 for_in_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            ProdVec4(ref for_n_expr) =>
+            ProdVec4(ref mut for_n_expr) =>
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            Min(ref for_n_expr) =>
+            Min(ref mut for_n_expr) =>
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            MinIn(ref for_in_expr) =>
+            MinIn(ref mut for_in_expr) =>
                 for_in_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            Max(ref for_n_expr) =>
+            Max(ref mut for_n_expr) =>
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            MaxIn(ref for_in_expr) =>
+            MaxIn(ref mut for_in_expr) =>
                 for_in_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            Sift(ref for_n_expr) =>
+            Sift(ref mut for_n_expr) =>
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            SiftIn(ref for_in_expr) =>
+            SiftIn(ref mut for_in_expr) =>
                 for_in_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            Any(ref for_n_expr) =>
+            Any(ref mut for_n_expr) =>
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            AnyIn(ref for_in_expr) =>
+            AnyIn(ref mut for_in_expr) =>
                 for_in_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            All(ref for_n_expr) =>
+            All(ref mut for_n_expr) =>
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            AllIn(ref for_in_expr) =>
+            AllIn(ref mut for_in_expr) =>
                 for_in_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            LinkFor(ref for_n_expr) =>
+            LinkFor(ref mut for_n_expr) =>
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            LinkIn(ref for_in_expr) =>
+            LinkIn(ref mut for_in_expr) =>
                 for_in_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            If(ref if_expr) =>
+            If(ref mut if_expr) =>
                 if_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             Variable(_) => {}
-            Try(ref expr) =>
+            Try(ref mut expr) =>
                 expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            Swizzle(ref swizzle) =>
+            Swizzle(ref mut swizzle) =>
                 swizzle.expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            Closure(ref closure) =>
-                closure.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            CallClosure(ref call) =>
+            Closure(ref mut closure) =>
+                Arc::make_mut(closure).resolve_locals(relative, stack, closure_stack, module, use_lookup),
+            CallClosure(ref mut call) =>
                 call.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            Grab(ref grab) =>
+            Grab(ref mut grab) =>
                 grab.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            TryExpr(ref try_expr) =>
+            TryExpr(ref mut try_expr) =>
                 try_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            In(ref in_expr) =>
+            In(ref mut in_expr) =>
                 in_expr.resolve_locals(relative, module, use_lookup),
         }
     }
@@ -1578,7 +1630,7 @@ impl Link {
     }
 
     fn resolve_locals(
-        &self,
+        &mut self,
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
@@ -1586,7 +1638,7 @@ impl Link {
         use_lookup: &UseLookup,
     ) {
         let st = stack.len();
-        for expr in &self.items {
+        for expr in &mut self.items {
             expr.resolve_locals(relative, stack, closure_stack, module, use_lookup);
         }
         stack.truncate(st);
@@ -1686,7 +1738,7 @@ impl Object {
     }
 
     fn resolve_locals(
-        &self,
+        &mut self,
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
@@ -1694,7 +1746,7 @@ impl Object {
         use_lookup: &UseLookup,
     ) {
         let st = stack.len();
-        for &(_, ref expr) in &self.key_values {
+        for &mut (_, ref mut expr) in &mut self.key_values {
             expr.resolve_locals(relative, stack, closure_stack, module, use_lookup);
             stack.truncate(st);
         }
@@ -1758,7 +1810,7 @@ impl Array {
     }
 
     fn resolve_locals(
-        &self,
+        &mut self,
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
@@ -1766,7 +1818,7 @@ impl Array {
         use_lookup: &UseLookup,
     ) {
         let st = stack.len();
-        for item in &self.items {
+        for item in &mut self.items {
             item.resolve_locals(relative, stack, closure_stack, module, use_lookup);
             stack.truncate(st);
         }
@@ -1839,7 +1891,7 @@ impl ArrayFill {
     }
 
     fn resolve_locals(
-        &self,
+        &mut self,
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
@@ -2184,7 +2236,7 @@ impl Id {
     }
 
     fn resolve_locals(
-        &self,
+        &mut self,
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
@@ -2194,7 +2246,7 @@ impl Id {
         match *self {
             Id::String(_, _) => false,
             Id::F64(_, _) => false,
-            Id::Expression(ref expr) => {
+            Id::Expression(ref mut expr) => {
                 let st = stack.len();
                 expr.resolve_locals(relative, stack, closure_stack, module, use_lookup);
                 stack.truncate(st);
@@ -2338,7 +2390,7 @@ impl Item {
     }
 
     fn resolve_locals(
-        &self,
+        &mut self,
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
@@ -2356,7 +2408,7 @@ impl Item {
                 }
             }
         }
-        for id in &self.ids {
+        for id in &mut self.ids {
             if id.resolve_locals(relative, stack, closure_stack, module, use_lookup) {
                 stack.push(None);
             }
@@ -2415,7 +2467,7 @@ impl Go {
     }
 
     fn resolve_locals(
-        &self,
+        &mut self,
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
@@ -2423,7 +2475,7 @@ impl Go {
         use_lookup: &UseLookup,
     ) {
         let st = stack.len();
-        for arg in &self.call.args {
+        for arg in &mut self.call.args {
             let st = stack.len();
             arg.resolve_locals(relative, stack, closure_stack, module, use_lookup);
             stack.truncate(st);
@@ -2432,21 +2484,76 @@ impl Go {
     }
 }
 
+/// Call info.
+#[derive(Debug, Clone)]
+pub struct CallInfo {
+    /// Name of function.
+    pub name: Arc<String>,
+    /// Alias.
+    pub alias: Option<Arc<String>>,
+    /// The range in source.
+    pub source_range: Range,
+}
+
+/// Loaded function call.
+#[derive(Debug, Clone)]
+pub struct CallLoaded {
+    /// Arguments.
+    pub args: Vec<Expression>,
+    /// Relative to function you call from.
+    pub fun: isize,
+    /// Info about the call.
+    pub info: Box<CallInfo>,
+    /// A custom source, such as when calling a function inside a loaded module.
+    pub custom_source: Option<Arc<String>>,
+}
+
+/// External function call.
+#[derive(Debug, Clone)]
+pub struct CallLazy {
+    /// Arguments.
+    pub args: Vec<Expression>,
+    /// Function pointer.
+    pub fun: crate::FnReturnRef,
+    /// Lazy invariant.
+    pub lazy_inv: crate::LazyInvariant,
+    /// Info about the call.
+    pub info: Box<CallInfo>,
+}
+
+/// External function call.
+#[derive(Debug, Clone)]
+pub struct CallReturn {
+    /// Arguments.
+    pub args: Vec<Expression>,
+    /// Function pointer.
+    pub fun: crate::FnReturnRef,
+    /// Info about the call.
+    pub info: Box<CallInfo>,
+}
+
+/// External function call.
+#[derive(Debug, Clone)]
+pub struct CallVoid {
+    /// Arguments.
+    pub args: Vec<Expression>,
+    /// Function pointer.
+    pub fun: crate::FnVoidRef,
+    /// Info about the call.
+    pub info: Box<CallInfo>,
+}
+
 /// Function call.
 #[derive(Debug, Clone)]
 pub struct Call {
-    /// Alias.
-    pub alias: Option<Arc<String>>,
-    /// Name of function.
-    pub name: Arc<String>,
     /// Arguments.
     pub args: Vec<Expression>,
     /// Function index.
-    pub f_index: Cell<FnIndex>,
+    pub f_index: FnIndex,
+    /// Info about the call.
+    pub info: Box<CallInfo>,
     /// A custom source, such as when calling a function inside a loaded module.
     pub custom_source: Option<Arc<String>>,
-    /// The range in source.
-    pub source_range: Range,
 }
 
 impl Call {
@@ -2512,12 +2619,14 @@ impl Call {
         }
 
         Ok((convert.subtract(start), Call {
-            alias,
-            name,
             args,
-            f_index: Cell::new(FnIndex::None),
+            f_index: FnIndex::None,
             custom_source: None,
-            source_range: convert.source(start).unwrap(),
+            info: Box::new(CallInfo {
+                alias,
+                name,
+                source_range: convert.source(start).unwrap(),
+            })
         }))
     }
 
@@ -2585,17 +2694,19 @@ impl Call {
         }
 
         Ok((convert.subtract(start), Call {
-            alias,
-            name: Arc::new(name),
             args,
-            f_index: Cell::new(FnIndex::None),
+            f_index: FnIndex::None,
             custom_source: None,
-            source_range: convert.source(start).unwrap(),
+            info: Box::new(CallInfo {
+                alias,
+                name: Arc::new(name),
+                source_range: convert.source(start).unwrap(),
+            })
         }))
     }
 
     fn resolve_locals(
-        &self,
+        &mut self,
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
@@ -2607,8 +2718,9 @@ impl Call {
         use FnExt;
 
         let st = stack.len();
-        let f_index = if let Some(ref alias) = self.alias {
-            if let Some(&i) = use_lookup.aliases.get(alias).and_then(|map| map.get(&self.name)) {
+        let f_index = if let Some(ref alias) = self.info.alias {
+            if let Some(&i) = use_lookup.aliases.get(alias)
+                .and_then(|map| map.get(&self.info.name)) {
                 match i {
                     FnAlias::Loaded(i) => FnIndex::Loaded(i as isize - relative as isize),
                     FnAlias::External(i) => {
@@ -2623,9 +2735,9 @@ impl Call {
                 FnIndex::None
             }
         } else {
-            module.find_function(&self.name, relative)
+            module.find_function(&self.info.name, relative)
         };
-        self.f_index.set(f_index);
+        self.f_index = f_index;
         match f_index {
             FnIndex::Loaded(f_index) => {
                 let index = (f_index + relative as isize) as usize;
@@ -2641,7 +2753,7 @@ impl Call {
             }
             FnIndex::None => {}
         }
-        for arg in &self.args {
+        for arg in &mut self.args {
             let arg_st = stack.len();
             arg.resolve_locals(relative, stack, closure_stack, module, use_lookup);
             stack.truncate(arg_st);
@@ -2812,7 +2924,7 @@ impl CallClosure {
     }
 
     fn resolve_locals(
-        &self,
+        &mut self,
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
@@ -2824,7 +2936,7 @@ impl CallClosure {
         // All closures must return a value.
         // Use return type because it has the same name.
         stack.push(Some(crate::runtime::RETURN_TYPE.clone()));
-        for arg in &self.args {
+        for arg in &mut self.args {
             let arg_st = stack.len();
             arg.resolve_locals(relative, stack, closure_stack, module, use_lookup);
             stack.truncate(arg_st);
@@ -2904,12 +3016,14 @@ impl Norm {
 
     fn into_call_expr(self) -> Expression {
         Expression::Call(Box::new(Call {
-            alias: None,
             args: vec![self.expr],
             custom_source: None,
-            f_index: Cell::new(FnIndex::None),
-            name: crate::NORM.clone(),
-            source_range: self.source_range,
+            f_index: FnIndex::None,
+            info: Box::new(CallInfo {
+                alias: None,
+                name: crate::NORM.clone(),
+                source_range: self.source_range,
+            })
         }))
     }
 }
@@ -2932,23 +3046,25 @@ impl BinOpExpression {
         use self::BinOp::*;
 
         Expression::Call(Box::new(Call {
-            alias: None,
-            name: match self.op {
-                Add => crate::ADD.clone(),
-                Sub => crate::SUB.clone(),
-                Mul => crate::MUL.clone(),
-                Div => crate::DIV.clone(),
-                Rem => crate::REM.clone(),
-                Pow => crate::POW.clone(),
-                Dot => crate::DOT.clone(),
-                Cross => crate::CROSS.clone(),
-                AndAlso => crate::AND_ALSO.clone(),
-                OrElse => crate::OR_ELSE.clone(),
-            },
             args: vec![self.left, self.right],
             custom_source: None,
-            f_index: Cell::new(FnIndex::None),
-            source_range: self.source_range,
+            f_index: FnIndex::None,
+            info: Box::new(CallInfo {
+                alias: None,
+                name: match self.op {
+                    Add => crate::ADD.clone(),
+                    Sub => crate::SUB.clone(),
+                    Mul => crate::MUL.clone(),
+                    Div => crate::DIV.clone(),
+                    Rem => crate::REM.clone(),
+                    Pow => crate::POW.clone(),
+                    Dot => crate::DOT.clone(),
+                    Cross => crate::CROSS.clone(),
+                    AndAlso => crate::AND_ALSO.clone(),
+                    OrElse => crate::OR_ELSE.clone(),
+                },
+                source_range: self.source_range,
+            })
         }))
     }
 }
@@ -2993,12 +3109,14 @@ impl UnOpExpression {
                 _ => return Err(())
             };
             Expression::Call(Box::new(Call {
-                alias: None,
-                name: name,
                 args: vec![expr],
                 custom_source: None,
-                f_index: Cell::new(FnIndex::None),
-                source_range: convert.source(start).unwrap()
+                f_index: FnIndex::None,
+                info: Box::new(CallInfo {
+                    alias: None,
+                    name: name,
+                    source_range: convert.source(start).unwrap()
+                })
             }))
         }))
     }
@@ -3088,7 +3206,7 @@ impl Assign {
     }
 
     fn resolve_locals(
-        &self,
+        &mut self,
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
@@ -3219,7 +3337,7 @@ impl Mat4 {
     }
 
     fn resolve_locals(
-        &self,
+        &mut self,
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
@@ -3227,7 +3345,7 @@ impl Mat4 {
         use_lookup: &UseLookup,
     ) {
         let st = stack.len();
-        for arg in &self.args {
+        for arg in &mut self.args {
             let arg_st = stack.len();
             arg.resolve_locals(relative, stack, closure_stack, module, use_lookup);
             stack.truncate(arg_st);
@@ -3320,7 +3438,7 @@ impl Vec4 {
     }
 
     fn resolve_locals(
-        &self,
+        &mut self,
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
@@ -3328,7 +3446,7 @@ impl Vec4 {
         use_lookup: &UseLookup,
     ) {
         let st = stack.len();
-        for arg in &self.args {
+        for arg in &mut self.args {
             let arg_st = stack.len();
             arg.resolve_locals(relative, stack, closure_stack, module, use_lookup);
             stack.truncate(arg_st);
@@ -3655,7 +3773,7 @@ impl For {
     }
 
     fn resolve_locals(
-        &self, relative: usize,
+        &mut self, relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
         module: &Module,
@@ -3740,7 +3858,7 @@ impl ForIn {
     }
 
     fn resolve_locals(
-        &self, relative: usize,
+        &mut self, relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
         module: &Module,
@@ -3896,7 +4014,7 @@ impl ForN {
     }
 
     fn resolve_locals(
-        &self,
+        &mut self,
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
@@ -3904,7 +4022,7 @@ impl ForN {
         use_lookup: &UseLookup,
     ) {
         let st = stack.len();
-        if let Some(ref start) = self.start {
+        if let Some(ref mut start) = self.start {
             start.resolve_locals(relative, stack, closure_stack, module, use_lookup);
             stack.truncate(st);
         }
@@ -4150,7 +4268,7 @@ impl If {
     }
 
     fn resolve_locals(
-        &self,
+        &mut self,
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
@@ -4164,15 +4282,15 @@ impl If {
         stack.truncate(st);
         // Does not matter that conditions are resolved before blocks,
         // since the stack gets truncated anyway.
-        for else_if_cond in &self.else_if_conds {
+        for else_if_cond in &mut self.else_if_conds {
             else_if_cond.resolve_locals(relative, stack, closure_stack, module, use_lookup);
             stack.truncate(st);
         }
-        for else_if_block in &self.else_if_blocks {
+        for else_if_block in &mut self.else_if_blocks {
             else_if_block.resolve_locals(relative, stack, closure_stack, module, use_lookup);
             stack.truncate(st);
         }
-        if let Some(ref else_block) = self.else_block {
+        if let Some(ref mut else_block) = self.else_block {
             else_block.resolve_locals(relative, stack, closure_stack, module, use_lookup);
             stack.truncate(st);
         }
@@ -4260,19 +4378,21 @@ impl Compare {
         use self::CompareOp::*;
 
         Expression::Call(Box::new(Call {
-            alias: None,
-            name: match self.op {
-                Less => crate::LESS.clone(),
-                LessOrEqual => crate::LESS_OR_EQUAL.clone(),
-                Greater => crate::GREATER.clone(),
-                GreaterOrEqual => crate::GREATER_OR_EQUAL.clone(),
-                Equal => crate::EQUAL.clone(),
-                NotEqual => crate::NOT_EQUAL.clone(),
-            },
             args: vec![self.left, self.right],
             custom_source: None,
-            f_index: Cell::new(FnIndex::None),
-            source_range: self.source_range,
+            f_index: FnIndex::None,
+            info: Box::new(CallInfo {
+                alias: None,
+                name: match self.op {
+                    Less => crate::LESS.clone(),
+                    LessOrEqual => crate::LESS_OR_EQUAL.clone(),
+                    Greater => crate::GREATER.clone(),
+                    GreaterOrEqual => crate::GREATER_OR_EQUAL.clone(),
+                    Equal => crate::EQUAL.clone(),
+                    NotEqual => crate::NOT_EQUAL.clone(),
+                },
+                source_range: self.source_range,
+            })
         }))
     }
 }
@@ -4361,7 +4481,7 @@ impl In {
     }
 
     fn resolve_locals(
-        &self,
+        &mut self,
         relative: usize,
         module: &Module,
         use_lookup: &UseLookup

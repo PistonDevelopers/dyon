@@ -4,6 +4,8 @@ use ast;
 use Runtime;
 use Variable;
 
+use std::sync::Arc;
+
 #[derive(Copy, Clone)]
 pub(crate) enum EscapeString {
     Json,
@@ -201,21 +203,11 @@ fn write_expr<W: io::Write>(
         E::Object(ref obj) => write_obj(w, rt, obj, tabs)?,
         E::Array(ref arr) => write_arr(w, rt, arr, tabs)?,
         E::ArrayFill(ref arr_fill) => write_arr_fill(w, rt, arr_fill, tabs)?,
-        E::Call(ref call) => {
-            if &**call.name == "norm" && call.args.len() == 1 {
-                write_norm(w, rt, &call.args[0], tabs)?
-            } else if &**call.name == "not" && call.args.len() == 1 {
-                write_not(w, rt, &call.args[0], tabs)?
-            } else if &**call.name == "neg" && call.args.len() == 1 {
-                write_neg(w, rt, &call.args[0], tabs)?
-            } else if let Some(op) = standard_binop(call) {
-                write_binop(w, rt, op, &call.args[0], &call.args[1], tabs)?
-            } else if let Some(op) = standard_compare(call) {
-                write_compare(w, rt, op, &call.args[0], &call.args[1], tabs)?
-            } else {
-                write_call(w, rt, call, tabs)?
-            }
-        }
+        E::Call(ref call) => write_call(w, rt, &call.info.name, &call.args, tabs)?,
+        E::CallVoid(ref call) => write_call(w, rt, &call.info.name, &call.args, tabs)?,
+        E::CallReturn(ref call) => write_call(w, rt, &call.info.name, &call.args, tabs)?,
+        E::CallLazy(ref call) => write_call(w, rt, &call.info.name, &call.args, tabs)?,
+        E::CallLoaded(ref call) => write_call(w, rt, &call.info.name, &call.args, tabs)?,
         E::Return(ref expr) => {
             write!(w, "return ")?;
             write_expr(w, rt, expr, tabs)?;
@@ -238,7 +230,7 @@ fn write_expr<W: io::Write>(
         E::Block(ref b) => write_block(w, rt, b, tabs)?,
         E::Go(ref go) => {
             write!(w, "go ")?;
-            write_call(w, rt, &go.call, tabs)?;
+            write_call(w, rt, &go.call.info.name, &go.call.args, tabs)?;
         }
         E::Assign(ref assign) => write_assign(w, rt, assign, tabs)?,
         E::Vec4(ref vec4) => write_vec4(w, rt, vec4, tabs)?,
@@ -388,7 +380,7 @@ fn binop_needs_parens(op: ast::BinOp, expr: &ast::Expression, right: bool) -> bo
 
     match *expr {
         E::Call(ref call) => {
-            if let Some(binop_op) = standard_binop(call) {
+            if let Some(binop_op) = standard_binop(&call.info.name, &call.args) {
                 match (op.precedence(), binop_op.precedence()) {
                     (3, _) => true,
                     (2, 1) => true,
@@ -396,10 +388,11 @@ fn binop_needs_parens(op: ast::BinOp, expr: &ast::Expression, right: bool) -> bo
                     (1, 1) if right => true,
                     _ => false
                 }
-            } else if let Some(_) = standard_compare(call) {
+            } else if let Some(_) = standard_compare(&call.info.name, &call.args) {
                 true
             } else {false}
         }
+        // TODO: Handle `E::CallVoid`.
         _ => false
     }
 }
@@ -523,18 +516,31 @@ fn write_obj<W: io::Write>(
 fn write_call<W: io::Write>(
     w: &mut W,
     rt: &Runtime,
-    call: &ast::Call,
+    name: &Arc<String>,
+    args: &[ast::Expression],
     tabs: u32,
 ) -> Result<(), io::Error> {
-    write!(w, "{}(", call.name)?;
-    for (i, arg) in call.args.iter().enumerate() {
-        write_expr(w, rt, arg, tabs)?;
-        if i + 1 < call.args.len() {
-            write!(w, ", ")?;
+    if &**name == "norm" && args.len() == 1 {
+        write_norm(w, rt, &args[0], tabs)
+    } else if &**name == "not" && args.len() == 1 {
+        write_not(w, rt, &args[0], tabs)
+    } else if &**name == "neg" && args.len() == 1 {
+        write_neg(w, rt, &args[0], tabs)
+    } else if let Some(op) = standard_binop(name, args) {
+        write_binop(w, rt, op, &args[0], &args[1], tabs)
+    } else if let Some(op) = standard_compare(name, args) {
+        write_compare(w, rt, op, &args[0], &args[1], tabs)
+    } else {
+        write!(w, "{}(", name)?;
+        for (i, arg) in args.iter().enumerate() {
+            write_expr(w, rt, arg, tabs)?;
+            if i + 1 < args.len() {
+                write!(w, ", ")?;
+            }
         }
+        write!(w, ")")?;
+        Ok(())
     }
-    write!(w, ")")?;
-    Ok(())
 }
 
 fn write_call_closure<W: io::Write>(
@@ -715,12 +721,13 @@ fn write_for<W: io::Write>(
     Ok(())
 }
 
-fn standard_binop(call: &ast::Call) -> Option<ast::BinOp> {
+fn standard_binop(name: &Arc<String>, args: &[ast::Expression]) -> Option<ast::BinOp> {
     use ast::BinOp::*;
 
-    if call.args.len() != 2 {return None};
+    if args.len() != 2 {return None};
 
-    Some(match &**call.name {
+    let name: &str = &**name;
+    Some(match name {
         "dot" => Dot,
         "cross" => Cross,
         "add" => Add,
@@ -735,12 +742,13 @@ fn standard_binop(call: &ast::Call) -> Option<ast::BinOp> {
     })
 }
 
-fn standard_compare(call: &ast::Call) -> Option<ast::CompareOp> {
+fn standard_compare(name: &Arc<String>, args: &[ast::Expression]) -> Option<ast::CompareOp> {
     use ast::CompareOp::*;
 
-    if call.args.len() != 2 {return None};
+    if args.len() != 2 {return None};
 
-    Some(match &**call.name {
+    let name: &str = &**name;
+    Some(match name {
         "less" => Less,
         "less_or_equal" => LessOrEqual,
         "greater" => Greater,
@@ -755,7 +763,7 @@ fn compare_needs_parent(expr: &ast::Expression) -> bool {
     use ast::Expression as E;
 
     match *expr {
-        E::Call(ref call) => standard_binop(call).is_some(),
+        E::Call(ref call) => standard_binop(&call.info.name, &call.args).is_some(),
         _ => false
     }
 }

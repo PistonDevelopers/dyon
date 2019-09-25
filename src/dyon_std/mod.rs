@@ -1251,8 +1251,6 @@ pub(crate) fn _call(rt: &mut Runtime) -> Result<(), String> {
     match obj.lock().unwrap()
         .downcast_ref::<Arc<Module>>() {
         Some(m) => {
-            use std::cell::Cell;
-
             let f_index = m.find_function(&fn_name, 0);
             match f_index {
                 FnIndex::Loaded(f_index) => {
@@ -1280,14 +1278,16 @@ pub(crate) fn _call(rt: &mut Runtime) -> Result<(), String> {
             // Use empty range instead of `call.source_range` (from when it was intrinsic).
             let call_range = Range::empty(0);
             let call = ast::Call {
-                alias: None,
-                name: fn_name.clone(),
-                f_index: Cell::new(f_index),
+                f_index,
                 args: args.iter().map(|arg|
                     ast::Expression::Variable(Box::new((
                         call_range, arg.clone())))).collect(),
                 custom_source: Some(source),
-                source_range: call_range,
+                info: Box::new(ast::CallInfo {
+                    alias: None,
+                    name: fn_name.clone(),
+                    source_range: call_range,
+                })
             };
 
             rt.call(&call, &m)?;
@@ -1320,8 +1320,6 @@ pub(crate) fn call_ret(rt: &mut Runtime) -> Result<Variable, String> {
     let v = match obj.lock().unwrap()
         .downcast_ref::<Arc<Module>>() {
         Some(m) => {
-            use std::cell::Cell;
-
             let f_index = m.find_function(&fn_name, 0);
             match f_index {
                 FnIndex::Loaded(f_index) => {
@@ -1349,14 +1347,16 @@ pub(crate) fn call_ret(rt: &mut Runtime) -> Result<Variable, String> {
             // Use empty range instead of `call.source_range` (from when it was intrinsic).
             let call_range = Range::empty(0);
             let call = ast::Call {
-                alias: None,
-                name: fn_name.clone(),
-                f_index: Cell::new(f_index),
+                f_index,
                 args: args.iter().map(|arg|
                     ast::Expression::Variable(Box::new((
                         call_range, arg.clone())))).collect(),
                 custom_source: Some(source),
-                source_range: call_range,
+                info: Box::new(ast::CallInfo {
+                    source_range: call_range,
+                    alias: None,
+                    name: fn_name.clone(),
+                })
             };
 
             if let Some(v) = rt.call(&call, &m)?.0 {v} else {
