@@ -1008,6 +1008,10 @@ pub enum Expression {
     CallLazy(Box<CallLazy>),
     /// Call loaded function.
     CallLoaded(Box<CallLoaded>),
+    /// Binary operator.
+    CallBinOp(Box<CallBinOp>),
+    /// Unary operator.
+    CallUnOp(Box<CallUnOp>),
     /// Item expression.
     Item(Box<Item>),
     /// Assignment expression.
@@ -1392,6 +1396,8 @@ impl Expression {
             Call(ref call) => call.info.source_range,
             CallVoid(ref call) => call.info.source_range,
             CallReturn(ref call) => call.info.source_range,
+            CallBinOp(ref call) => call.info.source_range,
+            CallUnOp(ref call) => call.info.source_range,
             CallLazy(ref call) => call.info.source_range,
             CallLoaded(ref call) => call.info.source_range,
             Item(ref it) => it.source_range,
@@ -1479,6 +1485,21 @@ impl Expression {
                             info: call.info.clone(),
                         }))
                     }
+                    FnIndex::BinOp(f) => {
+                        *self = Expression::CallBinOp(Box::new(self::CallBinOp {
+                            left: call.args[0].clone(),
+                            right: call.args[1].clone(),
+                            fun: f,
+                            info: call.info.clone(),
+                        }))
+                    }
+                    FnIndex::UnOp(f) => {
+                        *self = Expression::CallUnOp(Box::new(self::CallUnOp {
+                            arg: call.args[0].clone(),
+                            fun: f,
+                            info: call.info.clone(),
+                        }))
+                    }
                     FnIndex::Lazy(f, lazy_inv) => {
                         *self = Expression::CallLazy(Box::new(self::CallLazy {
                             args: call.args.clone(),
@@ -1495,13 +1516,15 @@ impl Expression {
                             info: call.info.clone(),
                         }))
                     }
-                    _ => {}
+                    FnIndex::None => {}
                 }
             }
             CallVoid(_) => unimplemented!("`CallVoid` is transformed from `Call`"),
             CallReturn(_) => unimplemented!("`CallReturn` is transformed from `Call`"),
             CallLazy(_) => unimplemented!("`CallLazy` is transformed from `Call`"),
-            CallLoaded(_) => unimplemented!("`CallLoaded` is transform from `Call`"),
+            CallLoaded(_) => unimplemented!("`CallLoaded` is transformed from `Call`"),
+            CallBinOp(_) => unimplemented!("`CallBinOp` is transformed from `Call`"),
+            CallUnOp(_) => unimplemented!("`CallUnOp` is transformed from `Call`"),
             Item(ref mut it) =>
                 it.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             Assign(ref mut assign) =>
@@ -2523,6 +2546,30 @@ pub struct CallLazy {
 
 /// External function call.
 #[derive(Debug, Clone)]
+pub struct CallBinOp {
+    /// Left argument.
+    pub left: Expression,
+    /// Right argument.
+    pub right: Expression,
+    /// Function pointer.
+    pub fun: crate::FnBinOpRef,
+    /// Info about the call.
+    pub info: Box<CallInfo>,
+}
+
+/// External function call.
+#[derive(Debug, Clone)]
+pub struct CallUnOp {
+    /// Argument.
+    pub arg: Expression,
+    /// Function pointer.
+    pub fun: crate::FnUnOpRef,
+    /// Info about the call.
+    pub info: Box<CallInfo>,
+}
+
+/// External function call.
+#[derive(Debug, Clone)]
 pub struct CallReturn {
     /// Arguments.
     pub args: Vec<Expression>,
@@ -2713,6 +2760,8 @@ impl Call {
         module: &Module,
         use_lookup: &UseLookup,
     ) {
+        use FnUnOpRef;
+        use FnBinOpRef;
         use FnReturnRef;
         use FnVoidRef;
         use FnExt;
@@ -2728,6 +2777,8 @@ impl Call {
                         match f.f {
                             FnExt::Void(ff) => FnIndex::Void(FnVoidRef(ff)),
                             FnExt::Return(ff) => FnIndex::Return(FnReturnRef(ff)),
+                            FnExt::BinOp(ff) => FnIndex::BinOp(FnBinOpRef(ff)),
+                            FnExt::UnOp(ff) => FnIndex::UnOp(FnUnOpRef(ff)),
                         }
                     }
                 }
@@ -2747,7 +2798,9 @@ impl Call {
             }
             FnIndex::Void(_) |
             FnIndex::Return(_) |
-            FnIndex::Lazy(_, _) => {
+            FnIndex::Lazy(_, _) |
+            FnIndex::BinOp(_) |
+            FnIndex::UnOp(_) => {
                 // Don't push return since last value in block
                 // is used as return value.
             }
@@ -2757,14 +2810,17 @@ impl Call {
             let arg_st = stack.len();
             arg.resolve_locals(relative, stack, closure_stack, module, use_lookup);
             stack.truncate(arg_st);
-            match *arg {
-                Expression::Swizzle(ref swizzle) => {
-                    for _ in 0..swizzle.len() {
+            if let FnIndex::BinOp(_) = f_index {}
+            else {
+                match *arg {
+                    Expression::Swizzle(ref swizzle) => {
+                        for _ in 0..swizzle.len() {
+                            stack.push(None);
+                        }
+                    }
+                    _ => {
                         stack.push(None);
                     }
-                }
-                _ => {
-                    stack.push(None);
                 }
             }
         }
@@ -4486,6 +4542,8 @@ impl In {
         module: &Module,
         use_lookup: &UseLookup
     ) {
+        use FnUnOpRef;
+        use FnBinOpRef;
         use FnReturnRef;
         use FnVoidRef;
         use FnExt;
@@ -4499,6 +4557,8 @@ impl In {
                         match f.f {
                             FnExt::Void(ff) => FnIndex::Void(FnVoidRef(ff)),
                             FnExt::Return(ff) => FnIndex::Return(FnReturnRef(ff)),
+                            FnExt::BinOp(ff) => FnIndex::BinOp(FnBinOpRef(ff)),
+                            FnExt::UnOp(ff) => FnIndex::UnOp(FnUnOpRef(ff)),
                         }
                     }
                 }

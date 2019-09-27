@@ -215,6 +215,30 @@ pub fn grab_expr(
                 fun: call.fun.clone(),
             }))), Flow::Continue))
         }
+        E::CallBinOp(ref call) => {
+            Ok((Grabbed::Expression(E::CallBinOp(Box::new(ast::CallBinOp {
+                left: match grab_expr(level, rt, &call.left, side) {
+                    Ok((Grabbed::Expression(x), Flow::Continue)) => x,
+                    x => return x,
+                },
+                right: match grab_expr(level, rt, &call.right, side) {
+                    Ok((Grabbed::Expression(x), Flow::Continue)) => x,
+                    x => return x,
+                },
+                info: call.info.clone(),
+                fun: call.fun.clone(),
+            }))), Flow::Continue))
+        }
+        E::CallUnOp(ref call) => {
+            Ok((Grabbed::Expression(E::CallUnOp(Box::new(ast::CallUnOp {
+                arg: match grab_expr(level, rt, &call.arg, side) {
+                    Ok((Grabbed::Expression(x), Flow::Continue)) => x,
+                    x => return x,
+                },
+                info: call.info.clone(),
+                fun: call.fun.clone(),
+            }))), Flow::Continue))
+        }
         E::CallLazy(ref call) => {
             Ok((Grabbed::Expression(E::CallLazy(Box::new(ast::CallLazy {
                 args: {

@@ -29,7 +29,7 @@ impl Module {
 
         let mut m = Module::empty();
         m.ns("std");
-        m.add_str("less", less, Dfn {
+        m.add_binop(crate::LESS.clone(), less, Dfn {
             lts: vec![Lt::Default; 2],
             tys: vec![Any, Any],
             ret: Bool,
@@ -40,7 +40,7 @@ impl Module {
             ],
             lazy: LAZY_NO
         });
-        m.add_str("less_or_equal", less_or_equal, Dfn {
+        m.add_binop(crate::LESS_OR_EQUAL.clone(), less_or_equal, Dfn {
             lts: vec![Lt::Default; 2],
             tys: vec![Any, Any],
             ret: Bool,
@@ -51,7 +51,7 @@ impl Module {
             ],
             lazy: LAZY_NO
         });
-        m.add_str("greater", greater, Dfn {
+        m.add_binop(crate::GREATER.clone(), greater, Dfn {
             lts: vec![Lt::Default; 2],
             tys: vec![Any, Any],
             ret: Bool,
@@ -62,7 +62,7 @@ impl Module {
             ],
             lazy: LAZY_NO
         });
-        m.add_str("greater_or_equal", greater_or_equal, Dfn {
+        m.add_binop(crate::GREATER_OR_EQUAL.clone(), greater_or_equal, Dfn {
             lts: vec![Lt::Default; 2],
             tys: vec![Any, Any],
             ret: Bool,
@@ -73,7 +73,7 @@ impl Module {
             ],
             lazy: LAZY_NO
         });
-        m.add_str("equal", equal, Dfn {
+        m.add_binop(crate::EQUAL.clone(), equal, Dfn {
             lts: vec![Lt::Default; 2],
             tys: vec![Any, Any],
             ret: Bool,
@@ -90,7 +90,7 @@ impl Module {
             ],
             lazy: LAZY_NO
         });
-        m.add_str("not_equal", not_equal, Dfn {
+        m.add_binop(crate::NOT_EQUAL.clone(), not_equal, Dfn {
             lts: vec![Lt::Default; 2],
             tys: vec![Any, Any],
             ret: Bool,
@@ -127,7 +127,7 @@ impl Module {
             ],
             lazy: LAZY_OR
         });
-        m.add_str("add", add, Dfn {
+        m.add_binop(crate::ADD.clone(), add, Dfn {
             lts: vec![Lt::Default; 2],
             tys: vec![Any; 2],
             ret: Any,
@@ -145,7 +145,7 @@ impl Module {
             ],
             lazy: LAZY_NO
         });
-        m.add_str("sub", sub, Dfn {
+        m.add_binop(crate::SUB.clone(), sub, Dfn {
             lts: vec![Lt::Default; 2],
             tys: vec![Any; 2],
             ret: Any,
@@ -161,7 +161,7 @@ impl Module {
             ],
             lazy: LAZY_NO
         });
-        m.add_str("mul", mul, Dfn {
+        m.add_binop(crate::MUL.clone(), mul, Dfn {
             lts: vec![Lt::Default; 2],
             tys: vec![Any; 2],
             ret: Any,
@@ -178,7 +178,7 @@ impl Module {
             ],
             lazy: LAZY_NO
         });
-        m.add_str("div", div, Dfn {
+        m.add_binop(crate::DIV.clone(), div, Dfn {
             lts: vec![Lt::Default; 2],
             tys: vec![Any; 2],
             ret: Any,
@@ -190,7 +190,7 @@ impl Module {
             ],
             lazy: LAZY_NO
         });
-        m.add_str("rem", rem, Dfn {
+        m.add_binop(crate::REM.clone(), rem, Dfn {
             lts: vec![Lt::Default; 2],
             tys: vec![Any; 2],
             ret: Any,
@@ -202,7 +202,7 @@ impl Module {
             ],
             lazy: LAZY_NO
         });
-        m.add_str("pow", pow, Dfn {
+        m.add_binop(crate::POW.clone(), pow, Dfn {
             lts: vec![Lt::Default; 2],
             tys: vec![Any; 2],
             ret: Any,
@@ -215,8 +215,8 @@ impl Module {
             ],
             lazy: LAZY_NO
         });
-        m.add_str("not", not, Dfn::nl(vec![Bool], Bool));
-        m.add_str("neg", neg, Dfn{
+        m.add_unop(crate::NOT.clone(), not, Dfn::nl(vec![Bool], Bool));
+        m.add_unop(crate::NEG.clone(), neg, Dfn{
             lts: vec![Lt::Default], tys: vec![Any], ret: Any,
             ext: vec![
                 (vec![], vec![F64], F64),
@@ -225,7 +225,7 @@ impl Module {
             ],
             lazy: LAZY_NO
         });
-        m.add_str("dot", dot, Dfn {
+        m.add_binop(crate::DOT.clone(), dot, Dfn {
             lts: vec![Lt::Default; 2],
             tys: vec![Any; 2],
             ret: F64,
@@ -241,7 +241,7 @@ impl Module {
         m.add_str("y", y, Dfn::nl(vec![Vec4], F64));
         m.add_str("z", z, Dfn::nl(vec![Vec4], F64));
         m.add_str("w", w, Dfn::nl(vec![Vec4], F64));
-        m.add_str("norm", norm, Dfn::nl(vec![Vec4], F64));
+        m.add_unop_str("norm", norm, Dfn::nl(vec![Vec4], F64));
         m.add_str("det", det, Dfn::nl(vec![Mat4], F64));
         m.add_str("inv", inv, Dfn::nl(vec![Mat4], Mat4));
         m.add_str("mov", mov, Dfn::nl(vec![Vec4], Mat4));
@@ -354,7 +354,7 @@ impl Module {
         m.add_str("tail", tail, Dfn::nl(vec![Link], Link));
         m.add_str("neck", neck, Dfn::nl(vec![Link], Link));
         m.add_str("is_empty", is_empty, Dfn::nl(vec![Link], Bool));
-        m.add_str("len", len, Dfn::nl(vec![Type::array()], F64));
+        m.add_unop_str("len", len, Dfn::nl(vec![Type::array()], F64));
         m.add_str("push_ref(mut,_)", push_ref, Dfn {
             lts: vec![Lt::Default, Lt::Arg(0)],
             tys: vec![Type::array(), Any],
@@ -446,26 +446,17 @@ impl Module {
         }
         for f in self.ext_prelude.iter().rev() {
             if &f.name == name {
-                return if f.p.returns() {
-                    if f.p.lazy == LAZY_NO {
-                        if let FnExt::Return(ff) = f.f {
+                return match f.f {
+                    FnExt::Return(ff) => {
+                        if f.p.lazy == LAZY_NO {
                             FnIndex::Return(FnReturnRef(ff))
                         } else {
-                            FnIndex::None
-                        }
-                    } else {
-                        if let FnExt::Return(ff) = f.f {
                             FnIndex::Lazy(FnReturnRef(ff), f.p.lazy)
-                        } else {
-                            FnIndex::None
                         }
                     }
-                } else {
-                    if let FnExt::Void(ff) = f.f {
-                        FnIndex::Void(FnVoidRef(ff))
-                    } else {
-                        FnIndex::None
-                    }
+                    FnExt::BinOp(ff) => FnIndex::BinOp(FnBinOpRef(ff)),
+                    FnExt::UnOp(ff) => FnIndex::UnOp(FnUnOpRef(ff)),
+                    FnExt::Void(ff) => FnIndex::Void(FnVoidRef(ff)),
                 };
             }
         }
@@ -528,5 +519,45 @@ impl Module {
             f: f.into(),
             p: prelude_function,
         });
+    }
+
+    /// Adds a new external prelude binary operator.
+    pub fn add_binop(
+        &mut self,
+        name: Arc<String>,
+        f: fn(&Variable, &Variable) -> Result<Variable, String>,
+        prelude_function: Dfn
+    ) {
+        self.ext_prelude.push(FnExternal {
+            namespace: self.register_namespace.clone(),
+            name: name.clone(),
+            f: f.into(),
+            p: prelude_function,
+        });
+    }
+
+    /// Adds a new external prelude unary operator.
+    pub fn add_unop(
+        &mut self,
+        name: Arc<String>,
+        f: fn(&Variable) -> Result<Variable, String>,
+        prelude_function: Dfn
+    ) {
+        self.ext_prelude.push(FnExternal {
+            namespace: self.register_namespace.clone(),
+            name: name.clone(),
+            f: f.into(),
+            p: prelude_function,
+        });
+    }
+
+    /// Adds a new external prelude unary operator.
+    pub fn add_unop_str(
+        &mut self,
+        name: &str,
+        f: fn(&Variable) -> Result<Variable, String>,
+        prelude_function: Dfn
+    ) {
+        self.add_unop(Arc::new(name.into()), f, prelude_function)
     }
 }

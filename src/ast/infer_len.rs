@@ -99,6 +99,8 @@ fn infer_expr(
         CallReturn(_) => unimplemented!("`CallReturn` is transformed from `Call` later"),
         CallLazy(_) => unimplemented!("`CallLazy` is transformed from `Call` later"),
         CallLoaded(_) => unimplemented!("`CallLoaded` is transformed from `Call` later"),
+        CallBinOp(_) => unimplemented!("`CallBinOp` is transformed from `Call` later"),
+        CallUnOp(_) => unimplemented!("`CallUnOp` is transformed from `Call` later"),
         Vec4(ref vec4_expr) => {
             for expr in &vec4_expr.args {
                 let res = infer_expr(expr, name, decls);

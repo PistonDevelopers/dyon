@@ -206,6 +206,9 @@ fn write_expr<W: io::Write>(
         E::Call(ref call) => write_call(w, rt, &call.info.name, &call.args, tabs)?,
         E::CallVoid(ref call) => write_call(w, rt, &call.info.name, &call.args, tabs)?,
         E::CallReturn(ref call) => write_call(w, rt, &call.info.name, &call.args, tabs)?,
+        E::CallBinOp(ref call) => write_call(w, rt, &call.info.name,
+                                             &[call.left.clone(), call.right.clone()], tabs)?,
+        E::CallUnOp(ref call) => write_call(w, rt, &call.info.name, &[call.arg.clone()], tabs)?,
         E::CallLazy(ref call) => write_call(w, rt, &call.info.name, &call.args, tabs)?,
         E::CallLoaded(ref call) => write_call(w, rt, &call.info.name, &call.args, tabs)?,
         E::Return(ref expr) => {

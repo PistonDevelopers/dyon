@@ -338,6 +338,10 @@ pub enum FnIndex {
     Return(FnReturnRef),
     /// Extern function with return value and lazy invariant.
     Lazy(FnReturnRef, LazyInvariant),
+    /// Extern binary operator.
+    BinOp(FnBinOpRef),
+    /// Extern unary operator.
+    UnOp(FnUnOpRef),
 }
 
 /// Refers to an external function.
@@ -347,6 +351,10 @@ pub enum FnExt {
     Void(fn(&mut Runtime) -> Result<(), String>),
     /// External function with return value.
     Return(fn(&mut Runtime) -> Result<Variable, String>),
+    /// External binary operator.
+    BinOp(fn(&Variable, &Variable) -> Result<Variable, String>),
+    /// External unary operator.
+    UnOp(fn(&Variable) -> Result<Variable, String>),
 }
 
 impl From<fn(&mut Runtime) -> Result<(), String>> for FnExt {
@@ -361,9 +369,53 @@ impl From<fn(&mut Runtime) -> Result<Variable, String>> for FnExt {
     }
 }
 
+impl From<fn(&Variable, &Variable) -> Result<Variable, String>> for FnExt {
+    fn from(val: fn(&Variable, &Variable) -> Result<Variable, String>) -> Self {
+        FnExt::BinOp(val)
+    }
+}
+
+impl From<fn(&Variable) -> Result<Variable, String>> for FnExt {
+    fn from(val: fn(&Variable) -> Result<Variable, String>) -> Self {
+        FnExt::UnOp(val)
+    }
+}
+
 impl fmt::Debug for FnExt {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "FnExt")
+    }
+}
+
+/// Used to store direct reference to external function.
+#[derive(Copy)]
+pub struct FnUnOpRef(pub fn(&Variable) -> Result<Variable, String>);
+
+impl Clone for FnUnOpRef {
+    fn clone(&self) -> FnUnOpRef {
+        *self
+    }
+}
+
+impl fmt::Debug for FnUnOpRef {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "FnUnOpRef")
+    }
+}
+
+/// Used to store direct reference to external function.
+#[derive(Copy)]
+pub struct FnBinOpRef(pub fn(&Variable, &Variable) -> Result<Variable, String>);
+
+impl Clone for FnBinOpRef {
+    fn clone(&self) -> FnBinOpRef {
+        *self
+    }
+}
+
+impl fmt::Debug for FnBinOpRef {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "FnBinOpRef")
     }
 }
 

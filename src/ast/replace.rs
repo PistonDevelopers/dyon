@@ -95,6 +95,8 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
         E::CallReturn(_) => unimplemented!("`CallVoid` is transformed from `Call` later"),
         E::CallLazy(_) => unimplemented!("`CallLazy` is transformed from `Call` later"),
         E::CallLoaded(_) => unimplemented!("`CallLoaded` is transform from `Call` later"),
+        E::CallBinOp(_) => unimplemented!("`CallBinOp` is transformed from `Call` later"),
+        E::CallUnOp(_) => unimplemented!("`CallUnOp` is transformed from `Call` later"),
         E::Array(ref array_expr) => {
             let mut new_items: Vec<Expression> = vec![];
             for item in &array_expr.items {

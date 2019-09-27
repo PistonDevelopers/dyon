@@ -514,6 +514,8 @@ impl Runtime {
             }
             CallVoid(ref call) => self.call_void(&call.args, call.fun, &call.info),
             CallReturn(ref call) => self.call_return(&call.args, call.fun, &call.info),
+            CallBinOp(ref call) => self.call_binop(&call.left, &call.right, call.fun, &call.info),
+            CallUnOp(ref call) => self.call_unop(&call.arg, call.fun, &call.info),
             CallLazy(ref call) =>
                 self.call_lazy(&call.args, call.fun, call.lazy_inv, &call.info),
             CallLoaded(ref call) => {
@@ -1075,6 +1077,68 @@ impl Runtime {
         })?), Flow::Continue))
     }
 
+    fn call_binop(
+        &mut self,
+        left_expr: &ast::Expression,
+        right_expr: &ast::Expression,
+        fun: crate::FnBinOpRef,
+        info: &Box<ast::CallInfo>,
+    ) -> FlowResult {
+        let left = match self.expression(left_expr, Side::Right)? {
+            (Some(x), Flow::Continue) => x,
+            (x, Flow::Return) => { return Ok((x, Flow::Return)); }
+            _ => return self.err(left_expr.source_range(),
+                            "Expected something. \
+                            Expression did not return a value.")
+        };
+        let right = match self.expression(right_expr, Side::Right)? {
+            (Some(x), Flow::Continue) => x,
+            (x, Flow::Return) => { return Ok((x, Flow::Return)); }
+            _ => return self.err(right_expr.source_range(),
+                            "Expected something. \
+                            Expression did not return a value.")
+        };
+        let left = self.resolve(&left);
+        let right = self.resolve(&right);
+        Ok((Some((fun.0)(left, right).map_err(|err| {
+            let range = if let Some(ind) = self.arg_err_index.get() {
+                self.arg_err_index.set(None);
+                if ind == 0 {left_expr.source_range()}
+                else if ind == 1 {right_expr.source_range()}
+                else {info.source_range}
+            } else {
+                info.source_range
+            };
+            self.module.error(range, &err, self)
+        })?), Flow::Continue))
+    }
+
+    fn call_unop(
+        &mut self,
+        expr: &ast::Expression,
+        fun: crate::FnUnOpRef,
+        info: &Box<ast::CallInfo>,
+    ) -> FlowResult {
+        let r = match self.expression(expr, Side::Right)? {
+            (Some(x), Flow::Continue) => x,
+            (x, Flow::Return) => { return Ok((x, Flow::Return)); }
+            _ => return self.err(expr.source_range(),
+                            "Expected something. \
+                            Expression did not return a value.")
+        };
+        let r = self.resolve(&r);
+        Ok((Some((fun.0)(r).map_err(|err| {
+            let range = if let Some(ind) = self.arg_err_index.get() {
+                self.arg_err_index.set(None);
+                if ind == 0 {expr.source_range()}
+                else {info.source_range}
+            } else {
+                info.source_range
+            };
+            self.module.error(range, &err, self)
+        })?), Flow::Continue))
+    }
+
     fn call_lazy(
         &mut self,
         args: &[ast::Expression],
@@ -1338,6 +1402,10 @@ impl Runtime {
                 self.call_return(&call.args, f, &call.info),
             FnIndex::Lazy(f, lazy_inv) =>
                 self.call_lazy(&call.args, f, lazy_inv, &call.info),
+            FnIndex::BinOp(f) =>
+                self.call_binop(&call.args[0], &call.args[1], f, &call.info),
+            FnIndex::UnOp(f) =>
+                self.call_unop(&call.args[0], f, &call.info),
             FnIndex::Loaded(f_index) => {
                 self.call_loaded(&call.args, f_index, &call.info,
                                  &call.custom_source, loader)
