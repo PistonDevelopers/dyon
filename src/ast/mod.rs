@@ -1153,7 +1153,11 @@ impl Expression {
                 convert.update(range);
                 result = Some(val);
             } else if let Ok((range, val)) = Mul::from_meta_data(
-                    file, source, convert, ignored) {
+                    file, source, "mul", convert, ignored) {
+                convert.update(range);
+                result = Some(val.into_expression());
+            } else if let Ok((range, val)) = Mul::from_meta_data(
+                    file, source, "compare", convert, ignored) {
                 convert.update(range);
                 result = Some(val.into_expression());
             } else if let Ok((range, val)) = Item::from_meta_data(
@@ -1314,10 +1318,6 @@ impl Expression {
                     file, source, convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::If(Box::new(val)));
-            } else if let Ok((range, val)) = Compare::from_meta_data(
-                    file, source, convert, ignored) {
-                convert.update(range);
-                result = Some(val.into_expression());
             } else if let Ok((range, _)) = convert.meta_bool("try") {
                 convert.update(range);
                 result = Some(Expression::Try(Box::new(result.unwrap())));
@@ -2025,11 +2025,11 @@ impl Mul {
     pub fn from_meta_data(
         file: &Arc<String>,
         source: &Arc<String>,
+        node: &str,
         mut convert: Convert,
         ignored: &mut Vec<Range>)
     -> Result<(Range, Mul), ()> {
         let start = convert;
-        let node = "mul";
         let start_range = convert.start_node(node)?;
         convert.update(start_range);
 
@@ -2048,7 +2048,7 @@ impl Mul {
                 convert.update(range);
                 items.push(val.into_expression());
             } else if let Ok((range, val)) = Expression::from_meta_data(
-                    file, source, "val", convert, ignored) {
+                    file, source, "expr", convert, ignored) {
                 convert.update(range);
                 items.push(val);
             } else if let Ok((range, _)) = convert.meta_bool("*.") {
@@ -2069,6 +2069,24 @@ impl Mul {
             } else if let Ok((range, _)) = convert.meta_bool("&&") {
                 convert.update(range);
                 ops.push(BinOp::AndAlso);
+            } else if let Ok((range, _)) = convert.meta_bool("<") {
+                convert.update(range);
+                ops.push(BinOp::Less);
+            } else if let Ok((range, _)) = convert.meta_bool("<=") {
+                convert.update(range);
+                ops.push(BinOp::LessOrEqual);
+            } else if let Ok((range, _)) = convert.meta_bool(">") {
+                convert.update(range);
+                ops.push(BinOp::Greater);
+            } else if let Ok((range, _)) = convert.meta_bool(">=") {
+                convert.update(range);
+                ops.push(BinOp::GreaterOrEqual);
+            } else if let Ok((range, _)) = convert.meta_bool("==") {
+                convert.update(range);
+                ops.push(BinOp::Equal);
+            } else if let Ok((range, _)) = convert.meta_bool("!=") {
+                convert.update(range);
+                ops.push(BinOp::NotEqual);
             } else {
                 let range = convert.ignore();
                 convert.update(range);
@@ -2194,6 +2212,18 @@ pub enum BinOp {
     OrElse,
     /// Lazy AND operator (`&&`).
     AndAlso,
+    /// Less.
+    Less,
+    /// Less or equal.
+    LessOrEqual,
+    /// Greater.
+    Greater,
+    /// Greater or equal.
+    GreaterOrEqual,
+    /// Equal.
+    Equal,
+    /// Not equal.
+    NotEqual,
 }
 
 pub(crate) const BINOP_PREC_POW: u8 = 3;
@@ -2215,6 +2245,12 @@ impl BinOp {
             BinOp::Pow => "^",
             BinOp::OrElse => "||",
             BinOp::AndAlso => "&&",
+            BinOp::Less => "<",
+            BinOp::LessOrEqual => "<=",
+            BinOp::Greater => ">",
+            BinOp::GreaterOrEqual => ">=",
+            BinOp::Equal => "==",
+            BinOp::NotEqual => "!=",
         }
     }
 
@@ -2231,6 +2267,9 @@ impl BinOp {
     /// Used to put parentheses in right places when printing out closures.
     pub fn precedence(self) -> u8 {
         match self {
+            BinOp::Less | BinOp::LessOrEqual |
+            BinOp::Greater | BinOp::GreaterOrEqual |
+            BinOp::Equal | BinOp::NotEqual => BINOP_PREC_OR,
             BinOp::OrElse | BinOp::AndAlso => BINOP_PREC_OR,
             BinOp::Add | BinOp::Sub => BINOP_PREC_ADD,
             BinOp::Mul | BinOp::Dot | BinOp::Cross
@@ -3123,6 +3162,12 @@ impl BinOpExpression {
                     Cross => crate::CROSS.clone(),
                     AndAlso => crate::AND_ALSO.clone(),
                     OrElse => crate::OR_ELSE.clone(),
+                    Less => crate::LESS.clone(),
+                    LessOrEqual => crate::LESS_OR_EQUAL.clone(),
+                    Greater => crate::GREATER.clone(),
+                    GreaterOrEqual => crate::GREATER_OR_EQUAL.clone(),
+                    Equal => crate::EQUAL.clone(),
+                    NotEqual => crate::NOT_EQUAL.clone(),
                 },
                 source_range: self.source_range,
             })
@@ -4354,137 +4399,6 @@ impl If {
         if let Some(ref mut else_block) = self.else_block {
             else_block.resolve_locals(relative, stack, closure_stack, module, use_lookup);
             stack.truncate(st);
-        }
-    }
-}
-
-/// Compare expression.
-#[derive(Debug, Clone)]
-pub struct Compare {
-    /// Comparison operator.
-    pub op: CompareOp,
-    /// Left side of expression.
-    pub left: Expression,
-    /// Right side of expression.
-    pub right: Expression,
-    /// The range in source.
-    pub source_range: Range,
-}
-
-impl Compare {
-    /// Creates compare expression from meta data.
-    pub fn from_meta_data(
-        file: &Arc<String>,
-        source: &Arc<String>,
-        mut convert: Convert,
-        ignored: &mut Vec<Range>)
-    -> Result<(Range, Compare), ()> {
-        let start = convert;
-        let node = "compare";
-        let start_range = convert.start_node(node)?;
-        convert.update(start_range);
-
-        let mut op: Option<CompareOp> = None;
-        let mut left: Option<Expression> = None;
-        let mut right: Option<Expression> = None;
-        loop {
-            if let Ok(range) = convert.end_node(node) {
-                convert.update(range);
-                break;
-            } else if let Ok((range, _)) = convert.meta_bool("<") {
-                convert.update(range);
-                op = Some(CompareOp::Less);
-            } else if let Ok((range, _)) = convert.meta_bool("<=") {
-                convert.update(range);
-                op = Some(CompareOp::LessOrEqual);
-            } else if let Ok((range, _)) = convert.meta_bool(">") {
-                convert.update(range);
-                op = Some(CompareOp::Greater);
-            } else if let Ok((range, _)) = convert.meta_bool(">=") {
-                convert.update(range);
-                op = Some(CompareOp::GreaterOrEqual);
-            } else if let Ok((range, _)) = convert.meta_bool("==") {
-                convert.update(range);
-                op = Some(CompareOp::Equal);
-            } else if let Ok((range, _)) = convert.meta_bool("!=") {
-                convert.update(range);
-                op = Some(CompareOp::NotEqual);
-            } else if let Ok((range, val)) = Expression::from_meta_data(
-                file, source, "left", convert, ignored) {
-                convert.update(range);
-                left = Some(val);
-            } else if let Ok((range, val)) = Expression::from_meta_data(
-                file, source, "right", convert, ignored) {
-                convert.update(range);
-                right = Some(val);
-            } else {
-                let range = convert.ignore();
-                convert.update(range);
-                ignored.push(range);
-            }
-        }
-
-        let op = op.ok_or(())?;
-        let left = left.ok_or(())?;
-        let right = right.ok_or(())?;
-        Ok((convert.subtract(start), Compare {
-            op,
-            left,
-            right,
-            source_range: convert.source(start).unwrap(),
-        }))
-    }
-
-    fn into_expression(self) -> Expression {
-        use self::CompareOp::*;
-
-        Expression::Call(Box::new(Call {
-            args: vec![self.left, self.right],
-            custom_source: None,
-            f_index: FnIndex::None,
-            info: Box::new(CallInfo {
-                alias: None,
-                name: match self.op {
-                    Less => crate::LESS.clone(),
-                    LessOrEqual => crate::LESS_OR_EQUAL.clone(),
-                    Greater => crate::GREATER.clone(),
-                    GreaterOrEqual => crate::GREATER_OR_EQUAL.clone(),
-                    Equal => crate::EQUAL.clone(),
-                    NotEqual => crate::NOT_EQUAL.clone(),
-                },
-                source_range: self.source_range,
-            })
-        }))
-    }
-}
-
-/// Comparison operator.
-#[derive(Debug, Clone, Copy)]
-pub enum CompareOp {
-    /// Less.
-    Less,
-    /// Less or equal.
-    LessOrEqual,
-    /// Greater.
-    Greater,
-    /// Greater or equal.
-    GreaterOrEqual,
-    /// Equal.
-    Equal,
-    /// Not equal.
-    NotEqual,
-}
-
-impl CompareOp {
-    /// Returns symbol for the comparison operator.
-    pub fn symbol(self) -> &'static str {
-        match self {
-            CompareOp::Less => "<",
-            CompareOp::LessOrEqual => "<=",
-            CompareOp::Greater => ">",
-            CompareOp::GreaterOrEqual => ">=",
-            CompareOp::Equal => "==",
-            CompareOp::NotEqual => "!=",
         }
     }
 }

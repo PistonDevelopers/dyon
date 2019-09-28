@@ -125,6 +125,12 @@ pub(crate) fn check_core(
                 Cross => crate::CROSS.clone(),
                 AndAlso => crate::AND_ALSO.clone(),
                 OrElse => crate::OR_ELSE.clone(),
+                Less => crate::LESS.clone(),
+                LessOrEqual => crate::LESS_OR_EQUAL.clone(),
+                Greater => crate::GREATER.clone(),
+                GreaterOrEqual => crate::GREATER_OR_EQUAL.clone(),
+                Equal => crate::EQUAL.clone(),
+                NotEqual => crate::NOT_EQUAL.clone(),
             }, nodes);
         } else if nodes[i].kind == Kind::Pow && nodes[i].children.len() == 2 {
             Node::rewrite_binop(i, crate::POW.clone(), nodes);

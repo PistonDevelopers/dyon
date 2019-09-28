@@ -599,6 +599,30 @@ pub(crate) fn convert_meta_data(
                         let i = *parents.last().unwrap();
                         nodes[i].binops.push(BinOp::OrElse);
                     }
+                    "<" => {
+                        let i = *parents.last().unwrap();
+                        nodes[i].binops.push(BinOp::Less);
+                    }
+                    "<=" => {
+                        let i = *parents.last().unwrap();
+                        nodes[i].binops.push(BinOp::LessOrEqual);
+                    }
+                    ">" => {
+                        let i = *parents.last().unwrap();
+                        nodes[i].binops.push(BinOp::Greater);
+                    }
+                    ">=" => {
+                        let i = *parents.last().unwrap();
+                        nodes[i].binops.push(BinOp::GreaterOrEqual);
+                    }
+                    "==" => {
+                        let i = *parents.last().unwrap();
+                        nodes[i].binops.push(BinOp::Equal);
+                    }
+                    "!=" => {
+                        let i = *parents.last().unwrap();
+                        nodes[i].binops.push(BinOp::NotEqual);
+                    }
                     _ => {}
                 }
             }

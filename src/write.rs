@@ -390,12 +390,11 @@ fn binop_needs_parens(op: ast::BinOp, expr: &ast::Expression, right: bool) -> bo
                     (ast::BINOP_PREC_MUL, ast::BINOP_PREC_MUL) if right => true,
                     (ast::BINOP_PREC_ADD, ast::BINOP_PREC_ADD) if right => true,
                     _ => false
+                    // TODO: Handle precedence for comparison operators.
                 }
-            } else if let Some(_) = standard_compare(&call.info.name, &call.args) {
-                true
             } else {false}
         }
-        // TODO: Handle `E::CallVoid`.
+        // TODO: Handle `E::CallVoid` etc.
         _ => false
     }
 }
@@ -531,8 +530,6 @@ fn write_call<W: io::Write>(
         write_neg(w, rt, &args[0], tabs)
     } else if let Some(op) = standard_binop(name, args) {
         write_binop(w, rt, op, &args[0], &args[1], tabs)
-    } else if let Some(op) = standard_compare(name, args) {
-        write_compare(w, rt, op, &args[0], &args[1], tabs)
     } else {
         write!(w, "{}(", name)?;
         for (i, arg) in args.iter().enumerate() {
@@ -741,63 +738,14 @@ fn standard_binop(name: &Arc<String>, args: &[ast::Expression]) -> Option<ast::B
         "pow" => Pow,
         "and_also" => AndAlso,
         "or_else" => OrElse,
-        _ => return None
-    })
-}
-
-fn standard_compare(name: &Arc<String>, args: &[ast::Expression]) -> Option<ast::CompareOp> {
-    use ast::CompareOp::*;
-
-    if args.len() != 2 {return None};
-
-    let name: &str = &**name;
-    Some(match name {
         "less" => Less,
         "less_or_equal" => LessOrEqual,
         "greater" => Greater,
         "greater_or_equal" => GreaterOrEqual,
         "equal" => Equal,
         "not_equal" => NotEqual,
-        _ => return None,
+        _ => return None
     })
-}
-
-fn compare_needs_parent(expr: &ast::Expression) -> bool {
-    use ast::Expression as E;
-
-    match *expr {
-        E::Call(ref call) => standard_binop(&call.info.name, &call.args).is_some(),
-        _ => false
-    }
-}
-
-fn write_compare<W: io::Write>(
-    w: &mut W,
-    rt: &Runtime,
-    op: ast::CompareOp,
-    left: &ast::Expression,
-    right: &ast::Expression,
-    tabs: u32,
-) -> Result<(), io::Error> {
-    let left_needs_parens = compare_needs_parent(left);
-    let right_needs_parens = compare_needs_parent(right);
-
-    if left_needs_parens {
-        write!(w, "(")?;
-    }
-    write_expr(w, rt, left, tabs)?;
-    if left_needs_parens {
-        write!(w, ")")?;
-    }
-    write!(w, " {} ", op.symbol())?;
-    if right_needs_parens {
-        write!(w, "(")?;
-    }
-    write_expr(w, rt, right, tabs)?;
-    if right_needs_parens {
-        write!(w, ")")?;
-    }
-    Ok(())
 }
 
 fn write_for_n<W: io::Write>(
