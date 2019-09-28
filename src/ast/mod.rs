@@ -1144,8 +1144,8 @@ impl Expression {
                     file, source, "block", convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::Block(Box::new(val)));
-            } else if let Ok((range, val)) = Add::from_meta_data(
-                    file, source, convert, ignored) {
+            } else if let Ok((range, val)) = Mul::from_meta_data(
+                    file, source, "add", convert, ignored) {
                 convert.update(range);
                 result = Some(val.into_expression());
             } else if let Ok((range, val)) = UnOpExpression::from_meta_data(
@@ -1929,86 +1929,6 @@ impl ArrayFill {
     }
 }
 
-/// Addition expression.
-#[derive(Debug, Clone)]
-pub struct Add {
-    /// Item expressions.
-    pub items: Vec<Expression>,
-    /// Binary operators.
-    pub ops: Vec<BinOp>,
-    /// The range in source.
-    pub source_range: Range,
-}
-
-impl Add {
-    /// Creates addition expression from meta data.
-    pub fn from_meta_data(
-        file: &Arc<String>,
-        source: &Arc<String>,
-        mut convert: Convert,
-        ignored: &mut Vec<Range>)
-    -> Result<(Range, Add), ()> {
-        let start = convert;
-        let node = "add";
-        let start_range = convert.start_node(node)?;
-        convert.update(start_range);
-
-        let mut items = vec![];
-        let mut ops = vec![];
-        loop {
-            if let Ok(range) = convert.end_node(node) {
-                convert.update(range);
-                break;
-            } else if let Ok((range, val)) = Expression::from_meta_data(
-                    file, source, "expr", convert, ignored) {
-                convert.update(range);
-                items.push(val);
-            } else if let Ok((range, _)) = convert.meta_bool("+") {
-                convert.update(range);
-                ops.push(BinOp::Add);
-            } else if let Ok((range, _)) = convert.meta_bool("-") {
-                convert.update(range);
-                ops.push(BinOp::Sub);
-            } else if let Ok((range, _)) = convert.meta_bool("||") {
-                convert.update(range);
-                ops.push(BinOp::OrElse);
-            } else if let Ok((range, _)) = convert.meta_bool("⊻") {
-                convert.update(range);
-                ops.push(BinOp::Pow);
-            } else {
-                let range = convert.ignore();
-                convert.update(range);
-                ignored.push(range);
-            }
-        }
-
-        if items.is_empty() {
-            return Err(())
-        }
-        Ok((convert.subtract(start), Add {
-            items,
-            ops,
-            source_range: convert.source(start).unwrap()
-        }))
-    }
-
-    fn into_expression(mut self) -> Expression {
-        if self.items.len() == 1 {
-            self.items[0].clone()
-        } else {
-            let op = self.ops.pop().unwrap();
-            let last = self.items.pop().unwrap();
-            let source_range = self.source_range;
-            BinOpExpression {
-                op,
-                left: self.into_expression(),
-                right: last,
-                source_range
-            }.into_expression()
-        }
-    }
-}
-
 /// Multiply expression.
 #[derive(Debug, Clone)]
 pub struct Mul {
@@ -2066,6 +1986,18 @@ impl Mul {
             } else if let Ok((range, _)) = convert.meta_bool("%") {
                 convert.update(range);
                 ops.push(BinOp::Rem);
+            } else if let Ok((range, _)) = convert.meta_bool("+") {
+                convert.update(range);
+                ops.push(BinOp::Add);
+            } else if let Ok((range, _)) = convert.meta_bool("-") {
+                convert.update(range);
+                ops.push(BinOp::Sub);
+            } else if let Ok((range, _)) = convert.meta_bool("||") {
+                convert.update(range);
+                ops.push(BinOp::OrElse);
+            } else if let Ok((range, _)) = convert.meta_bool("⊻") {
+                convert.update(range);
+                ops.push(BinOp::Pow);
             } else if let Ok((range, _)) = convert.meta_bool("&&") {
                 convert.update(range);
                 ops.push(BinOp::AndAlso);
