@@ -385,10 +385,10 @@ fn binop_needs_parens(op: ast::BinOp, expr: &ast::Expression, right: bool) -> bo
         E::Call(ref call) => {
             if let Some(binop_op) = standard_binop(&call.info.name, &call.args) {
                 match (op.precedence(), binop_op.precedence()) {
-                    (3, _) => true,
-                    (2, 1) => true,
-                    (2, 2) if right => true,
-                    (1, 1) if right => true,
+                    (ast::BINOP_PREC_POW, _) => true,
+                    (ast::BINOP_PREC_MUL, ast::BINOP_PREC_ADD) => true,
+                    (ast::BINOP_PREC_MUL, ast::BINOP_PREC_MUL) if right => true,
+                    (ast::BINOP_PREC_ADD, ast::BINOP_PREC_ADD) if right => true,
                     _ => false
                 }
             } else if let Some(_) = standard_compare(&call.info.name, &call.args) {

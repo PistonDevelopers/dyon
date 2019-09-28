@@ -2196,6 +2196,11 @@ pub enum BinOp {
     AndAlso,
 }
 
+pub(crate) const BINOP_PREC_POW: u8 = 3;
+pub(crate) const BINOP_PREC_MUL: u8 = 2;
+pub(crate) const BINOP_PREC_ADD: u8 = 1;
+pub(crate) const BINOP_PREC_OR: u8 = 0;
+
 impl BinOp {
     /// Returns symbol of binary operator.
     pub fn symbol(self) -> &'static str {
@@ -2226,11 +2231,11 @@ impl BinOp {
     /// Used to put parentheses in right places when printing out closures.
     pub fn precedence(self) -> u8 {
         match self {
-            BinOp::OrElse | BinOp::AndAlso => 0,
-            BinOp::Add | BinOp::Sub => 1,
+            BinOp::OrElse | BinOp::AndAlso => BINOP_PREC_OR,
+            BinOp::Add | BinOp::Sub => BINOP_PREC_ADD,
             BinOp::Mul | BinOp::Dot | BinOp::Cross
-            | BinOp::Div | BinOp::Rem => 2,
-            BinOp::Pow => 3,
+            | BinOp::Div | BinOp::Rem => BINOP_PREC_MUL,
+            BinOp::Pow => BINOP_PREC_POW,
         }
     }
 }
