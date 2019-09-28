@@ -1144,7 +1144,7 @@ impl Expression {
                     file, source, "block", convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::Block(Box::new(val)));
-            } else if let Ok((range, val)) = Mul::from_meta_data(
+            } else if let Ok((range, val)) = BinOpSeq::from_meta_data(
                     file, source, "add", convert, ignored) {
                 convert.update(range);
                 result = Some(val.into_expression());
@@ -1152,11 +1152,11 @@ impl Expression {
                     "not", file, source, convert, ignored) {
                 convert.update(range);
                 result = Some(val);
-            } else if let Ok((range, val)) = Mul::from_meta_data(
+            } else if let Ok((range, val)) = BinOpSeq::from_meta_data(
                     file, source, "mul", convert, ignored) {
                 convert.update(range);
                 result = Some(val.into_expression());
-            } else if let Ok((range, val)) = Mul::from_meta_data(
+            } else if let Ok((range, val)) = BinOpSeq::from_meta_data(
                     file, source, "compare", convert, ignored) {
                 convert.update(range);
                 result = Some(val.into_expression());
@@ -1929,9 +1929,9 @@ impl ArrayFill {
     }
 }
 
-/// Multiply expression.
+/// Parse sequence of binary operators.
 #[derive(Debug, Clone)]
-pub struct Mul {
+pub struct BinOpSeq {
     /// Item expressions.
     pub items: Vec<Expression>,
     /// Binary operators.
@@ -1940,7 +1940,7 @@ pub struct Mul {
     pub source_range: Range,
 }
 
-impl Mul {
+impl BinOpSeq {
     /// Creates multiply expression from meta data.
     pub fn from_meta_data(
         file: &Arc<String>,
@@ -1948,7 +1948,7 @@ impl Mul {
         node: &str,
         mut convert: Convert,
         ignored: &mut Vec<Range>)
-    -> Result<(Range, Mul), ()> {
+    -> Result<(Range, BinOpSeq), ()> {
         let start = convert;
         let start_range = convert.start_node(node)?;
         convert.update(start_range);
@@ -1963,7 +1963,7 @@ impl Mul {
                     "neg", file, source, convert, ignored) {
                 convert.update(range);
                 items.push(val);
-            } else if let Ok((range, val)) = Mul::from_meta_data(
+            } else if let Ok((range, val)) = BinOpSeq::from_meta_data(
                     file, source, "pow", convert, ignored) {
                 convert.update(range);
                 items.push(val.into_expression());
@@ -2029,7 +2029,7 @@ impl Mul {
         if items.is_empty() {
             return Err(())
         }
-        Ok((convert.subtract(start), Mul {
+        Ok((convert.subtract(start), BinOpSeq {
             items,
             ops,
             source_range: convert.source(start).unwrap(),
