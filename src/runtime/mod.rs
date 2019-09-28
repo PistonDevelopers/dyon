@@ -98,8 +98,6 @@ pub struct Runtime {
     pub arg_err_index: Cell<Option<usize>>,
 }
 
-unsafe impl Send for Runtime {}
-
 impl Default for Runtime {
     fn default() -> Runtime {Runtime::new()}
 }
