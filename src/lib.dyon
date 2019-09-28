@@ -236,6 +236,11 @@ fn load__source_imports(source: str, imports: [any]) -> res[any] { ... }
 /// Returns `ok(module)` if it succeeds.
 fn module__in_string_imports(name: str, code: str, imports: [any]) -> res[any] { ... }
 
+/// Returns data from lifetime/type-checker from source.
+/// Ignores any lifetime or type error.
+/// Returns an error if there are any syntax errors.
+fn check__in_string_imports(name: str, code: str, imports: [any]) -> res[[{}]] { ... }
+
 /// Calls function in module with arguments.
 fn call(module: any, function: str, arguments: [any]) { ... }
 

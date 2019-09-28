@@ -6,7 +6,8 @@ use std::collections::{HashMap, HashSet};
 use self::piston_meta::MetaData;
 use self::range::Range;
 use self::kind::Kind;
-use self::node::{convert_meta_data, Node};
+use self::node::convert_meta_data;
+pub(crate) use self::node::Node;
 use self::lt::{arg_lifetime, compare_lifetimes, Lifetime};
 
 use prelude::{Lt, Prelude};
@@ -24,10 +25,20 @@ mod normalize;
 /// Returns refined return types of functions to put in AST.
 pub fn check(
     data: &[Range<MetaData>],
-    prelude: &Prelude
+    prelude: &Prelude,
 ) -> Result<HashMap<Arc<String>, Type>, Range<String>> {
     let mut nodes: Vec<Node> = vec![];
-    convert_meta_data(&mut nodes, data)?;
+    check_core(&mut nodes, data, prelude)
+}
+
+// Core lifetime and type check.
+pub(crate) fn check_core(
+    nodes: &mut Vec<Node>,
+    data: &[Range<MetaData>],
+    prelude: &Prelude
+) -> Result<HashMap<Arc<String>, Type>, Range<String>> {
+
+    convert_meta_data(nodes, data)?;
 
     // Rewrite multiple binary operators into nested ones.
     for i in 0..nodes.len() {
@@ -95,9 +106,9 @@ pub fn check(
     for i in 0..nodes.len() {
         if nodes[i].children.len() == 1 {
             match nodes[i].kind {
-                Kind::Norm => Node::rewrite_unop(i, crate::NORM.clone(), &mut nodes),
-                Kind::Not => Node::rewrite_unop(i, crate::NOT.clone(), &mut nodes),
-                Kind::Neg => Node::rewrite_unop(i, crate::NEG.clone(), &mut nodes),
+                Kind::Norm => Node::rewrite_unop(i, crate::NORM.clone(), nodes),
+                Kind::Not => Node::rewrite_unop(i, crate::NOT.clone(), nodes),
+                Kind::Neg => Node::rewrite_unop(i, crate::NEG.clone(), nodes),
                 _ => {}
             }
         } else if nodes[i].binops.len() == 1 && nodes[i].children.len() == 2 {
@@ -114,21 +125,21 @@ pub fn check(
                 Cross => crate::CROSS.clone(),
                 AndAlso => crate::AND_ALSO.clone(),
                 OrElse => crate::OR_ELSE.clone(),
-            }, &mut nodes);
+            }, nodes);
         } else if nodes[i].kind == Kind::Pow && nodes[i].children.len() == 2 {
-            Node::rewrite_binop(i, crate::POW.clone(), &mut nodes);
+            Node::rewrite_binop(i, crate::POW.clone(), nodes);
         }
 
         if nodes[i].children.len() == 1 {
             match nodes[i].kind {
-                Kind::Add | Kind::Mul => Node::simplify(i, &mut nodes),
+                Kind::Add | Kind::Mul => Node::simplify(i, nodes),
                 _ => {}
             }
         }
     }
 
     // After graph rewrite, the graph might be unnormalized.
-    normalize::fix(&mut nodes);
+    normalize::fix(nodes);
 
     // Add mutability information to function names.
     for i in 0..nodes.len() {
@@ -985,7 +996,7 @@ pub fn check(
         }
     }
 
-    typecheck::run(&mut nodes, prelude, &use_lookup)?;
+    typecheck::run(nodes, prelude, &use_lookup)?;
 
     // Copy refined return types to use in AST.
     let mut refined_rets: HashMap<Arc<String>, Type> = HashMap::new();

@@ -1218,6 +1218,126 @@ pub(crate) fn module__in_string_imports(rt: &mut Runtime) -> Result<Variable, St
     Ok(v)
 }
 
+
+#[allow(non_snake_case)]
+pub(crate) fn check__in_string_imports(rt: &mut Runtime) -> Result<Variable, String> {
+    let modules = rt.stack.pop().expect(TINVOTS);
+    let source = rt.stack.pop().expect(TINVOTS);
+    let source = match rt.resolve(&source) {
+        &Variable::Str(ref t) => t.clone(),
+        x => return Err(rt.expected_arg(1, x, "str"))
+    };
+    let name = rt.stack.pop().expect(TINVOTS);
+    let name = match rt.resolve(&name) {
+        &Variable::Str(ref t) => t.clone(),
+        x => return Err(rt.expected_arg(0, x, "str"))
+    };
+    let mut new_module = Module::empty();
+    for f in &rt.module.ext_prelude {
+        match f.f {
+            FnExt::Void(ff) => new_module.add(f.name.clone(), ff, f.p.clone()),
+            FnExt::Return(ff) => new_module.add(f.name.clone(), ff, f.p.clone()),
+            FnExt::BinOp(ff) => new_module.add_binop(f.name.clone(), ff, f.p.clone()),
+            FnExt::UnOp(ff) => new_module.add_unop(f.name.clone(), ff, f.p.clone()),
+        }
+    }
+    let x = rt.resolve(&modules);
+    match x {
+        &Variable::Array(ref array) => {
+            for it in &**array {
+                match rt.resolve(it) {
+                    &Variable::RustObject(ref obj) => {
+                        match obj.lock().unwrap().downcast_ref::<Arc<Module>>() {
+                            Some(m) => {
+                                // Add external functions from imports.
+                                for f in &m.ext_prelude {
+                                    let has_external = new_module.ext_prelude.iter()
+                                        .any(|a| a.name == f.name);
+                                    if !has_external {
+                                        match f.f {
+                                            FnExt::Void(ff) => new_module.add(f.name.clone(), ff, f.p.clone()),
+                                            FnExt::Return(ff) => new_module.add(f.name.clone(), ff, f.p.clone()),
+                                            FnExt::BinOp(ff) => new_module.add_binop(f.name.clone(), ff, f.p.clone()),
+                                            FnExt::UnOp(ff) => new_module.add_unop(f.name.clone(), ff, f.p.clone()),
+                                        }
+                                    }
+                                }
+                                // Register loaded functions from imports.
+                                for f in &m.functions {
+                                    new_module.register(f.clone())
+                                }
+                            }
+                            None => return Err(rt.expected_arg(2, x, "[Module]"))
+                        }
+                    }
+                    x => return Err(rt.expected_arg(2, x, "[Module]"))
+                }
+            }
+        }
+        x => return Err(rt.expected_arg(2, x, "[Module]"))
+    }
+    let v = match check_str(&name, source, &new_module) {
+            Err(err) => Variable::Result(Err(Box::new(Error {
+                        message: Variable::Str(Arc::new(
+                            format!("When attempting to load module:\n{}", err))),
+                        trace: vec![]
+                    }))),
+            Ok(nodes) => {
+                Variable::Result(Ok(Box::new(Variable::Array({
+                    use embed::PushVariable;
+
+                    let mut res = vec![];
+                    lazy_static!{
+                        static ref KIND: Arc<String> = Arc::new("kind".into());
+                        static ref CHILDREN: Arc<String> = Arc::new("children".into());
+                        static ref NAMES: Arc<String> = Arc::new("names".into());
+                        static ref PARENT: Arc<String> = Arc::new("parent".into());
+                        static ref TY: Arc<String> = Arc::new("ty".into());
+                        static ref ALIAS: Arc<String> = Arc::new("alias".into());
+                        static ref MUTABLE: Arc<String> = Arc::new("mutable".into());
+                        static ref TRY: Arc<String> = Arc::new("try".into());
+                        static ref GRAB_LEVEL: Arc<String> = Arc::new("grab_level".into());
+                        static ref SOURCE_OFFSET: Arc<String> = Arc::new("source_offset".into());
+                        static ref SOURCE_LENGTH: Arc<String> = Arc::new("source_length".into());
+                        static ref START: Arc<String> = Arc::new("start".into());
+                        static ref END: Arc<String> = Arc::new("end".into());
+                        static ref LIFETIME: Arc<String> = Arc::new("lifetime".into());
+                        static ref DECLARATION: Arc<String> = Arc::new("declaration".into());
+                        static ref OP: Arc<String> = Arc::new("op".into());
+                        static ref LTS: Arc<String> = Arc::new("lts".into());
+                    }
+                    for n in &nodes {
+                        let mut obj = HashMap::new();
+                        obj.insert(KIND.clone(), format!("{:?}", n.kind).push_var());
+                        obj.insert(CHILDREN.clone(), n.children.push_var());
+                        obj.insert(NAMES.clone(), n.names.push_var());
+                        obj.insert(PARENT.clone(), n.parent.push_var());
+                        obj.insert(TY.clone(), n.ty.as_ref().map(|ty| ty.description()).push_var());
+                        obj.insert(ALIAS.clone(), n.alias.push_var());
+                        obj.insert(MUTABLE.clone(), n.mutable.push_var());
+                        obj.insert(TRY.clone(), n.try.push_var());
+                        obj.insert(GRAB_LEVEL.clone(), (n.grab_level as u32).push_var());
+                        obj.insert(SOURCE_OFFSET.clone(), n.source.offset.push_var());
+                        obj.insert(SOURCE_LENGTH.clone(), n.source.length.push_var());
+                        obj.insert(START.clone(), n.start.push_var());
+                        obj.insert(END.clone(), n.end.push_var());
+                        obj.insert(LIFETIME.clone(), n.lifetime.push_var());
+                        obj.insert(DECLARATION.clone(), n.declaration.push_var());
+                        obj.insert(OP.clone(),
+                            n.op.as_ref().map(|op| format!("{:?}", op)).push_var());
+                        obj.insert(LTS.clone(),
+                            n.lts.iter()
+                                 .map(|lt| format!("{:?}", lt)).collect::<Vec<String>>()
+                                 .push_var());
+                        res.push(Variable::Object(Arc::new(obj)));
+                    }
+                    Arc::new(res)
+                }))))
+            }
+        };
+    Ok(v)
+}
+
 pub(crate) fn _call(rt: &mut Runtime) -> Result<(), String> {
     // Use the source from calling function.
     let source = rt.module.functions[rt.call_stack.last().unwrap().index].source.clone();
@@ -1571,8 +1691,6 @@ dyon_fn!{fn syntax__in_string(name: Arc<String>, text: Arc<String>) -> Variable 
 }}
 
 pub(crate) fn meta__syntax_in_string(rt: &mut Runtime) -> Result<Variable, String> {
-    use piston_meta::Syntax;
-
     let text = rt.stack.pop().expect(TINVOTS);
     let text = match rt.resolve(&text) {
         &Variable::Str(ref t) => t.clone(),

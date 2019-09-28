@@ -334,6 +334,9 @@ impl Module {
                   Dfn::nl(vec![Str, Type::array()], Type::result()));
         m.add_str("module__in_string_imports", module__in_string_imports,
                   Dfn::nl(vec![Str, Str, Type::array()], Type::result()));
+        m.add_str("check__in_string_imports", check__in_string_imports,
+                  Dfn::nl(vec![Str, Str, Type::array()],
+                  Type::Result(Box::new(Type::Array(Box::new(Type::Object))))));
         m.add_str("call", _call, Dfn::nl(vec![Any, Str, Type::array()], Void));
         m.add_str("call_ret", call_ret, Dfn::nl(vec![Any, Str, Type::array()], Any));
         m.add_str("functions", functions, Dfn::nl(vec![], Any));

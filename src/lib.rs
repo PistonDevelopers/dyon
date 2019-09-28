@@ -27,7 +27,7 @@ use std::thread::JoinHandle;
 use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 use range::Range;
-use piston_meta::MetaData;
+use piston_meta::{parse_errstr, syntax_errstr, MetaData, Syntax};
 
 pub mod ast;
 pub mod runtime;
@@ -553,6 +553,39 @@ pub fn load(source: &str, module: &mut Module) -> Result<(), String> {
     load_str(source, data, module)
 }
 
+lazy_static! {
+    static ref SYNTAX_RULES: Result<Syntax, String> = {
+        let syntax = include_str!("../assets/syntax.txt");
+        syntax_errstr(syntax)
+    };
+}
+
+/// Generates graph of nodes after lifetime and type check.
+///
+/// Ignores errors generated during lifetime or type check.
+/// Returns an error if the source does not satisfy the syntax.
+///
+/// This data is what the lifetime/type-checker knows about the source.
+pub(crate) fn check_str(
+    source: &str,
+    d: Arc<String>,
+    module: &Module
+) -> Result<Vec<lifetime::Node>, String> {
+    let syntax_rules = SYNTAX_RULES.as_ref().map_err(|err| err.clone())?;
+
+    let mut data = vec![];
+    parse_errstr(syntax_rules, &d, &mut data).map_err(
+        |err| format!("In `{}:`\n{}", source, err)
+    )?;
+
+    let check_data = data.clone();
+    let prelude = Arc::new(Prelude::from_module(module));
+
+    let mut nodes = vec![];
+    let _ = lifetime::check_core(&mut nodes, &check_data, &prelude);
+    Ok(nodes)
+}
+
 /// Loads a source from string.
 ///
 /// - source - The name of source file
@@ -560,14 +593,6 @@ pub fn load(source: &str, module: &mut Module) -> Result<(), String> {
 /// - module - The module to load the source
 pub fn load_str(source: &str, d: Arc<String>, module: &mut Module) -> Result<(), String> {
     use std::thread;
-    use piston_meta::{parse_errstr, syntax_errstr, Syntax};
-
-    lazy_static! {
-        static ref SYNTAX_RULES: Result<Syntax, String> = {
-            let syntax = include_str!("../assets/syntax.txt");
-            syntax_errstr(syntax)
-        };
-    }
 
     let syntax_rules = SYNTAX_RULES.as_ref().map_err(|err| err.clone())?;
 

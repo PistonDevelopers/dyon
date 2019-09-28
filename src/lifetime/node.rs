@@ -10,7 +10,7 @@ use Lt;
 use Type;
 
 #[derive(Debug)]
-pub struct Node {
+pub(crate) struct Node {
     /// The kind of node.
     pub kind: Kind,
     /// The namespace alias.
@@ -364,7 +364,7 @@ impl Node {
     }
 }
 
-pub fn convert_meta_data(
+pub(crate) fn convert_meta_data(
     nodes: &mut Vec<Node>,
     data: &[Range<MetaData>]
 ) -> Result<(), Range<String>> {

@@ -90,7 +90,7 @@ pub(crate) fn write_variable<W>(
             write!(w, "{{")?;
             let n = obj.len();
             for (i, (k, v)) in obj.iter().enumerate() {
-                if k.chars().all(|c| c.is_alphanumeric()) {
+                if k.chars().all(|c| c.is_alphanumeric() || c == '_') {
                     write!(w, "{}: ", k)?;
                 } else {
                     json::write_string(w, &k)?;

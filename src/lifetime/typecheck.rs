@@ -44,7 +44,7 @@ mod refine;
 /// The type propagation step uses this assumption without checking the whole `if` expression.
 /// After type propagation, all blocks in the `if` expression should have some type information,
 /// but no further propagation is necessary, so it only need to check for consistency.
-pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> Result<(), Range<String>> {
+pub(crate) fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> Result<(), Range<String>> {
     use std::collections::HashMap;
 
     // Keep an extra todo-list for nodes that are affected by type refinement.
