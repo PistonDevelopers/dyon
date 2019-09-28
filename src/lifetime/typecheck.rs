@@ -378,7 +378,7 @@ pub(crate) fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLook
                     }
                 }
                 Kind::Return | Kind::Val | Kind::Expr | Kind::Cond |
-                Kind::Exp | Kind::Base | Kind::Left | Kind::Right |
+                Kind::Left | Kind::Right |
                 Kind::ElseIfCond | Kind::Grab | Kind::Add | Kind::Mul | Kind::Pow
                  => {
                     if nodes[i].children.is_empty() {

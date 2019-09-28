@@ -1963,8 +1963,8 @@ impl Mul {
                     "neg", file, source, convert, ignored) {
                 convert.update(range);
                 items.push(val);
-            } else if let Ok((range, val)) = Pow::from_meta_data(
-                    file, source, convert, ignored) {
+            } else if let Ok((range, val)) = Mul::from_meta_data(
+                    file, source, "pow", convert, ignored) {
                 convert.update(range);
                 items.push(val.into_expression());
             } else if let Ok((range, val)) = Expression::from_meta_data(
@@ -1995,7 +1995,7 @@ impl Mul {
             } else if let Ok((range, _)) = convert.meta_bool("||") {
                 convert.update(range);
                 ops.push(BinOp::OrElse);
-            } else if let Ok((range, _)) = convert.meta_bool("⊻") {
+            } else if let Ok((range, _)) = convert.meta_bool("^") {
                 convert.update(range);
                 ops.push(BinOp::Pow);
             } else if let Ok((range, _)) = convert.meta_bool("&&") {
@@ -2050,74 +2050,6 @@ impl Mul {
                 source_range,
             }.into_expression()
         }
-    }
-}
-
-/// Power expression.
-#[derive(Debug, Clone)]
-pub struct Pow {
-    /// Base expression.
-    ///
-    /// This is the `x` in `x^a`.
-    pub base: Expression,
-    /// Exponent expression.
-    ///
-    /// This is the `x` in `a^x`.
-    pub exp: Expression,
-    /// The range in source.
-    pub source_range: Range,
-}
-
-impl Pow {
-    /// Creates power expression from meta data.
-    pub fn from_meta_data(
-        file: &Arc<String>,
-        source: &Arc<String>,
-        mut convert: Convert,
-        ignored: &mut Vec<Range>)
-    -> Result<(Range, Pow), ()> {
-        let start = convert;
-        let node = "pow";
-        let start_range = convert.start_node(node)?;
-        convert.update(start_range);
-
-        let mut base: Option<Expression> = None;
-        let mut exp: Option<Expression> = None;
-        loop {
-            if let Ok(range) = convert.end_node(node) {
-                convert.update(range);
-                break;
-            } else if let Ok((range, val)) = Expression::from_meta_data(
-                file, source, "base", convert, ignored) {
-                convert.update(range);
-                base = Some(val);
-            } else if let Ok((range, val)) = Expression::from_meta_data(
-                file, source, "exp", convert, ignored) {
-                convert.update(range);
-                exp = Some(val);
-            } else {
-                let range = convert.ignore();
-                convert.update(range);
-                ignored.push(range);
-            }
-        }
-
-        let base = base.ok_or(())?;
-        let exp = exp.ok_or(())?;
-        Ok((convert.subtract(start), Pow {
-            base,
-            exp,
-            source_range: convert.source(start).unwrap()
-        }))
-    }
-
-    fn into_expression(self) -> Expression {
-        BinOpExpression {
-                op: BinOp::Pow,
-                left: self.base,
-                right: self.exp,
-                source_range: self.source_range,
-        }.into_expression()
     }
 }
 

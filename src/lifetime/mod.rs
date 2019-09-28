@@ -132,8 +132,6 @@ pub(crate) fn check_core(
                 Equal => crate::EQUAL.clone(),
                 NotEqual => crate::NOT_EQUAL.clone(),
             }, nodes);
-        } else if nodes[i].kind == Kind::Pow && nodes[i].children.len() == 2 {
-            Node::rewrite_binop(i, crate::POW.clone(), nodes);
         }
 
         if nodes[i].children.len() == 1 {

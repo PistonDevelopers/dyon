@@ -306,8 +306,6 @@ impl Node {
                 (_, Kind::ArrayItem) => {}
                 (_, Kind::ArrayFill) => {}
                 (_, Kind::Pow) => {}
-                (_, Kind::Base) => {}
-                (_, Kind::Exp) => {}
                 (_, Kind::Block) => {}
                 (_, Kind::If) => {}
                 (_, Kind::TrueBlock) => {}
@@ -582,6 +580,10 @@ pub(crate) fn convert_meta_data(
                     "%" => {
                         let i = *parents.last().unwrap();
                         nodes[i].binops.push(BinOp::Rem);
+                    }
+                    "^" => {
+                        let i = *parents.last().unwrap();
+                        nodes[i].binops.push(BinOp::Pow);
                     }
                     "&&" => {
                         let i = *parents.last().unwrap();
