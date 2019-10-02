@@ -207,7 +207,7 @@ pub(crate) fn div(a: &Variable, b: &Variable) -> Result<Variable, String> {
     use Variable::*;
 
     Ok(match (a, b) {
-        (&F64(a, ref sec), &F64(b, _)) => F64(a * b, sec.clone()),
+        (&F64(a, ref sec), &F64(b, _)) => F64(a / b, sec.clone()),
         (&Vec4(a), &Vec4(b)) => Vec4([a[0] / b[0], a[1] / b[1], a[2] / b[2], a[3] / b[3]]),
         (&Vec4(a), &F64(b, _)) => {
             let b = b as f32;
