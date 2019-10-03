@@ -22,6 +22,29 @@ impl Module {
         }
     }
 
+    /// Import external prelude from other module.
+    pub fn import_ext_prelude(&mut self, other: &Module) {
+        for f in &other.ext_prelude {
+            self.ext_prelude.push(f.clone());
+        }
+    }
+
+    /// Import external prelude and loaded functions from module.
+    pub fn import(&mut self, other: &Module) {
+        // Add external functions from imports.
+        for f in &other.ext_prelude {
+            let has_external = self.ext_prelude.iter()
+                .any(|a| a.name == f.name && a.namespace == f.namespace);
+            if !has_external {
+                self.ext_prelude.push(f.clone());
+            }
+        }
+        // Register loaded functions from imports.
+        for f in &other.functions {
+            self.functions.push(f.clone())
+        }
+    }
+
     /// Creates a new module with standard library.
     pub fn new() -> Module {
         use Type::*;

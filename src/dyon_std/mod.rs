@@ -1028,14 +1028,7 @@ pub(crate) fn load(rt: &mut Runtime) -> Result<Variable, String> {
     Ok(match rt.resolve(&v) {
         &Variable::Str(ref text) => {
             let mut m = Module::empty();
-            for f in &rt.module.ext_prelude {
-                match f.f {
-                    FnExt::Void(ff) => m.add(f.name.clone(), ff, f.p.clone()),
-                    FnExt::Return(ff) => m.add(f.name.clone(), ff, f.p.clone()),
-                    FnExt::BinOp(ff) => m.add_binop(f.name.clone(), ff, f.p.clone()),
-                    FnExt::UnOp(ff) => m.add_unop(f.name.clone(), ff, f.p.clone()),
-                }
-            }
+            m.import_ext_prelude(&rt.module);
             if let Err(err) = load(text, &mut m) {
                 Variable::Result(Err(Box::new(Error {
                     message: Variable::Str(Arc::new(format!("When attempting to load module:\n{}", err))),
@@ -1058,14 +1051,7 @@ pub(crate) fn load__source_imports(rt: &mut Runtime) -> Result<Variable, String>
     let modules = rt.stack.pop().expect(TINVOTS);
     let source = rt.stack.pop().expect(TINVOTS);
     let mut new_module = Module::empty();
-    for f in &rt.module.ext_prelude {
-        match f.f {
-            FnExt::Void(ff) => new_module.add(f.name.clone(), ff, f.p.clone()),
-            FnExt::Return(ff) => new_module.add(f.name.clone(), ff, f.p.clone()),
-            FnExt::BinOp(ff) => new_module.add_binop(f.name.clone(), ff, f.p.clone()),
-            FnExt::UnOp(ff) => new_module.add_unop(f.name.clone(), ff, f.p.clone()),
-        }
-    }
+    new_module.import_ext_prelude(&rt.module);
     let x = rt.resolve(&modules);
     match x {
         &Variable::Array(ref array) => {
@@ -1073,29 +1059,7 @@ pub(crate) fn load__source_imports(rt: &mut Runtime) -> Result<Variable, String>
                 match rt.resolve(it) {
                     &Variable::RustObject(ref obj) => {
                         match obj.lock().unwrap().downcast_ref::<Arc<Module>>() {
-                            Some(m) => {
-                                // Add external functions from imports.
-                                for f in &m.ext_prelude {
-                                    let has_external = new_module.ext_prelude.iter()
-                                        .any(|a| a.name == f.name);
-                                    if !has_external {
-                                        match f.f {
-                                            FnExt::Void(ff) =>
-                                                new_module.add(f.name.clone(), ff, f.p.clone()),
-                                            FnExt::Return(ff) =>
-                                                new_module.add(f.name.clone(), ff, f.p.clone()),
-                                            FnExt::BinOp(ff) =>
-                                                new_module.add_binop(f.name.clone(), ff, f.p.clone()),
-                                            FnExt::UnOp(ff) =>
-                                                new_module.add_unop(f.name.clone(), ff, f.p.clone()),
-                                        }
-                                    }
-                                }
-                                // Register loaded functions from imports.
-                                for f in &m.functions {
-                                    new_module.register(f.clone())
-                                }
-                            }
+                            Some(m) => new_module.import(m),
                             None => return Err(rt.expected_arg(1, x, "[Module]"))
                         }
                     }
@@ -1136,14 +1100,7 @@ pub(crate) fn module__in_string_imports(rt: &mut Runtime) -> Result<Variable, St
         x => return Err(rt.expected_arg(0, x, "str"))
     };
     let mut new_module = Module::empty();
-    for f in &rt.module.ext_prelude {
-        match f.f {
-            FnExt::Void(ff) => new_module.add(f.name.clone(), ff, f.p.clone()),
-            FnExt::Return(ff) => new_module.add(f.name.clone(), ff, f.p.clone()),
-            FnExt::BinOp(ff) => new_module.add_binop(f.name.clone(), ff, f.p.clone()),
-            FnExt::UnOp(ff) => new_module.add_unop(f.name.clone(), ff, f.p.clone()),
-        }
-    }
+    new_module.import_ext_prelude(&rt.module);
     let x = rt.resolve(&modules);
     match x {
         &Variable::Array(ref array) => {
@@ -1151,25 +1108,7 @@ pub(crate) fn module__in_string_imports(rt: &mut Runtime) -> Result<Variable, St
                 match rt.resolve(it) {
                     &Variable::RustObject(ref obj) => {
                         match obj.lock().unwrap().downcast_ref::<Arc<Module>>() {
-                            Some(m) => {
-                                // Add external functions from imports.
-                                for f in &m.ext_prelude {
-                                    let has_external = new_module.ext_prelude.iter()
-                                        .any(|a| a.name == f.name);
-                                    if !has_external {
-                                        match f.f {
-                                            FnExt::Void(ff) => new_module.add(f.name.clone(), ff, f.p.clone()),
-                                            FnExt::Return(ff) => new_module.add(f.name.clone(), ff, f.p.clone()),
-                                            FnExt::BinOp(ff) => new_module.add_binop(f.name.clone(), ff, f.p.clone()),
-                                            FnExt::UnOp(ff) => new_module.add_unop(f.name.clone(), ff, f.p.clone()),
-                                        }
-                                    }
-                                }
-                                // Register loaded functions from imports.
-                                for f in &m.functions {
-                                    new_module.register(f.clone())
-                                }
-                            }
+                            Some(m) => new_module.import(m),
                             None => return Err(rt.expected_arg(2, x, "[Module]"))
                         }
                     }
@@ -1207,14 +1146,7 @@ pub(crate) fn check__in_string_imports(rt: &mut Runtime) -> Result<Variable, Str
         x => return Err(rt.expected_arg(0, x, "str"))
     };
     let mut new_module = Module::empty();
-    for f in &rt.module.ext_prelude {
-        match f.f {
-            FnExt::Void(ff) => new_module.add(f.name.clone(), ff, f.p.clone()),
-            FnExt::Return(ff) => new_module.add(f.name.clone(), ff, f.p.clone()),
-            FnExt::BinOp(ff) => new_module.add_binop(f.name.clone(), ff, f.p.clone()),
-            FnExt::UnOp(ff) => new_module.add_unop(f.name.clone(), ff, f.p.clone()),
-        }
-    }
+    new_module.import_ext_prelude(&rt.module);
     let x = rt.resolve(&modules);
     match x {
         &Variable::Array(ref array) => {
@@ -1222,25 +1154,7 @@ pub(crate) fn check__in_string_imports(rt: &mut Runtime) -> Result<Variable, Str
                 match rt.resolve(it) {
                     &Variable::RustObject(ref obj) => {
                         match obj.lock().unwrap().downcast_ref::<Arc<Module>>() {
-                            Some(m) => {
-                                // Add external functions from imports.
-                                for f in &m.ext_prelude {
-                                    let has_external = new_module.ext_prelude.iter()
-                                        .any(|a| a.name == f.name);
-                                    if !has_external {
-                                        match f.f {
-                                            FnExt::Void(ff) => new_module.add(f.name.clone(), ff, f.p.clone()),
-                                            FnExt::Return(ff) => new_module.add(f.name.clone(), ff, f.p.clone()),
-                                            FnExt::BinOp(ff) => new_module.add_binop(f.name.clone(), ff, f.p.clone()),
-                                            FnExt::UnOp(ff) => new_module.add_unop(f.name.clone(), ff, f.p.clone()),
-                                        }
-                                    }
-                                }
-                                // Register loaded functions from imports.
-                                for f in &m.functions {
-                                    new_module.register(f.clone())
-                                }
-                            }
+                            Some(m) => new_module.import(m),
                             None => return Err(rt.expected_arg(2, x, "[Module]"))
                         }
                     }
