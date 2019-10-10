@@ -5,6 +5,8 @@ use Prelude;
 use Type;
 use ast::UseLookup;
 
+mod refine;
+
 /// Runs type checking.
 ///
 /// The type checking consists of 2 steps:
@@ -17,10 +19,7 @@ use ast::UseLookup;
 /// Step 1 runs as long any type information is propagated in the graph.
 /// It stops when no further type information can be inferred.
 ///
-/// This step is necessary to infer types of expressions, and can be quite complicated.
-/// Instead of picking the next place to check, it simply loops over all nodes
-/// looking for those that have no type information yet.
-/// This is not the fastest algorithm, but easy to reason about.
+/// This step is necessary to infer types of expressions, and can be quite complex.
 ///
 /// When a node gets type information, it will no longer be checked.
 /// Therefore, some nodes might delay setting a type to itself even it is known
@@ -45,16 +44,30 @@ use ast::UseLookup;
 /// The type propagation step uses this assumption without checking the whole `if` expression.
 /// After type propagation, all blocks in the `if` expression should have some type information,
 /// but no further propagation is necessary, so it only need to check for consistency.
-pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> Result<(), Range<String>> {
+pub(crate) fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> Result<(), Range<String>> {
+    use std::collections::HashMap;
+
+    // Keep an extra todo-list for nodes that are affected by type refinement.
+    let mut todo: Vec<usize> = (0..nodes.len()).collect();
+    // Keep an extra delay-errors map for nodes that should not report an error after all,
+    // if the type refined turned out to match.
+    let mut delay_errs: HashMap<usize, Range<String>> = HashMap::new();
     // Type propagation.
     let mut changed;
     loop {
         changed = false;
-        'node: for i in 0..nodes.len() {
-            if nodes[i].ty.is_some() { continue; }
+        // Keep track of the old length of the todo-list,
+        // in order to separate tasks already done from new tasks.
+        let todo_len = todo.len();
+        'node: for i in 0..todo.len() {
+            let i = todo[i];
             let kind = nodes[i].kind;
             let mut this_ty = None;
             match kind {
+                // No further work required for these statements.
+                Kind::Uses |
+                Kind::Start |
+                Kind::End => continue 'node,
                 Kind::Go => {
                     // Infer thread type from function.
                     if !nodes[i].children.is_empty() {
@@ -65,10 +78,15 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
                     }
                 }
                 Kind::Fn => {
+                    if nodes[i].ty.is_some() {
+                        // No further work is required for function.
+                        continue 'node;
+                    }
                     if let Some(ch) = nodes[i].find_child_by_kind(nodes, Kind::Expr) {
                         // If the block is unreachable at the end,
                         // this does not tell anything about the type of the function.
                         if nodes[ch].ty == Some(Type::Unreachable) {
+                            todo.push(i);
                             continue 'node;
                         }
                         // Infer return type from body of function.
@@ -77,16 +95,22 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
                 }
                 Kind::CallArg => {
                     if nodes[i].children.is_empty() || nodes[i].item_ids() {
+                        todo.push(i);
                         continue 'node;
                     }
                     let ch = nodes[i].children[0];
                     let expr_type = nodes[ch].ty.as_ref().map(|ty| nodes[i].inner_type(&ty));
                     if let Some(parent) = nodes[i].parent {
+                        // Remove previous delay errors.
+                        if delay_errs.contains_key(&i) {
+                            delay_errs.remove(&i);
+                        }
+
                         // Take into account swizzling for the declared argument position.
                         let j = {
                             let mut sum = 0;
-                            for &p_ch in &nodes[parent].children {
-                                if p_ch == i { break; }
+                            'inner: for &p_ch in &nodes[parent].children {
+                                if p_ch == i { break 'inner; }
                                 if let Some(sw) = nodes[p_ch]
                                     .find_child_by_kind(nodes, Kind::Swizzle) {
                                     for &sw_ch in &nodes[sw].children {
@@ -125,20 +149,24 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
                             vec![j]
                         };
 
-                        for &j in &js {
+                        'inner2: for &j in &js {
                             if nodes[parent].kind == Kind::CallClosure {
                                 // TODO: Check argument type against closure.
-                                continue;
+                                continue 'inner2;
                             }
                             if let Some(decl) = nodes[parent].declaration {
                                 let arg = nodes[decl].children[j];
                                 match (&expr_type, &nodes[arg].ty) {
                                     (&Some(ref ch_ty), &Some(ref arg_ty)) => {
                                         if !arg_ty.goes_with(ch_ty) {
-                                            return Err(nodes[i].source.wrap(
-                                                format!("Type mismatch (#100):\n\
-                                                    Expected `{}`, found `{}`",
-                                                    arg_ty.description(), ch_ty.description())));
+                                            if !delay_errs.contains_key(&i) {
+                                                delay_errs.insert(i, nodes[i].source.wrap(
+                                                    format!("Type mismatch (#100):\n\
+                                                        Expected `{}`, found `{}`",
+                                                        arg_ty.description(), ch_ty.description())));
+                                            }
+                                            todo.push(i);
+                                            continue 'node;
                                         }
                                     }
                                     (&None, _) | (_, &None) => {}
@@ -152,11 +180,15 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
                                     let f = &prelude.list[f];
                                     if let Some(ref ty) = expr_type {
                                         if !f.tys[j].goes_with(ty) {
-                                            return Err(nodes[i].source.wrap(
-                                                format!("Type mismatch (#150):\n\
-                                                    Expected `{}`, found `{}`",
-                                                    f.tys[j].description(), ty.description())
-                                            ))
+                                            if !delay_errs.contains_key(&i) {
+                                                delay_errs.insert(i, nodes[i].source.wrap(
+                                                    format!("Type mismatch (#150):\n\
+                                                        Expected `{}`, found `{}`",
+                                                        f.tys[j].description(), ty.description())
+                                                ));
+                                            }
+                                            todo.push(i);
+                                            continue 'node;
                                         }
                                     }
                                 }
@@ -165,11 +197,15 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
                                 let f = &prelude.list[f];
                                 if let Some(ref ty) = expr_type {
                                     if !f.tys[j].goes_with(ty) {
-                                        return Err(nodes[i].source.wrap(
-                                            format!("Type mismatch (#200):\n\
-                                                Expected `{}`, found `{}`",
-                                                f.tys[j].description(), ty.description())
-                                        ))
+                                        if !delay_errs.contains_key(&i) {
+                                            delay_errs.insert(i, nodes[i].source.wrap(
+                                                format!("Type mismatch (#200):\n\
+                                                    Expected `{}`, found `{}`",
+                                                    f.tys[j].description(), ty.description())
+                                            ));
+                                        }
+                                        todo.push(i);
+                                        continue 'node;
                                     }
                                 }
                             }
@@ -179,8 +215,13 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
                 }
                 Kind::Call => {
                     if let Some(decl) = nodes[i].declaration {
-                        if let Some(ref ty) = nodes[decl].ty {
-                            this_ty = Some(ty.clone());
+                        refine::declaration(i, decl, nodes, &mut todo, &mut this_ty)?;
+
+                        // If the type has not been refined, fall back to default type signature.
+                        if this_ty.is_none() && nodes[i].ty.is_none() {
+                            if let Some(ref ty) = nodes[decl].ty {
+                                this_ty = Some(ty.clone());
+                            }
                         }
                     } else if let Some(ref alias) = nodes[i].alias {
                         use ast::FnAlias;
@@ -188,29 +229,47 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
                         // External functions are treated as loaded in prelude.
                         if let Some(&FnAlias::Loaded(f)) = use_lookup.aliases.get(alias)
                         .and_then(|map| map.get(nodes[i].name().unwrap())) {
-                            this_ty = Some(prelude.list[f].ret.clone());
+                            let f = &prelude.list[f];
+                            if f.ext.len() == 0 {
+                                this_ty = Some(f.ret.clone());
+                            } else {
+                                refine::prelude(i, f, nodes, &mut todo, &mut this_ty)?;
+
+                                // If the type has not been refined, fall back to default type signature.
+                                if this_ty.is_none() && nodes[i].ty.is_none() {
+                                    this_ty = Some(f.ret.clone());
+                                }
+                            }
                         }
                     } else if let Some(&f) = prelude.functions.get(nodes[i].name().unwrap()) {
-                        this_ty = Some(prelude.list[f].ret.clone());
+                        let f = &prelude.list[f];
+                        if f.ext.len() == 0 {
+                            this_ty = Some(f.ret.clone());
+                        } else {
+                            refine::prelude(i, f, nodes, &mut todo, &mut this_ty)?;
+
+                            // If the type has not been refined, fall back to default type signature.
+                            if this_ty.is_none() && nodes[i].ty.is_none() {
+                                this_ty = Some(f.ret.clone());
+                            }
+                        }
                     }
                 }
                 Kind::CallClosure => {
                     if let Some(item) = nodes[i].find_child_by_kind(nodes, Kind::Item) {
-                        if nodes[item].item_ids() { continue 'node; }
+                        if nodes[item].item_ids() {
+                            todo.push(i);
+                            continue 'node;
+                        }
                         if let Some(decl) = nodes[item].declaration {
                             if let Some(ref ty) = nodes[decl].ty {
-                                match *ty {
-                                    Type::Closure(ref ty) => {
-                                        this_ty = Some(ty.ret.clone());
-                                    }
-                                    Type::Any => {
-                                        this_ty = Some(Type::Any);
-                                    }
-                                    _ => return Err(nodes[item].source.wrap(
+                                if let Some(ty) = ty.closure_ret_ty() {
+                                    this_ty = Some(ty);
+                                } else {
+                                    return Err(nodes[item].source.wrap(
                                             format!("Type mismatch (#250):\n\
                                                 Expected `closure`, found `{}`",
-                                                ty.description()),
-                                    ))
+                                                ty.description())))
                                 }
                             }
                         }
@@ -218,26 +277,64 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
                 }
                 Kind::Assign => {
                     let left = match nodes[i].find_child_by_kind(nodes, Kind::Left) {
-                        None => continue,
+                        None => {
+                            todo.push(i);
+                            continue 'node;
+                        }
                         Some(x) => x
                     };
                     let right = match nodes[i].find_child_by_kind(nodes, Kind::Right) {
-                        None => continue,
+                        None => {
+                            todo.push(i);
+                            continue 'node;
+                        }
                         Some(x) => x
                     };
-                    if nodes[right].item_ids() { continue 'node; }
+                    if nodes[right].item_ids() {
+                        todo.push(i);
+                        continue 'node;
+                    }
                     nodes[left].ty = match (&nodes[left].ty, &nodes[right].ty) {
                         (&None, &Some(ref right_ty)) => {
                             // Make assign return void since there is no more need for checking.
                             this_ty = Some(Type::Void);
                             Some(right_ty.clone())
                         }
-                        _ => { continue }
+                        (&Some(ref left_ty), &Some(ref right_ty)) => {
+                            if right_ty.goes_with(left_ty) {
+                                if !nodes[left].children.is_empty() {
+                                    // Tell the item that it needs refinement.
+                                    let it = nodes[left].children[0];
+                                    todo.push(it);
+                                    // Tell all nodes that uses the item as declaration that
+                                    // they need refinement.
+                                    for j in it+1..nodes.len() {
+                                        if let Some(decl) = nodes[j].declaration {
+                                            if decl == it {todo.push(j)}
+                                        }
+                                    }
+                                }
+                                this_ty = Some(Type::Void);
+                                Some(right_ty.clone())
+                            } else {
+                                // TODO: Type conflict between left and refined right.
+                                //       Might be caught by later rules.
+                                todo.push(i);
+                                continue 'node;
+                            }
+                        }
+                        _ => {
+                            todo.push(i);
+                            continue 'node;
+                        }
                     };
                     changed = true;
                 }
                 Kind::Item => {
-                    if nodes[i].item_ids() { continue 'node; }
+                    if nodes[i].item_ids() {
+                        todo.push(i);
+                        continue 'node;
+                    }
                     if let Some(decl) = nodes[i].declaration {
                         match nodes[decl].kind {
                             Kind::Sum | Kind::Min | Kind::Max |
@@ -281,15 +378,22 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
                     }
                 }
                 Kind::Return | Kind::Val | Kind::Expr | Kind::Cond |
-                Kind::Exp | Kind::Base | Kind::Left | Kind::Right |
-                Kind::ElseIfCond | Kind::UnOp | Kind::Grab
+                Kind::Left | Kind::Right |
+                Kind::ElseIfCond | Kind::Grab | Kind::Add | Kind::Mul | Kind::Pow
                  => {
-                     // TODO: Report error for expected unary operator.
-                    if nodes[i].children.is_empty() { continue 'node; }
+                    if nodes[i].children.is_empty() {
+                        // No further work is required.
+                        continue 'node;
+                    }
                     let ch = nodes[i].children[0];
-                    if nodes[ch].item_ids() { continue 'node; }
+                    if nodes[ch].item_ids() {
+                        todo.push(i);
+                        continue 'node;}
                     let ty = match nodes[ch].ty {
-                        None => continue 'node,
+                        None => {
+                            todo.push(i);
+                            continue 'node
+                        }
                         Some(ref ty) => ty.clone()
                     };
                     if nodes[i].kind == Kind::Grab && ty == Type::Void {
@@ -328,95 +432,16 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
                         this_ty = Some(nodes[i].inner_type(&ty));
                     }
                 }
-                Kind::Add => {
-                    // Require type to be inferred from all children.
-                    let mut it_ty: Option<Type> = None;
-                    for &ch in &nodes[i].children {
-                        if nodes[ch].item_ids() { continue 'node; }
-                        if let Some(ref ty) = nodes[ch].ty {
-                            it_ty = if let Some(ref it) = it_ty {
-                                match it.add(ty) {
-                                    None => return Err(nodes[ch].source.wrap(
-                                        format!("Type mismatch (#400):\n\
-                                            Binary operator can not be used with `{}` and `{}`",
-                                            it.description(), ty.description()))),
-                                    x => x
-                                }
-                            } else {
-                                Some(ty.clone())
-                            }
-                        } else {
-                            continue 'node;
-                        }
-                    }
-                    this_ty = it_ty;
-                }
-                Kind::Mul => {
-                    if nodes[i].binops.len() + 1 != nodes[i].children.len() {
-                        return Err(nodes[i].source.wrap(
-                            "Type mismatch (#450):\n\
-                            Missing binary operator for node when converting meta data".to_string()
-                        ))
-                    }
-
-                    // Require type to be inferred from all children.
-                    let mut bin_ind = 0;
-                    let mut it_ty: Option<Type> = None;
-                    for &ch in &nodes[i].children {
-                        if nodes[ch].item_ids() { continue 'node; }
-                        if let Some(ref ty) = nodes[ch].ty {
-                            it_ty = if let Some(ref it) = it_ty {
-                                match it.mul(ty, nodes[i].binops[bin_ind]) {
-                                    None => return Err(nodes[ch].source.wrap(
-                                        format!("Type mismatch (#500):\n\
-                                            Binary operator can not be used with `{}` and `{}`",
-                                            it.description(), ty.description()))),
-                                    x => {
-                                        bin_ind += 1;
-                                        x
-                                    }
-                                }
-                            } else {
-                                Some(ty.clone())
-                            }
-                        } else {
-                            continue 'node;
-                        }
-                    }
-                    this_ty = it_ty;
-                }
-                Kind::Pow => {
-                    let base = match nodes[i].find_child_by_kind(nodes, Kind::Base) {
-                        None => continue 'node,
-                        Some(x) => x
-                    };
-                    let exp = match nodes[i].find_child_by_kind(nodes, Kind::Exp) {
-                        None => continue 'node,
-                        Some(x) => x
-                    };
-                    if nodes[base].item_ids() || nodes[exp].item_ids() {
-                        continue 'node;
-                    }
-                    if let Some(ref base_ty) = nodes[base].ty {
-                        if let Some(ref exp_ty) = nodes[exp].ty {
-                            if let Some(ty) = base_ty.pow(exp_ty) {
-                                this_ty = Some(ty);
-                            } else {
-                                return Err(nodes[i].source.wrap(
-                                    format!("Type mismatch (#600):\n\
-                                        Binary operator can not be used \
-                                             with `{}` and `{}`", base_ty.description(),
-                                             exp_ty.description())));
-                            }
-                        }
-                    }
-                }
                 Kind::Compare => {
                     let left = match nodes[i].find_child_by_kind(nodes, Kind::Left) {
-                        None => continue 'node,
+                        None => {
+                            todo.push(i);
+                            continue 'node;
+                        }
                         Some(x) => x
                     };
                     if nodes[left].item_ids() {
+                        todo.push(i);
                         continue 'node;
                     }
                     match nodes[left].ty {
@@ -437,7 +462,10 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
                         this_ty = Some(Type::Void);
                     }
                     if let Some(&ch) = nodes[i].children.last() {
-                        if nodes[ch].item_ids() { continue 'node; }
+                        if nodes[ch].item_ids() {
+                            todo.push(i);
+                            continue 'node;
+                        }
                         if let Some(ref ty) = nodes[ch].ty {
                             this_ty = Some(nodes[i].inner_type(ty));
                         }
@@ -448,16 +476,23 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
                     let ch = if let Some(ch) = nodes[i].find_child_by_kind(nodes, Kind::Block) {
                         ch
                     } else {
+                        todo.push(i);
                         continue 'node;
                     };
                     if let Some(ref ty) = nodes[ch].ty {
                         this_ty = Some(Type::Array(Box::new(ty.clone())));
                     }
                 }
-                Kind::X | Kind::Y | Kind::Z | Kind::W => {
-                    if nodes[i].children.is_empty() { continue 'node; }
+                Kind::X | Kind::Y | Kind::Z | Kind::W | Kind::N => {
+                    if nodes[i].children.is_empty() {
+                        todo.push(i);
+                        continue 'node;
+                    }
                     let ch = nodes[i].children[0];
-                    if nodes[ch].item_ids() { continue 'node; }
+                    if nodes[ch].item_ids() {
+                        todo.push(i);
+                        continue 'node;
+                    }
 
                     let expr_type = nodes[ch].ty.as_ref().map(|ty| nodes[i].inner_type(&ty));
                     if let Some(ref ty) = expr_type {
@@ -471,19 +506,30 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
                 }
                 Kind::If => {
                     let tb = match nodes[i].find_child_by_kind(nodes, Kind::TrueBlock) {
-                        None => continue 'node,
+                        None => {
+                            todo.push(i);
+                            continue 'node;
+                        }
                         Some(tb) => tb
                     };
                     let true_type = match nodes[tb].ty.as_ref()
                         .map(|ty| nodes[i].inner_type(&ty)) {
-                            None => continue 'node,
+                            None => {
+                                todo.push(i);
+                                continue 'node;
+                            }
                             Some(true_type) => true_type
                         };
 
                     this_ty = Some(true_type);
                 }
                 Kind::Arg => {
-                    this_ty = Some(Type::Any);
+                    if nodes[i].ty.is_none() {
+                        this_ty = Some(Type::Any);
+                    } else {
+                        // No further work needed for this node.
+                        continue 'node;
+                    }
                 }
                 Kind::Closure => {
                     let mut lts = vec![];
@@ -512,18 +558,51 @@ pub fn run(nodes: &mut Vec<Node>, prelude: &Prelude, use_lookup: &UseLookup) -> 
                         this_ty = Some(Type::Closure(Box::new(Dfn {
                             lts,
                             tys,
-                            ret: ret.unwrap()
+                            ret: ret.unwrap(),
+                            ext: vec![],
+                            lazy: crate::LAZY_NO,
                         })));
                     }
                 }
                 _ => {}
             }
             if this_ty.is_some() {
+                if let (&Some(ref old_ty), &Some(ref new_ty)) =
+                    (&nodes[i].ty, &this_ty) {
+                    if old_ty != new_ty {
+                        // If type was refined, propagate changes to parent.
+                        if let Some(parent) = nodes[i].parent {
+                            // If the type of the parent is not set,
+                            // then there is no need to add it to the todo-list,
+                            // since it will be covered by the default loop.
+                            if nodes[parent].ty.is_some() {
+                                todo.push(parent);
+                            }
+                        }
+                    }
+                }
                 nodes[i].ty = this_ty;
                 changed = true;
+            } else {
+                todo.push(i);
             }
         }
+
+        // Remove old tasks.
+        for i in (0..todo_len).rev() {todo.swap_remove(i);}
+        // There must be a change to continue checking,
+        // even with type refinement, because the todo-list
+        // waits for other changes to happen.
         if !changed { break; }
+
+        // Prepare todo-list for binary search.
+        todo.sort();
+        todo.dedup();
+    }
+
+    // Report one delayed error, if any.
+    if delay_errs.len() > 0 {
+        return Err(delay_errs.values().next().unwrap().clone())
     }
 
     // After type propagation.

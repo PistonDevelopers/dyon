@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use ast;
 use Module;
 use Type;
+use Lazy;
 
 /// Argument lifetime constraint.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -32,15 +33,23 @@ pub struct Dfn {
     pub tys: Vec<Type>,
     /// Return type of function.
     pub ret: Type,
+    /// Extra type information.
+    ///
+    /// Stores type variables, argument types, return type.
+    pub ext: Vec<(Vec<Arc<String>>, Vec<Type>, Type)>,
+    /// Stores lazy invariants.
+    pub lazy: &'static [&'static [Lazy]],
 }
 
 impl Dfn {
-    /// Creates a new function signature with no lifetime.
+    /// Creates a new function signature with no lifetime or refinement.
     pub fn nl(args: Vec<Type>, ret: Type) -> Dfn {
         Dfn {
             lts: vec![Lt::Default; args.len()],
             tys: args,
-            ret
+            ret,
+            ext: vec![],
+            lazy: crate::LAZY_NO,
         }
     }
 
@@ -70,6 +79,8 @@ impl Dfn {
             lts,
             tys,
             ret: f.ret.clone(),
+            ext: vec![],
+            lazy: crate::LAZY_NO,
         }
     }
 

@@ -1,0 +1,12 @@
+// Use `any` implicitly.
+fn foo(x) -> {return x + 1}
+// Add simple refinement types to catch more errors.
+(f64) -> f64
+(vec4) -> vec4
+
+bar(x: f64) = x + 1
+
+fn main() {
+    x := bar(foo((1, 2)))
+    println(x)
+}

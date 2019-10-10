@@ -1,0 +1,10 @@
+fn check(_: thr[f64]) {}
+
+fn do_something() -> bool {return true}
+fn foo() -> thr[any] {return go do_something()}
+fn bar(a) -> {return clone(a)}
+(thr[bool]) -> thr[bool]
+
+fn main() {
+    check(bar(foo()))
+}

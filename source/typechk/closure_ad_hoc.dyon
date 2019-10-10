@@ -1,0 +1,5 @@
+fn foo() -> Foo \() -> bool {return \() = true}
+fn main() {
+    a := foo()
+    println(\a())
+}

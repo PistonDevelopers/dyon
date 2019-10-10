@@ -17,12 +17,21 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\\"
     ["fn" .w! .."("!:"name" ?w "(" ?w args ?w ")" ?w ?currents ?w {
             ["->":"returns" ?w ?type:"ret_type"]
             !"->":!"returns"
-        } ?w block:"block"]
+        } ?w block:"block" ?.l([?w ty:"ty" ?w])]
     [.."("!:"name" ?w "(" ?w args ?w ")" ?w ?currents ?w "=" ?w expr:"expr"]
 }
+4 ty = {
+  ty_var
+  ["(" ?w .s?.(, type:"ty_arg") ?w ")" .w? "->" ?w type:"ty_ret"]
+}
+5 ty_var = ["all" ?w .s?.(, .._seps!:"ty_var") ?w "{" ?w ty ?w "}"]
 4 args = .s?.(, arg:"arg")
 5 arg = [?"mut":"mut" ?w .._seps!:"name" ?[?w ":" ?w
-         ?["'" ?w .._seps!:"lifetime"] ?w ?type:"type"]]
+         ?["'" ?w .._seps!:"lifetime"] ?w ?type:"type"]
+         ?[?w "=>" ?w .s!.([?w "|" ?w] {
+            "ok(_)":"ok(_)" "err(_)":"err(_)" "some(_)":"some(_)" lazy:"grab"})]]
+// Fake grab expression to reuse code for lazy invariants.
+5 lazy = expr:"expr"
 6 imm_arg = [!"mut " .._seps!:"name" ?[?w ":" ?w !"'" ?type:"type"]]
 7 closure = ["\\(" ?w .s?.(, imm_arg:"arg") ?w ")" ?w ?currents
              ?w "=" ?w expr:"expr"]
@@ -97,8 +106,8 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\\"
                ?[, arg_expr:"z" ?[, arg_expr:"w"]] ?,]
 26 text = .t?:"text"
 27 bool = [{"true":"bool" "false":!"bool"} !.._seps!]
-28 unop_not = [{"!":"!" "¬":"!"} ?w lexpr:"expr"]
-29 unop_neg = ["-":"-" ?w mul_expr:"expr"]
+28 unop_not = [{"!" "¬"} ?w lexpr:"expr"]
+29 unop_neg = ["-" ?w mul_expr:"expr"]
 30 norm = ["|" ?w expr:"expr" ?w "|"]
 31 item = [?"~":"current" ?w .._seps!:"name" ?[wn "?":"try_item"]
     ?item_extra:"item_extra"]
@@ -137,7 +146,7 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\\"
 49 assign_op = {
   ":=":":=" "=":"=" "+=":"+=" "-=":"-=" "*=":"*=" "/=":"/=" "%=":"%=" "^=":"^="
 }
-50 compare = [lexpr:"left" wn compare_op ?w expr:"right"]
+50 compare = [lexpr:"expr" wn compare_op ?w expr:"expr"]
 51 compare_op = {"==":"==" "!=":"!=" "¬=":"!=" "<=":"<=" "<":"<" ">=":">=" ">":">"}
 52 grab = ["grab" ?[w "'" .$:"grab_level"] w expr:"expr"]
 53 try_expr = ["try" w expr:"expr"]
@@ -154,7 +163,7 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\\"
 64 , = [?w "," ?w]
 65 arr = {array:"array" array_fill:"array_fill"}
 66 items = {mat4:"mat4" vec4:"vec4" link:"link" grab:"grab" try_expr:"try_expr"
-            ["(" ?w expr ?w ")"] unop_not:"unop" norm:"norm"
+            ["(" ?w expr ?w ")"] unop_not:"not" norm:"norm"
             text go:"go"
             call_closure:"call_closure" named_call_closure:"named_call_closure"
             call:"call" named_call:"named_call"
@@ -213,7 +222,7 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\\"
     ["in" ?w "[" ?w type:"in" ?w "]"]
     "in":"in_any"
     closure_type:"closure_type"
-    [.._seps!:"ad_hoc" ?[?w type:"ad_hoc_ty"]]
+    [!"sec" .._seps!:"ad_hoc" ?[?w type:"ad_hoc_ty"]]
 }
 101 closure_type = ["\\(" ?w .s?.(, type:"cl_arg") ?w ")"
     ?w "->" ?w type:"cl_ret"]
@@ -229,8 +238,8 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\\"
 } ?w]
 203 / = [wn "/":"/" !"/" ?w]
 204 % = [wn "%":"%" ?w]
-205 pow = [lexpr:"base" wn {"^" "⊻" ["xor" w]} ?w lexpr:"exp"]
-206 mul = .s!({* / %} {unop_neg:"unop" pow:"pow" lexpr:"val"})
+205 pow = [lexpr:"expr" wn {"^":"^" "⊻":"^" ["xor":"^" w]} ?w lexpr:"expr"]
+206 mul = .s!({* / %} {unop_neg:"neg" pow:"pow" lexpr:"expr"})
 207 mul_expr = {mul:"mul"}
 208 add = .s!({+ -} mul_expr:"expr")
 

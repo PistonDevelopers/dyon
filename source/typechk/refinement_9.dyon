@@ -1,0 +1,11 @@
+fn check_f64(_: f64) {}
+fn foo(a) -> {return clone(a)}
+([f64]) -> [f64]
+fn bar(a: [f64]) -> [] {return clone(a)}
+
+fn main() {
+    // `bar` returns an ambiguous array type `[]`,
+    // so `foo` should not refine the type,
+    // which should make `check_f64` not detect a type error.
+    check_f64(foo(bar([1, 2, 3])))
+}

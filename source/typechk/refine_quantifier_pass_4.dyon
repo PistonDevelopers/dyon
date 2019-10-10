@@ -1,0 +1,15 @@
+fn km(a: any) -> km any {return clone(a)}
+    (vec4) -> km vec4
+    (f64) -> km f64
+fn m(a: any) -> m any {return clone(a)}
+    (vec4) -> m vec4
+    (f64) -> m f64
+fn foo(a: any, b: any) -> any {return a + b}
+    all T { (T vec4, T vec4) -> T vec4 }
+    all T { (T vec4, T f64) -> T vec4 }
+
+fn check_m(a: m vec4) {}
+
+fn main() {
+    check_m(foo(m((2, 0)), m(2)))
+}

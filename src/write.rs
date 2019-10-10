@@ -4,6 +4,8 @@ use ast;
 use Runtime;
 use Variable;
 
+use std::sync::Arc;
+
 #[derive(Copy, Clone)]
 pub(crate) enum EscapeString {
     Json,
@@ -88,7 +90,7 @@ pub(crate) fn write_variable<W>(
             write!(w, "{{")?;
             let n = obj.len();
             for (i, (k, v)) in obj.iter().enumerate() {
-                if k.chars().all(|c| c.is_alphanumeric()) {
+                if k.chars().all(|c| c.is_alphanumeric() || c == '_') {
                     write!(w, "{}: ", k)?;
                 } else {
                     json::write_string(w, &k)?;
@@ -194,7 +196,6 @@ fn write_expr<W: io::Write>(
     use ast::Expression as E;
 
     match *expr {
-        E::BinOp(ref binop) => write_binop(w, rt, binop, tabs)?,
         E::Item(ref item) => write_item(w, rt, item, tabs)?,
         E::Variable(ref range_var) =>
             write_variable(w, rt, &range_var.1, EscapeString::Json, tabs)?,
@@ -202,13 +203,14 @@ fn write_expr<W: io::Write>(
         E::Object(ref obj) => write_obj(w, rt, obj, tabs)?,
         E::Array(ref arr) => write_arr(w, rt, arr, tabs)?,
         E::ArrayFill(ref arr_fill) => write_arr_fill(w, rt, arr_fill, tabs)?,
-        E::Call(ref call) => {
-            if &**call.name == "norm" && call.args.len() == 1 {
-                write_norm(w, rt, &call.args[0], tabs)?
-            } else {
-                write_call(w, rt, call, tabs)?
-            }
-        }
+        E::Call(ref call) => write_call(w, rt, &call.info.name, &call.args, tabs)?,
+        E::CallVoid(ref call) => write_call(w, rt, &call.info.name, &call.args, tabs)?,
+        E::CallReturn(ref call) => write_call(w, rt, &call.info.name, &call.args, tabs)?,
+        E::CallBinOp(ref call) => write_call(w, rt, &call.info.name,
+                                             &[call.left.clone(), call.right.clone()], tabs)?,
+        E::CallUnOp(ref call) => write_call(w, rt, &call.info.name, &[call.arg.clone()], tabs)?,
+        E::CallLazy(ref call) => write_call(w, rt, &call.info.name, &call.args, tabs)?,
+        E::CallLoaded(ref call) => write_call(w, rt, &call.info.name, &call.args, tabs)?,
         E::Return(ref expr) => {
             write!(w, "return ")?;
             write_expr(w, rt, expr, tabs)?;
@@ -231,13 +233,12 @@ fn write_expr<W: io::Write>(
         E::Block(ref b) => write_block(w, rt, b, tabs)?,
         E::Go(ref go) => {
             write!(w, "go ")?;
-            write_call(w, rt, &go.call, tabs)?;
+            write_call(w, rt, &go.call.info.name, &go.call.args, tabs)?;
         }
         E::Assign(ref assign) => write_assign(w, rt, assign, tabs)?,
         E::Vec4(ref vec4) => write_vec4(w, rt, vec4, tabs)?,
         E::Mat4(ref mat4) => write_mat4(w, rt, mat4, tabs)?,
         E::For(ref f) => write_for(w, rt, f, tabs)?,
-        E::Compare(ref comp) => write_compare(w, rt, comp, tabs)?,
         E::ForN(ref for_n) => {
             write!(w, "for ")?;
             write_for_n(w, rt, for_n, tabs)?;
@@ -319,7 +320,6 @@ fn write_expr<W: io::Write>(
             write_for_in(w, rt, for_in, tabs)?;
         }
         E::If(ref if_expr) => write_if(w, rt, if_expr, tabs)?,
-        E::UnOp(ref unop) => write_unop(w, rt, unop, tabs)?,
         E::Try(ref expr) => {
             write_expr(w, rt, expr, tabs)?;
             write!(w, "?")?;
@@ -382,16 +382,19 @@ fn binop_needs_parens(op: ast::BinOp, expr: &ast::Expression, right: bool) -> bo
     use ast::Expression as E;
 
     match *expr {
-        E::Compare(_) => true,
-        E::BinOp(ref binop) => {
-            match (op.precedence(), binop.op.precedence()) {
-                (3, _) => true,
-                (2, 1) => true,
-                (2, 2) if right => true,
-                (1, 1) if right => true,
-                _ => false
-            }
+        E::Call(ref call) => {
+            if let Some(binop_op) = standard_binop(&call.info.name, &call.args) {
+                match (op.precedence(), binop_op.precedence()) {
+                    (ast::BINOP_PREC_POW, _) => true,
+                    (ast::BINOP_PREC_MUL, ast::BINOP_PREC_ADD) => true,
+                    (ast::BINOP_PREC_MUL, ast::BINOP_PREC_MUL) if right => true,
+                    (ast::BINOP_PREC_ADD, ast::BINOP_PREC_ADD) if right => true,
+                    _ => false
+                    // TODO: Handle precedence for comparison operators.
+                }
+            } else {false}
         }
+        // TODO: Handle `E::CallVoid` etc.
         _ => false
     }
 }
@@ -399,49 +402,50 @@ fn binop_needs_parens(op: ast::BinOp, expr: &ast::Expression, right: bool) -> bo
 fn write_binop<W: io::Write>(
     w: &mut W,
     rt: &Runtime,
-    binop: &ast::BinOpExpression,
+    op: ast::BinOp,
+    left: &ast::Expression,
+    right: &ast::Expression,
     tabs: u32,
 ) -> Result<(), io::Error> {
-    let left_needs_parens = binop_needs_parens(binop.op, &binop.left, false);
-    let right_needs_parens = binop_needs_parens(binop.op, &binop.right, true);
+    let left_needs_parens = binop_needs_parens(op, left, false);
+    let right_needs_parens = binop_needs_parens(op, right, true);
 
     if left_needs_parens {
         write!(w, "(")?;
     }
-    write_expr(w, rt, &binop.left, tabs)?;
+    write_expr(w, rt, left, tabs)?;
     if left_needs_parens {
         write!(w, ")")?;
     }
-    write!(w, " {} ", binop.op.symbol())?;
+    write!(w, " {} ", op.symbol())?;
     if right_needs_parens {
         write!(w, "(")?;
     }
-    write_expr(w, rt, &binop.right, tabs)?;
+    write_expr(w, rt, right, tabs)?;
     if right_needs_parens {
         write!(w, ")")?;
     }
     Ok(())
 }
 
-fn write_unop<W: io::Write>(
+fn write_not<W: io::Write>(
     w: &mut W,
     rt: &Runtime,
-    unop: &ast::UnOpExpression,
+    expr: &ast::Expression,
     tabs: u32,
 ) -> Result<(), io::Error> {
-    use ast::UnOp::*;
+    write!(w, "!")?;
+    write_expr(w, rt, &expr, tabs)
+}
 
-    match unop.op {
-        Not => {
-            write!(w, "!")?;
-            write_expr(w, rt, &unop.expr, tabs)?;
-        }
-        Neg => {
-            write!(w, "-")?;
-            write_expr(w, rt, &unop.expr, tabs)?;
-        }
-    }
-    Ok(())
+fn write_neg<W: io::Write>(
+    w: &mut W,
+    rt: &Runtime,
+    expr: &ast::Expression,
+    tabs: u32,
+) -> Result<(), io::Error> {
+    write!(w, "-")?;
+    write_expr(w, rt, &expr, tabs)
 }
 
 fn write_item<W: io::Write>(
@@ -514,18 +518,29 @@ fn write_obj<W: io::Write>(
 fn write_call<W: io::Write>(
     w: &mut W,
     rt: &Runtime,
-    call: &ast::Call,
+    name: &Arc<String>,
+    args: &[ast::Expression],
     tabs: u32,
 ) -> Result<(), io::Error> {
-    write!(w, "{}(", call.name)?;
-    for (i, arg) in call.args.iter().enumerate() {
-        write_expr(w, rt, arg, tabs)?;
-        if i + 1 < call.args.len() {
-            write!(w, ", ")?;
+    if &**name == "norm" && args.len() == 1 {
+        write_norm(w, rt, &args[0], tabs)
+    } else if &**name == "not" && args.len() == 1 {
+        write_not(w, rt, &args[0], tabs)
+    } else if &**name == "neg" && args.len() == 1 {
+        write_neg(w, rt, &args[0], tabs)
+    } else if let Some(op) = standard_binop(name, args) {
+        write_binop(w, rt, op, &args[0], &args[1], tabs)
+    } else {
+        write!(w, "{}(", name)?;
+        for (i, arg) in args.iter().enumerate() {
+            write_expr(w, rt, arg, tabs)?;
+            if i + 1 < args.len() {
+                write!(w, ", ")?;
+            }
         }
+        write!(w, ")")?;
+        Ok(())
     }
-    write!(w, ")")?;
-    Ok(())
 }
 
 fn write_call_closure<W: io::Write>(
@@ -706,40 +721,31 @@ fn write_for<W: io::Write>(
     Ok(())
 }
 
-fn compare_needs_parent(expr: &ast::Expression) -> bool {
-    use ast::Expression as E;
+fn standard_binop(name: &Arc<String>, args: &[ast::Expression]) -> Option<ast::BinOp> {
+    use ast::BinOp::*;
 
-    match *expr {
-        E::BinOp(_) => true,
-        _ => false
-    }
-}
+    if args.len() != 2 {return None};
 
-fn write_compare<W: io::Write>(
-    w: &mut W,
-    rt: &Runtime,
-    comp: &ast::Compare,
-    tabs: u32,
-) -> Result<(), io::Error> {
-    let left_needs_parens = compare_needs_parent(&comp.left);
-    let right_needs_parens = compare_needs_parent(&comp.right);
-
-    if left_needs_parens {
-        write!(w, "(")?;
-    }
-    write_expr(w, rt, &comp.left, tabs)?;
-    if left_needs_parens {
-        write!(w, ")")?;
-    }
-    write!(w, " {} ", comp.op.symbol())?;
-    if right_needs_parens {
-        write!(w, "(")?;
-    }
-    write_expr(w, rt, &comp.right, tabs)?;
-    if right_needs_parens {
-        write!(w, ")")?;
-    }
-    Ok(())
+    let name: &str = &**name;
+    Some(match name {
+        "dot" => Dot,
+        "cross" => Cross,
+        "add" => Add,
+        "sub" => Sub,
+        "mul" => Mul,
+        "div" => Div,
+        "rem" => Rem,
+        "pow" => Pow,
+        "and_also" => AndAlso,
+        "or_else" => OrElse,
+        "less" => Less,
+        "less_or_equal" => LessOrEqual,
+        "greater" => Greater,
+        "greater_or_equal" => GreaterOrEqual,
+        "equal" => Equal,
+        "not_equal" => NotEqual,
+        _ => return None
+    })
 }
 
 fn write_for_n<W: io::Write>(

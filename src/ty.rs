@@ -3,7 +3,6 @@ use std::sync::Arc;
 use piston_meta::bootstrap::Convert;
 use range::Range;
 use Dfn;
-use ast::BinOp;
 
 /// Stores a Dyon type.
 #[derive(Debug, Clone, PartialEq)]
@@ -47,6 +46,17 @@ pub enum Type {
 }
 
 impl Type {
+    /// Returns an extension quantified over ad-hoc types.
+    ///
+    /// For example, `(vec4, vec4) -> vec4` becomes `all T { (T vec4, T vec4) -> T vec4 }`.
+    pub fn all_ext(args: Vec<Type>, ret: Type) -> (Vec<Arc<String>>, Vec<Type>, Type) {
+        use crate::T;
+        use Type::AdHoc;
+
+        (vec![T.clone()], args.into_iter().map(|arg| AdHoc(T.clone(), Box::new(arg))).collect(),
+         AdHoc(T.clone(), Box::new(ret)))
+    }
+
     /// Returns description of the type.
     pub fn description(&self) -> String {
         use Type::*;
@@ -156,6 +166,129 @@ impl Type {
     /// Returns an in-type with an `any` as inner type.
     pub fn in_ty() -> Type {Type::In(Box::new(Type::Any))}
 
+    /// Binds refinement type variables.
+    ///
+    /// Returns the type argument to compare to.
+    pub fn bind_ty_vars(
+        &self,
+        refine: &Type,
+        names: &[Arc<String>],
+        ty_vars: &mut Vec<Option<Arc<String>>>
+    ) -> Result<Type, String> {
+        if names.len() == 0 {return Ok(self.clone())};
+        match (self, refine) {
+            (&Type::AdHoc(ref a_name, ref a_inner_ty),
+             &Type::AdHoc(ref b_name, ref b_inner_ty)) => {
+                for i in 0..names.len() {
+                    if a_name == &names[i] {
+                        let new_inner = a_inner_ty.bind_ty_vars(b_inner_ty, names, ty_vars)?;
+                        if let Some(ref existing_name) = ty_vars[i] {
+                            if existing_name != b_name &&
+                               new_inner.goes_with(b_inner_ty) &&
+                               !new_inner.ambiguous(b_inner_ty)
+                             {
+                                return Err(format!("Type mismatch (#1500): Expected `{}`, found `{}`",
+                                                   existing_name, b_name))
+                            } else {
+                                return Ok(Type::AdHoc(existing_name.clone(),
+                                          Box::new(new_inner)))
+                            }
+                        } else {
+                            ty_vars[i] = Some(b_name.clone());
+                            return Ok(Type::AdHoc(b_name.clone(),
+                                      Box::new(a_inner_ty.bind_ty_vars(b_inner_ty, names, ty_vars)?)))
+                        }
+                    }
+                }
+                Ok(Type::AdHoc(a_name.clone(),
+                   Box::new(a_inner_ty.bind_ty_vars(b_inner_ty, names, ty_vars)?)))
+            }
+            (&Type::AdHoc(ref a_name, ref a_inner_ty), ref b) => {
+                for i in 0..names.len() {
+                    if a_name == &names[i] {
+                        let new_inner = a_inner_ty.bind_ty_vars(refine, names, ty_vars)?;
+                        if let Some(ref n) = ty_vars[i] {
+                            if new_inner.goes_with(b) && !new_inner.ambiguous(b) {
+                                return Err(format!(
+                                "Type mismatch (#1600): Expected `{}`, found no ad-hoc type", n))
+                            }
+                        } else {break}
+                    }
+                }
+                a_inner_ty.bind_ty_vars(refine, names, ty_vars)
+            }
+            _ => Ok(self.clone())
+        }
+    }
+
+    /// Inserts variable name, replacing ad-hoc type name.
+    pub fn insert_var(&mut self, name: &Arc<String>, val: &Arc<String>) {
+        match *self {
+            Type::AdHoc(ref mut n, ref mut inner_ty) => {
+                if n == name {
+                    *n = val.clone();
+                }
+                inner_ty.insert_var(name, val)
+            }
+            _ => {}
+        }
+    }
+
+    /// Inserts a none ad-hoc variable.
+    pub fn insert_none_var(&mut self, name: &Arc<String>) {
+        match *self {
+            Type::AdHoc(_, ref mut inner_ty) => {
+                inner_ty.insert_none_var(name);
+                *self = (**inner_ty).clone();
+            }
+            _ => {}
+        }
+    }
+
+    /// Returns `true` if a type to be refined is ambiguous relative to this type (directional check).
+    ///
+    /// For example, the type ad-hoc type `Foo str` is ambiguous with type `str`.
+    /// If more was known about the `str` type with further refinement,
+    /// then it might turn out to be `Bar str`, which triggers a collision.
+    pub fn ambiguous(&self, refine: &Type) -> bool {
+        use self::Type::*;
+
+        match (self, refine) {
+            (&AdHoc(ref xa, ref xb), &AdHoc(ref ya, ref yb)) if xa == ya => xb.ambiguous(yb),
+            (&AdHoc(_, ref x), y) if x.goes_with(y) => true,
+            (&Array(ref x), &Array(ref y)) if x.ambiguous(y) => true,
+            (&Option(ref x), &Option(ref y)) if x.ambiguous(y) => true,
+            (&Result(ref x), &Result(ref y)) if x.ambiguous(y) => true,
+            (&Thread(ref x), &Thread(ref y)) if x.ambiguous(y) => true,
+            (&In(ref x), &In(ref y)) if x.ambiguous(y) => true,
+            (&Bool, &Any) => true,
+            (&F64, &Any) => true,
+            (&Str, &Any) => true,
+            (&Vec4, &Any) => true,
+            (&Mat4, &Any) => true,
+            (&Link, &Any) => true,
+            (&Array(_), &Any) => true,
+            (&Option(_), &Any) => true,
+            (&Result(_), &Any) => true,
+            (&Thread(_), &Any) => true,
+            (&Secret(_), &Any) => true,
+            (&In(_), &Any) => true,
+            _ => false
+        }
+    }
+
+    /// Returns `true` if the type can be a closure, `false` otherwise.
+    pub fn closure_ret_ty(&self) -> Option<Type> {
+        use self::Type::*;
+
+        match *self {
+            Closure(ref ty) => Some(ty.ret.clone()),
+            AdHoc(_, ref x) => x.closure_ret_ty(),
+            Any => Some(Type::Any),
+            _ => None
+        }
+    }
+
     /// Returns `true` if a type goes with another type (directional check).
     ///
     /// - `bool` (argument) goes with `sec[bool]` (value)
@@ -263,50 +396,10 @@ impl Type {
                     ty.goes_with(other)
                 }
             }
-            // Bool, F64, Text, Vec4, AdHoc.
+            // Bool, F64, Text, Vec4.
             x if x == other => { true }
             _ if *other == Type::Any => { true }
             _ => { false }
-        }
-    }
-
-    /// Infers type from the `+` operator.
-    pub fn add(&self, other: &Type) -> Option<Type> {
-        use self::Type::*;
-
-        match (self, other) {
-            (&AdHoc(ref name, ref ty), &AdHoc(ref other_name, ref other_ty)) => {
-                if name != other_name { return None; }
-                if !ty.goes_with(other_ty) { return None; }
-                if let Some(new_ty) = ty.add(other_ty) {
-                    Some(AdHoc(name.clone(), Box::new(new_ty)))
-                } else {
-                    None
-                }
-            }
-            (&Void, _) | (_, &Void) => None,
-            (&Array(_), _) | (_, &Array(_)) => None,
-            (&Bool, &Bool) => Some(Bool),
-            (&Secret(ref a), &Secret(ref b))
-            if **a == Type::Bool && **b == Type::Bool =>
-                Some(Secret(Box::new(Bool))),
-            (&Secret(ref a), &Bool) if **a == Type::Bool => Some(Secret(Box::new(Bool))),
-            (&Bool, &Secret(ref b)) if **b == Type::Bool => Some(Bool),
-            (&F64, &F64) => Some(F64),
-            (&Mat4, &Mat4) => Some(Mat4),
-            (&F64, &Mat4) | (&Mat4, &F64) => Some(Mat4),
-            (&Secret(ref a), &Secret(ref b))
-            if **a == Type::F64 && **b == Type::F64 =>
-                Some(Secret(Box::new(F64))),
-            (&Secret(ref a), &F64) if **a == Type::F64 => Some(Secret(Box::new(F64))),
-            (&F64, &Secret(ref b)) if **b == Type::F64 => Some(F64),
-            (&Str, &Str) => Some(Str),
-            (&Vec4, &F64) => Some(Vec4),
-            (&F64, &Vec4) => Some(Vec4),
-            (&Vec4, &Vec4) => Some(Vec4),
-            (&Any, x) if x != &Type::Void => Some(Any),
-            (x, &Any) if x != &Type::Void => Some(Any),
-            _ => None
         }
     }
 
@@ -323,70 +416,6 @@ impl Type {
             (&AdHoc(_, _), _) | (_, &AdHoc(_, _)) => false,
             (&Void, _) | (_, &Void) => false,
             _ => true
-        }
-    }
-
-    /// Infers type from the `*` binary operator.
-    pub fn mul(&self, other: &Type, binop: BinOp) -> Option<Type> {
-        use self::Type::*;
-
-        match (self, other) {
-            (&Void, _) | (_, &Void) => None,
-            (&Array(_), _) | (_, &Array(_)) => None,
-            (&Bool, &Bool) => Some(Bool),
-            (&Secret(ref a), &Secret(ref b))
-            if **a == Type::Bool && **b == Type::Bool =>
-                Some(Secret(Box::new(Bool))),
-            (&Secret(ref a), &Bool) if **a == Type::Bool => Some(Secret(Box::new(Bool))),
-            (&Bool, &Secret(ref b)) if **b == Type::Bool => Some(Bool),
-            (&F64, &F64) => Some(F64),
-            (&Mat4, &Mat4) => Some(Mat4),
-            (&F64, &Mat4) | (&Mat4, &F64) => Some(Mat4),
-            (&Mat4, &Vec4) => Some(Vec4),
-            (&Secret(ref a), &Secret(ref b))
-            if **a == Type::F64 && **b == Type::F64 =>
-                Some(Secret(Box::new(F64))),
-            (&Secret(ref a), &F64) if **a == Type::F64 => Some(Secret(Box::new(F64))),
-            (&F64, &Secret(ref b)) if **b == Type::F64 => Some(F64),
-            (&Vec4, &F64) => Some(Vec4),
-            (&F64, &Vec4) => Some(Vec4),
-            (&Vec4, &Vec4) => {
-                if let BinOp::Dot = binop {
-                    Some(F64)
-                } else {
-                    Some(Vec4)
-                }
-            }
-            (&Any, x) if x != &Type::Void => Some(Any),
-            (x, &Any) if x != &Type::Void => Some(Any),
-            _ => None
-        }
-    }
-
-    /// Infers type from the `^` binary operator.
-    pub fn pow(&self, other: &Type) -> Option<Type> {
-        use self::Type::*;
-
-        match (self, other) {
-            (&Void, _) | (_, &Void) => None,
-            (&Array(_), _) | (_, &Array(_)) => None,
-            (&Bool, &Bool) => Some(Bool),
-            (&Secret(ref a), &Secret(ref b))
-            if **a == Type::Bool && **b == Type::Bool =>
-                Some(Secret(Box::new(Bool))),
-            (&Secret(ref a), &Bool) if **a == Type::Bool => Some(Secret(Box::new(Bool))),
-            (&Bool, &Secret(ref b)) if **b == Type::Bool => Some(Bool),
-            (&F64, &F64) => Some(F64),
-            (&Secret(ref a), &Secret(ref b))
-            if **a == Type::F64 && **b == Type::F64 =>
-                Some(Secret(Box::new(F64))),
-            (&Secret(ref a), &F64) if **a == Type::F64 => Some(Secret(Box::new(F64))),
-            (&F64, &Secret(ref b)) if **b == Type::F64 => Some(F64),
-            (&Vec4, &F64) | (&F64, &Vec4) => Some(Vec4),
-            (&Vec4, &Vec4) => Some(Vec4),
-            (&Any, x) if x != &Type::Void => Some(Any),
-            (x, &Any) if x != &Type::Void => Some(Any),
-            _ => None
         }
     }
 
@@ -493,7 +522,9 @@ impl Type {
                 convert.update(range);
                 let range = convert.end_node("closure_type")?;
                 convert.update(range);
-                ty = Some(Type::Closure(Box::new(Dfn { lts, tys, ret })));
+                ty = Some(Type::Closure(Box::new(
+                    Dfn { lts, tys, ret, ext: vec![], lazy: crate::LAZY_NO }
+                )));
             } else {
                 let range = convert.ignore();
                 convert.update(range);

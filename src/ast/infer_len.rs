@@ -1,4 +1,3 @@
-use std::cell::Cell;
 use std::sync::Arc;
 
 use FnIndex;
@@ -6,6 +5,7 @@ use super::{
     AssignOp,
     Block,
     Call,
+    CallInfo,
     CallClosure,
     Expression,
     ForN,
@@ -19,14 +19,16 @@ pub fn infer(block: &Block, name: &str) -> Option<Expression> {
     let res = list.map(|item| {
         let source_range = item.source_range;
         Expression::Call(Box::new(Call {
-            alias: None,
-            name: Arc::new("len".into()),
-            f_index: Cell::new(FnIndex::None),
+            f_index: FnIndex::None,
             args: vec![
                 Expression::Item(Box::new(item))
             ],
             custom_source: None,
-            source_range,
+            info: Box::new(CallInfo {
+                alias: None,
+                name: Arc::new("len".into()),
+                source_range,
+            })
         }))
     });
     res
@@ -49,12 +51,6 @@ fn infer_expr(
         Item(ref item) => {
             let res = infer_item(item, name, decls);
             if res.is_some() { return res; }
-        }
-        BinOp(ref binop_expr) => {
-            let left = infer_expr(&binop_expr.left, name, decls);
-            if left.is_some() { return left; }
-            let right = infer_expr(&binop_expr.right, name, decls);
-            if right.is_some() { return right; }
         }
         Assign(ref assign_expr) => {
             let left = infer_expr(&assign_expr.left, name, decls);
@@ -99,6 +95,12 @@ fn infer_expr(
             let res = infer_call(call, name, decls);
             if res.is_some() { return res; }
         }
+        CallVoid(_) => unimplemented!("`CallVoid` is transformed from `Call` later"),
+        CallReturn(_) => unimplemented!("`CallReturn` is transformed from `Call` later"),
+        CallLazy(_) => unimplemented!("`CallLazy` is transformed from `Call` later"),
+        CallLoaded(_) => unimplemented!("`CallLoaded` is transformed from `Call` later"),
+        CallBinOp(_) => unimplemented!("`CallBinOp` is transformed from `Call` later"),
+        CallUnOp(_) => unimplemented!("`CallUnOp` is transformed from `Call` later"),
         Vec4(ref vec4_expr) => {
             for expr in &vec4_expr.args {
                 let res = infer_expr(expr, name, decls);
@@ -207,16 +209,6 @@ fn infer_expr(
                 let res = infer_block(else_block, name, decls);
                 if res.is_some() { return res; }
             }
-        }
-        Compare(ref cmp_expr) => {
-            let left = infer_expr(&cmp_expr.left, name, decls);
-            if left.is_some() { return left; }
-            let right = infer_expr(&cmp_expr.right, name, decls);
-            if right.is_some() { return right; }
-        }
-        UnOp(ref unop_expr) => {
-            let res = infer_expr(&unop_expr.expr, name, decls);
-            if res.is_some() { return res; }
         }
         Variable(_) => {}
         Try(ref expr) => {

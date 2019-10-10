@@ -1,0 +1,8 @@
+fn foo(a: str => "hi", b: str) -> str {return clone(a)}
+
+fn main() {
+    println(foo("hi", {
+        println("this is a test")
+        "hello"
+    }))
+}

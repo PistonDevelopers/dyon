@@ -6,7 +6,8 @@ use std::collections::{HashMap, HashSet};
 use self::piston_meta::MetaData;
 use self::range::Range;
 use self::kind::Kind;
-use self::node::{convert_meta_data, Node};
+use self::node::convert_meta_data;
+pub(crate) use self::node::Node;
 use self::lt::{arg_lifetime, compare_lifetimes, Lifetime};
 
 use prelude::{Lt, Prelude};
@@ -18,30 +19,131 @@ mod kind;
 mod node;
 mod lt;
 mod typecheck;
+mod normalize;
 
 /// Checks lifetime constraints and does type checking.
 /// Returns refined return types of functions to put in AST.
 pub fn check(
     data: &[Range<MetaData>],
-    prelude: &Prelude
+    prelude: &Prelude,
 ) -> Result<HashMap<Arc<String>, Type>, Range<String>> {
     let mut nodes: Vec<Node> = vec![];
-    convert_meta_data(&mut nodes, data)?;
+    check_core(&mut nodes, data, prelude)
+}
+
+// Core lifetime and type check.
+pub(crate) fn check_core(
+    nodes: &mut Vec<Node>,
+    data: &[Range<MetaData>],
+    prelude: &Prelude
+) -> Result<HashMap<Arc<String>, Type>, Range<String>> {
+
+    convert_meta_data(nodes, data)?;
+
+    // Rewrite multiple binary operators into nested ones.
+    for i in 0..nodes.len() {
+        if nodes[i].binops.len() <= 1 {continue};
+
+        let new_child = nodes.len();
+        let mut parent = nodes[i].parent;
+        for n in (2..nodes[i].children.len()).rev() {
+            // The right argument of the last call
+            // is the last item among the children.
+            // The left argument of the last call
+            // is the result of the recursion.
+            // The last call gets at the top.
+            // This means that it gets pushed first.
+            // The left argument points to the next node to be pushed,
+            // except the last push which points to original node for reuse.
+            let id = nodes.len();
+            let right = nodes[i].children[n];
+            nodes[right].parent = Some(id);
+            nodes.push(Node {
+                kind: nodes[i].kind,
+                names: vec![],
+                ty: None,
+                declaration: None,
+                alias: None,
+                mutable: false,
+                try: false,
+                grab_level: 0,
+                source: nodes[i].source,
+                start: nodes[i].start,
+                end: nodes[i].end,
+                lifetime: None,
+                op: None,
+                binops: vec![nodes[i].binops[n-1]],
+                lts: vec![],
+                parent,
+                children: vec![
+                    if n == 2 {i} else {id + 1},
+                    right
+                ]
+            });
+            parent = Some(id);
+        }
+
+        // Remove all children from original node except the two first.
+        nodes[i].children.truncate(2);
+        // Remove all binary operators from original node except the first.
+        nodes[i].binops.truncate(1);
+        if let Some(old_parent) = nodes[i].parent {
+            // Find the node among the children of the parent,
+            // but do not rely on binary search because it might be unsorted.
+            // Unsorted children is due to possible inference from other rewrites.
+            for j in 0..nodes[old_parent].children.len() {
+                if nodes[old_parent].children[j] == i {
+                    nodes[old_parent].children[j] = new_child;
+                    break;
+                }
+            }
+        }
+        // Change parent of original node.
+        nodes[i].parent = parent;
+    }
 
     // Rewrite graph for syntax sugar that corresponds to function calls.
     for i in 0..nodes.len() {
-        match nodes[i].kind {
-            Kind::Norm => {
-                if nodes[i].children.len() == 1 {
-                    nodes[i].kind = Kind::Call;
-                    nodes[i].names.push(Arc::new("norm".into()));
-                    let ch = nodes[i].children[0];
-                    nodes[ch].kind = Kind::CallArg;
-                }
+        if nodes[i].children.len() == 1 {
+            match nodes[i].kind {
+                Kind::Norm => Node::rewrite_unop(i, crate::NORM.clone(), nodes),
+                Kind::Not => Node::rewrite_unop(i, crate::NOT.clone(), nodes),
+                Kind::Neg => Node::rewrite_unop(i, crate::NEG.clone(), nodes),
+                _ => {}
             }
-            _ => {}
+        } else if nodes[i].binops.len() == 1 && nodes[i].children.len() == 2 {
+            use ast::BinOp::*;
+
+            Node::rewrite_binop(i, match nodes[i].binops[0] {
+                Add => crate::ADD.clone(),
+                Sub => crate::SUB.clone(),
+                Mul => crate::MUL.clone(),
+                Div => crate::DIV.clone(),
+                Rem => crate::REM.clone(),
+                Pow => crate::POW.clone(),
+                Dot => crate::DOT.clone(),
+                Cross => crate::CROSS.clone(),
+                AndAlso => crate::AND_ALSO.clone(),
+                OrElse => crate::OR_ELSE.clone(),
+                Less => crate::LESS.clone(),
+                LessOrEqual => crate::LESS_OR_EQUAL.clone(),
+                Greater => crate::GREATER.clone(),
+                GreaterOrEqual => crate::GREATER_OR_EQUAL.clone(),
+                Equal => crate::EQUAL.clone(),
+                NotEqual => crate::NOT_EQUAL.clone(),
+            }, nodes);
+        }
+
+        if nodes[i].children.len() == 1 {
+            match nodes[i].kind {
+                Kind::Add | Kind::Mul => Node::simplify(i, nodes),
+                _ => {}
+            }
         }
     }
+
+    // After graph rewrite, the graph might be unnormalized.
+    normalize::fix(nodes);
 
     // Add mutability information to function names.
     for i in 0..nodes.len() {
@@ -87,8 +189,9 @@ pub fn check(
     let functions: Vec<usize> = nodes.iter().enumerate()
         .filter(|&(_, n)| n.kind == Kind::Fn).map(|(i, _)| i).collect();
 
-    // Stores functions arguments with same index as `functions`.
-    let mut function_args = Vec::with_capacity(functions.len());
+    // Stores number of functions arguments with same index as `functions`.
+    // To look up number of arguments, use `.enumerate()` on the loop.
+    let mut function_args: Vec<usize> = Vec::with_capacity(functions.len());
 
     // Collect indices to call nodes.
     let calls: Vec<usize> = nodes.iter().enumerate()
@@ -378,6 +481,62 @@ pub fn check(
             n += 1;
         }
         function_args.push(n);
+    }
+
+    // Check extra type information.
+    for (i, &f) in functions.iter().enumerate() {
+        if nodes[f].ty == Some(Type::Void) {
+            for &ch in &nodes[f].children {
+                if nodes[ch].kind == Kind::Ty {
+                    return Err(nodes[ch].source.wrap(
+                        format!("`{}` has extra type information but does not return anything",
+                        nodes[f].name().expect("Expected name"))))
+                }
+            }
+        } else if let Some(ref ret_type) = nodes[f].ty {
+            let n = function_args[i];
+            for &ch in &nodes[f].children {
+                if nodes[ch].kind == Kind::Ty {
+                    let mut count = 0;
+                    let mut arg = 0;
+                    for &ty_ch in nodes[ch].children.iter() {
+                        if nodes[ty_ch].kind == Kind::TyArg {
+                            if arg < n {
+                                if let Some(ref ty_arg_ty) = nodes[ty_ch].ty {
+                                    while nodes[nodes[f].children[arg]].kind != Kind::Arg {
+                                        arg += 1;
+                                    }
+                                    if arg < n {
+                                        if let Some(ref arg_ty) = nodes[nodes[f].children[arg]].ty {
+                                            if !arg_ty.goes_with(ty_arg_ty) {
+                                                return Err(nodes[ty_ch].source.wrap(
+                                                    format!("The type `{}` does not work with `{}`",
+                                                            ty_arg_ty.description(), arg_ty.description())))
+                                            }
+                                        }
+                                    }
+                                }
+                                arg += 1;
+                            }
+                            count += 1;
+                        } else if nodes[ty_ch].kind == Kind::TyRet {
+                            if let Some(ref ty_ret) = nodes[ty_ch].ty {
+                                if !ret_type.goes_with(ty_ret) {
+                                    return Err(nodes[ty_ch].source.wrap(
+                                        format!("The type `{}` does not work with `{}`",
+                                                ty_ret.description(), ret_type.description())))
+                                }
+                            }
+                        }
+                    }
+                    if count != n {
+                        return Err(nodes[ch].source.wrap(
+                            format!("Expected {} number of arguments, found {}",
+                                    n, count)))
+                    }
+                }
+            }
+        }
     }
 
     // Check for duplicate functions and build name to index map.
@@ -841,7 +1000,7 @@ pub fn check(
         }
     }
 
-    typecheck::run(&mut nodes, prelude, &use_lookup)?;
+    typecheck::run(nodes, prelude, &use_lookup)?;
 
     // Copy refined return types to use in AST.
     let mut refined_rets: HashMap<Arc<String>, Type> = HashMap::new();

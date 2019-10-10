@@ -1,0 +1,8 @@
+fn foo(a: [f64] => [], b: [f64]) -> [f64] {return clone(a)}
+
+fn main() {
+    println(foo([], {
+        println("this is a test")
+        [1, 2]
+    }))
+}

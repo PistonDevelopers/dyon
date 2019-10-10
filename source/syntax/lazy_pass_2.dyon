@@ -1,0 +1,8 @@
+fn foo(a: f64 => 0, b: f64) -> f64 {return a * b}
+
+fn main() {
+    println(foo(0, {
+        println("this is a test")
+        2
+    }))
+}

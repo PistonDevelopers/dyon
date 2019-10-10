@@ -1,0 +1,7 @@
+fn check_mat4(_: mat4) {}
+fn foo(a) -> {return clone(a)}
+([]) -> [mat4]
+
+fn main() {
+    check_mat4(foo([mat4 {1,;}]))
+}

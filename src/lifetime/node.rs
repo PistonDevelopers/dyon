@@ -10,7 +10,7 @@ use Lt;
 use Type;
 
 #[derive(Debug)]
-pub struct Node {
+pub(crate) struct Node {
     /// The kind of node.
     pub kind: Kind,
     /// The namespace alias.
@@ -52,6 +52,89 @@ impl Node {
     pub fn name(&self) -> Option<&Arc<String>> {
         if self.names.is_empty() { None }
         else { Some(&self.names[0]) }
+    }
+
+    pub fn rewrite_unop(i: usize, name: Arc<String>, nodes: &mut [Node]) {
+        nodes[i].kind = Kind::Call;
+        nodes[i].names.push(name);
+        let ch = nodes[i].children[0];
+        nodes[ch].kind = Kind::CallArg;
+    }
+
+    pub fn rewrite_binop(i: usize, name: Arc<String>, nodes: &mut Vec<Node>) {
+        nodes[i].kind = Kind::Call;
+        nodes[i].names.push(name);
+        nodes[i].binops.clear();
+
+        let old_left = nodes[i].children[0];
+        let old_right = nodes[i].children[1];
+
+        let left = nodes.len();
+        nodes.push(Node {
+            kind: Kind::CallArg,
+            names: vec![],
+            ty: None,
+            declaration: None,
+            alias: None,
+            mutable: false,
+            try: false,
+            grab_level: 0,
+            source: nodes[old_left].source,
+            start: nodes[old_left].start,
+            end: nodes[old_left].end,
+            lifetime: None,
+            op: None,
+            binops: vec![],
+            lts: vec![],
+            parent: Some(i),
+            children: vec![old_left],
+        });
+        let right = nodes.len();
+        nodes.push(Node {
+            kind: Kind::CallArg,
+            names: vec![],
+            ty: None,
+            declaration: None,
+            alias: None,
+            mutable: false,
+            try: false,
+            grab_level: 0,
+            source: nodes[old_right].source,
+            start: nodes[old_right].start,
+            end: nodes[old_right].end,
+            lifetime: None,
+            op: None,
+            binops: vec![],
+            lts: vec![],
+            parent: Some(i),
+            children: vec![old_right],
+        });
+
+        nodes[old_left].parent = Some(left);
+        nodes[old_right].parent = Some(right);
+
+        nodes[i].children[0] = left;
+        nodes[i].children[1] = right;
+    }
+
+    /// Simplifies a node by linking child with grand-parent.
+    ///
+    /// Removes the node that gets simplified.
+    pub fn simplify(i: usize, nodes: &mut Vec<Node>) {
+        if let Some(parent) = nodes[i].parent {
+            // Link child to grand-parent.
+            let ch = nodes[i].children[0];
+            nodes[ch].parent = Some(parent);
+            for p_ch in &mut nodes[parent].children {
+                if *p_ch == i {
+                    *p_ch = ch;
+                }
+            }
+
+            // Disable this node.
+            nodes[i].parent = None;
+            nodes[i].children.clear();
+        }
     }
 
     #[allow(dead_code)]
@@ -210,11 +293,6 @@ impl Node {
                 (Kind::CallClosure, Kind::Item) => { continue }
                 (_, Kind::Item) => {}
                 (_, Kind::Norm) => {}
-                (_, Kind::UnOp) => {
-                    // The result of all unary operators does not depend
-                    // on the lifetime of the argument.
-                    continue
-                }
                 (_, Kind::Compare) => {
                     // The result of all compare operators does not depend
                     // on the lifetime of the arguments.
@@ -228,8 +306,6 @@ impl Node {
                 (_, Kind::ArrayItem) => {}
                 (_, Kind::ArrayFill) => {}
                 (_, Kind::Pow) => {}
-                (_, Kind::Base) => {}
-                (_, Kind::Exp) => {}
                 (_, Kind::Block) => {}
                 (_, Kind::If) => {}
                 (_, Kind::TrueBlock) => {}
@@ -250,7 +326,8 @@ impl Node {
                     // The result of array fill does not depend on `n`.
                     continue
                 }
-                (Kind::Call, Kind::CallArg) | (Kind::CallClosure, Kind::CallArg) => {
+                (Kind::Call, Kind::CallArg) | (Kind::CallClosure, Kind::CallArg) |
+                (Kind::CallArg, Kind::CallArg) => {
                     // If there is no return lifetime on the declared argument,
                     // there is no need to check it, because the computed value
                     // does not depend on the lifetime of that argument.
@@ -285,7 +362,7 @@ impl Node {
     }
 }
 
-pub fn convert_meta_data(
+pub(crate) fn convert_meta_data(
     nodes: &mut Vec<Node>,
     data: &[Range<MetaData>]
 ) -> Result<(), Range<String>> {
@@ -330,6 +407,17 @@ pub fn convert_meta_data(
                     Kind::Min | Kind::MinIn | Kind::Max | Kind::MaxIn =>
                         Some(Type::Secret(Box::new(Type::F64))),
                     Kind::For | Kind::ForN => Some(Type::Void),
+                    Kind::TyArg | Kind::TyRet => {
+                        // Parse extra type information.
+                        let convert = Convert::new(&data[i..]);
+                        if let Ok((range, val)) = Type::from_meta_data(kind_name, convert, ignored) {
+                            // Skip content of type meta data until end node.
+                            skip = Some(range.next_offset() + i - 1);
+                            Some(val)
+                        } else {
+                            None
+                        }
+                    }
                     _ => None
                 };
 
@@ -402,6 +490,11 @@ pub fn convert_meta_data(
                     "color" => {
                         let i = *parents.last().unwrap();
                         nodes[i].ty = Some(Type::Vec4);
+                    }
+                    "ty_var" => {
+                        // Use names as a way of storing type variables.
+                        let i = *parents.last().unwrap();
+                        nodes[i].names.push(val.clone());
                     }
                     _ => {}
                 }
@@ -488,9 +581,49 @@ pub fn convert_meta_data(
                         let i = *parents.last().unwrap();
                         nodes[i].binops.push(BinOp::Rem);
                     }
+                    "^" => {
+                        let i = *parents.last().unwrap();
+                        nodes[i].binops.push(BinOp::Pow);
+                    }
                     "&&" => {
                         let i = *parents.last().unwrap();
                         nodes[i].binops.push(BinOp::AndAlso);
+                    }
+                    "+" => {
+                        let i = *parents.last().unwrap();
+                        nodes[i].binops.push(BinOp::Add);
+                    }
+                    "-" => {
+                        let i = *parents.last().unwrap();
+                        nodes[i].binops.push(BinOp::Sub);
+                    }
+                    "||" => {
+                        let i = *parents.last().unwrap();
+                        nodes[i].binops.push(BinOp::OrElse);
+                    }
+                    "<" => {
+                        let i = *parents.last().unwrap();
+                        nodes[i].binops.push(BinOp::Less);
+                    }
+                    "<=" => {
+                        let i = *parents.last().unwrap();
+                        nodes[i].binops.push(BinOp::LessOrEqual);
+                    }
+                    ">" => {
+                        let i = *parents.last().unwrap();
+                        nodes[i].binops.push(BinOp::Greater);
+                    }
+                    ">=" => {
+                        let i = *parents.last().unwrap();
+                        nodes[i].binops.push(BinOp::GreaterOrEqual);
+                    }
+                    "==" => {
+                        let i = *parents.last().unwrap();
+                        nodes[i].binops.push(BinOp::Equal);
+                    }
+                    "!=" => {
+                        let i = *parents.last().unwrap();
+                        nodes[i].binops.push(BinOp::NotEqual);
                     }
                     _ => {}
                 }

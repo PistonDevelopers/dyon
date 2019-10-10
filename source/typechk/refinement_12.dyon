@@ -1,0 +1,7 @@
+fn check_str(_: str) {}
+fn foo(a) -> {return clone(a)}
+([]) -> [str]
+
+fn main() {
+    check_str(foo(["one", "two", "three"]))
+}

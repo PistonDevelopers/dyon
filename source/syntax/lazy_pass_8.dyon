@@ -1,0 +1,11 @@
+fn foo(a: any => ok(_) | some(_), b: str) -> str {
+    return unwrap_or(a, b)
+}
+
+fn main() {
+    a := ok("hi")
+    println(foo(a, {
+        println("this is a test")
+        "hello"
+    }))
+}

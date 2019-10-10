@@ -135,6 +135,15 @@ fn test_syntax() {
     test_fail_src("source/syntax/div_fail_1.dyon");
     test_src("source/syntax/continue_call.dyon");
     test_src("source/syntax/mat4_1.dyon");
+    test_fail_src("source/syntax/secret_fail.dyon");
+    test_src("source/syntax/lazy_pass_1.dyon");
+    test_src("source/syntax/lazy_pass_2.dyon");
+    test_src("source/syntax/lazy_pass_3.dyon");
+    test_src("source/syntax/lazy_pass_4.dyon");
+    test_src("source/syntax/lazy_pass_5.dyon");
+    test_src("source/syntax/lazy_pass_6.dyon");
+    test_src("source/syntax/lazy_pass_7.dyon");
+    test_src("source/syntax/lazy_pass_8.dyon");
 }
 
 #[test]
@@ -171,6 +180,7 @@ fn test_typechk() {
     test_src("source/typechk/obj_pass_1.dyon");
     test_src("source/typechk/arr_pass_1.dyon");
     test_fail_src("source/typechk/arr_fail_1.dyon");
+    test_fail_src("source/typechk/arr_fail_2.dyon");
     test_fail_src("source/typechk/go.dyon");
     test_fail_src("source/typechk/unused_result.dyon");
     test_fail_src("source/typechk/unused_result_2.dyon");
@@ -221,6 +231,48 @@ fn test_typechk() {
     test_src("source/typechk/mat4_2.dyon");
     test_src("source/typechk/ind_arr.dyon");
     test_fail_src("source/typechk/norm.dyon");
+    test_fail_src("source/typechk/refinement.dyon");
+    test_fail_src("source/typechk/refinement_2.dyon");
+    test_fail_src("source/typechk/refinement_3.dyon");
+    test_fail_src("source/typechk/refinement_4.dyon");
+    test_src("source/typechk/refinement_5.dyon");
+    test_src("source/typechk/refinement_6.dyon");
+    test_fail_src("source/typechk/refinement_7.dyon");
+    test_fail_src("source/typechk/refinement_8.dyon");
+    test_src("source/typechk/refinement_9.dyon");
+    test_fail_src("source/typechk/refinement_10.dyon");
+    test_src("source/typechk/refinement_11.dyon");
+    test_fail_src("source/typechk/refinement_12.dyon");
+    test_src("source/typechk/refinement_13.dyon");
+    test_fail_src("source/typechk/refinement_14.dyon");
+    test_src("source/typechk/refinement_15.dyon");
+    test_fail_src("source/typechk/refinement_16.dyon");
+    test_src("source/typechk/refinement_17.dyon");
+    test_fail_src("source/typechk/refinement_18.dyon");
+    test_src("source/typechk/refinement_19.dyon");
+    test_fail_src("source/typechk/refinement_20.dyon");
+    test_src("source/typechk/refinement_21.dyon");
+    test_fail_src("source/typechk/refinement_22.dyon");
+    test_src("source/typechk/refinement_23.dyon");
+    test_fail_src("source/typechk/refinement_24.dyon");
+    test_src("source/typechk/refinement_25.dyon");
+    test_fail_src("source/typechk/refinement_26.dyon");
+    test_src("source/typechk/refinement_27.dyon");
+    test_fail_src("source/typechk/void_refinement.dyon");
+    test_fail_src("source/typechk/args_refinement.dyon");
+    test_fail_src("source/typechk/refine_type_fail.dyon");
+    test_fail_src("source/typechk/refine_type_fail_2.dyon");
+    test_src("source/typechk/closure_ad_hoc.dyon");
+    test_fail_src("source/typechk/refine_closed_fail_1.dyon");
+    test_fail_src("source/typechk/refine_closed_fail_2.dyon");
+    test_src("source/typechk/refine_closed_pass_1.dyon");
+    test_src("source/typechk/refine_quantifier_pass_1.dyon");
+    test_src("source/typechk/refine_quantifier_pass_2.dyon");
+    test_src("source/typechk/refine_quantifier_pass_3.dyon");
+    test_src("source/typechk/refine_quantifier_pass_4.dyon");
+    test_src("source/typechk/refine_quantifier_pass_5.dyon");
+    test_fail_src("source/typechk/refine_quantifier_fail_1.dyon");
+    test_fail_src("source/typechk/refine_quantifier_fail_2.dyon");
 }
 
 #[test]

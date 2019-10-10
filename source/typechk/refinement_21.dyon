@@ -1,0 +1,8 @@
+fn check(_: f64) {}
+fn foo(a) -> {return clone(a)}
+(opt[f64]) -> opt[f64]
+fn bar(a: opt[f64]) -> opt {return clone(a)}
+
+fn main() {
+    check(foo(bar(some(1))))
+}

@@ -6,10 +6,8 @@ use super::{
     ArrayFill,
     Assign,
     Block,
-    BinOpExpression,
     Call,
     CallClosure,
-    Compare,
     Expression,
     For,
     ForN,
@@ -21,7 +19,6 @@ use super::{
     Link,
     Object,
     Swizzle,
-    UnOpExpression,
     Vec4,
     Mat4,
     TryExpr,
@@ -43,14 +40,6 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
             E::Link(Box::new(Link {
                 items: new_items,
                 source_range: link_expr.source_range,
-            }))
-        }
-        E::BinOp(ref bin_op_expr) => {
-            E::BinOp(Box::new(BinOpExpression {
-                op: bin_op_expr.op,
-                left: number(&bin_op_expr.left, name, val),
-                right: number(&bin_op_expr.right, name, val),
-                source_range: bin_op_expr.source_range,
             }))
         }
         E::Item(ref item) => {
@@ -102,6 +91,12 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
         E::Call(ref call_expr) => {
             E::Call(Box::new(number_call(call_expr, name, val)))
         }
+        E::CallVoid(_) => unimplemented!("`CallVoid` is transformed from `Call` later"),
+        E::CallReturn(_) => unimplemented!("`CallVoid` is transformed from `Call` later"),
+        E::CallLazy(_) => unimplemented!("`CallLazy` is transformed from `Call` later"),
+        E::CallLoaded(_) => unimplemented!("`CallLoaded` is transform from `Call` later"),
+        E::CallBinOp(_) => unimplemented!("`CallBinOp` is transformed from `Call` later"),
+        E::CallUnOp(_) => unimplemented!("`CallUnOp` is transformed from `Call` later"),
         E::Array(ref array_expr) => {
             let mut new_items: Vec<Expression> = vec![];
             for item in &array_expr.items {
@@ -319,21 +314,6 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
                 source_range: if_expr.source_range,
             }))
         }
-        E::Compare(ref cmp_expr) => {
-            E::Compare(Box::new(Compare {
-                op: cmp_expr.op,
-                left: number(&cmp_expr.left, name, val),
-                right: number(&cmp_expr.right, name, val),
-                source_range: cmp_expr.source_range,
-            }))
-        }
-        E::UnOp(ref unop_expr) => {
-            E::UnOp(Box::new(UnOpExpression {
-                op: unop_expr.op,
-                expr: number(&unop_expr.expr, name, val),
-                source_range: unop_expr.source_range,
-            }))
-        }
         E::Variable(_) => expr.clone(),
         E::Try(ref expr) => E::Try(Box::new(number(expr, name, val))),
         E::Swizzle(ref swizzle_expr) => {
@@ -365,12 +345,10 @@ fn number_call(call_expr: &Call, name: &Arc<String>, val: f64) -> Call {
         new_args.push(number(arg, name, val));
     }
     Call {
-        alias: call_expr.alias.clone(),
-        name: call_expr.name.clone(),
         args: new_args,
         f_index: call_expr.f_index.clone(),
         custom_source: None,
-        source_range: call_expr.source_range,
+        info: call_expr.info.clone(),
     }
 }
 

@@ -72,7 +72,7 @@ fn compare_argument_outlives(a: &[usize], b: &[usize]) -> Option<Ordering> {
 }
 
 /// Gets the lifetime of a function argument.
-pub fn arg_lifetime(
+pub(crate) fn arg_lifetime(
     declaration: usize,
     arg: &Node,
     nodes: &[Node],
@@ -108,7 +108,7 @@ pub fn arg_lifetime(
     })
 }
 
-pub fn compare_lifetimes(
+pub(crate) fn compare_lifetimes(
     l: &Option<Lifetime>,
     r: &Option<Lifetime>,
     nodes: &[Node]

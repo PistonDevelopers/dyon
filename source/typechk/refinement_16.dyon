@@ -1,0 +1,7 @@
+fn check_vec4(_: vec4) {}
+fn foo(a) -> {return clone(a)}
+([]) -> [vec4]
+
+fn main() {
+    check_vec4(foo([(1, 0)]))
+}

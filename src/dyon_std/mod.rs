@@ -14,19 +14,309 @@ const HTTP_SUPPORT_DISABLED: &'static str = "Http support is disabled";
 #[cfg(not(feature = "file"))]
 const FILE_SUPPORT_DISABLED: &'static str = "File support is disabled";
 
+pub(crate) fn and_also(rt: &mut Runtime) -> Result<Variable, String> {
+    use Variable::*;
+
+    let b = rt.stack.pop().expect(TINVOTS);
+    let a = rt.stack.pop().expect(TINVOTS);
+    Ok(match (rt.resolve(&a), rt.resolve(&b)) {
+        (&Bool(a, ref sec), &Bool(b, _)) => Bool(a && b, sec.clone()),
+        _ => return Err("Expected `bool`".into())
+    })
+}
+
+pub(crate) fn or_else(rt: &mut Runtime) -> Result<Variable, String> {
+    use Variable::*;
+
+    let b = rt.stack.pop().expect(TINVOTS);
+    let a = rt.stack.pop().expect(TINVOTS);
+    Ok(match (rt.resolve(&a), rt.resolve(&b)) {
+        (&Bool(a, ref sec), &Bool(b, _)) => Bool(a || b, sec.clone()),
+        _ => return Err("Expected `bool`".into())
+    })
+}
+
+pub(crate) fn less(a: &Variable, b: &Variable) -> Result<Variable, String> {
+    use Variable::*;
+
+    Ok(match (a, b) {
+        (&F64(a, ref sec), &F64(b, _)) => Bool(a < b, sec.clone()),
+        (&Str(ref a), &Str(ref b)) => Variable::bool(a < b),
+        _ => return Err("Expected `f64` or `str`".into())
+    })
+}
+
+pub(crate) fn less_or_equal(a: &Variable, b: &Variable) -> Result<Variable, String> {
+    use Variable::*;
+
+    Ok(match (a, b) {
+        (&F64(a, ref sec), &F64(b, _)) => Bool(a <= b, sec.clone()),
+        (&Str(ref a), &Str(ref b)) => Variable::bool(a <= b),
+        _ => return Err("Expected `f64` or `str`".into())
+    })
+}
+
+pub(crate) fn greater(a: &Variable, b: &Variable) -> Result<Variable, String> {
+    less_or_equal(a, b).map(|v| if let Variable::Bool(a, sec) = v {Variable::Bool(!a, sec)} else {
+        panic!("Expected equal to return `bool`")
+    })
+}
+
+pub(crate) fn greater_or_equal(a: &Variable, b: &Variable) -> Result<Variable, String> {
+    less(a, b).map(|v| if let Variable::Bool(a, sec) = v {Variable::Bool(!a, sec)} else {
+        panic!("Expected equal to return `bool`")
+    })
+}
+
+pub(crate) fn equal(a: &Variable, b: &Variable) -> Result<Variable, String> {
+    use Variable::*;
+
+    Ok(match (a, b) {
+        (&F64(a, ref sec), &F64(b, _)) => Bool(a == b, sec.clone()),
+        (&Str(ref a), &Str(ref b)) => Variable::bool(a == b),
+        (&Bool(a, ref sec), &Bool(b, _)) => Bool(a == b, sec.clone()),
+        (&Vec4(a), &Vec4(b)) => Variable::bool(a == b),
+        (&Object(ref a), &Object(ref b)) => {
+            Variable::bool(a.len() == b.len() &&
+            a.iter().all(|a| {
+                if let Some(b_val) = b.get(a.0) {
+                    if let Ok(Variable::Bool(true, _)) =
+                        equal(&a.1, b_val) {true}
+                    else {false}
+                } else {false}
+            }))
+        }
+        (&Array(ref a), &Array(ref b)) => {
+            Variable::bool(a.len() == b.len() &&
+            a.iter().zip(b.iter()).all(|(a, b)| {
+                if let Ok(Variable::Bool(true, _)) =
+                    equal(a, b) {true} else {false}
+            }))
+        }
+        (&Option(None), &Option(None)) => Variable::bool(true),
+        (&Option(None), &Option(_)) => Variable::bool(false),
+        (&Option(_), &Option(None)) => Variable::bool(false),
+        (&Option(Some(ref a)), &Option(Some(ref b))) => equal(a, b)?,
+        _ => return Err("Expected `f64`, `str`, `bool`, `vec4`, `{}`, `[]` or `opt`".into())
+    })
+}
+
+pub(crate) fn not_equal(a: &Variable, b: &Variable) -> Result<Variable, String> {
+    equal(a, b).map(|v| if let Variable::Bool(a, sec) = v {Variable::Bool(!a, sec)} else {
+        panic!("Expected equal to return `bool`")
+    })
+}
+
+pub(crate) fn add(a: &Variable, b: &Variable) -> Result<Variable, String> {
+    use Variable::*;
+
+    Ok(match (a, b) {
+        (&F64(a, ref sec), &F64(b, _)) => F64(a + b, sec.clone()),
+        (&Vec4(a), &Vec4(b)) => Vec4(vecmath::vec4_add(a, b)),
+        (&Vec4(a), &F64(b, _)) | (&F64(b, _), &Vec4(a)) => {
+            let b = b as f32;
+            Vec4([a[0] + b, a[1] + b, a[2] + b, a[3] + b])
+        }
+        (&Mat4(ref a), &Mat4(ref b)) => Mat4(Box::new(vecmath::mat4_add(**a, **b))),
+        (&F64(a, _), &Mat4(ref b)) | (&Mat4(ref b), &F64(a, _)) => {
+            let a = a as f32;
+            Mat4(Box::new([
+                    [b[0][0] + a, b[0][1] + a, b[0][2] + a, b[0][3] + a],
+                    [b[1][0] + a, b[1][1] + a, b[1][2] + a, b[1][3] + a],
+                    [b[2][0] + a, b[2][1] + a, b[2][2] + a, b[2][3] + a],
+                    [b[3][0] + a, b[3][1] + a, b[3][2] + a, b[3][3] + a]
+                ]))
+        }
+        (&Bool(a, ref sec), &Bool(b, _)) => Bool(a || b, sec.clone()),
+        (&Str(ref a), &Str(ref b)) => {
+            let mut res = String::with_capacity(a.len() + b.len());
+            res.push_str(a);
+            res.push_str(b);
+            Str(Arc::new(res))
+        }
+        (&Link(ref a), &Link(ref b)) => Link(Box::new(a.add(b))),
+        _ => return Err("Expected `f64`, `vec4`, `mat4`, `bool`, `str` or `link`".into())
+    })
+}
+
+pub(crate) fn sub(a: &Variable, b: &Variable) -> Result<Variable, String> {
+    use Variable::*;
+
+    Ok(match (a, b) {
+        (&F64(a, ref sec), &F64(b, _)) => F64(a - b, sec.clone()),
+        (&Vec4(a), &Vec4(b)) => Vec4(vecmath::vec4_sub(a, b)),
+        (&Vec4(a), &F64(b, _)) => {
+            let b = b as f32;
+            Vec4([a[0] - b, a[1] - b, a[2] - b, a[3] - b])
+        }
+        (&F64(a, _), &Vec4(b)) => {
+            let a = a as f32;
+            Vec4([a - b[0], a - b[1], a - b[2], a - b[3]])
+        }
+        (&Mat4(ref a), &Mat4(ref b)) => Mat4(Box::new(vecmath::mat4_sub(**a, **b))),
+        (&F64(a, _), &Mat4(ref b)) => {
+            let a = a as f32;
+            Mat4(Box::new([
+                    [a - b[0][0], a - b[0][1], a - b[0][2], a - b[0][3]],
+                    [a - b[1][0], a - b[1][1], a - b[1][2], a - b[1][3]],
+                    [a - b[2][0], a - b[2][1], a - b[2][2], a - b[2][3]],
+                    [a - b[3][0], a - b[3][1], a - b[3][2], a - b[3][3]]
+                ]))
+        }
+        (&Mat4(ref b), &F64(a, _)) => {
+            let a = a as f32;
+            Mat4(Box::new([
+                    [b[0][0] - a, b[0][1] - a, b[0][2] - a, b[0][3] - a],
+                    [b[1][0] - a, b[1][1] - a, b[1][2] - a, b[1][3] - a],
+                    [b[2][0] - a, b[2][1] - a, b[2][2] - a, b[2][3] - a],
+                    [b[3][0] - a, b[3][1] - a, b[3][2] - a, b[3][3] - a]
+                ]))
+        }
+        (&Bool(a, ref sec), &Bool(b, _)) => Bool(a && !b, sec.clone()),
+        _ => return Err("Expected `f64`, `vec4`, `mat4` or `bool`".into())
+    })
+}
+
+pub(crate) fn mul(a: &Variable, b: &Variable) -> Result<Variable, String> {
+    use Variable::*;
+
+    Ok(match (a, b) {
+        (&F64(a, ref sec), &F64(b, _)) => F64(a * b, sec.clone()),
+        (&Vec4(a), &Vec4(b)) => Vec4(vecmath::vec4_mul(a, b)),
+        (&Vec4(a), &F64(b, _)) | (&F64(b, _), &Vec4(a)) => {
+            let b = b as f32;
+            Vec4([a[0] * b, a[1] * b, a[2] * b, a[3] * b])
+        }
+        (&Mat4(ref a), &Mat4(ref b)) => Mat4(Box::new(vecmath::col_mat4_mul(**a, **b))),
+        (&F64(a, _), &Mat4(ref b)) | (&Mat4(ref b), &F64(a, _)) => {
+            let a = a as f32;
+            Mat4(Box::new([
+                    [b[0][0] * a, b[0][1] * a, b[0][2] * a, b[0][3] * a],
+                    [b[1][0] * a, b[1][1] * a, b[1][2] * a, b[1][3] * a],
+                    [b[2][0] * a, b[2][1] * a, b[2][2] * a, b[2][3] * a],
+                    [b[3][0] * a, b[3][1] * a, b[3][2] * a, b[3][3] * a]
+                ]))
+        }
+        (&Mat4(ref a), &Vec4(b)) => Vec4(vecmath::col_mat4_transform(**a, b)),
+        (&Bool(a, ref sec), &Bool(b, _)) => Bool(a && b, sec.clone()),
+        _ => return Err("Expected `f64`, `vec4`, `mat4` or `bool`".into())
+    })
+}
+
+pub(crate) fn div(a: &Variable, b: &Variable) -> Result<Variable, String> {
+    use Variable::*;
+
+    Ok(match (a, b) {
+        (&F64(a, ref sec), &F64(b, _)) => F64(a / b, sec.clone()),
+        (&Vec4(a), &Vec4(b)) => Vec4([a[0] / b[0], a[1] / b[1], a[2] / b[2], a[3] / b[3]]),
+        (&Vec4(a), &F64(b, _)) => {
+            let b = b as f32;
+            Vec4([a[0] / b, a[1] / b, a[2] / b, a[3] / b])
+        }
+        (&F64(a, _), &Vec4(b)) => {
+            let a = a as f32;
+            Vec4([a / b[0], a / b[1], a / b[2], a / b[3]])
+        }
+        _ => return Err("Expected `f64` or `vec4`".into())
+    })
+}
+
+pub(crate) fn rem(a: &Variable, b: &Variable) -> Result<Variable, String> {
+    use Variable::*;
+
+    Ok(match (a, b) {
+        (&F64(a, ref sec), &F64(b, _)) => F64(a % b, sec.clone()),
+        (&Vec4(a), &Vec4(b)) => Vec4([a[0] % b[0], a[1] % b[1], a[2] % b[2], a[3] % b[3]]),
+        (&Vec4(a), &F64(b, _)) => {
+            let b = b as f32;
+            Vec4([a[0] % b, a[1] % b, a[2] % b, a[3] % b])
+        }
+        (&F64(a, _), &Vec4(b)) => {
+            let a = a as f32;
+            Vec4([a % b[0], a % b[1], a % b[2], a % b[3]])
+        }
+        _ => return Err("Expected `f64` or `vec4`".into())
+    })
+}
+
+pub(crate) fn pow(a: &Variable, b: &Variable) -> Result<Variable, String> {
+    use Variable::*;
+
+    Ok(match (a, b) {
+        (&F64(a, ref sec), &F64(b, _)) => F64(a.powf(b), sec.clone()),
+        (&Vec4(a), &Vec4(b)) => Vec4([a[0].powf(b[0]), a[1].powf(b[1]),
+                                      a[2].powf(b[2]), a[3].powf(b[3])]),
+        (&Vec4(a), &F64(b, _)) => {
+            let b = b as f32;
+            Vec4([a[0].powf(b), a[1].powf(b), a[2].powf(b), a[3].powf(b)])
+        }
+        (&F64(a, _), &Vec4(b)) => {
+            let a = a as f32;
+            Vec4([a.powf(b[0]), a.powf(b[1]), a.powf(b[2]), a.powf(b[3])])
+        }
+        (&Bool(a, ref sec), &Bool(ref b, _)) => Bool(a ^ b, sec.clone()),
+        _ => return Err("Expected `f64`, `vec4` or `bool`".into())
+    })
+}
+
+pub(crate) fn not(a: &Variable) -> Result<Variable, String> {
+    Ok(match *a {
+        Variable::Bool(ref b, ref sec) => Variable::Bool(!b, sec.clone()),
+        _ => return Err("Expected `bool`".into())
+    })
+}
+
+pub(crate) fn neg(a: &Variable) -> Result<Variable, String> {
+    Ok(match *a {
+        Variable::F64(v, ref sec) => Variable::F64(-v, sec.clone()),
+        Variable::Vec4(v) => Variable::Vec4([-v[0], -v[1], -v[2], -v[3]]),
+        Variable::Mat4(ref m) => Variable::Mat4(Box::new([
+                [-m[0][0], -m[0][1], -m[0][2], -m[0][3]],
+                [-m[1][0], -m[1][1], -m[1][2], -m[1][3]],
+                [-m[2][0], -m[2][1], -m[2][2], -m[2][3]],
+                [-m[3][0], -m[3][1], -m[3][2], -m[3][3]],
+            ])),
+        _ => return Err("Expected `f64`, `vec4` or `mat4`".into())
+    })
+}
+
+pub(crate) fn dot(a: &Variable, b: &Variable) -> Result<Variable, String> {
+    Ok(Variable::f64(match (a, b) {
+        (&Variable::Vec4(a), &Variable::Vec4(b)) => vecmath::vec4_dot(a, b) as f64,
+        (&Variable::Vec4(a), &Variable::F64(b, _)) |
+        (&Variable::F64(b, _), &Variable::Vec4(a)) => {
+            let b = b as f32;
+            (a[0] * b + a[1] * b + a[2] * b + a[3] * b) as f64
+        }
+        _ => return Err("Expected (vec4, vec4), (vec4, f64) or (f64, vec4)".into())
+    }))
+}
+
+dyon_fn!{fn cross(a: Vec4, b: Vec4) -> Vec4 {
+    Vec4([a.0[1] * b.0[2] - a.0[2] * b.0[1],
+          a.0[2] * b.0[0] - a.0[0] * b.0[2],
+          a.0[0] * b.0[1] - a.0[1] * b.0[0], 0.0])
+}}
+
 dyon_fn!{fn x(v: Vec4) -> f64 {f64::from(v.0[0])}}
 dyon_fn!{fn y(v: Vec4) -> f64 {f64::from(v.0[1])}}
 dyon_fn!{fn z(v: Vec4) -> f64 {f64::from(v.0[2])}}
 dyon_fn!{fn w(v: Vec4) -> f64 {f64::from(v.0[3])}}
-dyon_fn!{fn norm(v: Vec4) -> f32 {vecmath::vec4_len(v.0)}}
 
-pub(crate) fn s(rt: &mut Runtime) -> Result<(), String> {
+pub(crate) fn norm(v: &Variable) -> Result<Variable, String> {
+    if let Variable::Vec4(v) = *v {
+        Ok(Variable::f64(vecmath::vec4_len(v) as f64))
+    } else {
+        Err("Expected `vec4`".into())
+    }
+}
+
+pub(crate) fn s(rt: &mut Runtime) -> Result<Variable, String> {
     let ind: f64 = rt.pop().expect(TINVOTS);
     let ind = ind as usize;
     if ind >= 4 {return Err(format!("Index out of bounds `{}`", ind))};
     let v: [f32; 4] = rt.pop_vec4().expect(TINVOTS);
-    rt.push(f64::from(v[ind]));
-    Ok(())
+    Ok(Variable::f64(f64::from(v[ind])))
 }
 
 dyon_fn!{fn det(m: Mat4) -> f64 {f64::from(vecmath::mat4_det(m.0))}}
@@ -98,13 +388,12 @@ dyon_fn!{fn ry(m: Mat4) -> Vec4 {Vec4([m.0[0][1], m.0[1][1], m.0[2][1], m.0[3][1
 dyon_fn!{fn rz(m: Mat4) -> Vec4 {Vec4([m.0[0][2], m.0[1][2], m.0[2][2], m.0[3][2]])}}
 dyon_fn!{fn rw(m: Mat4) -> Vec4 {Vec4([m.0[0][3], m.0[1][3], m.0[2][3], m.0[3][3]])}}
 
-pub(crate) fn rv(rt: &mut Runtime) -> Result<(), String> {
+pub(crate) fn rv(rt: &mut Runtime) -> Result<Variable, String> {
     let ind: f64 = rt.pop().expect(TINVOTS);
     let ind = ind as usize;
     if ind >= 4 {return Err(format!("Index out of bounds `{}`", ind))};
     let m: [[f32; 4]; 4] = rt.pop_mat4().expect(TINVOTS);
-    rt.stack.push(Variable::Vec4([m[0][ind], m[1][ind], m[2][ind], m[3][ind]]));
-    Ok(())
+    Ok(Variable::Vec4([m[0][ind], m[1][ind], m[2][ind], m[3][ind]]))
 }
 
 dyon_fn!{fn cx(m: Mat4) -> Vec4 {Vec4(m.0[0])}}
@@ -112,25 +401,22 @@ dyon_fn!{fn cy(m: Mat4) -> Vec4 {Vec4(m.0[1])}}
 dyon_fn!{fn cz(m: Mat4) -> Vec4 {Vec4(m.0[2])}}
 dyon_fn!{fn cw(m: Mat4) -> Vec4 {Vec4(m.0[3])}}
 
-pub(crate) fn cv(rt: &mut Runtime) -> Result<(), String> {
+pub(crate) fn cv(rt: &mut Runtime) -> Result<Variable, String> {
     let ind: f64 = rt.pop().expect(TINVOTS);
     let ind = ind as usize;
     if ind >= 4 {return Err(format!("Index out of bounds `{}`", ind))};
     let m: [[f32; 4]; 4] = rt.pop_mat4().expect(TINVOTS);
-    rt.stack.push(Variable::Vec4(m[ind]));
-    Ok(())
+    Ok(Variable::Mat4(Box::new(m)))
 }
 
-pub(crate) fn clone(rt: &mut Runtime) -> Result<(), String> {
+pub(crate) fn clone(rt: &mut Runtime) -> Result<Variable, String> {
     let v = rt.stack.pop().expect(TINVOTS);
-    let v = rt.resolve(&v).deep_clone(&rt.stack);
-    rt.stack.push(v);
-    Ok(())
+    Ok(rt.resolve(&v).deep_clone(&rt.stack))
 }
 
-pub(crate) fn why(rt: &mut Runtime) -> Result<(), String> {
+pub(crate) fn why(rt: &mut Runtime) -> Result<Variable, String> {
     let v = rt.stack.pop().expect(TINVOTS);
-    let v = Variable::Array(Arc::new(match rt.resolve(&v) {
+    Ok(Variable::Array(Arc::new(match rt.resolve(&v) {
         &Variable::Bool(true, Some(ref sec)) => {
             let mut sec = (**sec).clone();
             sec.reverse();
@@ -149,14 +435,12 @@ pub(crate) fn why(rt: &mut Runtime) -> Result<(), String> {
             })
         }
         x => return Err(rt.expected_arg(0, x, "bool"))
-    }));
-    rt.stack.push(v);
-    Ok(())
+    })))
 }
 
-pub(crate) fn _where(rt: &mut Runtime) -> Result<(), String> {
+pub(crate) fn _where(rt: &mut Runtime) -> Result<Variable, String> {
     let v = rt.stack.pop().expect(TINVOTS);
-    let v = Variable::Array(Arc::new(match rt.resolve(&v) {
+    Ok(Variable::Array(Arc::new(match rt.resolve(&v) {
         &Variable::F64(val, Some(ref sec)) => {
             if val.is_nan() {
                 return Err({
@@ -176,12 +460,10 @@ pub(crate) fn _where(rt: &mut Runtime) -> Result<(), String> {
             })
         }
         x => return Err(rt.expected_arg(0, x, "f64"))
-    }));
-    rt.stack.push(v);
-    Ok(())
+    })))
 }
 
-pub(crate) fn explain_why(rt: &mut Runtime) -> Result<(), String> {
+pub(crate) fn explain_why(rt: &mut Runtime) -> Result<Variable, String> {
     let why = rt.stack.pop().expect(TINVOTS);
     let val = rt.stack.pop().expect(TINVOTS);
     let (val, why) = match rt.resolve(&val) {
@@ -197,11 +479,10 @@ pub(crate) fn explain_why(rt: &mut Runtime) -> Result<(), String> {
         ),
         x => return Err(rt.expected_arg(0, x, "bool"))
     };
-    rt.stack.push(Variable::Bool(val, Some(why)));
-    Ok(())
+    Ok(Variable::Bool(val, Some(why)))
 }
 
-pub(crate) fn explain_where(rt: &mut Runtime) -> Result<(), String> {
+pub(crate) fn explain_where(rt: &mut Runtime) -> Result<Variable, String> {
     let wh = rt.stack.pop().expect(TINVOTS);
     let val = rt.stack.pop().expect(TINVOTS);
     let (val, wh) = match rt.resolve(&val) {
@@ -217,8 +498,7 @@ pub(crate) fn explain_where(rt: &mut Runtime) -> Result<(), String> {
         ),
         x => return Err(rt.expected_arg(0, x, "bool"))
     };
-    rt.stack.push(Variable::F64(val, Some(wh)));
-    Ok(())
+    Ok(Variable::F64(val, Some(wh)))
 }
 
 pub(crate) fn println(rt: &mut Runtime) -> Result<(), String> {
@@ -263,77 +543,59 @@ dyon_fn!{fn sleep(v: f64) {
     sleep(Duration::new(secs, nanos));
 }}
 
-pub(crate) fn head(rt: &mut Runtime) -> Result<(), String> {
+pub(crate) fn head(rt: &mut Runtime) -> Result<Variable, String> {
     let v = rt.stack.pop().expect(TINVOTS);
-    let v = Variable::Option(match rt.resolve(&v) {
+    Ok(Variable::Option(match rt.resolve(&v) {
         &Variable::Link(ref link) => link.head(),
         x => return Err(rt.expected_arg(0, x, "link"))
-    });
-    rt.stack.push(v);
-    Ok(())
+    }))
 }
 
-pub(crate) fn tip(rt: &mut Runtime) -> Result<(), String> {
+pub(crate) fn tip(rt: &mut Runtime) -> Result<Variable, String> {
     let v = rt.stack.pop().expect(TINVOTS);
-    let v = Variable::Option(match rt.resolve(&v) {
+    Ok(Variable::Option(match rt.resolve(&v) {
         &Variable::Link(ref link) => link.tip(),
         x => return Err(rt.expected_arg(0, x, "link"))
-    });
-    rt.stack.push(v);
-    Ok(())
+    }))
 }
 
-pub(crate) fn tail(rt: &mut Runtime) -> Result<(), String> {
+pub(crate) fn tail(rt: &mut Runtime) -> Result<Variable, String> {
     let v = rt.stack.pop().expect(TINVOTS);
-    let v = Variable::Link(Box::new(match rt.resolve(&v) {
+    Ok(Variable::Link(Box::new(match rt.resolve(&v) {
         &Variable::Link(ref link) => link.tail(),
         x => return Err(rt.expected_arg(0, x, "link"))
-    }));
-    rt.stack.push(v);
-    Ok(())
+    })))
 }
 
-pub(crate) fn neck(rt: &mut Runtime) -> Result<(), String> {
+pub(crate) fn neck(rt: &mut Runtime) -> Result<Variable, String> {
     let v = rt.stack.pop().expect(TINVOTS);
-    let v = Variable::Link(Box::new(match rt.resolve(&v) {
+    Ok(Variable::Link(Box::new(match rt.resolve(&v) {
         &Variable::Link(ref link) => link.neck(),
         x => return Err(rt.expected_arg(0, x, "link"))
-    }));
-    rt.stack.push(v);
-    Ok(())
+    })))
 }
 
-pub(crate) fn is_empty(rt: &mut Runtime) -> Result<(), String> {
+pub(crate) fn is_empty(rt: &mut Runtime) -> Result<Variable, String> {
     let v = rt.stack.pop().expect(TINVOTS);
-    let v = Variable::bool(match rt.resolve(&v) {
+    Ok(Variable::bool(match rt.resolve(&v) {
         &Variable::Link(ref link) => link.is_empty(),
         x => return Err(rt.expected_arg(0, x, "link"))
-    });
-    rt.stack.push(v);
-    Ok(())
+    }))
 }
 
-pub(crate) fn random(rt: &mut Runtime) -> Result<(), String> {
+pub(crate) fn random(rt: &mut Runtime) -> Result<Variable, String> {
     use rand::Rng;
 
-    let v: f64 = rt.rng.gen();
-    rt.push(v);
-    Ok(())
+    Ok(Variable::f64(rt.rng.gen()))
 }
 
 dyon_fn!{fn tau() -> f64 {6.283_185_307_179_586}}
 
-pub(crate) fn len(rt: &mut Runtime) -> Result<(), String> {
-    let v = rt.stack.pop().expect(TINVOTS);
-    let v = {
-        let arr = match rt.resolve(&v) {
-            &Variable::Array(ref arr) => arr,
-            x => return Err(rt.expected_arg(0, x, "array"))
-        };
-        Variable::f64(arr.len() as f64)
-    };
-    rt.stack.push(v);
-    Ok(())
+pub(crate) fn len(a: &Variable) -> Result<Variable, String> {
+    match a {
+        &Variable::Array(ref arr) => Ok(Variable::f64(arr.len() as f64)),
+        _ => return Err("Expected array".into())
+    }
 }
 
 pub(crate) fn push_ref(rt: &mut Runtime) -> Result<(), String> {
@@ -464,7 +726,7 @@ pub(crate) fn insert(rt: &mut Runtime) -> Result<(), String> {
     Ok(())
 }
 
-pub(crate) fn pop(rt: &mut Runtime) -> Result<(), String> {
+pub(crate) fn pop(rt: &mut Runtime) -> Result<Variable, String> {
     let arr = rt.stack.pop().expect(TINVOTS);
     let mut v: Option<Variable> = None;
     if let Variable::Ref(ind) = arr {
@@ -493,11 +755,10 @@ pub(crate) fn pop(rt: &mut Runtime) -> Result<(), String> {
         }),
         Some(val) => val
     };
-    rt.stack.push(v);
-    Ok(())
+    Ok(v)
 }
 
-pub(crate) fn remove(rt: &mut Runtime) -> Result<(), String> {
+pub(crate) fn remove(rt: &mut Runtime) -> Result<Variable, String> {
     let index = rt.stack.pop().expect(TINVOTS);
     let index = match rt.resolve(&index) {
         &Variable::F64(index, _) => index,
@@ -513,8 +774,7 @@ pub(crate) fn remove(rt: &mut Runtime) -> Result<(), String> {
         }
         if let Variable::Array(ref mut arr) = rt.stack[ind] {
             let v = Arc::make_mut(arr).remove(index as usize);
-            rt.stack.push(v);
-            return Ok(());
+            return Ok(v);
         };
         return Err({
             rt.arg_err_index.set(Some(0));
@@ -610,7 +870,7 @@ pub(crate) fn swap(rt: &mut Runtime) -> Result<(), String> {
     Ok(())
 }
 
-pub(crate) fn read_line(rt: &mut Runtime) -> Result<(), String> {
+pub(crate) fn read_line(_rt: &mut Runtime) -> Result<Variable, String> {
     use std::io::{self, Write};
     use std::error::Error;
 
@@ -620,15 +880,14 @@ pub(crate) fn read_line(rt: &mut Runtime) -> Result<(), String> {
         Ok(_) => None,
         Err(error) => Some(error)
     };
-    rt.push(if let Some(error) = error {
+    Ok(if let Some(error) = error {
         return Err(error.description().into())
     } else {
         Variable::Str(Arc::new(input))
-    });
-    Ok(())
+    })
 }
 
-pub(crate) fn read_number(rt: &mut Runtime) -> Result<(), String> {
+pub(crate) fn read_number(rt: &mut Runtime) -> Result<Variable, String> {
     use std::io::{self, Write};
     use std::error::Error;
 
@@ -648,8 +907,7 @@ pub(crate) fn read_number(rt: &mut Runtime) -> Result<(), String> {
             Err(_) => println!("{}", err),
         }
     };
-    rt.push(rv);
-    Ok(())
+    Ok(Variable::f64(rv))
 }
 
 dyon_fn!{fn parse_number(text: Arc<String>) -> Option<f64> {text.trim().parse::<f64>().ok()}}
@@ -657,24 +915,22 @@ dyon_fn!{fn trim(v: Arc<String>) -> Arc<String> {Arc::new(v.trim().into())}}
 dyon_fn!{fn trim_left(v: Arc<String>) -> Arc<String> {Arc::new(v.trim_start().into())}}
 dyon_fn!{fn trim_right(v: Arc<String>) -> Arc<String> {Arc::new(v.trim_end().into())}}
 
-pub(crate) fn _str(rt: &mut Runtime) -> Result<(), String> {
+pub(crate) fn _str(rt: &mut Runtime) -> Result<Variable, String> {
     use write::{write_variable, EscapeString};
 
     let v = rt.stack.pop().expect(TINVOTS);
     let mut buf: Vec<u8> = vec![];
     write_variable(&mut buf, rt, rt.resolve(&v), EscapeString::None, 0).unwrap();
-    rt.push(String::from_utf8(buf).unwrap());
-    Ok(())
+    Ok(Variable::Str(Arc::new(String::from_utf8(buf).unwrap())))
 }
 
-pub(crate) fn json_string(rt: &mut Runtime) -> Result<(), String> {
+pub(crate) fn json_string(rt: &mut Runtime) -> Result<Variable, String> {
     use write::{write_variable, EscapeString};
 
     let v = rt.stack.pop().expect(TINVOTS);
     let mut buf: Vec<u8> = vec![];
     write_variable(&mut buf, rt, rt.resolve(&v), EscapeString::Json, 0).unwrap();
-    rt.stack.push(Variable::Str(Arc::new(String::from_utf8(buf).unwrap())));
-    Ok(())
+    Ok(Variable::Str(Arc::new(String::from_utf8(buf).unwrap())))
 }
 
 dyon_fn!{fn str__color(v: Vec4) -> Arc<String> {
@@ -727,12 +983,12 @@ dyon_fn!{fn linear_to_srgb__color(v: Vec4) -> Vec4 {
     Vec4([to_srgb(v[0]), to_srgb(v[1]), to_srgb(v[2]), v[3]])
 }}
 
-pub(crate) fn _typeof(rt: &mut Runtime) -> Result<(), String> {
+pub(crate) fn _typeof(rt: &mut Runtime) -> Result<Variable, String> {
     use crate::runtime::*;
     use crate::Variable::*;
 
     let v = rt.stack.pop().expect(TINVOTS);
-    let t = Variable::Str(match *rt.resolve(&v) {
+    Ok(Variable::Str(match *rt.resolve(&v) {
         Str(_) => TEXT_TYPE.clone(),
         F64(_, _) => F64_TYPE.clone(),
         Vec4(_) => VEC4_TYPE.clone(),
@@ -750,9 +1006,7 @@ pub(crate) fn _typeof(rt: &mut Runtime) -> Result<(), String> {
         Thread(_) => THREAD_TYPE.clone(),
         Closure(_, _) => CLOSURE_TYPE.clone(),
         In(_) => IN_TYPE.clone(),
-    });
-    rt.stack.push(t);
-    Ok(())
+    }))
 }
 
 pub(crate) fn debug(rt: &mut Runtime) -> Result<(), String> {
@@ -767,16 +1021,14 @@ pub(crate) fn backtrace(rt: &mut Runtime) -> Result<(), String> {
     Ok(())
 }
 
-pub(crate) fn load(rt: &mut Runtime) -> Result<(), String> {
+pub(crate) fn load(rt: &mut Runtime) -> Result<Variable, String> {
     use load;
 
     let v = rt.stack.pop().expect(TINVOTS);
-    let v = match rt.resolve(&v) {
+    Ok(match rt.resolve(&v) {
         &Variable::Str(ref text) => {
             let mut m = Module::empty();
-            for f in &rt.module.ext_prelude {
-                m.add(f.name.clone(), f.f, f.p.clone());
-            }
+            m.import_ext_prelude(&rt.module);
             if let Err(err) = load(text, &mut m) {
                 Variable::Result(Err(Box::new(Error {
                     message: Variable::Str(Arc::new(format!("When attempting to load module:\n{}", err))),
@@ -790,20 +1042,16 @@ pub(crate) fn load(rt: &mut Runtime) -> Result<(), String> {
         x => {
             return Err(rt.expected_arg(0, x, "string"));
         }
-    };
-    rt.stack.push(v);
-    Ok(())
+    })
 }
 
-pub(crate) fn load__source_imports(rt: &mut Runtime) -> Result<(), String> {
+pub(crate) fn load__source_imports(rt: &mut Runtime) -> Result<Variable, String> {
     use load;
 
     let modules = rt.stack.pop().expect(TINVOTS);
     let source = rt.stack.pop().expect(TINVOTS);
     let mut new_module = Module::empty();
-    for f in &rt.module.ext_prelude {
-        new_module.add(f.name.clone(), f.f, f.p.clone());
-    }
+    new_module.import_ext_prelude(&rt.module);
     let x = rt.resolve(&modules);
     match x {
         &Variable::Array(ref array) => {
@@ -811,20 +1059,7 @@ pub(crate) fn load__source_imports(rt: &mut Runtime) -> Result<(), String> {
                 match rt.resolve(it) {
                     &Variable::RustObject(ref obj) => {
                         match obj.lock().unwrap().downcast_ref::<Arc<Module>>() {
-                            Some(m) => {
-                                // Add external functions from imports.
-                                for f in &m.ext_prelude {
-                                    let has_external = new_module.ext_prelude.iter()
-                                        .any(|a| a.name == f.name);
-                                    if !has_external {
-                                        new_module.add(f.name.clone(), f.f, f.p.clone());
-                                    }
-                                }
-                                // Register loaded functions from imports.
-                                for f in &m.functions {
-                                    new_module.register(f.clone())
-                                }
-                            }
+                            Some(m) => new_module.import(m),
                             None => return Err(rt.expected_arg(1, x, "[Module]"))
                         }
                     }
@@ -834,7 +1069,7 @@ pub(crate) fn load__source_imports(rt: &mut Runtime) -> Result<(), String> {
         }
         x => return Err(rt.expected_arg(1, x, "[Module]"))
     }
-    let v = match rt.resolve(&source) {
+    Ok(match rt.resolve(&source) {
         &Variable::Str(ref text) => {
             if let Err(err) = load(text, &mut new_module) {
                 Variable::Result(Err(Box::new(Error {
@@ -849,12 +1084,10 @@ pub(crate) fn load__source_imports(rt: &mut Runtime) -> Result<(), String> {
             }
         }
         x => return Err(rt.expected_arg(0, x, "str"))
-    };
-    rt.stack.push(v);
-    Ok(())
+    })
 }
 
-pub(crate) fn module__in_string_imports(rt: &mut Runtime) -> Result<(), String> {
+pub(crate) fn module__in_string_imports(rt: &mut Runtime) -> Result<Variable, String> {
     let modules = rt.stack.pop().expect(TINVOTS);
     let source = rt.stack.pop().expect(TINVOTS);
     let source = match rt.resolve(&source) {
@@ -867,9 +1100,7 @@ pub(crate) fn module__in_string_imports(rt: &mut Runtime) -> Result<(), String> 
         x => return Err(rt.expected_arg(0, x, "str"))
     };
     let mut new_module = Module::empty();
-    for f in &rt.module.ext_prelude {
-        new_module.add(f.name.clone(), f.f, f.p.clone());
-    }
+    new_module.import_ext_prelude(&rt.module);
     let x = rt.resolve(&modules);
     match x {
         &Variable::Array(ref array) => {
@@ -877,20 +1108,7 @@ pub(crate) fn module__in_string_imports(rt: &mut Runtime) -> Result<(), String> 
                 match rt.resolve(it) {
                     &Variable::RustObject(ref obj) => {
                         match obj.lock().unwrap().downcast_ref::<Arc<Module>>() {
-                            Some(m) => {
-                                // Add external functions from imports.
-                                for f in &m.ext_prelude {
-                                    let has_external = new_module.ext_prelude.iter()
-                                        .any(|a| a.name == f.name);
-                                    if !has_external {
-                                        new_module.add(f.name.clone(), f.f, f.p.clone());
-                                    }
-                                }
-                                // Register loaded functions from imports.
-                                for f in &m.functions {
-                                    new_module.register(f.clone())
-                                }
-                            }
+                            Some(m) => new_module.import(m),
                             None => return Err(rt.expected_arg(2, x, "[Module]"))
                         }
                     }
@@ -900,7 +1118,7 @@ pub(crate) fn module__in_string_imports(rt: &mut Runtime) -> Result<(), String> 
         }
         x => return Err(rt.expected_arg(2, x, "[Module]"))
     }
-    let v = if let Err(err) = load_str(&name, source, &mut new_module) {
+    Ok(if let Err(err) = load_str(&name, source, &mut new_module) {
             Variable::Result(Err(Box::new(Error {
                 message: Variable::Str(Arc::new(
                     format!("When attempting to load module:\n{}", err))),
@@ -910,9 +1128,101 @@ pub(crate) fn module__in_string_imports(rt: &mut Runtime) -> Result<(), String> 
             Variable::Result(Ok(Box::new(
                 Variable::RustObject(Arc::new(
                     Mutex::new(Arc::new(new_module)))))))
-        };
-    rt.stack.push(v);
-    Ok(())
+        })
+}
+
+
+#[allow(non_snake_case)]
+pub(crate) fn check__in_string_imports(rt: &mut Runtime) -> Result<Variable, String> {
+    let modules = rt.stack.pop().expect(TINVOTS);
+    let source = rt.stack.pop().expect(TINVOTS);
+    let source = match rt.resolve(&source) {
+        &Variable::Str(ref t) => t.clone(),
+        x => return Err(rt.expected_arg(1, x, "str"))
+    };
+    let name = rt.stack.pop().expect(TINVOTS);
+    let name = match rt.resolve(&name) {
+        &Variable::Str(ref t) => t.clone(),
+        x => return Err(rt.expected_arg(0, x, "str"))
+    };
+    let mut new_module = Module::empty();
+    new_module.import_ext_prelude(&rt.module);
+    let x = rt.resolve(&modules);
+    match x {
+        &Variable::Array(ref array) => {
+            for it in &**array {
+                match rt.resolve(it) {
+                    &Variable::RustObject(ref obj) => {
+                        match obj.lock().unwrap().downcast_ref::<Arc<Module>>() {
+                            Some(m) => new_module.import(m),
+                            None => return Err(rt.expected_arg(2, x, "[Module]"))
+                        }
+                    }
+                    x => return Err(rt.expected_arg(2, x, "[Module]"))
+                }
+            }
+        }
+        x => return Err(rt.expected_arg(2, x, "[Module]"))
+    }
+    Ok(match check_str(&name, source, &new_module) {
+            Err(err) => Variable::Result(Err(Box::new(Error {
+                        message: Variable::Str(Arc::new(
+                            format!("When attempting to load module:\n{}", err))),
+                        trace: vec![]
+                    }))),
+            Ok(nodes) => {
+                Variable::Result(Ok(Box::new(Variable::Array({
+                    use embed::PushVariable;
+
+                    let mut res = vec![];
+                    lazy_static!{
+                        static ref KIND: Arc<String> = Arc::new("kind".into());
+                        static ref CHILDREN: Arc<String> = Arc::new("children".into());
+                        static ref NAMES: Arc<String> = Arc::new("names".into());
+                        static ref PARENT: Arc<String> = Arc::new("parent".into());
+                        static ref TY: Arc<String> = Arc::new("ty".into());
+                        static ref ALIAS: Arc<String> = Arc::new("alias".into());
+                        static ref MUTABLE: Arc<String> = Arc::new("mutable".into());
+                        static ref TRY: Arc<String> = Arc::new("try".into());
+                        static ref GRAB_LEVEL: Arc<String> = Arc::new("grab_level".into());
+                        static ref SOURCE_OFFSET: Arc<String> = Arc::new("source_offset".into());
+                        static ref SOURCE_LENGTH: Arc<String> = Arc::new("source_length".into());
+                        static ref START: Arc<String> = Arc::new("start".into());
+                        static ref END: Arc<String> = Arc::new("end".into());
+                        static ref LIFETIME: Arc<String> = Arc::new("lifetime".into());
+                        static ref DECLARATION: Arc<String> = Arc::new("declaration".into());
+                        static ref OP: Arc<String> = Arc::new("op".into());
+                        static ref LTS: Arc<String> = Arc::new("lts".into());
+                    }
+                    for n in &nodes {
+                        let mut obj = HashMap::new();
+                        obj.insert(KIND.clone(), format!("{:?}", n.kind).push_var());
+                        obj.insert(CHILDREN.clone(), n.children.push_var());
+                        obj.insert(NAMES.clone(), n.names.push_var());
+                        obj.insert(PARENT.clone(), n.parent.push_var());
+                        obj.insert(TY.clone(), n.ty.as_ref().map(|ty| ty.description()).push_var());
+                        obj.insert(ALIAS.clone(), n.alias.push_var());
+                        obj.insert(MUTABLE.clone(), n.mutable.push_var());
+                        obj.insert(TRY.clone(), n.try.push_var());
+                        obj.insert(GRAB_LEVEL.clone(), (n.grab_level as u32).push_var());
+                        obj.insert(SOURCE_OFFSET.clone(), n.source.offset.push_var());
+                        obj.insert(SOURCE_LENGTH.clone(), n.source.length.push_var());
+                        obj.insert(START.clone(), n.start.push_var());
+                        obj.insert(END.clone(), n.end.push_var());
+                        obj.insert(LIFETIME.clone(), n.lifetime.push_var());
+                        obj.insert(DECLARATION.clone(), n.declaration.push_var());
+                        obj.insert(OP.clone(),
+                            n.op.as_ref().map(|op| format!("{:?}", op)).push_var());
+                        obj.insert(LTS.clone(),
+                            n.lts.iter()
+                                 .map(|lt| format!("{:?}", lt)).collect::<Vec<String>>()
+                                 .push_var());
+                        res.push(Variable::Object(Arc::new(obj)));
+                    }
+                    Arc::new(res)
+                }))))
+            }
+        })
 }
 
 pub(crate) fn _call(rt: &mut Runtime) -> Result<(), String> {
@@ -938,8 +1248,6 @@ pub(crate) fn _call(rt: &mut Runtime) -> Result<(), String> {
     match obj.lock().unwrap()
         .downcast_ref::<Arc<Module>>() {
         Some(m) => {
-            use std::cell::Cell;
-
             let f_index = m.find_function(&fn_name, 0);
             match f_index {
                 FnIndex::Loaded(f_index) => {
@@ -959,31 +1267,36 @@ pub(crate) fn _call(rt: &mut Runtime) -> Result<(), String> {
                     })?;
                 }
                 FnIndex::None |
-                FnIndex::ExternalVoid(_) | FnIndex::ExternalReturn(_) =>
+                FnIndex::Void(_) |
+                FnIndex::Return(_) |
+                FnIndex::Lazy(_, _) |
+                FnIndex::BinOp(_) |
+                FnIndex::UnOp(_) =>
                     return Err(format!("Could not find function `{}`", fn_name))
             }
             // Use empty range instead of `call.source_range` (from when it was intrinsic).
             let call_range = Range::empty(0);
             let call = ast::Call {
-                alias: None,
-                name: fn_name.clone(),
-                f_index: Cell::new(f_index),
+                f_index,
                 args: args.iter().map(|arg|
                     ast::Expression::Variable(Box::new((
                         call_range, arg.clone())))).collect(),
                 custom_source: Some(source),
-                source_range: call_range,
+                info: Box::new(ast::CallInfo {
+                    alias: None,
+                    name: fn_name.clone(),
+                    source_range: call_range,
+                })
             };
 
             rt.call(&call, &m)?;
         }
         None => return Err(rt.expected_arg(0, x, "Module"))
     }
-
     Ok(())
 }
 
-pub(crate) fn call_ret(rt: &mut Runtime) -> Result<(), String> {
+pub(crate) fn call_ret(rt: &mut Runtime) -> Result<Variable, String> {
     // Use the source from calling function.
     let source = rt.module.functions[rt.call_stack.last().unwrap().index].source.clone();
     let args = rt.stack.pop().expect(TINVOTS);
@@ -1006,8 +1319,6 @@ pub(crate) fn call_ret(rt: &mut Runtime) -> Result<(), String> {
     let v = match obj.lock().unwrap()
         .downcast_ref::<Arc<Module>>() {
         Some(m) => {
-            use std::cell::Cell;
-
             let f_index = m.find_function(&fn_name, 0);
             match f_index {
                 FnIndex::Loaded(f_index) => {
@@ -1027,20 +1338,26 @@ pub(crate) fn call_ret(rt: &mut Runtime) -> Result<(), String> {
                     })?;
                 }
                 FnIndex::None |
-                FnIndex::ExternalVoid(_) | FnIndex::ExternalReturn(_) =>
+                FnIndex::Void(_) |
+                FnIndex::Return(_) |
+                FnIndex::Lazy(_, _) |
+                FnIndex::BinOp(_) |
+                FnIndex::UnOp(_) =>
                     return Err(format!("Could not find function `{}`", fn_name))
             }
             // Use empty range instead of `call.source_range` (from when it was intrinsic).
             let call_range = Range::empty(0);
             let call = ast::Call {
-                alias: None,
-                name: fn_name.clone(),
-                f_index: Cell::new(f_index),
+                f_index,
                 args: args.iter().map(|arg|
                     ast::Expression::Variable(Box::new((
                         call_range, arg.clone())))).collect(),
                 custom_source: Some(source),
-                source_range: call_range,
+                info: Box::new(ast::CallInfo {
+                    source_range: call_range,
+                    alias: None,
+                    name: fn_name.clone(),
+                })
             };
 
             if let Some(v) = rt.call(&call, &m)?.0 {v} else {
@@ -1050,18 +1367,15 @@ pub(crate) fn call_ret(rt: &mut Runtime) -> Result<(), String> {
         None => return Err(rt.expected_arg(0, x, "Module"))
     };
 
-    rt.stack.push(v);
-    Ok(())
+    Ok(v)
 }
 
-pub(crate) fn functions(rt: &mut Runtime) -> Result<(), String> {
+pub(crate) fn functions(rt: &mut Runtime) -> Result<Variable, String> {
     // List available functions in scope.
-    let v = Variable::Array(Arc::new(functions::list_functions(&rt.module)));
-    rt.stack.push(v);
-    Ok(())
+    Ok(Variable::Array(Arc::new(functions::list_functions(&rt.module))))
 }
 
-pub(crate) fn functions__module(rt: &mut Runtime) -> Result<(), String> {
+pub(crate) fn functions__module(rt: &mut Runtime) -> Result<Variable, String> {
     // List available functions in scope.
     let m = rt.stack.pop().expect(TINVOTS);
     let x = rt.resolve(&m);
@@ -1076,67 +1390,56 @@ pub(crate) fn functions__module(rt: &mut Runtime) -> Result<(), String> {
         None => return Err(rt.expected_arg(0, x, "Module"))
     };
 
-    let v = Variable::Array(Arc::new(functions));
-    rt.push(v);
-    Ok(())
+    Ok(Variable::Array(Arc::new(functions)))
 }
 
-dyon_fn!{fn none() -> Option<Variable> {None}}
+dyon_fn!{fn none() -> Variable {Variable::Option(None)}}
 
-pub(crate) fn some(rt: &mut Runtime) -> Result<(), String> {
+pub(crate) fn some(rt: &mut Runtime) -> Result<Variable, String> {
     let v = rt.stack.pop().expect(TINVOTS);
-    let v = Variable::Option(Some(Box::new(
+    Ok(Variable::Option(Some(Box::new(
         rt.resolve(&v).deep_clone(&rt.stack)
-    )));
-    rt.stack.push(v);
-    Ok(())
+    ))))
 }
 
-pub(crate) fn ok(rt: &mut Runtime) -> Result<(), String> {
+pub(crate) fn ok(rt: &mut Runtime) -> Result<Variable, String> {
     let v = rt.stack.pop().expect(TINVOTS);
     let v = Variable::Result(Ok(Box::new(
         rt.resolve(&v).deep_clone(&rt.stack)
     )));
-    rt.stack.push(v);
-    Ok(())
+    Ok(v)
 }
 
-pub(crate) fn err(rt: &mut Runtime) -> Result<(), String> {
+pub(crate) fn err(rt: &mut Runtime) -> Result<Variable, String> {
     let v = rt.stack.pop().expect(TINVOTS);
-    let v = Variable::Result(Err(Box::new(
+    Ok(Variable::Result(Err(Box::new(
         Error {
             message: rt.resolve(&v).deep_clone(&rt.stack),
             trace: vec![]
-        })));
-    rt.stack.push(v);
-    Ok(())
+        }))))
 }
 
-pub(crate) fn is_err(rt: &mut Runtime) -> Result<(), String> {
+pub(crate) fn is_err(rt: &mut Runtime) -> Result<Variable, String> {
     let v = rt.stack.pop().expect(TINVOTS);
-    let v = match rt.resolve(&v) {
+    Ok(match rt.resolve(&v) {
         &Variable::Result(Err(_)) => Variable::bool(true),
         &Variable::Result(Ok(_)) => Variable::bool(false),
         x => return Err(rt.expected_arg(0, x, "result"))
-    };
-    rt.stack.push(v);
-    Ok(())
+    })
 }
 
-pub(crate) fn is_ok(rt: &mut Runtime) -> Result<(), String> {
+pub(crate) fn is_ok(rt: &mut Runtime) -> Result<Variable, String> {
     let v = rt.stack.pop().expect(TINVOTS);
-    let v = match rt.resolve(&v) {
+    Ok(match rt.resolve(&v) {
         &Variable::Result(Err(_)) => Variable::bool(false),
         &Variable::Result(Ok(_)) => Variable::bool(true),
         x => return Err(rt.expected_arg(0, x, "result"))
-    };
-    rt.stack.push(v);
-    Ok(())
+    })
 }
 
-pub(crate) fn min(rt: &mut Runtime) -> Result<(), String> {
+pub(crate) fn min(rt: &mut Runtime) -> Result<Variable, String> {
     let v = rt.stack.pop().expect(TINVOTS);
-    let v = match rt.resolve(&v) {
+    Ok(Variable::f64(match rt.resolve(&v) {
         &Variable::Array(ref arr) => {
             let mut min: f64 = ::std::f64::NAN;
             for v in &**arr {
@@ -1147,14 +1450,12 @@ pub(crate) fn min(rt: &mut Runtime) -> Result<(), String> {
             min
         }
         x => return Err(rt.expected_arg(0, x, "array"))
-    };
-    rt.stack.push(Variable::f64(v));
-    Ok(())
+    }))
 }
 
-pub(crate) fn max(rt: &mut Runtime) -> Result<(), String> {
+pub(crate) fn max(rt: &mut Runtime) -> Result<Variable, String> {
     let v = rt.stack.pop().expect(TINVOTS);
-    let v = match rt.resolve(&v) {
+    Ok(Variable::f64(match rt.resolve(&v) {
         &Variable::Array(ref arr) => {
             let mut max: f64 = ::std::f64::NAN;
             for v in &**arr {
@@ -1165,18 +1466,16 @@ pub(crate) fn max(rt: &mut Runtime) -> Result<(), String> {
             max
         }
         x => return Err(rt.expected_arg(0, x, "array"))
-    };
-    rt.stack.push(Variable::f64(v));
-    Ok(())
+    }))
 }
 
-pub(crate) fn unwrap(rt: &mut Runtime) -> Result<(), String> {
+pub(crate) fn unwrap(rt: &mut Runtime) -> Result<Variable, String> {
     use write::{write_variable, EscapeString};
 
     // Return value does not depend on lifetime of argument since
     // `ok(x)` and `some(x)` perform a deep clone.
     let v = rt.stack.pop().expect(TINVOTS);
-    let v = match rt.resolve(&v) {
+    Ok(match rt.resolve(&v) {
         &Variable::Option(Some(ref v)) => (**v).clone(),
         &Variable::Option(None) => {
             return Err({
@@ -1204,35 +1503,29 @@ pub(crate) fn unwrap(rt: &mut Runtime) -> Result<(), String> {
             })
         }
         x => return Err(rt.expected_arg(0, x, "some(_) or ok(_)"))
-    };
-    rt.stack.push(v);
-    Ok(())
+    })
 }
 
-pub(crate) fn unwrap_or(rt: &mut Runtime) -> Result<(), String> {
+pub(crate) fn unwrap_or(rt: &mut Runtime) -> Result<Variable, String> {
     // Return value does not depend on lifetime of argument since
     // `ok(x)` and `some(x)` perform a deep clone.
     let def = rt.stack.pop().expect(TINVOTS);
     let v = rt.stack.pop().expect(TINVOTS);
-    let v = match rt.resolve(&v) {
+    Ok(match rt.resolve(&v) {
         &Variable::Option(Some(ref v)) => (**v).clone(),
         &Variable::Result(Ok(ref ok)) => (**ok).clone(),
         &Variable::Option(None) |
         &Variable::Result(Err(_)) => rt.resolve(&def).clone(),
         x => return Err(rt.expected_arg(0, x, "some(_) or ok(_)"))
-    };
-    rt.stack.push(v);
-    Ok(())
+    })
 }
 
-pub(crate) fn unwrap_err(rt: &mut Runtime) -> Result<(), String> {
+pub(crate) fn unwrap_err(rt: &mut Runtime) -> Result<Variable, String> {
     let v = rt.stack.pop().expect(TINVOTS);
-    let v = match rt.resolve(&v) {
+    Ok(match rt.resolve(&v) {
         &Variable::Result(Err(ref err)) => err.message.clone(),
         x => return Err(rt.expected_arg(0, x, "err(_)"))
-    };
-    rt.stack.push(v);
-    Ok(())
+    })
 }
 
 dyon_fn!{fn dir__angle(val: f64) -> Vec4 {Vec4([val.cos() as f32, val.sin() as f32, 0.0, 0.0])}}
@@ -1273,9 +1566,7 @@ dyon_fn!{fn syntax__in_string(name: Arc<String>, text: Arc<String>) -> Variable 
     })
 }}
 
-pub(crate) fn meta__syntax_in_string(rt: &mut Runtime) -> Result<(), String> {
-    use piston_meta::Syntax;
-
+pub(crate) fn meta__syntax_in_string(rt: &mut Runtime) -> Result<Variable, String> {
     let text = rt.stack.pop().expect(TINVOTS);
     let text = match rt.resolve(&text) {
         &Variable::Str(ref t) => t.clone(),
@@ -1297,15 +1588,13 @@ pub(crate) fn meta__syntax_in_string(rt: &mut Runtime) -> Result<(), String> {
         Some(s) => s,
         None => return Err(rt.expected_arg(0, syntax_var, "Syntax"))
     }, &name, &text);
-    let v = Variable::Result(match res {
+    Ok(Variable::Result(match res {
         Ok(res) => Ok(Box::new(Variable::Array(Arc::new(res)))),
         Err(err) => Err(Box::new(Error {
             message: Variable::Str(Arc::new(err)),
             trace: vec![]
         }))
-    });
-    rt.stack.push(v);
-    Ok(())
+    }))
 }
 
 dyon_fn!{fn download__url_file(url: Arc<String>, file: Arc<String>) -> Variable {
@@ -1343,7 +1632,7 @@ dyon_fn!{fn save__string_file(text: Arc<String>, file: Arc<String>) -> Variable 
 }}
 
 #[cfg(not(feature = "file"))]
-pub(crate) fn save__string_file(_: &mut Runtime) -> Result<(), String> {
+pub(crate) fn save__string_file(_: &mut Runtime) -> Result<Variable, String> {
     Err(FILE_SUPPORT_DISABLED.into())
 }
 
@@ -1376,7 +1665,7 @@ dyon_fn!{fn load_string__file(file: Arc<String>) -> Variable {
 }}
 
 #[cfg(not(feature = "file"))]
-pub(crate) fn load_string__file(_: &mut Runtime) -> Result<(), String> {
+pub(crate) fn load_string__file(_: &mut Runtime) -> Result<Variable, String> {
     Err(FILE_SUPPORT_DISABLED.into())
 }
 
@@ -1394,10 +1683,10 @@ dyon_fn!{fn load_string__url(url: Arc<String>) -> Variable {
     })
 }}
 
-pub(crate) fn join__thread(rt: &mut Runtime) -> Result<(), String> {
+pub(crate) fn join__thread(rt: &mut Runtime) -> Result<Variable, String> {
     let thread = rt.stack.pop().expect(TINVOTS);
     let handle_res = Thread::invalidate_handle(rt, thread);
-    let v = Variable::Result({
+    Ok(Variable::Result({
         match handle_res {
             Ok(handle) => {
                 match handle.join() {
@@ -1422,9 +1711,7 @@ pub(crate) fn join__thread(rt: &mut Runtime) -> Result<(), String> {
                 }))
             }
         }
-    });
-    rt.push(v);
-    Ok(())
+    }))
 }
 
 dyon_fn!{fn load_data__file(file: Arc<String>) -> Variable {
@@ -1457,7 +1744,7 @@ dyon_fn!{fn load_data__string(text: Arc<String>) -> Variable {
     Variable::Result(res)
 }}
 
-pub(crate) fn args_os(rt: &mut Runtime) -> Result<(), String> {
+pub(crate) fn args_os(_rt: &mut Runtime) -> Result<Variable, String> {
     let mut arr: Vec<Variable> = vec![];
     for arg in ::std::env::args_os() {
         if let Ok(t) = arg.into_string() {
@@ -1466,12 +1753,11 @@ pub(crate) fn args_os(rt: &mut Runtime) -> Result<(), String> {
             return Err("Invalid unicode in os argument".into());
         }
     }
-    rt.stack.push(Variable::Array(Arc::new(arr)));
-    Ok(())
+    Ok(Variable::Array(Arc::new(arr)))
 }
 
 #[cfg(feature = "file")]
-pub(crate) fn save__data_file(rt: &mut Runtime) -> Result<(), String> {
+pub(crate) fn save__data_file(rt: &mut Runtime) -> Result<Variable, String> {
     use std::error::Error;
     use std::fs::File;
     use std::io::BufWriter;
@@ -1505,16 +1791,15 @@ pub(crate) fn save__data_file(rt: &mut Runtime) -> Result<(), String> {
             }))
         }
     };
-    rt.stack.push(Variable::Result(res));
-    Ok(())
+    Ok(Variable::Result(res))
 }
 
 #[cfg(not(feature = "file"))]
-pub(crate) fn save__data_file(_: &mut Runtime) -> Result<(), String> {
+pub(crate) fn save__data_file(_: &mut Runtime) -> Result<Variable, String> {
     Err(FILE_SUPPORT_DISABLED.into())
 }
 
-pub(crate) fn json_from_meta_data(rt: &mut Runtime) -> Result<(), String> {
+pub(crate) fn json_from_meta_data(rt: &mut Runtime) -> Result<Variable, String> {
     use std::error::Error;
 
     let meta_data = rt.stack.pop().expect(TINVOTS);
@@ -1528,11 +1813,10 @@ pub(crate) fn json_from_meta_data(rt: &mut Runtime) -> Result<(), String> {
         }
         x => return Err(rt.expected_arg(0, x, "array"))
     };
-    rt.stack.push(Variable::Str(Arc::new(json)));
-    Ok(())
+    Ok(Variable::Str(Arc::new(json)))
 }
 
-pub(crate) fn errstr__string_start_len_msg(rt: &mut Runtime) -> Result<(), String> {
+pub(crate) fn errstr__string_start_len_msg(rt: &mut Runtime) -> Result<Variable, String> {
     use piston_meta::ParseErrorHandler;
 
     let msg = rt.stack.pop().expect(TINVOTS);
@@ -1560,52 +1844,45 @@ pub(crate) fn errstr__string_start_len_msg(rt: &mut Runtime) -> Result<(), Strin
     ParseErrorHandler::new(&source)
         .write_msg(&mut buf, Range::new(start, len), &msg)
         .unwrap();
-    rt.stack.push(Variable::Str(Arc::new(String::from_utf8(buf).unwrap())));
-    Ok(())
+    Ok(Variable::Str(Arc::new(String::from_utf8(buf).unwrap())))
 }
 
-pub(crate) fn has(rt: &mut Runtime) -> Result<(), String> {
+pub(crate) fn has(rt: &mut Runtime) -> Result<Variable, String> {
     let key = rt.stack.pop().expect(TINVOTS);
     let key = match rt.resolve(&key) {
         &Variable::Str(ref t) => t.clone(),
         x => return Err(rt.expected_arg(1, x, "str"))
     };
     let obj = rt.stack.pop().expect(TINVOTS);
-    let res = match rt.resolve(&obj) {
+    Ok(Variable::bool(match rt.resolve(&obj) {
         &Variable::Object(ref obj) => obj.contains_key(&key),
         x => return Err(rt.expected_arg(0, x, "object"))
-    };
-    rt.stack.push(Variable::bool(res));
-    Ok(())
+    }))
 }
 
-pub(crate) fn keys(rt: &mut Runtime) -> Result<(), String> {
+pub(crate) fn keys(rt: &mut Runtime) -> Result<Variable, String> {
     let obj = rt.stack.pop().expect(TINVOTS);
-    let res = Variable::Array(Arc::new(match rt.resolve(&obj) {
+    Ok(Variable::Array(Arc::new(match rt.resolve(&obj) {
         &Variable::Object(ref obj) => {
             obj.keys().map(|k| Variable::Str(k.clone())).collect()
         }
         x => return Err(rt.expected_arg(0, x, "object"))
-    }));
-    rt.stack.push(res);
-    Ok(())
+    })))
 }
 
-pub(crate) fn chars(rt: &mut Runtime) -> Result<(), String> {
+pub(crate) fn chars(rt: &mut Runtime) -> Result<Variable, String> {
     let t = rt.stack.pop().expect(TINVOTS);
     let t = match rt.resolve(&t) {
         &Variable::Str(ref t) => t.clone(),
         x => return Err(rt.expected_arg(0, x, "str"))
     };
-    let res = t.chars()
+    Ok(Variable::Array(Arc::new(t.chars()
         .map(|ch| {
             let mut s = String::new();
             s.push(ch);
             Variable::Str(Arc::new(s))
         })
-        .collect::<Vec<_>>();
-    rt.stack.push(Variable::Array(Arc::new(res)));
-    Ok(())
+        .collect::<Vec<_>>())))
 }
 
 dyon_fn!{fn now() -> f64 {
@@ -1624,11 +1901,11 @@ dyon_fn!{fn now() -> f64 {
 
 dyon_fn!{fn is_nan(v: f64) -> bool {v.is_nan()}}
 
-pub(crate) fn wait_next(rt: &mut Runtime) -> Result<(), String> {
+pub(crate) fn wait_next(rt: &mut Runtime) -> Result<Variable, String> {
     use std::error::Error;
 
     let v = rt.stack.pop().expect(TINVOTS);
-    let v = match rt.resolve(&v) {
+    Ok(match rt.resolve(&v) {
         &Variable::In(ref mutex) => {
             match mutex.lock() {
                 Ok(x) => match x.recv() {
@@ -1640,16 +1917,14 @@ pub(crate) fn wait_next(rt: &mut Runtime) -> Result<(), String> {
             }
         }
         x => return Err(rt.expected_arg(0, x, "in"))
-    };
-    rt.stack.push(v);
-    Ok(())
+    })
 }
 
-pub(crate) fn next(rt: &mut Runtime) -> Result<(), String> {
+pub(crate) fn next(rt: &mut Runtime) -> Result<Variable, String> {
     use std::error::Error;
 
     let v = rt.stack.pop().expect(TINVOTS);
-    let v = match rt.resolve(&v) {
+    Ok(match rt.resolve(&v) {
         &Variable::In(ref mutex) => {
             match mutex.lock() {
                 Ok(x) => match x.try_recv() {
@@ -1661,7 +1936,5 @@ pub(crate) fn next(rt: &mut Runtime) -> Result<(), String> {
             }
         }
         x => return Err(rt.expected_arg(0, x, "in"))
-    };
-    rt.stack.push(v);
-    Ok(())
+    })
 }

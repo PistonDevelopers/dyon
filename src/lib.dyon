@@ -1,3 +1,57 @@
+ns std
+
+/// Less.
+fn less(a: any, b: any) -> bool { ... }
+    (sec[f64], f64) -> sec[bool]
+    (f64, f64) -> bool
+    (str, str) -> bool
+
+/// Less or equal.
+fn less_or_equal(a: any, b: any) -> bool { ... }
+    (sec[f64], f64) -> sec[bool]
+    (f64, f64) -> bool
+    (str, str) -> bool
+
+/// Greater.
+fn greater(a: any, b: any) -> bool { ... }
+    (sec[f64], f64) -> sec[bool]
+    (f64, f64) -> bool
+    (str, str) -> bool
+
+/// Greater or equal.
+fn greater_or_equal(a: any, b: any) -> bool { ... }
+    (sec[f64], f64) -> sec[bool]
+    (f64, f64) -> bool
+    (str, str) -> bool
+
+/// Equal.
+fn equal(a: any, b: any) -> bool { ... }
+    (sec[f64], f64) -> sec[bool]
+    (f64, f64) -> bool
+    (str, str) -> bool
+    (sec[bool], bool) -> sec[bool]
+    (bool, bool) -> bool
+    (vec4, vec4) -> bool
+    ({}, {}) -> bool
+    ([], []) -> bool
+    (opt, opt) -> bool
+
+/// Not equal.
+fn not_equal(a: any, b: any) -> bool { ... }
+    (sec[f64], f64) -> sec[bool]
+    (f64, f64) -> bool
+    (str, str) -> bool
+
+/// Lazy AND (`&&`).
+fn and_also(a: bool => false, b: bool) -> any { ... }
+    (sec[bool], bool) -> sec[bool]
+    (bool, bool) -> bool
+
+/// Lazy OR (`||`).
+fn or_else(a: bool => true, b: bool) -> any { ... }
+    (sec[bool], bool) -> sec[bool]
+    (bool, bool) -> bool
+
 /// Returns an array of derived information for the truth value of `var`.
 /// This can be used with the value of `∃`/`any` and `∀`/`all` loops.
 fn why(var: sec[bool]) -> [any] { ... }
@@ -182,6 +236,11 @@ fn load__source_imports(source: str, imports: [any]) -> res[any] { ... }
 /// Returns `ok(module)` if it succeeds.
 fn module__in_string_imports(name: str, code: str, imports: [any]) -> res[any] { ... }
 
+/// Returns data from lifetime/type-checker from source.
+/// Ignores any lifetime or type error.
+/// Returns an error if there are any syntax errors.
+fn check__in_string_imports(name: str, code: str, imports: [any]) -> res[[{}]] { ... }
+
 /// Calls function in module with arguments.
 fn call(module: any, function: str, arguments: [any]) { ... }
 
@@ -207,7 +266,11 @@ fn unwrap(var: any) -> any { ... }
 fn unwrap_err(var: any) -> any { ... }
 
 /// Unwraps value or using a default.
-fn unwrap_or(var: any, def: any) -> any { ... }
+///
+/// This function uses a lazy invariant in the first argument.
+/// This means that if the lazy invariant matches,
+/// the second argument is not evaluated.
+fn unwrap_or(var: any => ok(_) | some(_), def: any) -> any { ... }
 
 /// Creates `ok(var)` variant of option values.
 fn ok(var: any) -> res[any] { ... }
@@ -228,6 +291,85 @@ fn min(array: [f64]) -> f64 { ... }
 /// Returns highest number in non-empty array.
 /// Returns NaN if array is empty.
 fn max(array: [f64]) -> f64 { ... }
+
+/// Addition.
+fn add(a: any, b: any) -> any { ... }
+    all T { (T f64, T f64) -> T f64 }
+    all T { (T vec4, T vec4) -> T vec4 }
+    all T { (T vec4, T f64) -> T vec4 }
+    all T { (T f64, T vec4) -> T vec4 }
+    all T { (T mat4, T mat4) -> T mat4 }
+    all T { (T f64, T mat4) -> T mat4 }
+    all T { (T mat4, T f64) -> T mat4 }
+    all T { (T bool, T bool) -> T bool }
+    all T { (T str, T str) -> T str }
+    all T { (T link, T link) -> T link }
+
+/// Subtraction.
+fn sub(a: any, b: any) -> any { ... }
+    all T { (T f64, T f64) -> T f64 }
+    all T { (T vec4, T vec4) -> T vec4 }
+    all T { (T vec4, T f64) -> T vec4 }
+    all T { (T f64, T vec4) -> T vec4 }
+    all T { (T mat4, T mat4) -> T mat4 }
+    all T { (T f64, T mat4) -> T mat4 }
+    all T { (T mat4, T f64) -> T mat4 }
+    all T { (T bool, T bool) -> T bool }
+
+/// Multiplication.
+fn mul(a: any, b: any) -> any { ... }
+    (f64, f64) -> f64
+    (vec4, vec4) -> vec4
+    (vec4, f64) -> vec4
+    (f64, vec4) -> vec4
+    (mat4, mat4) -> mat4
+    (f64, mat4) -> mat4
+    (mat4, f64) -> mat4
+    (mat4, vec4) -> vec4
+    all T { (T bool, T bool) -> T bool }
+
+/// Division.
+fn div(a: any, b: any) -> any { ... }
+    (f64, f64) -> f64
+    (vec4, vec4) -> vec4
+    (vec4, f64) -> vec4
+    (f64, vec4) -> vec4
+
+/// Division reminder.
+fn rem(a: any, b: any) -> any { ... }
+    (f64, f64) -> f64
+    (vec4, vec4) -> vec4
+    (vec4, f64) -> vec4
+    (f64, vec4) -> vec4
+
+/// Power operator.
+fn pow(a: any, b: any) -> any { ... }
+    (f64, f64) -> f64
+    (vec4, vec4) -> vec4
+    (vec4, f64) -> vec4
+    (f64, vec4) -> vec4
+    all T { (T bool, T bool) -> T bool }
+
+/// Returns the length of 4D vector.
+fn norm(v: vec4) -> f64 { ... }
+
+/// Logical NOT.
+fn not(b: bool) -> bool { ... }
+
+/// Negation.
+fn neg(v: any) -> any { ... }
+    (f64) -> f64
+    (vec4) -> vec4
+    (mat4) -> mat4
+
+/// Returns dot product.
+fn dot(a: any, b: any) -> f64 { ... }
+    (vec4, vec4) -> f64
+    (vec4, f64) -> f64
+    (f64, vec4) -> f64
+
+/// Returns cross product.
+fn cross(a: vec4, b: vec4) -> vec4 { ... }
 
 /// Returns x component of 4D vector.
 fn x(v: vec4) -> f64 { ... }

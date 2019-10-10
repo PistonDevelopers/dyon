@@ -1,0 +1,10 @@
+fn check(_: in[[bool]]) {}
+
+fn foo(a: f64) {}
+fn bar(a) -> {return clone(a)}
+(in[[f64]]) -> in[[f64]]
+fn baz() -> in {return in foo}
+
+fn main() {
+    check(bar(baz()))
+}

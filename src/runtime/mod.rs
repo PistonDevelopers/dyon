@@ -75,6 +75,7 @@ lazy_static! {
     pub(crate) static ref THREAD_TYPE: Arc<String> = Arc::new("thread".into());
     pub(crate) static ref CLOSURE_TYPE: Arc<String> = Arc::new("closure".into());
     pub(crate) static ref IN_TYPE: Arc<String> = Arc::new("in".into());
+    pub(crate) static ref MAIN: Arc<String> = Arc::new("main".into());
 }
 
 /// Stores data needed for running a Dyon program.
@@ -92,7 +93,6 @@ pub struct Runtime {
     /// When a current object is used, the runtime searches backwards
     /// until it finds the last current variable with the name.
     pub current_stack: Vec<(Arc<String>, usize)>,
-    ret: Arc<String>,
     pub(crate) rng: rand::rngs::StdRng,
     /// External functions can choose to report an error on an argument.
     pub arg_err_index: Cell<Option<usize>>,
@@ -309,7 +309,6 @@ impl Runtime {
             call_stack: vec![],
             local_stack: vec![],
             current_stack: vec![],
-            ret: Arc::new("return".into()),
             rng: rand::rngs::StdRng::from_entropy(),
             arg_err_index: Cell::new(None),
         }
@@ -511,9 +510,18 @@ impl Runtime {
                 let loader = false;
                 self.call_internal(call, loader)
             }
+            CallVoid(ref call) => self.call_void(&call.args, call.fun, &call.info),
+            CallReturn(ref call) => self.call_return(&call.args, call.fun, &call.info),
+            CallBinOp(ref call) => self.call_binop(&call.left, &call.right, call.fun, &call.info),
+            CallUnOp(ref call) => self.call_unop(&call.arg, call.fun, &call.info),
+            CallLazy(ref call) =>
+                self.call_lazy(&call.args, call.fun, call.lazy_inv, &call.info),
+            CallLoaded(ref call) => {
+                let loader = false;
+                self.call_loaded(&call.args, call.fun, &call.info,
+                                 &call.custom_source, loader)
+            }
             Item(ref item) => self.item(item, side),
-            UnOp(ref unop) => self.unop(unop, side),
-            BinOp(ref binop) => self.binop(binop, side),
             Assign(ref assign) => self.assign(assign.op, &assign.left, &assign.right),
             Vec4(ref vec4) => self.vec4(vec4, side),
             Mat4(ref mat4) => self.mat4(mat4, side),
@@ -539,7 +547,6 @@ impl Runtime {
             LinkFor(ref for_n_expr) => self.link_for_n_expr(for_n_expr),
             LinkIn(ref for_in_expr) => self.link_for_in_expr(for_in_expr),
             If(ref if_expr) => self.if_expr(if_expr),
-            Compare(ref compare) => self.compare(compare),
             Variable(ref range_var) => Ok((Some(range_var.1.clone()), Flow::Continue)),
             Try(ref expr) => self.try(expr, side),
             Swizzle(ref sw) => {
@@ -749,16 +756,18 @@ impl Runtime {
         use std::mem::replace;
 
         let old_module = replace(&mut self.module, module.clone());
-        let name: Arc<String> = Arc::new("main".into());
+        let name: Arc<String> = MAIN.clone();
         let call = ast::Call {
-            alias: None,
-            name: name.clone(),
-            f_index: Cell::new(module.find_function(&name, 0)),
+            f_index: module.find_function(&name, 0),
             args: vec![],
             custom_source: None,
-            source_range: Range::empty(0),
+            info: Box::new(ast::CallInfo {
+                alias: None,
+                name: name.clone(),
+                source_range: Range::empty(0),
+            })
         };
-        match call.f_index.get() {
+        match call.f_index {
             FnIndex::Loaded(f_index) => {
                 let f = &module.functions[f_index as usize];
                 if !f.args.is_empty() {
@@ -780,7 +789,7 @@ impl Runtime {
             }
             _ => {
                 self.module = old_module;
-                Err(module.error(call.source_range,
+                Err(module.error(call.info.source_range,
                                "Could not find function `main`", self))
             }
         }
@@ -818,12 +827,10 @@ impl Runtime {
         let mut stack = vec![];
         let relative = self.call_stack.last().map(|c| c.index).unwrap();
         let mut fake_call = ast::Call {
-            alias: go.call.alias.clone(),
-            name: go.call.name.clone(),
-            f_index: Cell::new(self.module.find_function(&go.call.name, relative)),
+            f_index: self.module.find_function(&go.call.info.name, relative),
             args: Vec::with_capacity(n),
             custom_source: None,
-            source_range: go.call.source_range,
+            info: go.call.info.clone(),
         };
         // Evaluate the arguments and put a deep clone on the new stack.
         // This prevents the arguments from containing any reference to other variables.
@@ -858,7 +865,6 @@ impl Runtime {
                 current_len: 0,
             }],
             rng: self.rng.clone(),
-            ret: self.ret.clone(),
             arg_err_index: Cell::new(None),
         };
         let handle: JoinHandle<Result<Variable, String>> = thread::spawn(move || {
@@ -942,7 +948,8 @@ impl Runtime {
 
         self.push_fn(call.item.name.clone(), env.relative, Some(f.file.clone()), st, lc, cu);
         if f.returns() {
-            self.local_stack.push((self.ret.clone(), st - 1));
+            // Use return type because it has the same name.
+            self.local_stack.push((RETURN_TYPE.clone(), st - 1));
         }
         for (i, arg) in f.args.iter().enumerate() {
             // Do not resolve locals to keep fixed length from end of stack.
@@ -1015,223 +1022,395 @@ impl Runtime {
         res
     }
 
+    fn call_void(
+        &mut self,
+        args: &[ast::Expression],
+        fun: crate::FnVoidRef,
+        info: &Box<ast::CallInfo>,
+    ) -> FlowResult {
+        for arg in args {
+            match self.expression(arg, Side::Right)? {
+                (Some(x), Flow::Continue) => self.stack.push(x),
+                (x, Flow::Return) => { return Ok((x, Flow::Return)); }
+                _ => return self.err(arg.source_range(),
+                                "Expected something. \
+                                Expression did not return a value.")
+            };
+        }
+        (fun.0)(self).map_err(|err| {
+            let range = if let Some(ind) = self.arg_err_index.get() {
+                self.arg_err_index.set(None);
+                args[ind].source_range()
+            } else {
+                info.source_range
+            };
+            self.module.error(range, &err, self)
+        })?;
+        Ok((None, Flow::Continue))
+    }
+
+    fn call_return(
+        &mut self,
+        args: &[ast::Expression],
+        fun: crate::FnReturnRef,
+        info: &Box<ast::CallInfo>,
+    ) -> FlowResult {
+        for arg in args {
+            match self.expression(arg, Side::Right)? {
+                (Some(x), Flow::Continue) => self.stack.push(x),
+                (x, Flow::Return) => { return Ok((x, Flow::Return)); }
+                _ => return self.err(arg.source_range(),
+                                "Expected something. \
+                                Expression did not return a value.")
+            };
+        }
+        Ok((Some((fun.0)(self).map_err(|err| {
+            let range = if let Some(ind) = self.arg_err_index.get() {
+                self.arg_err_index.set(None);
+                args[ind].source_range()
+            } else {
+                info.source_range
+            };
+            self.module.error(range, &err, self)
+        })?), Flow::Continue))
+    }
+
+    fn call_binop(
+        &mut self,
+        left_expr: &ast::Expression,
+        right_expr: &ast::Expression,
+        fun: crate::FnBinOpRef,
+        info: &Box<ast::CallInfo>,
+    ) -> FlowResult {
+        let left = match self.expression(left_expr, Side::Right)? {
+            (Some(x), Flow::Continue) => x,
+            (x, Flow::Return) => { return Ok((x, Flow::Return)); }
+            _ => return self.err(left_expr.source_range(),
+                            "Expected something. \
+                            Expression did not return a value.")
+        };
+        let right = match self.expression(right_expr, Side::Right)? {
+            (Some(x), Flow::Continue) => x,
+            (x, Flow::Return) => { return Ok((x, Flow::Return)); }
+            _ => return self.err(right_expr.source_range(),
+                            "Expected something. \
+                            Expression did not return a value.")
+        };
+        let left = self.resolve(&left);
+        let right = self.resolve(&right);
+        Ok((Some((fun.0)(left, right).map_err(|err| {
+            let range = if let Some(ind) = self.arg_err_index.get() {
+                self.arg_err_index.set(None);
+                if ind == 0 {left_expr.source_range()}
+                else if ind == 1 {right_expr.source_range()}
+                else {info.source_range}
+            } else {
+                info.source_range
+            };
+            self.module.error(range, &err, self)
+        })?), Flow::Continue))
+    }
+
+    fn call_unop(
+        &mut self,
+        expr: &ast::Expression,
+        fun: crate::FnUnOpRef,
+        info: &Box<ast::CallInfo>,
+    ) -> FlowResult {
+        let r = match self.expression(expr, Side::Right)? {
+            (Some(x), Flow::Continue) => x,
+            (x, Flow::Return) => { return Ok((x, Flow::Return)); }
+            _ => return self.err(expr.source_range(),
+                            "Expected something. \
+                            Expression did not return a value.")
+        };
+        let r = self.resolve(&r);
+        Ok((Some((fun.0)(r).map_err(|err| {
+            let range = if let Some(ind) = self.arg_err_index.get() {
+                self.arg_err_index.set(None);
+                if ind == 0 {expr.source_range()}
+                else {info.source_range}
+            } else {
+                info.source_range
+            };
+            self.module.error(range, &err, self)
+        })?), Flow::Continue))
+    }
+
+    fn call_lazy(
+        &mut self,
+        args: &[ast::Expression],
+        fun: crate::FnReturnRef,
+        lazy_inv: crate::LazyInvariant,
+        info: &Box<ast::CallInfo>,
+    ) -> FlowResult {
+        for (i, arg) in args.iter().enumerate() {
+            match self.expression(arg, Side::Right)? {
+                (Some(x), Flow::Continue) => {
+                    use ast::Lazy;
+                    // Return immediately if equal to lazy invariant.
+                    if let Some(&ls) = lazy_inv.get(i) {
+                        for lazy in ls {
+                            match *lazy {
+                                Lazy::Variable(ref val) => {
+                                    if self.resolve(&x) == val {return Ok((Some(x), Flow::Continue))}
+                                }
+                                Lazy::UnwrapOk => {
+                                    if let &Variable::Result(Ok(ref x)) = self.resolve(&x) {
+                                        return Ok((Some((**x).clone()), Flow::Continue))
+                                    }
+                                }
+                                Lazy::UnwrapErr => {
+                                    if let &Variable::Result(Err(ref x)) = self.resolve(&x) {
+                                        return Ok((Some(x.message.clone()), Flow::Continue))
+                                    }
+                                }
+                                Lazy::UnwrapSome => {
+                                    if let &Variable::Option(Some(ref x)) = self.resolve(&x) {
+                                        return Ok((Some((**x).clone()), Flow::Continue))
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    self.stack.push(x)
+                }
+                (x, Flow::Return) => { return Ok((x, Flow::Return)); }
+                _ => return self.err(arg.source_range(),
+                                "Expected something. \
+                                Expression did not return a value.")
+            };
+        }
+        Ok((Some((fun.0)(self).map_err(|err| {
+            let range = if let Some(ind) = self.arg_err_index.get() {
+                self.arg_err_index.set(None);
+                args[ind].source_range()
+            } else {
+                info.source_range
+            };
+            self.module.error(range, &err, self)
+        })?), Flow::Continue))
+    }
+
+    fn call_loaded(
+        &mut self,
+        args: &[ast::Expression],
+        f_index: isize,
+        info: &Box<ast::CallInfo>,
+        custom_source: &Option<Arc<String>>,
+        loader: bool
+    ) -> FlowResult {
+        use std::sync::atomic::Ordering;
+
+        let relative = if loader {0} else {
+            self.call_stack.last().map(|c| c.index).unwrap_or(0)
+        };
+        let new_index = (f_index + relative as isize) as usize;
+        // Copy the module to avoid problems with borrow checker.
+        let mod_copy = self.module.clone();
+        let ref f = mod_copy.functions[new_index];
+        // Arguments must be computed.
+        if f.returns() {
+            // Add return value before arguments on the stack.
+            // The stack value should remain, but the local should not.
+            self.stack.push(Variable::Return);
+        }
+        let st = self.stack.len();
+        let lc = self.local_stack.len();
+        let cu = self.current_stack.len();
+
+        for (i, arg) in args.iter().enumerate() {
+            match self.expression(arg, Side::Right)? {
+                (Some(x), Flow::Continue) => {
+                    use ast::Lazy;
+                    // Return immediately if equal to lazy invariant.
+                    if let Some(lz) = f.lazy_inv.get(i) {
+                        for lazy in lz {
+                            match *lazy {
+                                Lazy::Variable(ref val) => {
+                                    if self.resolve(&x) == val {return Ok((Some(x), Flow::Continue))}
+                                }
+                                Lazy::UnwrapOk => {
+                                    if let &Variable::Result(Ok(ref x)) = self.resolve(&x) {
+                                        return Ok((Some((**x).clone()), Flow::Continue))
+                                    }
+                                }
+                                Lazy::UnwrapErr => {
+                                    if let &Variable::Result(Err(ref x)) = self.resolve(&x) {
+                                        return Ok((Some(x.message.clone()), Flow::Continue))
+                                    }
+                                }
+                                Lazy::UnwrapSome => {
+                                    if let &Variable::Option(Some(ref x)) = self.resolve(&x) {
+                                        return Ok((Some((**x).clone()), Flow::Continue))
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    self.stack.push(x)
+                }
+                (None, Flow::Continue) => {}
+                (x, Flow::Return) => { return Ok((x, Flow::Return)); }
+                _ => return self.err(arg.source_range(),
+                                "Expected something. \
+                                Check that expression returns a value.")
+            };
+        }
+
+        // Look for variable in current stack.
+        if !f.currents.is_empty() {
+            for current in &f.currents {
+                let mut res = None;
+                for &(ref cname, ind) in self.current_stack.iter().rev() {
+                    if cname == &current.name {
+                        res = Some(ind);
+                        break;
+                    }
+                }
+                if let Some(ind) = res {
+                    self.local_stack.push((current.name.clone(), self.stack.len()));
+                    self.stack.push(Variable::Ref(ind));
+                } else {
+                    return Err(self.module.error(info.source_range, &format!(
+                        "{}\nCould not find current variable `{}`",
+                            self.stack_trace(), current.name), self));
+                }
+            }
+        }
+
+        // Send arguments to senders.
+        if f.senders.0.load(Ordering::Relaxed) {
+            let n = self.stack.len();
+            let mut msg = Vec::with_capacity(n - st);
+            for i in st..n {
+                msg.push(self.stack[i].deep_clone(&self.stack));
+            }
+            let msg = Arc::new(msg);
+            // Uses smart swapping of channels to put the closed ones at the end.
+            let mut channels = f.senders.1.lock().unwrap();
+            let mut open = channels.len();
+            for i in (0..channels.len()).rev() {
+                match channels[i].send(Variable::Array(msg.clone())) {
+                    Ok(_) => {}
+                    Err(_) => {
+                        open -= 1;
+                        channels.swap(i, open);
+                    }
+                }
+            }
+            channels.truncate(open);
+            if channels.len() == 0 {
+                // Change of flag is guarded by the mutex.
+                f.senders.0.store(false, Ordering::Relaxed);
+            }
+            drop(channels);
+        }
+
+        self.push_fn(info.name.clone(), new_index, Some(f.file.clone()), st, lc, cu);
+        if f.returns() {
+            // Use return type because it has same name.
+            self.local_stack.push((RETURN_TYPE.clone(), st - 1));
+        }
+        for (i, arg) in f.args.iter().enumerate() {
+            // Do not resolve locals to keep fixed length from end of stack.
+            self.local_stack.push((arg.name.clone(), st + i));
+        }
+        let (x, flow) = self.block(&f.block)?;
+        match flow {
+            Flow::Break(None) =>
+                return self.err(info.source_range, "Can not break from function"),
+            Flow::ContinueLoop(None) =>
+                return self.err(info.source_range, "Can not continue from function"),
+            Flow::Break(Some(ref label)) =>
+                return Err(self.module.error(info.source_range,
+                    &format!("{}\nThere is no loop labeled `{}`",
+                             self.stack_trace(), label), self)),
+            Flow::ContinueLoop(Some(ref label)) =>
+                return Err(self.module.error(info.source_range,
+                    &format!("{}\nThere is no loop labeled `{}`",
+                            self.stack_trace(), label), self)),
+            _ => {}
+        }
+        self.pop_fn(info.name.clone());
+        match (f.returns(), x) {
+            (true, None) => {
+                match self.stack.pop().expect(TINVOTS) {
+                    Variable::Return => {
+                        let source = custom_source.as_ref().unwrap_or(
+                            &self.module.functions[
+                                self.call_stack.last().unwrap().index
+                            ].source
+                        );
+                        Err(self.module.error_source(
+                        info.source_range, &format!(
+                        "{}\nFunction `{}` did not return a value",
+                        self.stack_trace(),
+                        f.name), source))
+                    }
+                    x => {
+                        // This happens when return is only
+                        // assigned to `return = x`.
+                        Ok((Some(x), Flow::Continue))
+                    }
+                }
+            }
+            (false, Some(_)) => {
+                let source = custom_source.as_ref().unwrap_or(
+                    &self.module.functions[self.call_stack.last().unwrap().index].source
+                );
+                Err(self.module.error_source(info.source_range,
+                    &format!(
+                        "{}\nFunction `{}` should not return a value",
+                        self.stack_trace(),
+                        f.name), source))
+            }
+            (true, Some(Variable::Return)) => {
+                // TODO: Could return the last value on the stack.
+                //       Requires .pop_fn delayed after.
+                let source = custom_source.as_ref().unwrap_or(
+                    &self.module.functions[self.call_stack.last().unwrap().index].source
+                );
+                Err(self.module.error_source(info.source_range,
+                    &format!(
+                    "{}\nFunction `{}` did not return a value. \
+                    Did you forget a `return`?",
+                        self.stack_trace(),
+                        f.name), source))
+            }
+            (returns, b) => {
+                if returns { self.stack.pop(); }
+                Ok((b, Flow::Continue))
+            }
+        }
+    }
+
     /// Used internally because loaded functions are resolved
     /// relative to the caller, which stores its index on the
     /// call stack.
     ///
     /// The `loader` flag is set to `true` when called from the outside.
     fn call_internal(&mut self, call: &ast::Call, loader: bool) -> FlowResult {
-        use FnExternalRef;
-
-        match call.f_index.get() {
-            FnIndex::ExternalVoid(FnExternalRef(f)) => {
-                for arg in &call.args {
-                    match self.expression(arg, Side::Right)? {
-                        (Some(x), Flow::Continue) => self.stack.push(x),
-                        (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-                        _ => return self.err(arg.source_range(),
-                                        "Expected something. \
-                                        Expression did not return a value.")
-                    };
-                }
-                (f)(self).map_err(|err| {
-                    let range = if let Some(ind) = self.arg_err_index.get() {
-                        self.arg_err_index.set(None);
-                        call.args[ind].source_range()
-                    } else {
-                        call.source_range
-                    };
-                    self.module.error(range, &err, self)
-                })?;
-                Ok((None, Flow::Continue))
-            }
-            FnIndex::ExternalReturn(FnExternalRef(f)) => {
-                for arg in &call.args {
-                    match self.expression(arg, Side::Right)? {
-                        (Some(x), Flow::Continue) => self.stack.push(x),
-                        (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-                        _ => return self.err(arg.source_range(),
-                                        "Expected something. \
-                                        Expression did not return a value.")
-                    };
-                }
-                (f)(self).map_err(|err| {
-                    let range = if let Some(ind) = self.arg_err_index.get() {
-                        self.arg_err_index.set(None);
-                        call.args[ind].source_range()
-                    } else {
-                        call.source_range
-                    };
-                    self.module.error(range, &err, self)
-                })?;
-                Ok((Some(self.stack.pop().expect(TINVOTS)), Flow::Continue))
-            }
+        match call.f_index {
+            FnIndex::Void(f) =>
+                self.call_void(&call.args, f, &call.info),
+            FnIndex::Return(f) =>
+                self.call_return(&call.args, f, &call.info),
+            FnIndex::Lazy(f, lazy_inv) =>
+                self.call_lazy(&call.args, f, lazy_inv, &call.info),
+            FnIndex::BinOp(f) =>
+                self.call_binop(&call.args[0], &call.args[1], f, &call.info),
+            FnIndex::UnOp(f) =>
+                self.call_unop(&call.args[0], f, &call.info),
             FnIndex::Loaded(f_index) => {
-                use std::sync::atomic::Ordering;
-
-                let relative = if loader {0} else {
-                    self.call_stack.last().map(|c| c.index).unwrap_or(0)
-                };
-                let new_index = (f_index + relative as isize) as usize;
-                // Copy the module to avoid problems with borrow checker.
-                let mod_copy = self.module.clone();
-                let ref f = mod_copy.functions[new_index];
-                if call.arg_len() != f.args.len() {
-                    return Err(self.module.error(call.source_range,
-                        &format!("{}\nExpected {} arguments but found {}",
-                        self.stack_trace(),
-                        f.args.len(),
-                        call.arg_len()), self));
-                }
-                // Arguments must be computed.
-                if f.returns() {
-                    // Add return value before arguments on the stack.
-                    // The stack value should remain, but the local should not.
-                    self.stack.push(Variable::Return);
-                }
-                let st = self.stack.len();
-                let lc = self.local_stack.len();
-                let cu = self.current_stack.len();
-
-                for arg in &call.args {
-                    match self.expression(arg, Side::Right)? {
-                        (Some(x), Flow::Continue) => self.stack.push(x),
-                        (None, Flow::Continue) => {}
-                        (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-                        _ => return self.err(arg.source_range(),
-                                        "Expected something. \
-                                        Check that expression returns a value.")
-                    };
-                }
-
-                // Look for variable in current stack.
-                if !f.currents.is_empty() {
-                    for current in &f.currents {
-                        let mut res = None;
-                        for &(ref cname, ind) in self.current_stack.iter().rev() {
-                            if cname == &current.name {
-                                res = Some(ind);
-                                break;
-                            }
-                        }
-                        if let Some(ind) = res {
-                            self.local_stack.push((current.name.clone(), self.stack.len()));
-                            self.stack.push(Variable::Ref(ind));
-                        } else {
-                            return Err(self.module.error(call.source_range, &format!(
-                                "{}\nCould not find current variable `{}`",
-                                    self.stack_trace(), current.name), self));
-                        }
-                    }
-                }
-
-                // Send arguments to senders.
-                if f.senders.0.load(Ordering::Relaxed) {
-                    let n = self.stack.len();
-                    let mut msg = Vec::with_capacity(n - st);
-                    for i in st..n {
-                        msg.push(self.stack[i].deep_clone(&self.stack));
-                    }
-                    let msg = Arc::new(msg);
-                    // Uses smart swapping of channels to put the closed ones at the end.
-                    let mut channels = f.senders.1.lock().unwrap();
-                    let mut open = channels.len();
-                    for i in (0..channels.len()).rev() {
-                        match channels[i].send(Variable::Array(msg.clone())) {
-                            Ok(_) => {}
-                            Err(_) => {
-                                open -= 1;
-                                channels.swap(i, open);
-                            }
-                        }
-                    }
-                    channels.truncate(open);
-                    if channels.len() == 0 {
-                        // Change of flag is guarded by the mutex.
-                        f.senders.0.store(false, Ordering::Relaxed);
-                    }
-                    drop(channels);
-                }
-
-                self.push_fn(call.name.clone(), new_index, Some(f.file.clone()), st, lc, cu);
-                if f.returns() {
-                    self.local_stack.push((self.ret.clone(), st - 1));
-                }
-                for (i, arg) in f.args.iter().enumerate() {
-                    // Do not resolve locals to keep fixed length from end of stack.
-                    self.local_stack.push((arg.name.clone(), st + i));
-                }
-                let (x, flow) = self.block(&f.block)?;
-                match flow {
-                    Flow::Break(None) =>
-                        return self.err(call.source_range, "Can not break from function"),
-                    Flow::ContinueLoop(None) =>
-                        return self.err(call.source_range, "Can not continue from function"),
-                    Flow::Break(Some(ref label)) =>
-                        return Err(self.module.error(call.source_range,
-                            &format!("{}\nThere is no loop labeled `{}`",
-                                     self.stack_trace(), label), self)),
-                    Flow::ContinueLoop(Some(ref label)) =>
-                        return Err(self.module.error(call.source_range,
-                            &format!("{}\nThere is no loop labeled `{}`",
-                                    self.stack_trace(), label), self)),
-                    _ => {}
-                }
-                self.pop_fn(call.name.clone());
-                match (f.returns(), x) {
-                    (true, None) => {
-                        match self.stack.pop().expect(TINVOTS) {
-                            Variable::Return => {
-                                let source = call.custom_source.as_ref().unwrap_or(
-                                    &self.module.functions[
-                                        self.call_stack.last().unwrap().index
-                                    ].source
-                                );
-                                Err(self.module.error_source(
-                                call.source_range, &format!(
-                                "{}\nFunction `{}` did not return a value",
-                                self.stack_trace(),
-                                f.name), source))
-                            }
-                            x => {
-                                // This happens when return is only
-                                // assigned to `return = x`.
-                                Ok((Some(x), Flow::Continue))
-                            }
-                        }
-                    }
-                    (false, Some(_)) => {
-                        let source = call.custom_source.as_ref().unwrap_or(
-                            &self.module.functions[self.call_stack.last().unwrap().index].source
-                        );
-                        Err(self.module.error_source(call.source_range,
-                            &format!(
-                                "{}\nFunction `{}` should not return a value",
-                                self.stack_trace(),
-                                f.name), source))
-                    }
-                    (true, Some(Variable::Return)) => {
-                        // TODO: Could return the last value on the stack.
-                        //       Requires .pop_fn delayed after.
-                        let source = call.custom_source.as_ref().unwrap_or(
-                            &self.module.functions[self.call_stack.last().unwrap().index].source
-                        );
-                        Err(self.module.error_source(call.source_range,
-                            &format!(
-                            "{}\nFunction `{}` did not return a value. \
-                            Did you forget a `return`?",
-                                self.stack_trace(),
-                                f.name), source))
-                    }
-                    (returns, b) => {
-                        if returns { self.stack.pop(); }
-                        Ok((b, Flow::Continue))
-                    }
-                }
+                self.call_loaded(&call.args, f_index, &call.info,
+                                 &call.custom_source, loader)
             }
             FnIndex::None => {
-                Err(self.module.error(call.source_range,
-                    &format!("{}\nUnknown function `{}`", self.stack_trace(), call.name), self))
+                Err(self.module.error(call.info.source_range,
+                    &format!("{}\nUnknown function `{}`", self.stack_trace(), call.info.name), self))
             }
         }
     }
@@ -1246,15 +1425,17 @@ impl Runtime {
         match module.find_function(&name, 0) {
             FnIndex::Loaded(f_index) => {
                 let call = ast::Call {
-                    alias: None,
-                    name: name.clone(),
-                    f_index: Cell::new(FnIndex::Loaded(f_index)),
+                    f_index: FnIndex::Loaded(f_index),
                     args: args.iter()
                             .map(|arg| ast::Expression::Variable(Box::new((
                                        Range::empty(0), arg.clone()))))
                             .collect(),
                     custom_source: None,
-                    source_range: Range::empty(0),
+                    info: Box::new(ast::CallInfo {
+                        alias: None,
+                        name: name.clone(),
+                        source_range: Range::empty(0),
+                    })
                 };
                 self.call(&call, &module)?;
                 Ok(())
@@ -1277,21 +1458,23 @@ impl Runtime {
         }
 
         let call = ast::Call {
-            alias: None,
-            name: name.clone(),
-            f_index: Cell::new(fn_index),
+            f_index: fn_index,
             args: args
                 .iter()
                 .map(|arg| ast::Expression::Variable(Box::new((Range::empty(0), arg.clone()))))
                 .collect(),
             custom_source: None,
-            source_range: Range::empty(0),
+            info: Box::new(ast::CallInfo {
+                alias: None,
+                name: name.clone(),
+                source_range: Range::empty(0),
+            })
         };
         match self.call(&call, &module) {
             Ok((Some(val), Flow::Continue)) => Ok(val),
             Err(err) => Err(err),
             _ => Err(module.error(
-                call.source_range,
+                call.info.source_range,
                 &format!("{}\nExpected something", self.stack_trace()),
                 self,
             )),
@@ -2141,165 +2324,6 @@ impl Runtime {
         stack.truncate(start_stack_len);
         Ok((Some(v), Flow::Continue))
     }
-
-    fn compare(&mut self, compare: &ast::Compare) -> FlowResult {
-        fn sub_compare(
-            rt: &Runtime,
-            compare: &ast::Compare,
-            a: &Variable,
-            b: &Variable
-        ) -> Result<Variable, String> {
-            use ast::CompareOp::*;
-
-            match (rt.resolve(&b), rt.resolve(&a)) {
-                (&Variable::F64(b, _), &Variable::F64(a, ref sec)) => {
-                    Ok(Variable::Bool(match compare.op {
-                        Less => a < b,
-                        LessOrEqual => a <= b,
-                        Greater => a > b,
-                        GreaterOrEqual => a >= b,
-                        Equal => a == b,
-                        NotEqual => a != b
-                    }, sec.clone()))
-                }
-                (&Variable::Str(ref b), &Variable::Str(ref a)) => {
-                    Ok(Variable::bool(match compare.op {
-                        Less => a < b,
-                        LessOrEqual => a <= b,
-                        Greater => a > b,
-                        GreaterOrEqual => a >= b,
-                        Equal => a == b,
-                        NotEqual => a != b
-                    }))
-                }
-                (&Variable::Bool(b, _), &Variable::Bool(a, ref sec)) => {
-                    Ok(Variable::Bool(match compare.op {
-                        Equal => a == b,
-                        NotEqual => a != b,
-                        x => return Err(rt.module.error(compare.source_range,
-                            &format!("{}\n`{}` can not be used with bools",
-                                rt.stack_trace(),
-                                x.symbol()), rt))
-                    }, sec.clone()))
-                }
-                (&Variable::Vec4(ref b), &Variable::Vec4(ref a)) => {
-                    Ok(Variable::bool(match compare.op {
-                        Equal => a == b,
-                        NotEqual => a != b,
-                        x => return Err(rt.module.error(compare.source_range,
-                            &format!("{}\n`{}` can not be used with vec4s",
-                                rt.stack_trace(),
-                                x.symbol()), rt))
-                    }))
-                }
-                (&Variable::Object(ref b), &Variable::Object(ref a)) => {
-                    Ok(Variable::bool(match compare.op {
-                        Equal => {
-                            a.len() == b.len() &&
-                            a.iter().all(|a| {
-                                if let Some(b_val) = b.get(a.0) {
-                                    if let Ok(Variable::Bool(true, _)) =
-                                        sub_compare(rt, compare, &a.1, b_val) {true}
-                                    else {false}
-                                } else {false}
-                            })
-                        }
-                        NotEqual => {
-                            a.len() != b.len() ||
-                            a.iter().any(|a| {
-                                if let Some(b_val) = b.get(a.0) {
-                                    if let Ok(Variable::Bool(false, _)) =
-                                        sub_compare(rt, compare, &a.1, b_val) {false}
-                                    else {true}
-                                } else {true}
-                            })
-                        }
-                        x => return Err(rt.module.error(compare.source_range,
-                            &format!("{}\n`{}` can not be used with objects",
-                                rt.stack_trace(),
-                                x.symbol()), rt))
-                    }))
-                }
-                (&Variable::Array(ref b), &Variable::Array(ref a)) => {
-                    Ok(Variable::bool(match compare.op {
-                        Equal => {
-                            a.len() == b.len() &&
-                            a.iter().zip(b.iter()).all(|(a, b)| {
-                                if let Ok(Variable::Bool(true, _)) =
-                                    sub_compare(rt, compare, a, b) {true} else {false}
-                            })
-                        }
-                        NotEqual => {
-                            a.len() != b.len() ||
-                            a.iter().zip(b.iter()).any(|(a, b)| {
-                                if let Ok(Variable::Bool(false, _)) =
-                                    sub_compare(rt, compare, a, b) {false} else {true}
-                            })
-                        }
-                        x => return Err(rt.module.error(compare.source_range,
-                            &format!("{}\n`{}` can not be used with arrays",
-                                rt.stack_trace(),
-                                x.symbol()), rt))
-                    }))
-                }
-                (&Variable::Option(None), &Variable::Option(None)) => {
-                    Ok(Variable::bool(match compare.op {
-                        Equal => true,
-                        NotEqual => false,
-                        x => return Err(rt.module.error(compare.source_range,
-                            &format!("{}\n`{}` can not be used with options",
-                                rt.stack_trace(),
-                                x.symbol()), rt))
-                    }))
-                }
-                (&Variable::Option(None), &Variable::Option(_)) => {
-                    Ok(Variable::bool(match compare.op {
-                        Equal => false,
-                        NotEqual => true,
-                        x => return Err(rt.module.error(compare.source_range,
-                            &format!("{}\n`{}` can not be used with options",
-                                rt.stack_trace(),
-                                x.symbol()), rt))
-                    }))
-                }
-                (&Variable::Option(_), &Variable::Option(None)) => {
-                    Ok(Variable::bool(match compare.op {
-                        Equal => false,
-                        NotEqual => true,
-                        x => return Err(rt.module.error(compare.source_range,
-                            &format!("{}\n`{}` can not be used with options",
-                                rt.stack_trace(),
-                                x.symbol()), rt))
-                    }))
-                }
-                (&Variable::Option(Some(ref b)),
-                 &Variable::Option(Some(ref a))) => {
-                    sub_compare(rt, compare, a, b)
-                }
-                (b, a) => Err(rt.module.error(compare.source_range,
-                    &format!(
-                    "{}\n`{}` can not be used with `{}` and `{}`",
-                    rt.stack_trace(),
-                    compare.op.symbol(),
-                    a.typeof_var(),
-                    b.typeof_var()), rt))
-            }
-        }
-
-        let left = match self.expression(&compare.left, Side::Right)? {
-            (Some(x), Flow::Continue) => x,
-            (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-            _ => return self.err(compare.left.source_range(),
-                                 "Expected something from the left argument")
-        };
-        let right = match self.expression(&compare.right, Side::Right)? {
-            (Some(x), Flow::Continue) => x,
-            (x, Flow::Return) => return Ok((x, Flow::Return)),
-            _ => return self.err(compare.right.source_range(),
-                                 "Expected something from the right argument")
-        };
-        Ok((Some(sub_compare(self, compare, &left, &right)?), Flow::Continue))
-    }
     fn if_expr(
         &mut self,
         if_expr: &ast::If
@@ -2482,276 +2506,7 @@ impl Runtime {
             [x[3], y[3], z[3], w[3]],
         ]))), Flow::Continue))
     }
-    fn unop(&mut self, unop: &ast::UnOpExpression, side: Side) -> FlowResult {
-        let val = match self.expression(&unop.expr, side)? {
-            (Some(x), Flow::Continue) => x,
-            (x, Flow::Return) => return Ok((x, Flow::Return)),
-            _ => return self.err(unop.source_range, "Expected something from unary argument")
-        };
-        let v = match *self.resolve(&val) {
-            Variable::Bool(b, ref sec) => {
-                Variable::Bool(match unop.op {
-                    ast::UnOp::Not => !b,
-                    _ => return self.err(unop.source_range, "Unknown boolean unary operator")
-                }, sec.clone())
-            }
-            Variable::F64(v, ref sec) => {
-                Variable::F64(match unop.op {
-                    ast::UnOp::Neg => -v,
-                    _ => return self.err(unop.source_range, "Unknown number unary operator")
-                }, sec.clone())
-            }
-            Variable::Vec4(v) => {
-                Variable::Vec4(match unop.op {
-                    ast::UnOp::Neg => [-v[0], -v[1], -v[2], -v[3]],
-                    _ => return self.err(unop.source_range, "Unknown vec4 unary operator")
-                })
-            }
-            Variable::Mat4(ref m) => {
-                match unop.op {
-                    ast::UnOp::Neg => Variable::Mat4(Box::new([
-                            [-m[0][0], -m[0][1], -m[0][2], -m[0][3]],
-                            [-m[1][0], -m[1][1], -m[1][2], -m[1][3]],
-                            [-m[2][0], -m[2][1], -m[2][2], -m[2][3]],
-                            [-m[3][0], -m[3][1], -m[3][2], -m[3][3]],
-                        ])),
-                    _ => return self.err(unop.source_range, "Unknown mat4 unary operator")
-                }
-            }
-            _ => return self.err(unop.source_range,
-                "Invalid type for unary operator, expected bool, f64, vec4 or mat4")
-        };
-        Ok((Some(v), Flow::Continue))
-    }
-    fn binop(&mut self, binop: &ast::BinOpExpression, side: Side) -> FlowResult {
-        use ast::BinOp::*;
 
-        let left = match self.expression(&binop.left, side)? {
-            (Some(x), Flow::Continue) => x,
-            (x, Flow::Return) => return Ok((x, Flow::Return)),
-            _ => return self.err(binop.source_range, "Expected something from left argument")
-        };
-
-        // Check lazy boolean expressions.
-        match binop.op {
-            OrElse => {
-                if let Variable::Bool(true, ref sec) = *self.resolve(&left) {
-                    return Ok((Some(Variable::Bool(true, sec.clone())), Flow::Continue));
-                }
-            }
-            AndAlso => {
-                if let Variable::Bool(false, ref sec) = *self.resolve(&left) {
-                    return Ok((Some(Variable::Bool(false, sec.clone())), Flow::Continue));
-                }
-            }
-            _ => {}
-        }
-
-        let right = match self.expression(&binop.right, side)? {
-            (Some(x), Flow::Continue) => x,
-            (x, Flow::Return) => return Ok((x, Flow::Return)),
-            _ => return self.err(binop.source_range, "Expected something from right argument")
-        };
-        let v = match (self.resolve(&left), self.resolve(&right)) {
-            (&Variable::F64(a, ref sec), &Variable::F64(b, _)) => {
-                Variable::F64(match binop.op {
-                    Add => a + b,
-                    Sub => a - b,
-                    Mul => a * b,
-                    Div => a / b,
-                    Rem => a % b,
-                    Pow => a.powf(b),
-                    _ => return Err(self.module.error(binop.source_range,
-                        &format!("{}\nUnknown number operator `{:?}`",
-                            self.stack_trace(),
-                            binop.op.symbol()), self))
-                }, sec.clone())
-            }
-            (&Variable::Vec4(a), &Variable::Vec4(b)) => {
-                match binop.op {
-                    Add => Variable::Vec4([a[0] + b[0], a[1] + b[1], a[2] + b[2], a[3] + b[3]]),
-                    Sub => Variable::Vec4([a[0] - b[0], a[1] - b[1], a[2] - b[2], a[3] - b[3]]),
-                    Mul => Variable::Vec4([a[0] * b[0], a[1] * b[1], a[2] * b[2], a[3] * b[3]]),
-                    Dot => Variable::f64(f64::from(a[0] * b[0] + a[1] * b[1] +
-                                                   a[2] * b[2] + a[3] * b[3])),
-                    Cross => Variable::Vec4([a[1] * b[2] - a[2] * b[1],
-                                             a[2] * b[0] - a[0] * b[2],
-                                             a[0] * b[1] - a[1] * b[0], 0.0]),
-                    Div => Variable::Vec4([a[0] / b[0], a[1] / b[1], a[2] / b[2], a[3] / b[3]]),
-                    Rem => Variable::Vec4([a[0] % b[0], a[1] % b[1], a[2] % b[2], a[3] % b[3]]),
-                    Pow => Variable::Vec4([a[0].powf(b[0]), a[1].powf(b[1]),
-                                           a[2].powf(b[2]), a[3].powf(b[3])]),
-                    AndAlso | OrElse => return Err(self.module.error(binop.source_range,
-                        &format!("{}\nUnknown operator `{:?}` for `vec4` and `vec4`",
-                            self.stack_trace(),
-                            binop.op.symbol_bool()), self)),
-                }
-            }
-            (&Variable::Vec4(a), &Variable::F64(b, _)) => {
-                let b = b as f32;
-                match binop.op {
-                    Add => Variable::Vec4([a[0] + b, a[1] + b, a[2] + b, a[3] + b]),
-                    Sub => Variable::Vec4([a[0] - b, a[1] - b, a[2] - b, a[3] - b]),
-                    Mul => Variable::Vec4([a[0] * b, a[1] * b, a[2] * b, a[3] * b]),
-                    Dot => Variable::f64(f64::from(a[0] * b + a[1] * b + a[2] * b + a[3] * b)),
-                    Cross => return Err(self.module.error(binop.source_range,
-                        &format!("{}\nExpected two vec4 for `{:?}`",
-                            self.stack_trace(), binop.op.symbol()), self)),
-                    Div => Variable::Vec4([a[0] / b, a[1] / b, a[2] / b, a[3] / b]),
-                    Rem => Variable::Vec4([a[0] % b, a[1] % b, a[2] % b, a[3] % b]),
-                    Pow => Variable::Vec4([a[0].powf(b), a[1].powf(b),
-                                           a[2].powf(b), a[3].powf(b)]),
-                    AndAlso | OrElse => return Err(self.module.error(binop.source_range,
-                        &format!("{}\nUnknown operator `{:?}` for `vec4` and `f64`",
-                            self.stack_trace(),
-                            binop.op.symbol_bool()), self)),
-                }
-            }
-            (&Variable::F64(a, _), &Variable::Vec4(b)) => {
-                let a = a as f32;
-                match binop.op {
-                    Add => Variable::Vec4([a + b[0], a + b[1], a + b[2], a + b[3]]),
-                    Sub => Variable::Vec4([a - b[0], a - b[1], a - b[2], a - b[3]]),
-                    Mul => Variable::Vec4([a * b[0], a * b[1], a * b[2], a * b[3]]),
-                    Dot => Variable::f64(f64::from(a * b[0] + a * b[1] + a * b[2] + a * b[3])),
-                    Div => Variable::Vec4([a / b[0], a / b[1], a / b[2], a / b[3]]),
-                    Rem => Variable::Vec4([a % b[0], a % b[1], a % b[2], a % b[3]]),
-                    Pow => Variable::Vec4([a.powf(b[0]), a.powf(b[1]),
-                                           a.powf(b[2]), a.powf(b[3])]),
-                    Cross => return Err(self.module.error(binop.source_range,
-                        &format!("{}\nExpected two vec4 for `{:?}`",
-                            self.stack_trace(), binop.op.symbol()), self)),
-                    AndAlso | OrElse => return Err(self.module.error(binop.source_range,
-                        &format!("{}\nUnknown operator `{:?}` for `f64` and `vec4`",
-                            self.stack_trace(),
-                            binop.op.symbol_bool()), self)),
-                }
-            }
-            (&Variable::Mat4(ref a), &Variable::Mat4(ref b)) => {
-                use vecmath::{mat4_add, mat4_sub, col_mat4_mul};
-
-                match binop.op {
-                    Add => Variable::Mat4(Box::new(mat4_add(**a, **b))),
-                    Sub => Variable::Mat4(Box::new(mat4_sub(**a, **b))),
-                    Mul => Variable::Mat4(Box::new(col_mat4_mul(**a, **b))),
-                    _ => return Err(self.module.error(binop.source_range,
-                        &format!("{}\nUnknown operator `{:?}` for `mat4` and `mat4`",
-                            self.stack_trace(),
-                            binop.op.symbol_bool()), self)),
-                }
-            }
-            (&Variable::F64(a, _), &Variable::Mat4(ref b)) => {
-                let a = a as f32;
-                match binop.op {
-                    Add => Variable::Mat4(Box::new([
-                            [b[0][0] + a, b[0][1] + a, b[0][2] + a, b[0][3] + a],
-                            [b[1][0] + a, b[1][1] + a, b[1][2] + a, b[1][3] + a],
-                            [b[2][0] + a, b[2][1] + a, b[2][2] + a, b[2][3] + a],
-                            [b[3][0] + a, b[3][1] + a, b[3][2] + a, b[3][3] + a]
-                        ])),
-                    Sub => Variable::Mat4(Box::new([
-                            [a - b[0][0], a - b[0][1], a - b[0][2], a - b[0][3]],
-                            [a - b[1][0], a - b[1][1], a - b[1][2], a - b[1][3]],
-                            [a - b[2][0], a - b[2][1], a - b[2][2], a - b[2][3]],
-                            [a - b[3][0], a - b[3][1], a - b[3][2], a - b[3][3]]
-                        ])),
-                    Mul => Variable::Mat4(Box::new([
-                            [b[0][0] * a, b[0][1] * a, b[0][2] * a, b[0][3] * a],
-                            [b[1][0] * a, b[1][1] * a, b[1][2] * a, b[1][3] * a],
-                            [b[2][0] * a, b[2][1] * a, b[2][2] * a, b[2][3] * a],
-                            [b[3][0] * a, b[3][1] * a, b[3][2] * a, b[3][3] * a]
-                        ])),
-                    _ => return Err(self.module.error(binop.source_range,
-                        &format!("{}\nUnknown operator `{:?}` for `f64` and `mat4`",
-                            self.stack_trace(),
-                            binop.op.symbol_bool()), self)),
-                }
-            }
-            (&Variable::Mat4(ref b), &Variable::F64(a, _)) => {
-                let a = a as f32;
-                match binop.op {
-                    Add => Variable::Mat4(Box::new([
-                            [b[0][0] + a, b[0][1] + a, b[0][2] + a, b[0][3] + a],
-                            [b[1][0] + a, b[1][1] + a, b[1][2] + a, b[1][3] + a],
-                            [b[2][0] + a, b[2][1] + a, b[2][2] + a, b[2][3] + a],
-                            [b[3][0] + a, b[3][1] + a, b[3][2] + a, b[3][3] + a]
-                        ])),
-                    Sub => Variable::Mat4(Box::new([
-                            [b[0][0] - a, b[0][1] - a, b[0][2] - a, b[0][3] - a],
-                            [b[1][0] - a, b[1][1] - a, b[1][2] - a, b[1][3] - a],
-                            [b[2][0] - a, b[2][1] - a, b[2][2] - a, b[2][3] - a],
-                            [b[3][0] - a, b[3][1] - a, b[3][2] - a, b[3][3] - a]
-                        ])),
-                    Mul => Variable::Mat4(Box::new([
-                            [b[0][0] * a, b[0][1] * a, b[0][2] * a, b[0][3] * a],
-                            [b[1][0] * a, b[1][1] * a, b[1][2] * a, b[1][3] * a],
-                            [b[2][0] * a, b[2][1] * a, b[2][2] * a, b[2][3] * a],
-                            [b[3][0] * a, b[3][1] * a, b[3][2] * a, b[3][3] * a]
-                        ])),
-                    _ => return Err(self.module.error(binop.source_range,
-                        &format!("{}\nUnknown operator `{:?}` for `f64` and `mat4`",
-                            self.stack_trace(),
-                            binop.op.symbol_bool()), self)),
-                }
-            }
-            (&Variable::Mat4(ref a), &Variable::Vec4(b)) => {
-                use vecmath::col_mat4_transform;
-
-                match binop.op {
-                    Mul => Variable::Vec4(col_mat4_transform(**a, b)),
-                    _ => return Err(self.module.error(binop.source_range,
-                        &format!("{}\nUnknown operator `{:?}` for `mat4` and `vec4`",
-                            self.stack_trace(),
-                            binop.op.symbol_bool()), self)),
-                }
-            }
-            (&Variable::Bool(a, ref sec), &Variable::Bool(b, _)) => {
-                Variable::Bool(match binop.op {
-                    Add | OrElse => a || b,
-                    // Boolean subtraction with lazy precedence.
-                    Sub => a && !b,
-                    Mul | AndAlso => a && b,
-                    Pow => a ^ b,
-                    _ => return Err(self.module.error(binop.source_range,
-                        &format!("{}\nUnknown boolean operator `{:?}`",
-                            self.stack_trace(),
-                            binop.op.symbol_bool()), self))
-                }, sec.clone())
-            }
-            (&Variable::Str(ref a), &Variable::Str(ref b)) => {
-                match binop.op {
-                    Add => {
-                        let mut res = String::with_capacity(a.len() + b.len());
-                        res.push_str(a);
-                        res.push_str(b);
-                        Variable::Str(Arc::new(res))
-                    }
-                    _ => return self.err(binop.source_range,
-                                         "This operation can not be used with strings")
-                }
-            }
-            (&Variable::Str(_), _) =>
-                return self.err(binop.source_range,
-                                "The right argument must be a string. \
-                                Try the `str` function"),
-            (&Variable::Link(ref a), &Variable::Link(ref b)) => {
-                match binop.op {
-                    Add => {
-                        Variable::Link(Box::new(a.add(b)))
-                    }
-                    _ => return self.err(binop.source_range,
-                                         "This operation can not be used with links")
-                }
-            }
-            _ => return Err(self.module.error(binop.source_range, &format!(
-                "{}\nInvalid type for binary operator `{:?}`, \
-                expected numbers, vec4s, bools or strings",
-                self.stack_trace(),
-                binop.op.symbol()), self))
-        };
-
-        Ok((Some(v), Flow::Continue))
-    }
     pub(crate) fn stack_trace(&self) -> String {stack_trace(&self.call_stack)}
 }
 

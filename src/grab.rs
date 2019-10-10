@@ -56,20 +56,6 @@ pub fn grab_expr(
                     x => return x,
                 }))), Flow::Continue))
         }
-        E::BinOp(ref binop_expr) => {
-            Ok((Grabbed::Expression(E::BinOp(Box::new(ast::BinOpExpression {
-                op: binop_expr.op,
-                left: match grab_expr(level, rt, &binop_expr.left, side) {
-                    Ok((Grabbed::Expression(x), Flow::Continue)) => x,
-                    x => return x,
-                },
-                right: match grab_expr(level, rt, &binop_expr.right, side) {
-                    Ok((Grabbed::Expression(x), Flow::Continue)) => x,
-                    x => return x,
-                },
-                source_range: binop_expr.source_range,
-            }))), Flow::Continue))
-        }
         E::ReturnVoid(_) |
         E::Break(_) |
         E::Continue(_) |
@@ -115,20 +101,6 @@ pub fn grab_expr(
                 source_range: assign.source_range,
             }))), Flow::Continue))
         },
-        E::Compare(ref compare) => {
-            Ok((Grabbed::Expression(E::Compare(Box::new(ast::Compare {
-                op: compare.op,
-                left: match grab_expr(level, rt, &compare.left, side) {
-                    Ok((Grabbed::Expression(x), Flow::Continue)) => x,
-                    x => return x,
-                },
-                right: match grab_expr(level, rt, &compare.right, side) {
-                    Ok((Grabbed::Expression(x), Flow::Continue)) => x,
-                    x => return x,
-                },
-                source_range: compare.source_range,
-            }))), Flow::Continue))
-        }
         E::If(ref if_expr) => {
             Ok((Grabbed::Expression(E::If(Box::new(ast::If {
                 cond: match grab_expr(level, rt, &if_expr.cond, side) {
@@ -177,8 +149,6 @@ pub fn grab_expr(
             let call = &go.call;
             Ok((Grabbed::Expression(E::Go(Box::new(ast::Go {
                 call: ast::Call {
-                    alias: call.alias.clone(),
-                    name: call.name.clone(),
                     args: {
                         let mut new_args = vec![];
                         for arg in &call.args {
@@ -189,7 +159,7 @@ pub fn grab_expr(
                         }
                         new_args
                     },
-                    source_range: call.source_range,
+                    info: call.info.clone(),
                     f_index: call.f_index.clone(),
                     custom_source: call.custom_source.clone(),
                 },
@@ -198,8 +168,6 @@ pub fn grab_expr(
         }
         E::Call(ref call) => {
             Ok((Grabbed::Expression(E::Call(Box::new(ast::Call {
-                alias: call.alias.clone(),
-                name: call.name.clone(),
                 args: {
                     let mut new_args = vec![];
                     for arg in &call.args {
@@ -210,9 +178,99 @@ pub fn grab_expr(
                     }
                     new_args
                 },
-                source_range: call.source_range,
+                info: call.info.clone(),
                 f_index: call.f_index.clone(),
                 custom_source: call.custom_source.clone(),
+            }))), Flow::Continue))
+        }
+        E::CallVoid(ref call) => {
+            Ok((Grabbed::Expression(E::CallVoid(Box::new(ast::CallVoid {
+                args: {
+                    let mut new_args = vec![];
+                    for arg in &call.args {
+                        new_args.push(match grab_expr(level, rt, arg, side) {
+                            Ok((Grabbed::Expression(x), Flow::Continue)) => x,
+                            x => return x,
+                        });
+                    }
+                    new_args
+                },
+                info: call.info.clone(),
+                fun: call.fun.clone(),
+            }))), Flow::Continue))
+        }
+        E::CallReturn(ref call) => {
+            Ok((Grabbed::Expression(E::CallReturn(Box::new(ast::CallReturn {
+                args: {
+                    let mut new_args = vec![];
+                    for arg in &call.args {
+                        new_args.push(match grab_expr(level, rt, arg, side) {
+                            Ok((Grabbed::Expression(x), Flow::Continue)) => x,
+                            x => return x,
+                        });
+                    }
+                    new_args
+                },
+                info: call.info.clone(),
+                fun: call.fun.clone(),
+            }))), Flow::Continue))
+        }
+        E::CallBinOp(ref call) => {
+            Ok((Grabbed::Expression(E::CallBinOp(Box::new(ast::CallBinOp {
+                left: match grab_expr(level, rt, &call.left, side) {
+                    Ok((Grabbed::Expression(x), Flow::Continue)) => x,
+                    x => return x,
+                },
+                right: match grab_expr(level, rt, &call.right, side) {
+                    Ok((Grabbed::Expression(x), Flow::Continue)) => x,
+                    x => return x,
+                },
+                info: call.info.clone(),
+                fun: call.fun.clone(),
+            }))), Flow::Continue))
+        }
+        E::CallUnOp(ref call) => {
+            Ok((Grabbed::Expression(E::CallUnOp(Box::new(ast::CallUnOp {
+                arg: match grab_expr(level, rt, &call.arg, side) {
+                    Ok((Grabbed::Expression(x), Flow::Continue)) => x,
+                    x => return x,
+                },
+                info: call.info.clone(),
+                fun: call.fun.clone(),
+            }))), Flow::Continue))
+        }
+        E::CallLazy(ref call) => {
+            Ok((Grabbed::Expression(E::CallLazy(Box::new(ast::CallLazy {
+                args: {
+                    let mut new_args = vec![];
+                    for arg in &call.args {
+                        new_args.push(match grab_expr(level, rt, arg, side) {
+                            Ok((Grabbed::Expression(x), Flow::Continue)) => x,
+                            x => return x,
+                        });
+                    }
+                    new_args
+                },
+                lazy_inv: call.lazy_inv,
+                info: call.info.clone(),
+                fun: call.fun.clone(),
+            }))), Flow::Continue))
+        }
+        E::CallLoaded(ref call) => {
+            Ok((Grabbed::Expression(E::CallLoaded(Box::new(ast::CallLoaded {
+                args: {
+                    let mut new_args = vec![];
+                    for arg in &call.args {
+                        new_args.push(match grab_expr(level, rt, arg, side) {
+                            Ok((Grabbed::Expression(x), Flow::Continue)) => x,
+                            x => return x,
+                        });
+                    }
+                    new_args
+                },
+                info: call.info.clone(),
+                custom_source: call.custom_source.clone(),
+                fun: call.fun.clone(),
             }))), Flow::Continue))
         }
         E::CallClosure(ref call_closure) => {
@@ -300,16 +358,6 @@ pub fn grab_expr(
             }
             x => x,
         },
-        E::UnOp(ref unop) => {
-            Ok((Grabbed::Expression(E::UnOp(Box::new(ast::UnOpExpression {
-                op: unop.op,
-                expr: match grab_expr(level, rt, &unop.expr, side) {
-                    Ok((Grabbed::Expression(x), Flow::Continue)) => x,
-                    x => return x,
-                },
-                source_range: unop.source_range,
-            }))), Flow::Continue))
-        }
         E::Vec4(ref vec4) => {
             Ok((Grabbed::Expression(E::Vec4(Box::new(ast::Vec4 {
                 args: {

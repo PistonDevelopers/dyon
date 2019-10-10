@@ -1,0 +1,10 @@
+fn foo(a: any, b: any) -> any {return a + b}
+    all T { (T f64, T f64) -> T f64 }
+
+fn km(a: f64) -> km f64 {return clone(a)}
+
+fn check_km(a: km f64) {}
+
+fn main() {
+    check_km(foo(km(2), 3))
+}

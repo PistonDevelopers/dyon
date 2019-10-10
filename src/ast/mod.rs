@@ -51,9 +51,11 @@ pub fn convert(
             break;
         }
     }
-    for (i, f) in module.functions.iter().enumerate() {
-        f.resolve_locals(i, module, &use_lookup);
+    let mut new_functions = module.functions.clone();
+    for i in 0..new_functions.len() {
+        new_functions[i].resolve_locals(i, module, &use_lookup);
     }
+    module.functions = new_functions;
     Ok(())
 }
 
@@ -345,6 +347,8 @@ pub struct Function {
     pub source: Arc<String>,
     /// Function arguments.
     pub args: Vec<Arg>,
+    /// Lazy invariants.
+    pub lazy_inv: Vec<Vec<Lazy>>,
     /// Current object references.
     pub currents: Vec<Current>,
     /// Function block.
@@ -385,6 +389,7 @@ impl Function {
         let mut block: Option<Block> = None;
         let mut expr: Option<Expression> = None;
         let mut ret: Option<Type> = None;
+        let mut lazy_inv: Vec<Vec<Lazy>> = vec![];
         loop {
             if let Ok(range) = convert.end_node(node) {
                 convert.update(range);
@@ -392,10 +397,11 @@ impl Function {
             } else if let Ok((range, val)) = convert.meta_string("name") {
                 convert.update(range);
                 name = Some(val);
-            } else if let Ok((range, val)) = Arg::from_meta_data(
-                    convert, ignored) {
+            } else if let Ok((range, val, lazy)) = Arg::from_meta_data(
+                    file, source, convert, ignored) {
                 convert.update(range);
                 args.push(val);
+                lazy_inv.push(lazy);
             } else if let Ok((range, val)) = Current::from_meta_data(
                     convert, ignored) {
                 convert.update(range);
@@ -416,6 +422,11 @@ impl Function {
                 convert.update(range);
                 expr = Some(val);
                 ret = Some(Type::Any);
+            } else if let Ok(_) = convert.start_node("ty") {
+                // Ignore extra type information,
+                // since this is only used by type checker.
+                let range = convert.ignore();
+                convert.update(range);
             } else {
                 let range = convert.ignore();
                 convert.update(range);
@@ -448,6 +459,10 @@ impl Function {
             name = Arc::new(name_plus_args);
         }
         let ret = ret.ok_or(())?;
+        // Remove empty lazy invariants.
+        while let Some(true) = lazy_inv.last().map(|lz| lz.len() == 0) {
+            lazy_inv.pop();
+        }
         Ok((convert.subtract(start), Function {
             namespace: namespace.clone(),
             resolved: Arc::new(AtomicBool::new(false)),
@@ -455,6 +470,7 @@ impl Function {
             file: file.clone(),
             source: source.clone(),
             args,
+            lazy_inv,
             currents,
             block,
             ret,
@@ -466,7 +482,7 @@ impl Function {
     /// Returns `true` if the function returns something.
     pub fn returns(&self) -> bool { self.ret != Type::Void }
 
-    fn resolve_locals(&self, relative: usize, module: &Module, use_lookup: &UseLookup) {
+    fn resolve_locals(&mut self, relative: usize, module: &Module, use_lookup: &UseLookup) {
         use std::sync::atomic::Ordering;
 
         // Ensure sequential order just to be safe.
@@ -474,7 +490,8 @@ impl Function {
         let mut stack: Vec<Option<Arc<String>>> = vec![];
         let mut closure_stack: Vec<usize> = vec![];
         if self.returns() {
-            stack.push(Some(Arc::new("return".into())));
+            // Use return type because it has the same name.
+            stack.push(Some(crate::runtime::RETURN_TYPE.clone()));
         }
         for arg in &self.args {
             stack.push(Some(arg.name.clone()));
@@ -527,8 +544,8 @@ impl Closure {
             if let Ok(range) = convert.end_node(node) {
                 convert.update(range);
                 break;
-            } else if let Ok((range, val)) = Arg::from_meta_data(
-                    convert, ignored) {
+            } else if let Ok((range, val, _)) = Arg::from_meta_data(
+                    file, source, convert, ignored) {
                 convert.update(range);
                 args.push(val);
             } else if let Ok((range, val)) = Current::from_meta_data(
@@ -571,7 +588,7 @@ impl Closure {
     pub fn returns(&self) -> bool { self.ret != Type::Void }
 
     fn resolve_locals(
-        &self,
+        &mut self,
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
@@ -584,7 +601,8 @@ impl Closure {
         let cs = closure_stack.len();
         closure_stack.push(stack.len());
         if self.returns() {
-            stack.push(Some(Arc::new("return".into())));
+            // Use return type because it has the same name.
+            stack.push(Some(crate::runtime::RETURN_TYPE.clone()));
         }
         for arg in &self.args {
             stack.push(Some(arg.name.clone()));
@@ -655,7 +673,7 @@ impl Grab {
     }
 
     fn resolve_locals(
-        &self,
+        &mut self,
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
@@ -728,7 +746,7 @@ impl TryExpr {
     }
 
     fn resolve_locals(
-        &self,
+        &mut self,
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
@@ -738,6 +756,24 @@ impl TryExpr {
         self.expr.resolve_locals(relative, stack, closure_stack, module, use_lookup)
     }
 }
+
+/// Lazy invariant.
+#[derive(Debug, Clone, PartialEq)]
+pub enum Lazy {
+    /// Return a variable if result of argument is equal to the variable.
+    Variable(Variable),
+    /// Unwrap the Ok result.
+    UnwrapOk,
+    /// Unwrap the Err result.
+    UnwrapErr,
+    /// Unwrap the Some option.
+    UnwrapSome,
+}
+
+/// This is requires because `UnsafeRef(*mut Variable)` can not be sent across threads.
+/// The lack of `UnsafeRef` variant when sending across threads is guaranteed at language level.
+/// The interior of `UnsafeRef` can not be accessed outside this library.
+unsafe impl Sync for Lazy {}
 
 /// Function argument.
 #[derive(Debug, Clone)]
@@ -756,8 +792,12 @@ pub struct Arg {
 
 impl Arg {
     /// Creates function argument from meta data.
-    pub fn from_meta_data(mut convert: Convert, ignored: &mut Vec<Range>)
-    -> Result<(Range, Arg), ()> {
+    pub fn from_meta_data(
+        file: &Arc<String>,
+        source: &Arc<String>,
+        mut convert: Convert,
+        ignored: &mut Vec<Range>
+    ) -> Result<(Range, Arg, Vec<Lazy>), ()> {
         let start = convert;
         let node = "arg";
         let start_range = convert.start_node(node)?;
@@ -767,6 +807,7 @@ impl Arg {
         let mut lifetime: Option<Arc<String>> = None;
         let mut ty: Option<Type> = None;
         let mut mutable = false;
+        let mut lazy: Vec<Lazy> = vec![];
         loop {
             if let Ok(range) = convert.end_node(node) {
                 convert.update(range);
@@ -784,6 +825,20 @@ impl Arg {
                     "type", convert, ignored) {
                 convert.update(range);
                 ty = Some(val);
+            } else if let Ok((range, val)) = Grab::from_meta_data(file, source, convert, ignored) {
+                convert.update(range);
+                if let Some(val) = val.precompute() {
+                    lazy.push(Lazy::Variable(val));
+                } else {return Err(())}
+            } else if let Ok((range, _)) = convert.meta_bool("ok(_)") {
+                convert.update(range);
+                lazy.push(Lazy::UnwrapOk);
+            } else if let Ok((range, _)) = convert.meta_bool("err(_)") {
+                convert.update(range);
+                lazy.push(Lazy::UnwrapErr);
+            } else if let Ok((range, _)) = convert.meta_bool("some(_)") {
+                convert.update(range);
+                lazy.push(Lazy::UnwrapSome);
             } else {
                 let range = convert.ignore();
                 convert.update(range);
@@ -802,7 +857,7 @@ impl Arg {
             ty,
             source_range: convert.source(start).unwrap(),
             mutable,
-        }))
+        }, lazy))
     }
 }
 
@@ -905,7 +960,7 @@ impl Block {
     }
 
     fn resolve_locals(
-        &self,
+        &mut self,
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
@@ -913,7 +968,7 @@ impl Block {
         use_lookup: &UseLookup,
     ) {
         let st = stack.len();
-        for expr in &self.expressions {
+        for expr in &mut self.expressions {
             expr.resolve_locals(relative, stack, closure_stack, module, use_lookup);
         }
         stack.truncate(st);
@@ -945,10 +1000,20 @@ pub enum Expression {
     Go(Box<Go>),
     /// Call expression.
     Call(Box<Call>),
+    /// Call external function.
+    CallVoid(Box<CallVoid>),
+    /// Call external function that returns something.
+    CallReturn(Box<CallReturn>),
+    /// Call external function with lazy invariant.
+    CallLazy(Box<CallLazy>),
+    /// Call loaded function.
+    CallLoaded(Box<CallLoaded>),
+    /// Binary operator.
+    CallBinOp(Box<CallBinOp>),
+    /// Unary operator.
+    CallUnOp(Box<CallUnOp>),
     /// Item expression.
     Item(Box<Item>),
-    /// Binary operator expression.
-    BinOp(Box<BinOpExpression>),
     /// Assignment expression.
     Assign(Box<Assign>),
     /// 4D vector expression.
@@ -999,10 +1064,6 @@ pub enum Expression {
     LinkIn(Box<ForIn>),
     /// If-expression.
     If(Box<If>),
-    /// Compare expression.
-    Compare(Box<Compare>),
-    /// Unary operator expression.
-    UnOp(Box<UnOpExpression>),
     /// Variable.
     ///
     /// This means it contains no members that depends on other expressions.
@@ -1083,16 +1144,20 @@ impl Expression {
                     file, source, "block", convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::Block(Box::new(val)));
-            } else if let Ok((range, val)) = Add::from_meta_data(
-                    file, source, convert, ignored) {
+            } else if let Ok((range, val)) = BinOpSeq::from_meta_data(
+                    file, source, "add", convert, ignored) {
                 convert.update(range);
                 result = Some(val.into_expression());
             } else if let Ok((range, val)) = UnOpExpression::from_meta_data(
-                    file, source, convert, ignored) {
+                    "not", file, source, convert, ignored) {
                 convert.update(range);
-                result = Some(Expression::UnOp(Box::new(val)));
-            } else if let Ok((range, val)) = Mul::from_meta_data(
-                    file, source, convert, ignored) {
+                result = Some(val);
+            } else if let Ok((range, val)) = BinOpSeq::from_meta_data(
+                    file, source, "mul", convert, ignored) {
+                convert.update(range);
+                result = Some(val.into_expression());
+            } else if let Ok((range, val)) = BinOpSeq::from_meta_data(
+                    file, source, "compare", convert, ignored) {
                 convert.update(range);
                 result = Some(val.into_expression());
             } else if let Ok((range, val)) = Item::from_meta_data(
@@ -1253,10 +1318,6 @@ impl Expression {
                     file, source, convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::If(Box::new(val)));
-            } else if let Ok((range, val)) = Compare::from_meta_data(
-                    file, source, convert, ignored) {
-                convert.update(range);
-                result = Some(Expression::Compare(Box::new(val)));
             } else if let Ok((range, _)) = convert.meta_bool("try") {
                 convert.update(range);
                 result = Some(Expression::Try(Box::new(result.unwrap())));
@@ -1332,9 +1393,14 @@ impl Expression {
             Continue(ref c) => c.source_range,
             Block(ref bl) => bl.source_range,
             Go(ref go) => go.source_range,
-            Call(ref call) => call.source_range,
+            Call(ref call) => call.info.source_range,
+            CallVoid(ref call) => call.info.source_range,
+            CallReturn(ref call) => call.info.source_range,
+            CallBinOp(ref call) => call.info.source_range,
+            CallUnOp(ref call) => call.info.source_range,
+            CallLazy(ref call) => call.info.source_range,
+            CallLoaded(ref call) => call.info.source_range,
             Item(ref it) => it.source_range,
-            BinOp(ref binop) => binop.source_range,
             Assign(ref assign) => assign.source_range,
             Vec4(ref vec4) => vec4.source_range,
             Mat4(ref mat4) => mat4.source_range,
@@ -1360,8 +1426,6 @@ impl Expression {
             LinkFor(ref for_n_expr) => for_n_expr.source_range,
             LinkIn(ref for_in_expr) => for_in_expr.source_range,
             If(ref if_expr) => if_expr.source_range,
-            Compare(ref comp) => comp.source_range,
-            UnOp(ref unop) => unop.source_range,
             Variable(ref range_var) => range_var.0,
             Try(ref expr) => expr.source_range(),
             Swizzle(ref swizzle) => swizzle.source_range,
@@ -1374,7 +1438,7 @@ impl Expression {
     }
 
     fn resolve_locals(
-        &self,
+        &mut self,
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
@@ -1384,15 +1448,15 @@ impl Expression {
         use self::Expression::*;
 
         match *self {
-            Link(ref link) =>
+            Link(ref mut link) =>
                 link.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            Object(ref obj) =>
+            Object(ref mut obj) =>
                 obj.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            Array(ref arr) =>
+            Array(ref mut arr) =>
                 arr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            ArrayFill(ref arr_fill) =>
+            ArrayFill(ref mut arr_fill) =>
                 arr_fill.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            Return(ref expr) => {
+            Return(ref mut expr) => {
                 let st = stack.len();
                 expr.resolve_locals(relative, stack, closure_stack, module, use_lookup);
                 stack.truncate(st);
@@ -1400,84 +1464,133 @@ impl Expression {
             ReturnVoid(_) => {}
             Break(_) => {}
             Continue(_) => {}
-            Block(ref bl) =>
+            Block(ref mut bl) =>
                 bl.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            Go(ref go) =>
+            Go(ref mut go) =>
                 go.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            Call(ref call) =>
-                call.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            Item(ref it) =>
+            Call(ref mut call) => {
+                call.resolve_locals(relative, stack, closure_stack, module, use_lookup);
+                match call.f_index {
+                    FnIndex::Void(f) => {
+                        *self = Expression::CallVoid(Box::new(self::CallVoid {
+                            args: call.args.clone(),
+                            fun: f,
+                            info: call.info.clone(),
+                        }))
+                    }
+                    FnIndex::Return(f) => {
+                        *self = Expression::CallReturn(Box::new(self::CallReturn {
+                            args: call.args.clone(),
+                            fun: f,
+                            info: call.info.clone(),
+                        }))
+                    }
+                    FnIndex::BinOp(f) => {
+                        *self = Expression::CallBinOp(Box::new(self::CallBinOp {
+                            left: call.args[0].clone(),
+                            right: call.args[1].clone(),
+                            fun: f,
+                            info: call.info.clone(),
+                        }))
+                    }
+                    FnIndex::UnOp(f) => {
+                        *self = Expression::CallUnOp(Box::new(self::CallUnOp {
+                            arg: call.args[0].clone(),
+                            fun: f,
+                            info: call.info.clone(),
+                        }))
+                    }
+                    FnIndex::Lazy(f, lazy_inv) => {
+                        *self = Expression::CallLazy(Box::new(self::CallLazy {
+                            args: call.args.clone(),
+                            fun: f,
+                            lazy_inv,
+                            info: call.info.clone(),
+                        }))
+                    }
+                    FnIndex::Loaded(f) => {
+                        *self = Expression::CallLoaded(Box::new(self::CallLoaded {
+                            args: call.args.clone(),
+                            custom_source: call.custom_source.clone(),
+                            fun: f,
+                            info: call.info.clone(),
+                        }))
+                    }
+                    FnIndex::None => {}
+                }
+            }
+            CallVoid(_) => unimplemented!("`CallVoid` is transformed from `Call`"),
+            CallReturn(_) => unimplemented!("`CallReturn` is transformed from `Call`"),
+            CallLazy(_) => unimplemented!("`CallLazy` is transformed from `Call`"),
+            CallLoaded(_) => unimplemented!("`CallLoaded` is transformed from `Call`"),
+            CallBinOp(_) => unimplemented!("`CallBinOp` is transformed from `Call`"),
+            CallUnOp(_) => unimplemented!("`CallUnOp` is transformed from `Call`"),
+            Item(ref mut it) =>
                 it.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            BinOp(ref binop) =>
-                binop.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            Assign(ref assign) =>
+            Assign(ref mut assign) =>
                 assign.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            Vec4(ref vec4) =>
+            Vec4(ref mut vec4) =>
                 vec4.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            Mat4(ref mat4) =>
+            Mat4(ref mut mat4) =>
                 mat4.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            For(ref for_expr) =>
+            For(ref mut for_expr) =>
                 for_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            ForN(ref for_n_expr) =>
+            ForN(ref mut for_n_expr) =>
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            ForIn(ref for_n_expr) =>
+            ForIn(ref mut for_n_expr) =>
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            Sum(ref for_n_expr) =>
+            Sum(ref mut for_n_expr) =>
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            SumIn(ref for_in_expr) =>
+            SumIn(ref mut for_in_expr) =>
                 for_in_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            SumVec4(ref for_n_expr) =>
+            SumVec4(ref mut for_n_expr) =>
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            Prod(ref for_n_expr) =>
+            Prod(ref mut for_n_expr) =>
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            ProdIn(ref for_in_expr) =>
+            ProdIn(ref mut for_in_expr) =>
                 for_in_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            ProdVec4(ref for_n_expr) =>
+            ProdVec4(ref mut for_n_expr) =>
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            Min(ref for_n_expr) =>
+            Min(ref mut for_n_expr) =>
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            MinIn(ref for_in_expr) =>
+            MinIn(ref mut for_in_expr) =>
                 for_in_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            Max(ref for_n_expr) =>
+            Max(ref mut for_n_expr) =>
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            MaxIn(ref for_in_expr) =>
+            MaxIn(ref mut for_in_expr) =>
                 for_in_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            Sift(ref for_n_expr) =>
+            Sift(ref mut for_n_expr) =>
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            SiftIn(ref for_in_expr) =>
+            SiftIn(ref mut for_in_expr) =>
                 for_in_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            Any(ref for_n_expr) =>
+            Any(ref mut for_n_expr) =>
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            AnyIn(ref for_in_expr) =>
+            AnyIn(ref mut for_in_expr) =>
                 for_in_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            All(ref for_n_expr) =>
+            All(ref mut for_n_expr) =>
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            AllIn(ref for_in_expr) =>
+            AllIn(ref mut for_in_expr) =>
                 for_in_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            LinkFor(ref for_n_expr) =>
+            LinkFor(ref mut for_n_expr) =>
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            LinkIn(ref for_in_expr) =>
+            LinkIn(ref mut for_in_expr) =>
                 for_in_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            If(ref if_expr) =>
+            If(ref mut if_expr) =>
                 if_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            Compare(ref comp) =>
-                comp.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            UnOp(ref unop) =>
-                unop.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             Variable(_) => {}
-            Try(ref expr) =>
+            Try(ref mut expr) =>
                 expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            Swizzle(ref swizzle) =>
+            Swizzle(ref mut swizzle) =>
                 swizzle.expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            Closure(ref closure) =>
-                closure.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            CallClosure(ref call) =>
+            Closure(ref mut closure) =>
+                Arc::make_mut(closure).resolve_locals(relative, stack, closure_stack, module, use_lookup),
+            CallClosure(ref mut call) =>
                 call.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            Grab(ref grab) =>
+            Grab(ref mut grab) =>
                 grab.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            TryExpr(ref try_expr) =>
+            TryExpr(ref mut try_expr) =>
                 try_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            In(ref in_expr) =>
+            In(ref mut in_expr) =>
                 in_expr.resolve_locals(relative, module, use_lookup),
         }
     }
@@ -1540,7 +1653,7 @@ impl Link {
     }
 
     fn resolve_locals(
-        &self,
+        &mut self,
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
@@ -1548,7 +1661,7 @@ impl Link {
         use_lookup: &UseLookup,
     ) {
         let st = stack.len();
-        for expr in &self.items {
+        for expr in &mut self.items {
             expr.resolve_locals(relative, stack, closure_stack, module, use_lookup);
         }
         stack.truncate(st);
@@ -1648,7 +1761,7 @@ impl Object {
     }
 
     fn resolve_locals(
-        &self,
+        &mut self,
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
@@ -1656,7 +1769,7 @@ impl Object {
         use_lookup: &UseLookup,
     ) {
         let st = stack.len();
-        for &(_, ref expr) in &self.key_values {
+        for &mut (_, ref mut expr) in &mut self.key_values {
             expr.resolve_locals(relative, stack, closure_stack, module, use_lookup);
             stack.truncate(st);
         }
@@ -1720,7 +1833,7 @@ impl Array {
     }
 
     fn resolve_locals(
-        &self,
+        &mut self,
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
@@ -1728,7 +1841,7 @@ impl Array {
         use_lookup: &UseLookup,
     ) {
         let st = stack.len();
-        for item in &self.items {
+        for item in &mut self.items {
             item.resolve_locals(relative, stack, closure_stack, module, use_lookup);
             stack.truncate(st);
         }
@@ -1801,7 +1914,7 @@ impl ArrayFill {
     }
 
     fn resolve_locals(
-        &self,
+        &mut self,
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
@@ -1816,9 +1929,9 @@ impl ArrayFill {
     }
 }
 
-/// Addition expression.
+/// Parse sequence of binary operators.
 #[derive(Debug, Clone)]
-pub struct Add {
+pub struct BinOpSeq {
     /// Item expressions.
     pub items: Vec<Expression>,
     /// Binary operators.
@@ -1827,96 +1940,16 @@ pub struct Add {
     pub source_range: Range,
 }
 
-impl Add {
-    /// Creates addition expression from meta data.
-    pub fn from_meta_data(
-        file: &Arc<String>,
-        source: &Arc<String>,
-        mut convert: Convert,
-        ignored: &mut Vec<Range>)
-    -> Result<(Range, Add), ()> {
-        let start = convert;
-        let node = "add";
-        let start_range = convert.start_node(node)?;
-        convert.update(start_range);
-
-        let mut items = vec![];
-        let mut ops = vec![];
-        loop {
-            if let Ok(range) = convert.end_node(node) {
-                convert.update(range);
-                break;
-            } else if let Ok((range, val)) = Expression::from_meta_data(
-                    file, source, "expr", convert, ignored) {
-                convert.update(range);
-                items.push(val);
-            } else if let Ok((range, _)) = convert.meta_bool("+") {
-                convert.update(range);
-                ops.push(BinOp::Add);
-            } else if let Ok((range, _)) = convert.meta_bool("-") {
-                convert.update(range);
-                ops.push(BinOp::Sub);
-            } else if let Ok((range, _)) = convert.meta_bool("||") {
-                convert.update(range);
-                ops.push(BinOp::OrElse);
-            } else if let Ok((range, _)) = convert.meta_bool("⊻") {
-                convert.update(range);
-                ops.push(BinOp::Pow);
-            } else {
-                let range = convert.ignore();
-                convert.update(range);
-                ignored.push(range);
-            }
-        }
-
-        if items.is_empty() {
-            return Err(())
-        }
-        Ok((convert.subtract(start), Add {
-            items,
-            ops,
-            source_range: convert.source(start).unwrap()
-        }))
-    }
-
-    fn into_expression(mut self) -> Expression {
-        if self.items.len() == 1 {
-            self.items[0].clone()
-        } else {
-            let op = self.ops.pop().unwrap();
-            let last = self.items.pop().unwrap();
-            let source_range = self.source_range;
-            Expression::BinOp(Box::new(BinOpExpression {
-                op,
-                left: self.into_expression(),
-                right: last,
-                source_range
-            }))
-        }
-    }
-}
-
-/// Multiply expression.
-#[derive(Debug, Clone)]
-pub struct Mul {
-    /// Item expressions.
-    pub items: Vec<Expression>,
-    /// Binary operators.
-    pub ops: Vec<BinOp>,
-    /// The range in source.
-    pub source_range: Range,
-}
-
-impl Mul {
+impl BinOpSeq {
     /// Creates multiply expression from meta data.
     pub fn from_meta_data(
         file: &Arc<String>,
         source: &Arc<String>,
+        node: &str,
         mut convert: Convert,
         ignored: &mut Vec<Range>)
-    -> Result<(Range, Mul), ()> {
+    -> Result<(Range, BinOpSeq), ()> {
         let start = convert;
-        let node = "mul";
         let start_range = convert.start_node(node)?;
         convert.update(start_range);
 
@@ -1927,15 +1960,15 @@ impl Mul {
                 convert.update(range);
                 break;
             } else if let Ok((range, val)) = UnOpExpression::from_meta_data(
-                    file, source, convert, ignored) {
+                    "neg", file, source, convert, ignored) {
                 convert.update(range);
-                items.push(Expression::UnOp(Box::new(val)));
-            } else if let Ok((range, val)) = Pow::from_meta_data(
-                    file, source, convert, ignored) {
+                items.push(val);
+            } else if let Ok((range, val)) = BinOpSeq::from_meta_data(
+                    file, source, "pow", convert, ignored) {
                 convert.update(range);
                 items.push(val.into_expression());
             } else if let Ok((range, val)) = Expression::from_meta_data(
-                    file, source, "val", convert, ignored) {
+                    file, source, "expr", convert, ignored) {
                 convert.update(range);
                 items.push(val);
             } else if let Ok((range, _)) = convert.meta_bool("*.") {
@@ -1953,9 +1986,39 @@ impl Mul {
             } else if let Ok((range, _)) = convert.meta_bool("%") {
                 convert.update(range);
                 ops.push(BinOp::Rem);
+            } else if let Ok((range, _)) = convert.meta_bool("+") {
+                convert.update(range);
+                ops.push(BinOp::Add);
+            } else if let Ok((range, _)) = convert.meta_bool("-") {
+                convert.update(range);
+                ops.push(BinOp::Sub);
+            } else if let Ok((range, _)) = convert.meta_bool("||") {
+                convert.update(range);
+                ops.push(BinOp::OrElse);
+            } else if let Ok((range, _)) = convert.meta_bool("^") {
+                convert.update(range);
+                ops.push(BinOp::Pow);
             } else if let Ok((range, _)) = convert.meta_bool("&&") {
                 convert.update(range);
                 ops.push(BinOp::AndAlso);
+            } else if let Ok((range, _)) = convert.meta_bool("<") {
+                convert.update(range);
+                ops.push(BinOp::Less);
+            } else if let Ok((range, _)) = convert.meta_bool("<=") {
+                convert.update(range);
+                ops.push(BinOp::LessOrEqual);
+            } else if let Ok((range, _)) = convert.meta_bool(">") {
+                convert.update(range);
+                ops.push(BinOp::Greater);
+            } else if let Ok((range, _)) = convert.meta_bool(">=") {
+                convert.update(range);
+                ops.push(BinOp::GreaterOrEqual);
+            } else if let Ok((range, _)) = convert.meta_bool("==") {
+                convert.update(range);
+                ops.push(BinOp::Equal);
+            } else if let Ok((range, _)) = convert.meta_bool("!=") {
+                convert.update(range);
+                ops.push(BinOp::NotEqual);
             } else {
                 let range = convert.ignore();
                 convert.update(range);
@@ -1966,7 +2029,7 @@ impl Mul {
         if items.is_empty() {
             return Err(())
         }
-        Ok((convert.subtract(start), Mul {
+        Ok((convert.subtract(start), BinOpSeq {
             items,
             ops,
             source_range: convert.source(start).unwrap(),
@@ -1980,81 +2043,13 @@ impl Mul {
             let op = self.ops.pop().expect("Expected a binary operation");
             let last = self.items.pop().expect("Expected argument");
             let source_range = self.source_range;
-            Expression::BinOp(Box::new(BinOpExpression {
+            BinOpExpression {
                 op,
                 left: self.into_expression(),
                 right: last,
                 source_range,
-            }))
+            }.into_expression()
         }
-    }
-}
-
-/// Power expression.
-#[derive(Debug, Clone)]
-pub struct Pow {
-    /// Base expression.
-    ///
-    /// This is the `x` in `x^a`.
-    pub base: Expression,
-    /// Exponent expression.
-    ///
-    /// This is the `x` in `a^x`.
-    pub exp: Expression,
-    /// The range in source.
-    pub source_range: Range,
-}
-
-impl Pow {
-    /// Creates power expression from meta data.
-    pub fn from_meta_data(
-        file: &Arc<String>,
-        source: &Arc<String>,
-        mut convert: Convert,
-        ignored: &mut Vec<Range>)
-    -> Result<(Range, Pow), ()> {
-        let start = convert;
-        let node = "pow";
-        let start_range = convert.start_node(node)?;
-        convert.update(start_range);
-
-        let mut base: Option<Expression> = None;
-        let mut exp: Option<Expression> = None;
-        loop {
-            if let Ok(range) = convert.end_node(node) {
-                convert.update(range);
-                break;
-            } else if let Ok((range, val)) = Expression::from_meta_data(
-                file, source, "base", convert, ignored) {
-                convert.update(range);
-                base = Some(val);
-            } else if let Ok((range, val)) = Expression::from_meta_data(
-                file, source, "exp", convert, ignored) {
-                convert.update(range);
-                exp = Some(val);
-            } else {
-                let range = convert.ignore();
-                convert.update(range);
-                ignored.push(range);
-            }
-        }
-
-        let base = base.ok_or(())?;
-        let exp = exp.ok_or(())?;
-        Ok((convert.subtract(start), Pow {
-            base,
-            exp,
-            source_range: convert.source(start).unwrap()
-        }))
-    }
-
-    fn into_expression(self) -> Expression {
-        Expression::BinOp(Box::new(BinOpExpression {
-                op: BinOp::Pow,
-                left: self.base,
-                right: self.exp,
-                source_range: self.source_range,
-        }))
     }
 }
 
@@ -2081,7 +2076,24 @@ pub enum BinOp {
     OrElse,
     /// Lazy AND operator (`&&`).
     AndAlso,
+    /// Less.
+    Less,
+    /// Less or equal.
+    LessOrEqual,
+    /// Greater.
+    Greater,
+    /// Greater or equal.
+    GreaterOrEqual,
+    /// Equal.
+    Equal,
+    /// Not equal.
+    NotEqual,
 }
+
+pub(crate) const BINOP_PREC_POW: u8 = 3;
+pub(crate) const BINOP_PREC_MUL: u8 = 2;
+pub(crate) const BINOP_PREC_ADD: u8 = 1;
+pub(crate) const BINOP_PREC_OR: u8 = 0;
 
 impl BinOp {
     /// Returns symbol of binary operator.
@@ -2097,6 +2109,12 @@ impl BinOp {
             BinOp::Pow => "^",
             BinOp::OrElse => "||",
             BinOp::AndAlso => "&&",
+            BinOp::Less => "<",
+            BinOp::LessOrEqual => "<=",
+            BinOp::Greater => ">",
+            BinOp::GreaterOrEqual => ">=",
+            BinOp::Equal => "==",
+            BinOp::NotEqual => "!=",
         }
     }
 
@@ -2113,22 +2131,16 @@ impl BinOp {
     /// Used to put parentheses in right places when printing out closures.
     pub fn precedence(self) -> u8 {
         match self {
-            BinOp::OrElse | BinOp::AndAlso => 0,
-            BinOp::Add | BinOp::Sub => 1,
+            BinOp::Less | BinOp::LessOrEqual |
+            BinOp::Greater | BinOp::GreaterOrEqual |
+            BinOp::Equal | BinOp::NotEqual => BINOP_PREC_OR,
+            BinOp::OrElse | BinOp::AndAlso => BINOP_PREC_OR,
+            BinOp::Add | BinOp::Sub => BINOP_PREC_ADD,
             BinOp::Mul | BinOp::Dot | BinOp::Cross
-            | BinOp::Div | BinOp::Rem => 2,
-            BinOp::Pow => 3,
+            | BinOp::Div | BinOp::Rem => BINOP_PREC_MUL,
+            BinOp::Pow => BINOP_PREC_POW,
         }
     }
-}
-
-/// Unary operator.
-#[derive(Debug, Copy, Clone)]
-pub enum UnOp {
-    /// Logical not.
-    Not,
-    /// Negation.
-    Neg,
 }
 
 /// An item id.
@@ -2155,7 +2167,7 @@ impl Id {
     }
 
     fn resolve_locals(
-        &self,
+        &mut self,
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
@@ -2165,7 +2177,7 @@ impl Id {
         match *self {
             Id::String(_, _) => false,
             Id::F64(_, _) => false,
-            Id::Expression(ref expr) => {
+            Id::Expression(ref mut expr) => {
                 let st = stack.len();
                 expr.resolve_locals(relative, stack, closure_stack, module, use_lookup);
                 stack.truncate(st);
@@ -2309,7 +2321,7 @@ impl Item {
     }
 
     fn resolve_locals(
-        &self,
+        &mut self,
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
@@ -2327,7 +2339,7 @@ impl Item {
                 }
             }
         }
-        for id in &self.ids {
+        for id in &mut self.ids {
             if id.resolve_locals(relative, stack, closure_stack, module, use_lookup) {
                 stack.push(None);
             }
@@ -2386,7 +2398,7 @@ impl Go {
     }
 
     fn resolve_locals(
-        &self,
+        &mut self,
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
@@ -2394,7 +2406,7 @@ impl Go {
         use_lookup: &UseLookup,
     ) {
         let st = stack.len();
-        for arg in &self.call.args {
+        for arg in &mut self.call.args {
             let st = stack.len();
             arg.resolve_locals(relative, stack, closure_stack, module, use_lookup);
             stack.truncate(st);
@@ -2403,21 +2415,100 @@ impl Go {
     }
 }
 
+/// Call info.
+#[derive(Debug, Clone)]
+pub struct CallInfo {
+    /// Name of function.
+    pub name: Arc<String>,
+    /// Alias.
+    pub alias: Option<Arc<String>>,
+    /// The range in source.
+    pub source_range: Range,
+}
+
+/// Loaded function call.
+#[derive(Debug, Clone)]
+pub struct CallLoaded {
+    /// Arguments.
+    pub args: Vec<Expression>,
+    /// Relative to function you call from.
+    pub fun: isize,
+    /// Info about the call.
+    pub info: Box<CallInfo>,
+    /// A custom source, such as when calling a function inside a loaded module.
+    pub custom_source: Option<Arc<String>>,
+}
+
+/// External function call.
+#[derive(Debug, Clone)]
+pub struct CallLazy {
+    /// Arguments.
+    pub args: Vec<Expression>,
+    /// Function pointer.
+    pub fun: crate::FnReturnRef,
+    /// Lazy invariant.
+    pub lazy_inv: crate::LazyInvariant,
+    /// Info about the call.
+    pub info: Box<CallInfo>,
+}
+
+/// External function call.
+#[derive(Debug, Clone)]
+pub struct CallBinOp {
+    /// Left argument.
+    pub left: Expression,
+    /// Right argument.
+    pub right: Expression,
+    /// Function pointer.
+    pub fun: crate::FnBinOpRef,
+    /// Info about the call.
+    pub info: Box<CallInfo>,
+}
+
+/// External function call.
+#[derive(Debug, Clone)]
+pub struct CallUnOp {
+    /// Argument.
+    pub arg: Expression,
+    /// Function pointer.
+    pub fun: crate::FnUnOpRef,
+    /// Info about the call.
+    pub info: Box<CallInfo>,
+}
+
+/// External function call.
+#[derive(Debug, Clone)]
+pub struct CallReturn {
+    /// Arguments.
+    pub args: Vec<Expression>,
+    /// Function pointer.
+    pub fun: crate::FnReturnRef,
+    /// Info about the call.
+    pub info: Box<CallInfo>,
+}
+
+/// External function call.
+#[derive(Debug, Clone)]
+pub struct CallVoid {
+    /// Arguments.
+    pub args: Vec<Expression>,
+    /// Function pointer.
+    pub fun: crate::FnVoidRef,
+    /// Info about the call.
+    pub info: Box<CallInfo>,
+}
+
 /// Function call.
 #[derive(Debug, Clone)]
 pub struct Call {
-    /// Alias.
-    pub alias: Option<Arc<String>>,
-    /// Name of function.
-    pub name: Arc<String>,
     /// Arguments.
     pub args: Vec<Expression>,
     /// Function index.
-    pub f_index: Cell<FnIndex>,
+    pub f_index: FnIndex,
+    /// Info about the call.
+    pub info: Box<CallInfo>,
     /// A custom source, such as when calling a function inside a loaded module.
     pub custom_source: Option<Arc<String>>,
-    /// The range in source.
-    pub source_range: Range,
 }
 
 impl Call {
@@ -2483,12 +2574,14 @@ impl Call {
         }
 
         Ok((convert.subtract(start), Call {
-            alias,
-            name,
             args,
-            f_index: Cell::new(FnIndex::None),
+            f_index: FnIndex::None,
             custom_source: None,
-            source_range: convert.source(start).unwrap(),
+            info: Box::new(CallInfo {
+                alias,
+                name,
+                source_range: convert.source(start).unwrap(),
+            })
         }))
     }
 
@@ -2556,36 +2649,44 @@ impl Call {
         }
 
         Ok((convert.subtract(start), Call {
-            alias,
-            name: Arc::new(name),
             args,
-            f_index: Cell::new(FnIndex::None),
+            f_index: FnIndex::None,
             custom_source: None,
-            source_range: convert.source(start).unwrap(),
+            info: Box::new(CallInfo {
+                alias,
+                name: Arc::new(name),
+                source_range: convert.source(start).unwrap(),
+            })
         }))
     }
 
     fn resolve_locals(
-        &self,
+        &mut self,
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
         module: &Module,
         use_lookup: &UseLookup,
     ) {
-        use FnExternalRef;
+        use FnUnOpRef;
+        use FnBinOpRef;
+        use FnReturnRef;
+        use FnVoidRef;
+        use FnExt;
 
         let st = stack.len();
-        let f_index = if let Some(ref alias) = self.alias {
-            if let Some(&i) = use_lookup.aliases.get(alias).and_then(|map| map.get(&self.name)) {
+        let f_index = if let Some(ref alias) = self.info.alias {
+            if let Some(&i) = use_lookup.aliases.get(alias)
+                .and_then(|map| map.get(&self.info.name)) {
                 match i {
                     FnAlias::Loaded(i) => FnIndex::Loaded(i as isize - relative as isize),
                     FnAlias::External(i) => {
                         let f = &module.ext_prelude[i];
-                        if let Type::Void = f.p.ret {
-                            FnIndex::ExternalVoid(FnExternalRef(f.f))
-                        } else {
-                            FnIndex::ExternalReturn(FnExternalRef(f.f))
+                        match f.f {
+                            FnExt::Void(ff) => FnIndex::Void(FnVoidRef(ff)),
+                            FnExt::Return(ff) => FnIndex::Return(FnReturnRef(ff)),
+                            FnExt::BinOp(ff) => FnIndex::BinOp(FnBinOpRef(ff)),
+                            FnExt::UnOp(ff) => FnIndex::UnOp(FnUnOpRef(ff)),
                         }
                     }
                 }
@@ -2593,9 +2694,9 @@ impl Call {
                 FnIndex::None
             }
         } else {
-            module.find_function(&self.name, relative)
+            module.find_function(&self.info.name, relative)
         };
-        self.f_index.set(f_index);
+        self.f_index = f_index;
         match f_index {
             FnIndex::Loaded(f_index) => {
                 let index = (f_index + relative as isize) as usize;
@@ -2603,24 +2704,31 @@ impl Call {
                     stack.push(None);
                 }
             }
-            FnIndex::ExternalVoid(_) | FnIndex::ExternalReturn(_) => {
+            FnIndex::Void(_) |
+            FnIndex::Return(_) |
+            FnIndex::Lazy(_, _) |
+            FnIndex::BinOp(_) |
+            FnIndex::UnOp(_) => {
                 // Don't push return since last value in block
                 // is used as return value.
             }
             FnIndex::None => {}
         }
-        for arg in &self.args {
+        for arg in &mut self.args {
             let arg_st = stack.len();
             arg.resolve_locals(relative, stack, closure_stack, module, use_lookup);
             stack.truncate(arg_st);
-            match *arg {
-                Expression::Swizzle(ref swizzle) => {
-                    for _ in 0..swizzle.len() {
+            if let FnIndex::BinOp(_) = f_index {}
+            else {
+                match *arg {
+                    Expression::Swizzle(ref swizzle) => {
+                        for _ in 0..swizzle.len() {
+                            stack.push(None);
+                        }
+                    }
+                    _ => {
                         stack.push(None);
                     }
-                }
-                _ => {
-                    stack.push(None);
                 }
             }
         }
@@ -2780,7 +2888,7 @@ impl CallClosure {
     }
 
     fn resolve_locals(
-        &self,
+        &mut self,
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
@@ -2790,8 +2898,9 @@ impl CallClosure {
         let st = stack.len();
         self.item.resolve_locals(relative, stack, closure_stack, module, use_lookup);
         // All closures must return a value.
-        stack.push(Some(Arc::new("return".into())));
-        for arg in &self.args {
+        // Use return type because it has the same name.
+        stack.push(Some(crate::runtime::RETURN_TYPE.clone()));
+        for arg in &mut self.args {
             let arg_st = stack.len();
             arg.resolve_locals(relative, stack, closure_stack, module, use_lookup);
             stack.truncate(arg_st);
@@ -2871,12 +2980,14 @@ impl Norm {
 
     fn into_call_expr(self) -> Expression {
         Expression::Call(Box::new(Call {
-            alias: None,
             args: vec![self.expr],
             custom_source: None,
-            f_index: Cell::new(FnIndex::None),
-            name: Arc::new("norm".into()),
-            source_range: self.source_range,
+            f_index: FnIndex::None,
+            info: Box::new(CallInfo {
+                alias: None,
+                name: crate::NORM.clone(),
+                source_range: self.source_range,
+            })
         }))
     }
 }
@@ -2895,58 +3006,60 @@ pub struct BinOpExpression {
 }
 
 impl BinOpExpression {
-    fn resolve_locals(
-        &self,
-        relative: usize,
-        stack: &mut Vec<Option<Arc<String>>>,
-        closure_stack: &mut Vec<usize>,
-        module: &Module,
-        use_lookup: &UseLookup,
-    ) {
-        let st = stack.len();
-        self.left.resolve_locals(relative, stack, closure_stack, module, use_lookup);
-        stack.truncate(st);
-        self.right.resolve_locals(relative, stack, closure_stack, module, use_lookup);
-        stack.truncate(st);
+    fn into_expression(self) -> Expression {
+        use self::BinOp::*;
+
+        Expression::Call(Box::new(Call {
+            args: vec![self.left, self.right],
+            custom_source: None,
+            f_index: FnIndex::None,
+            info: Box::new(CallInfo {
+                alias: None,
+                name: match self.op {
+                    Add => crate::ADD.clone(),
+                    Sub => crate::SUB.clone(),
+                    Mul => crate::MUL.clone(),
+                    Div => crate::DIV.clone(),
+                    Rem => crate::REM.clone(),
+                    Pow => crate::POW.clone(),
+                    Dot => crate::DOT.clone(),
+                    Cross => crate::CROSS.clone(),
+                    AndAlso => crate::AND_ALSO.clone(),
+                    OrElse => crate::OR_ELSE.clone(),
+                    Less => crate::LESS.clone(),
+                    LessOrEqual => crate::LESS_OR_EQUAL.clone(),
+                    Greater => crate::GREATER.clone(),
+                    GreaterOrEqual => crate::GREATER_OR_EQUAL.clone(),
+                    Equal => crate::EQUAL.clone(),
+                    NotEqual => crate::NOT_EQUAL.clone(),
+                },
+                source_range: self.source_range,
+            })
+        }))
     }
 }
 
 /// Unary operator expression.
-#[derive(Debug, Clone)]
-pub struct UnOpExpression {
-    /// Unary operator.
-    pub op: UnOp,
-    /// Expression argument.
-    pub expr: Expression,
-    /// The range in source.
-    pub source_range: Range,
-}
+pub struct UnOpExpression;
 
 impl UnOpExpression {
     /// Creates unary operator expression from meta data.
     pub fn from_meta_data(
+        node: &str,
         file: &Arc<String>,
         source: &Arc<String>,
         mut convert: Convert,
         ignored: &mut Vec<Range>)
-    -> Result<(Range, UnOpExpression), ()> {
+    -> Result<(Range, Expression), ()> {
         let start = convert;
-        let node = "unop";
         let start_range = convert.start_node(node)?;
         convert.update(start_range);
 
-        let mut unop: Option<UnOp> = None;
         let mut expr: Option<Expression> = None;
         loop {
             if let Ok(range) = convert.end_node(node) {
                 convert.update(range);
                 break;
-            } else if let Ok((range, _)) = convert.meta_bool("!") {
-                convert.update(range);
-                unop = Some(UnOp::Not);
-            } else if let Ok((range, _)) = convert.meta_bool("-") {
-                convert.update(range);
-                unop = Some(UnOp::Neg);
             } else if let Ok((range, val)) = Expression::from_meta_data(
                 file, source, "expr", convert, ignored) {
                 convert.update(range);
@@ -2958,26 +3071,24 @@ impl UnOpExpression {
             }
         }
 
-        let unop = unop.ok_or(())?;
         let expr = expr.ok_or(())?;
-        Ok((convert.subtract(start), UnOpExpression {
-            op: unop,
-            expr,
-            source_range: convert.source(start).unwrap()
+        Ok((convert.subtract(start), {
+            let name = match node {
+                "not" => crate::NOT.clone(),
+                "neg" => crate::NEG.clone(),
+                _ => return Err(())
+            };
+            Expression::Call(Box::new(Call {
+                args: vec![expr],
+                custom_source: None,
+                f_index: FnIndex::None,
+                info: Box::new(CallInfo {
+                    alias: None,
+                    name: name,
+                    source_range: convert.source(start).unwrap()
+                })
+            }))
         }))
-    }
-
-    fn resolve_locals(
-        &self,
-        relative: usize,
-        stack: &mut Vec<Option<Arc<String>>>,
-        closure_stack: &mut Vec<usize>,
-        module: &Module,
-        use_lookup: &UseLookup,
-    ) {
-        let st = stack.len();
-        self.expr.resolve_locals(relative, stack, closure_stack, module, use_lookup);
-        stack.truncate(st);
     }
 }
 
@@ -3065,7 +3176,7 @@ impl Assign {
     }
 
     fn resolve_locals(
-        &self,
+        &mut self,
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
@@ -3196,7 +3307,7 @@ impl Mat4 {
     }
 
     fn resolve_locals(
-        &self,
+        &mut self,
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
@@ -3204,7 +3315,7 @@ impl Mat4 {
         use_lookup: &UseLookup,
     ) {
         let st = stack.len();
-        for arg in &self.args {
+        for arg in &mut self.args {
             let arg_st = stack.len();
             arg.resolve_locals(relative, stack, closure_stack, module, use_lookup);
             stack.truncate(arg_st);
@@ -3297,7 +3408,7 @@ impl Vec4 {
     }
 
     fn resolve_locals(
-        &self,
+        &mut self,
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
@@ -3305,7 +3416,7 @@ impl Vec4 {
         use_lookup: &UseLookup,
     ) {
         let st = stack.len();
-        for arg in &self.args {
+        for arg in &mut self.args {
             let arg_st = stack.len();
             arg.resolve_locals(relative, stack, closure_stack, module, use_lookup);
             stack.truncate(arg_st);
@@ -3632,7 +3743,7 @@ impl For {
     }
 
     fn resolve_locals(
-        &self, relative: usize,
+        &mut self, relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
         module: &Module,
@@ -3717,7 +3828,7 @@ impl ForIn {
     }
 
     fn resolve_locals(
-        &self, relative: usize,
+        &mut self, relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
         module: &Module,
@@ -3873,7 +3984,7 @@ impl ForN {
     }
 
     fn resolve_locals(
-        &self,
+        &mut self,
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
@@ -3881,7 +3992,7 @@ impl ForN {
         use_lookup: &UseLookup,
     ) {
         let st = stack.len();
-        if let Some(ref start) = self.start {
+        if let Some(ref mut start) = self.start {
             start.resolve_locals(relative, stack, closure_stack, module, use_lookup);
             stack.truncate(st);
         }
@@ -4127,7 +4238,7 @@ impl If {
     }
 
     fn resolve_locals(
-        &self,
+        &mut self,
         relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
@@ -4141,141 +4252,17 @@ impl If {
         stack.truncate(st);
         // Does not matter that conditions are resolved before blocks,
         // since the stack gets truncated anyway.
-        for else_if_cond in &self.else_if_conds {
+        for else_if_cond in &mut self.else_if_conds {
             else_if_cond.resolve_locals(relative, stack, closure_stack, module, use_lookup);
             stack.truncate(st);
         }
-        for else_if_block in &self.else_if_blocks {
+        for else_if_block in &mut self.else_if_blocks {
             else_if_block.resolve_locals(relative, stack, closure_stack, module, use_lookup);
             stack.truncate(st);
         }
-        if let Some(ref else_block) = self.else_block {
+        if let Some(ref mut else_block) = self.else_block {
             else_block.resolve_locals(relative, stack, closure_stack, module, use_lookup);
             stack.truncate(st);
-        }
-    }
-}
-
-/// Compare expression.
-#[derive(Debug, Clone)]
-pub struct Compare {
-    /// Comparison operator.
-    pub op: CompareOp,
-    /// Left side of expression.
-    pub left: Expression,
-    /// Right side of expression.
-    pub right: Expression,
-    /// The range in source.
-    pub source_range: Range,
-}
-
-impl Compare {
-    /// Creates compare expression from meta data.
-    pub fn from_meta_data(
-        file: &Arc<String>,
-        source: &Arc<String>,
-        mut convert: Convert,
-        ignored: &mut Vec<Range>)
-    -> Result<(Range, Compare), ()> {
-        let start = convert;
-        let node = "compare";
-        let start_range = convert.start_node(node)?;
-        convert.update(start_range);
-
-        let mut op: Option<CompareOp> = None;
-        let mut left: Option<Expression> = None;
-        let mut right: Option<Expression> = None;
-        loop {
-            if let Ok(range) = convert.end_node(node) {
-                convert.update(range);
-                break;
-            } else if let Ok((range, _)) = convert.meta_bool("<") {
-                convert.update(range);
-                op = Some(CompareOp::Less);
-            } else if let Ok((range, _)) = convert.meta_bool("<=") {
-                convert.update(range);
-                op = Some(CompareOp::LessOrEqual);
-            } else if let Ok((range, _)) = convert.meta_bool(">") {
-                convert.update(range);
-                op = Some(CompareOp::Greater);
-            } else if let Ok((range, _)) = convert.meta_bool(">=") {
-                convert.update(range);
-                op = Some(CompareOp::GreaterOrEqual);
-            } else if let Ok((range, _)) = convert.meta_bool("==") {
-                convert.update(range);
-                op = Some(CompareOp::Equal);
-            } else if let Ok((range, _)) = convert.meta_bool("!=") {
-                convert.update(range);
-                op = Some(CompareOp::NotEqual);
-            } else if let Ok((range, val)) = Expression::from_meta_data(
-                file, source, "left", convert, ignored) {
-                convert.update(range);
-                left = Some(val);
-            } else if let Ok((range, val)) = Expression::from_meta_data(
-                file, source, "right", convert, ignored) {
-                convert.update(range);
-                right = Some(val);
-            } else {
-                let range = convert.ignore();
-                convert.update(range);
-                ignored.push(range);
-            }
-        }
-
-        let op = op.ok_or(())?;
-        let left = left.ok_or(())?;
-        let right = right.ok_or(())?;
-        Ok((convert.subtract(start), Compare {
-            op,
-            left,
-            right,
-            source_range: convert.source(start).unwrap(),
-        }))
-    }
-
-    fn resolve_locals(
-        &self,
-        relative: usize,
-        stack: &mut Vec<Option<Arc<String>>>,
-        closure_stack: &mut Vec<usize>,
-        module: &Module,
-        use_lookup: &UseLookup,
-    ) {
-        let st = stack.len();
-        self.left.resolve_locals(relative, stack, closure_stack, module, use_lookup);
-        stack.truncate(st);
-        self.right.resolve_locals(relative, stack, closure_stack, module, use_lookup);
-        stack.truncate(st);
-    }
-}
-
-/// Comparison operator.
-#[derive(Debug, Clone, Copy)]
-pub enum CompareOp {
-    /// Less.
-    Less,
-    /// Less or equal.
-    LessOrEqual,
-    /// Greater.
-    Greater,
-    /// Greater or equal.
-    GreaterOrEqual,
-    /// Equal.
-    Equal,
-    /// Not equal.
-    NotEqual,
-}
-
-impl CompareOp {
-    /// Returns symbol for the comparison operator.
-    pub fn symbol(self) -> &'static str {
-        match self {
-            CompareOp::Less => "<",
-            CompareOp::LessOrEqual => "<=",
-            CompareOp::Greater => ">",
-            CompareOp::GreaterOrEqual => ">=",
-            CompareOp::Equal => "==",
-            CompareOp::NotEqual => "!=",
         }
     }
 }
@@ -4333,12 +4320,16 @@ impl In {
     }
 
     fn resolve_locals(
-        &self,
+        &mut self,
         relative: usize,
         module: &Module,
         use_lookup: &UseLookup
     ) {
-        use FnExternalRef;
+        use FnUnOpRef;
+        use FnBinOpRef;
+        use FnReturnRef;
+        use FnVoidRef;
+        use FnExt;
 
         let f_index = if let Some(ref alias) = self.alias {
             if let Some(&i) = use_lookup.aliases.get(alias).and_then(|map| map.get(&self.name)) {
@@ -4346,10 +4337,11 @@ impl In {
                     FnAlias::Loaded(i) => FnIndex::Loaded(i as isize - relative as isize),
                     FnAlias::External(i) => {
                         let f = &module.ext_prelude[i];
-                        if let Type::Void = f.p.ret {
-                            FnIndex::ExternalVoid(FnExternalRef(f.f))
-                        } else {
-                            FnIndex::ExternalReturn(FnExternalRef(f.f))
+                        match f.f {
+                            FnExt::Void(ff) => FnIndex::Void(FnVoidRef(ff)),
+                            FnExt::Return(ff) => FnIndex::Return(FnReturnRef(ff)),
+                            FnExt::BinOp(ff) => FnIndex::BinOp(FnBinOpRef(ff)),
+                            FnExt::UnOp(ff) => FnIndex::UnOp(FnUnOpRef(ff)),
                         }
                     }
                 }

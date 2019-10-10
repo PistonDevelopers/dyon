@@ -1,0 +1,9 @@
+fn add(a, b) -> {return a + b}
+(vec4, vec4) -> vec4
+
+fn check_f64(_: f64) {}
+
+fn main() {
+    b := add((1, 2), (3, 4))
+    check_f64(b)
+}

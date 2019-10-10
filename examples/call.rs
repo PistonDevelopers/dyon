@@ -2,22 +2,14 @@
 extern crate dyon;
 
 use std::sync::Arc;
-use dyon::{load_str, error, Call, Module, Dfn, Lt, Type, Runtime, RustObject};
+use dyon::{load_str, error, Call, Module, Dfn, Type, Runtime, RustObject};
 
 fn main() {
     let mut module = Module::new();
 
     // Add functions to read `a` and `b` from `RustArgs`.
-    module.add(Arc::new("a_of".into()), a_of, Dfn {
-        lts: vec![Lt::Default],
-        tys: vec![Type::Any],
-        ret: Type::F64
-    });
-    module.add(Arc::new("b_of".into()), b_of, Dfn {
-        lts: vec![Lt::Default],
-        tys: vec![Type::Any],
-        ret: Type::F64
-    });
+    module.add(Arc::new("a_of".into()), a_of, Dfn::nl(vec![Type::Any], Type::F64));
+    module.add(Arc::new("b_of".into()), b_of, Dfn::nl(vec![Type::Any], Type::F64));
 
     error(load_str("main.dyon", Arc::new(r#"
         fn add_args(a: f64, b: f64) {

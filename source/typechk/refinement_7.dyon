@@ -1,0 +1,8 @@
+fn foo(a: bool) -> bool {return clone(a)}
+(sec[bool]) -> sec[bool]
+
+fn check_sec(a: sec[bool]) {}
+
+fn main() {
+    check_sec(foo(true))
+}

@@ -12,8 +12,6 @@ pub enum Kind {
     Add,
     Mul,
     Pow,
-    Base,
-    Exp,
     Val,
     Call,
     CallArg,
@@ -67,7 +65,8 @@ pub enum Kind {
     Break,
     Continue,
     Norm,
-    UnOp,
+    Not,
+    Neg,
     Vec4,
     X,
     Y,
@@ -102,6 +101,9 @@ pub enum Kind {
     Grab,
     TryExpr,
     In,
+    Ty,
+    TyArg,
+    TyRet,
 }
 
 impl Kind {
@@ -118,8 +120,6 @@ impl Kind {
             "add" => Kind::Add,
             "mul" => Kind::Mul,
             "pow" => Kind::Pow,
-            "base" => Kind::Base,
-            "exp" => Kind::Exp,
             "val" => Kind::Val,
             "call" => Kind::Call,
             "call_arg" => Kind::CallArg,
@@ -174,7 +174,8 @@ impl Kind {
             "break" => Kind::Break,
             "continue" => Kind::Continue,
             "norm" => Kind::Norm,
-            "unop" => Kind::UnOp,
+            "not" => Kind::Not,
+            "neg" => Kind::Neg,
             "vec4" => Kind::Vec4,
             "x" => Kind::X,
             "y" => Kind::Y,
@@ -210,6 +211,9 @@ impl Kind {
             "grab" => Kind::Grab,
             "try_expr" => Kind::TryExpr,
             "in" => Kind::In,
+            "ty" => Kind::Ty,
+            "ty_arg" => Kind::TyArg,
+            "ty_ret" => Kind::TyRet,
             _ => return None
         })
     }

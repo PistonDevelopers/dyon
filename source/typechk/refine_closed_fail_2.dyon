@@ -1,0 +1,7 @@
+fn foo(a, b) -> {return clone(a)}
+(bool, bool) -> bool
+(f64, bool) -> f64
+
+fn main() {
+    println(foo(1, 2))
+}
