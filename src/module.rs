@@ -130,7 +130,7 @@ impl Module {
             ],
             lazy: LAZY_NO
         });
-        m.add_str("and_also", and_also, Dfn {
+        m.add(crate::AND_ALSO.clone(), and_also, Dfn {
             lts: vec![Lt::Default; 2],
             tys: vec![Bool, Bool],
             ret: Any,
@@ -140,7 +140,7 @@ impl Module {
             ],
             lazy: LAZY_AND
         });
-        m.add_str("or_else", or_else, Dfn {
+        m.add(crate::OR_ELSE.clone(), or_else, Dfn {
             lts: vec![Lt::Default; 2],
             tys: vec![Bool, Bool],
             ret: Any,
@@ -238,7 +238,16 @@ impl Module {
             ],
             lazy: LAZY_NO
         });
-        m.add_unop(crate::NOT.clone(), not, Dfn::nl(vec![Bool], Bool));
+        m.add_unop(crate::NOT.clone(), not, Dfn {
+            lts: vec![Lt::Default],
+            tys: vec![Any],
+            ret: Any,
+            ext: vec![
+                (vec![], vec![Type::Secret(Box::new(Bool))], Type::Secret(Box::new(Bool))),
+                (vec![], vec![Bool], Bool),
+            ],
+            lazy: LAZY_NO
+        });
         m.add_unop(crate::NEG.clone(), neg, Dfn{
             lts: vec![Lt::Default], tys: vec![Any], ret: Any,
             ext: vec![

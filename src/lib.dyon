@@ -354,7 +354,9 @@ fn pow(a: any, b: any) -> any { ... }
 fn norm(v: vec4) -> f64 { ... }
 
 /// Logical NOT.
-fn not(b: bool) -> bool { ... }
+fn not(b: any) -> any { ... }
+    (sec[bool]) -> sec[bool]
+    (bool) -> bool
 
 /// Negation.
 fn neg(v: any) -> any { ... }
