@@ -223,6 +223,7 @@ fn test_typechk() {
     test_src("source/typechk/secret_8.dyon");
     test_src("source/typechk/secret_9.dyon");
     test_fail_src("source/typechk/secret_10.dyon");
+    test_src("source/typechk/secret_11.dyon");
     test_src("source/typechk/dot.dyon");
     test_src("source/typechk/in.dyon");
     test_fail_src("source/typechk/in_2.dyon");
