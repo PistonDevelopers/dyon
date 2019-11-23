@@ -1,6 +1,6 @@
 [package]
 name = "dyon"
-version = "0.43.0"
+version = "0.44.0"
 authors = ["Sven Nilsen <bvssvni@gmail.com>"]
 keywords = ["script", "scripting", "game", "language", "piston"]
 description = "A rusty dynamically typed scripting language"
@@ -21,7 +21,7 @@ vecmath = "1.0.0"
 advancedresearch-tree_mem_sort = "0.2.0"
 
 [dependencies.reqwest]
-version = "0.4.0"
+version = "0.9.22"
 default-features = false
 optional = true
 

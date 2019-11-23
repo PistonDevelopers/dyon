@@ -85,14 +85,12 @@ pub fn load_text_file_from_url(url: &str) -> Result<String, String> {
 
     let url_address = Url::parse(url)
         .map_err(|e| format!("Error parsing url:\n`{}`\n", e))?;
-    let client = Client::new()
-        .map_err(|e| format!("Error creating http client `{}`:\n{}\n",
-                             url, e.to_string()))?;
+    let client = Client::new();
     let request = client.get(url_address);
     let mut response = request.send()
         .map_err(|e| format!("Error fetching file over http `{}`:\n{}\n",
                              url, e.to_string()))?;
-    if *response.status() == StatusCode::Ok {
+    if response.status() == StatusCode::OK {
         let mut data = String::new();
         response.read_to_string(&mut data)
             .map_err(|e| format!("Error fetching file over http `{}`:\n{}\n",
@@ -133,14 +131,12 @@ pub fn download_url_to_file(url: &str, file: &str) -> Result<String, String> {
 
     let url_address = Url::parse(url)
         .map_err(|e| format!("Error parsing url:\n`{}`\n", e))?;
-    let client = Client::new()
-        .map_err(|e| format!("Error creating http client `{}`:\n{}\n",
-                             url, e.to_string()))?;
+    let client = Client::new();
     let request = client.get(url_address);
     let mut response = request.send()
         .map_err(|e| format!("Error fetching file over http `{}`:\n{}\n",
                              url, e.to_string()))?;
-    if *response.status() == StatusCode::Ok {
+    if response.status() == StatusCode::OK {
         let mut f = File::create(file).map_err(|err| {
             format!("Could not create file `{}`:\n{}", file, err.description())
         })?;

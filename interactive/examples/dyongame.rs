@@ -10,7 +10,7 @@ extern crate image;
 
 use std::sync::Arc;
 use current::CurrentGuard;
-use dyon::{error, load, Lt, Module, Dfn, Runtime, Type};
+use dyon::{error, load, Module, Dfn, Runtime, Type};
 use dyon_interactive::{FontNames, ImageNames};
 use image::RgbaImage;
 use piston::input::Event;
@@ -120,77 +120,28 @@ fn load_module(file: &str) -> Option<Module> {
 
     let mut module = Module::new();
     add_functions::<Sdl2Window, (), GlyphCache>(&mut module);
-    module.add(Arc::new("render_source".into()), render_source, Dfn {
-        lts: vec![],
-        tys: vec![],
-        ret: Type::Text
-    });
-    module.add(Arc::new("draw".into()), draw, Dfn {
-        lts: vec![Lt::Default],
-        tys: vec![Type::array()],
-        ret: Type::Void
-    });
+    module.add(Arc::new("render_source".into()), render_source, Dfn::nl(vec![], Type::Str));
+    module.add(Arc::new("draw".into()), draw, Dfn::nl(vec![Type::array()], Type::Void));
     module.add(Arc::new("next_event".into()),
-        next_event, Dfn {
-            lts: vec![],
-            tys: vec![],
-            ret: Type::Bool
-        });
+        next_event, Dfn::nl(vec![], Type::Bool));
     module.add(Arc::new("bind_sound__name_file".into()),
-        bind_sound__name_file, Dfn {
-            lts: vec![Lt::Default; 2],
-            tys: vec![Type::Text; 2],
-            ret: Type::Void
-        });
+        bind_sound__name_file, Dfn::nl(vec![Type::Str; 2], Type::Void));
     module.add(Arc::new("bind_music__name_file".into()),
-        bind_music__name_file, Dfn {
-            lts: vec![Lt::Default; 2],
-            tys: vec![Type::Text; 2],
-            ret: Type::Void
-        });
+        bind_music__name_file, Dfn::nl(vec![Type::Str; 2], Type::Void));
     module.add(Arc::new("play_sound__name_repeat_volume".into()),
-        play_sound__name_repeat_volume, Dfn {
-            lts: vec![Lt::Default; 3],
-            tys: vec![Type::Text, Type::F64, Type::F64],
-            ret: Type::Void
-        });
+        play_sound__name_repeat_volume, Dfn::nl(vec![Type::Str, Type::F64, Type::F64], Type::Void));
     module.add(Arc::new("play_sound_forever__name_volume".into()),
-        play_sound_forever__name_volume, Dfn {
-            lts: vec![Lt::Default; 2],
-            tys: vec![Type::Text, Type::F64],
-            ret: Type::Void
-        });
+        play_sound_forever__name_volume, Dfn::nl(vec![Type::Str, Type::F64], Type::Void));
     module.add(Arc::new("play_music__name_repeat".into()),
-        play_music__name_repeat, Dfn {
-            lts: vec![Lt::Default; 2],
-            tys: vec![Type::Text, Type::F64],
-            ret: Type::Void
-        });
+        play_music__name_repeat, Dfn::nl(vec![Type::Str, Type::F64], Type::Void));
     module.add(Arc::new("play_music_forever__name".into()),
-        play_music_forever__name, Dfn {
-            lts: vec![Lt::Default; 1],
-            tys: vec![Type::Text],
-            ret: Type::Void
-        });
+        play_music_forever__name, Dfn::nl(vec![Type::Str], Type::Void));
     module.add(Arc::new("set_music_volume".into()),
-        set_music_volume, Dfn {
-            lts: vec![Lt::Default],
-            tys: vec![Type::F64],
-            ret: Type::Void
-        });
+        set_music_volume, Dfn::nl(vec![Type::F64], Type::Void));
     module.add(Arc::new("create_texture".into()),
-        create_texture, Dfn {
-            lts: vec![Lt::Default],
-            tys: vec![Type::F64],
-            ret: Type::F64,
-        }
-    );
+        create_texture, Dfn::nl(vec![Type::F64], Type::F64));
     module.add(Arc::new("update__texture_image".into()),
-        update__texture_image, Dfn {
-            lts: vec![Lt::Default; 2],
-            tys: vec![Type::F64, Type::F64],
-            ret: Type::Void
-        }
+        update__texture_image, Dfn::nl(vec![Type::F64, Type::F64], Type::Void)
     );
 
     if error(dyon::load_str(
