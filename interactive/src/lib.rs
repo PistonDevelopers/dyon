@@ -28,307 +28,108 @@ pub fn add_functions<W, F, C>(module: &mut Module)
           C::Texture: CreateTexture<F> + UpdateTexture<F>,
           C: Any + CharacterCache,
 {
-    module.add(Arc::new("window_size".into()), window_size::<W>, Dfn {
-        lts: vec![],
-        tys: vec![],
-        ret: Type::Vec4
-    });
-    module.add(Arc::new("set_window__size".into()), set_window__size::<W>, Dfn {
-        lts: vec![Lt::Default],
-        tys: vec![Type::Vec4],
-        ret: Type::Void
-    });
-    module.add(Arc::new("window_draw_size".into()), window_draw_size::<W>, Dfn {
-        lts: vec![],
-        tys: vec![],
-        ret: Type::Vec4
-    });
-    module.add(Arc::new("window_position".into()), window_position::<W>, Dfn {
-        lts: vec![],
-        tys: vec![],
-        ret: Type::Vec4
-    });
-    module.add(Arc::new("set_window__position".into()), set_window__position::<W>, Dfn {
-        lts: vec![Lt::Default],
-        tys: vec![Type::Vec4],
-        ret: Type::Void
-    });
-    module.add(Arc::new("render".into()), render, Dfn {
-        lts: vec![],
-        tys: vec![],
-        ret: Type::Bool
-    });
-    module.add(Arc::new("after_render".into()), after_render, Dfn {
-        lts: vec![],
-        tys: vec![],
-        ret: Type::Bool
-    });
-    module.add(Arc::new("update".into()), update, Dfn {
-        lts: vec![],
-        tys: vec![],
-        ret: Type::Bool
-    });
-    module.add(Arc::new("idle".into()), idle, Dfn {
-        lts: vec![],
-        tys: vec![],
-        ret: Type::Bool
-    });
-    module.add(Arc::new("press".into()), press, Dfn {
-        lts: vec![],
-        tys: vec![],
-        ret: Type::Bool
-    });
-    module.add(Arc::new("release".into()), release, Dfn {
-        lts: vec![],
-        tys: vec![],
-        ret: Type::Bool
-    });
-    module.add(Arc::new("resize".into()), resize, Dfn {
-        lts: vec![],
-        tys: vec![],
-        ret: Type::Bool,
-    });
-    module.add(Arc::new("focus".into()), focus, Dfn {
-        lts: vec![],
-        tys: vec![],
-        ret: Type::Bool,
-    });
-    module.add(Arc::new("cursor".into()), cursor, Dfn {
-        lts: vec![],
-        tys: vec![],
-        ret: Type::Bool,
-    });
-    module.add(Arc::new("text".into()), text, Dfn {
-        lts: vec![],
-        tys: vec![],
-        ret: Type::Bool,
-    });
-    module.add(Arc::new("mouse_cursor".into()), mouse_cursor, Dfn {
-        lts: vec![],
-        tys: vec![],
-        ret: Type::Bool
-    });
-    module.add(Arc::new("focus_arg".into()), focus_arg, Dfn {
-        lts: vec![],
-        tys: vec![],
-        ret: Type::Option(Box::new(Type::Bool)),
-    });
-    module.add(Arc::new("cursor_arg".into()), cursor_arg, Dfn {
-        lts: vec![],
-        tys: vec![],
-        ret: Type::Option(Box::new(Type::Bool)),
-    });
-    module.add(Arc::new("mouse_cursor_pos".into()), mouse_cursor_pos, Dfn {
-        lts: vec![],
-        tys: vec![],
-        ret: Type::Option(Box::new(Type::Vec4)),
-    });
+    module.add(Arc::new("window_size".into()), window_size::<W>,
+        Dfn::nl(vec![], Type::Vec4));
+    module.add(Arc::new("set_window__size".into()), set_window__size::<W>,
+        Dfn::nl(vec![Type::Vec4], Type::Void));
+    module.add(Arc::new("window_draw_size".into()), window_draw_size::<W>,
+        Dfn::nl(vec![], Type::Vec4));
+    module.add(Arc::new("window_position".into()), window_position::<W>,
+        Dfn::nl(vec![], Type::Vec4));
+    module.add(Arc::new("set_window__position".into()), set_window__position::<W>,
+        Dfn::nl(vec![Type::Vec4], Type::Void));
+    module.add(Arc::new("render".into()), render, Dfn::nl(vec![], Type::Bool));
+    module.add(Arc::new("after_render".into()), after_render, Dfn::nl(vec![], Type::Bool));
+    module.add(Arc::new("update".into()), update, Dfn::nl(vec![], Type::Bool));
+    module.add(Arc::new("idle".into()), idle, Dfn::nl(vec![], Type::Bool));
+    module.add(Arc::new("press".into()), press, Dfn::nl(vec![], Type::Bool));
+    module.add(Arc::new("release".into()), release, Dfn::nl(vec![], Type::Bool));
+    module.add(Arc::new("resize".into()), resize, Dfn::nl(vec![], Type::Bool));
+    module.add(Arc::new("focus".into()), focus, Dfn::nl(vec![], Type::Bool));
+    module.add(Arc::new("cursor".into()), cursor, Dfn::nl(vec![], Type::Bool));
+    module.add(Arc::new("text".into()), text, Dfn::nl(vec![], Type::Bool));
+    module.add(Arc::new("mouse_cursor".into()), mouse_cursor,
+        Dfn::nl(vec![], Type::Bool));
+    module.add(Arc::new("focus_arg".into()), focus_arg,
+        Dfn::nl(vec![], Type::Option(Box::new(Type::Bool))));
+    module.add(Arc::new("cursor_arg".into()), cursor_arg,
+        Dfn::nl(vec![], Type::Option(Box::new(Type::Bool))));
+    module.add(Arc::new("mouse_cursor_pos".into()), mouse_cursor_pos,
+        Dfn::nl(vec![], Type::Option(Box::new(Type::Vec4))));
     module.add(Arc::new("window_title".into()),
-        window_title::<W>, Dfn {
-            lts: vec![],
-            tys: vec![],
-            ret: Type::Text
-        });
+        window_title::<W>, Dfn::nl(vec![], Type::Str));
     module.add(Arc::new("set_window__title".into()),
-        set_window__title::<W>, Dfn {
-            lts: vec![Lt::Default],
-            tys: vec![Type::Text],
-            ret: Type::Void
-        });
+        set_window__title::<W>, Dfn::nl(vec![Type::Str], Type::Void));
     module.add(Arc::new("event_loop_ups".into()),
-        event_loop_ups, Dfn {
-            lts: vec![],
-            tys: vec![],
-            ret: Type::F64
-        });
+        event_loop_ups, Dfn::nl(vec![], Type::F64));
     module.add(Arc::new("set_event_loop__ups".into()),
-        set_event_loop__ups, Dfn {
-            lts: vec![Lt::Default],
-            tys: vec![Type::F64],
-            ret: Type::Void
-        });
+        set_event_loop__ups, Dfn::nl(vec![Type::F64], Type::Void));
     module.add(Arc::new("event_loop_upsreset".into()),
-        event_loop_upsreset, Dfn {
-            lts: vec![],
-            tys: vec![],
-            ret: Type::F64
-        });
+        event_loop_upsreset, Dfn::nl(vec![], Type::F64));
     module.add(Arc::new("set_event_loop__upsreset".into()),
-        set_event_loop__upsreset, Dfn {
-            lts: vec![Lt::Default],
-            tys: vec![Type::F64],
-            ret: Type::Void
-        });
+        set_event_loop__upsreset, Dfn::nl(vec![Type::F64], Type::Void));
     module.add(Arc::new("event_loop_maxfps".into()),
-        event_loop_maxfps, Dfn {
-            lts: vec![],
-            tys: vec![],
-            ret: Type::F64
-        });
+        event_loop_maxfps, Dfn::nl(vec![], Type::F64));
     module.add(Arc::new("set_event_loop__maxfps".into()),
-        set_event_loop__maxfps, Dfn {
-            lts: vec![Lt::Default],
-            tys: vec![Type::F64],
-            ret: Type::Void
-        });
+        set_event_loop__maxfps, Dfn::nl(vec![Type::F64], Type::Void));
     module.add(Arc::new("event_loop_swapbuffers".into()),
-        event_loop_swapbuffers, Dfn {
-            lts: vec![],
-            tys: vec![],
-            ret: Type::Bool
-        });
+        event_loop_swapbuffers, Dfn::nl(vec![], Type::Bool));
     module.add(Arc::new("set_event_loop__swapbuffers".into()),
-        set_event_loop__swapbuffers, Dfn {
-            lts: vec![Lt::Default],
-            tys: vec![Type::Bool],
-            ret: Type::Void
-        });
+        set_event_loop__swapbuffers, Dfn::nl(vec![Type::Bool], Type::Void));
     module.add(Arc::new("swap_buffers".into()),
-        swap_buffers::<W>, Dfn {
-            lts: vec![],
-            tys: vec![],
-            ret: Type::Void
-        });
+        swap_buffers::<W>, Dfn::nl(vec![], Type::Void));
     module.add(Arc::new("event_loop_benchmode".into()),
-        event_loop_benchmode, Dfn {
-            lts: vec![],
-            tys: vec![],
-            ret: Type::Bool
-        });
+        event_loop_benchmode, Dfn::nl(vec![], Type::Bool));
     module.add(Arc::new("set_event_loop__benchmode".into()),
-        set_event_loop__benchmode, Dfn {
-            lts: vec![Lt::Default],
-            tys: vec![Type::Bool],
-            ret: Type::Void
-        });
+        set_event_loop__benchmode, Dfn::nl(vec![Type::Bool], Type::Void));
     module.add(Arc::new("event_loop_lazy".into()),
-        event_loop_lazy, Dfn {
-            lts: vec![],
-            tys: vec![],
-            ret: Type::Bool
-        });
+        event_loop_lazy, Dfn::nl(vec![], Type::Bool));
     module.add(Arc::new("set_event_loop__lazy".into()),
-        set_event_loop__lazy, Dfn {
-            lts: vec![Lt::Default],
-            tys: vec![Type::Bool],
-            ret: Type::Void
-        });
+        set_event_loop__lazy, Dfn::nl(vec![Type::Bool], Type::Void));
     module.add(Arc::new("render_ext_dt".into()),
-        render_ext_dt, Dfn {
-            lts: vec![],
-            tys: vec![],
-            ret: Type::Option(Box::new(Type::F64))
-        });
+        render_ext_dt, Dfn::nl(vec![], Type::Option(Box::new(Type::F64))));
     module.add(Arc::new("update_dt".into()),
-        update_dt, Dfn {
-            lts: vec![],
-            tys: vec![],
-            ret: Type::Option(Box::new(Type::F64))
-        });
+        update_dt, Dfn::nl(vec![], Type::Option(Box::new(Type::F64))));
     module.add(Arc::new("idle_dt".into()),
-        idle_dt, Dfn {
-            lts: vec![],
-            tys: vec![],
-            ret: Type::Option(Box::new(Type::F64))
-        });
+        idle_dt, Dfn::nl(vec![], Type::Option(Box::new(Type::F64))));
     module.add(Arc::new("press_keyboard_key".into()),
-        press_keyboard_key, Dfn {
-            lts: vec![],
-            tys: vec![],
-            ret: Type::Option(Box::new(Type::F64))
-        });
+        press_keyboard_key, Dfn::nl(vec![], Type::Option(Box::new(Type::F64))));
     module.add(Arc::new("release_keyboard_key".into()),
-        release_keyboard_key, Dfn {
-            lts: vec![],
-            tys: vec![],
-            ret: Type::Option(Box::new(Type::F64))
-        });
+        release_keyboard_key, Dfn::nl(vec![], Type::Option(Box::new(Type::F64))));
     module.add(Arc::new("press_mouse_button".into()),
-        press_mouse_button, Dfn {
-            lts: vec![],
-            tys: vec![],
-            ret: Type::Option(Box::new(Type::F64))
-        });
+        press_mouse_button, Dfn::nl(vec![], Type::Option(Box::new(Type::F64))));
     module.add(Arc::new("release_mouse_button".into()),
-        release_mouse_button, Dfn {
-            lts: vec![],
-            tys: vec![],
-            ret: Type::Option(Box::new(Type::F64))
-        });
+        release_mouse_button, Dfn::nl(vec![], Type::Option(Box::new(Type::F64))));
     module.add(Arc::new("text_arg".into()),
-        text_arg, Dfn {
-            lts: vec![],
-            tys: vec![],
-            ret: Type::Option(Box::new(Type::Text))
-        });
+        text_arg, Dfn::nl(vec![], Type::Option(Box::new(Type::Str))));
     module.add(Arc::new("width__font_size_string".into()),
-        width__font_size_string::<C>, Dfn {
-            lts: vec![Lt::Default; 3],
-            tys: vec![Type::F64, Type::F64, Type::Text],
-            ret: Type::F64
-        });
+        width__font_size_string::<C>, Dfn::nl(vec![Type::F64, Type::F64, Type::Str], Type::F64));
     module.add(Arc::new("font_names".into()),
-        font_names, Dfn {
-            lts: vec![],
-            tys: vec![],
-            ret: Type::Array(Box::new(Type::Text))
-        }
+        font_names, Dfn::nl(vec![], Type::Array(Box::new(Type::Str)))
     );
     module.add(Arc::new("load_font".into()),
-        load_font::<F, C::Texture>, Dfn {
-            lts: vec![Lt::Default],
-            tys: vec![Type::Text],
-            ret: Type::Result(Box::new(Type::F64))
-        }
+        load_font::<F, C::Texture>, Dfn::nl(vec![Type::Str], Type::Result(Box::new(Type::F64)))
     );
     module.add(Arc::new("image_names".into()),
-        image_names, Dfn {
-            lts: vec![],
-            tys: vec![],
-            ret: Type::Array(Box::new(Type::Text))
-        }
+        image_names, Dfn::nl(vec![], Type::Array(Box::new(Type::Str)))
     );
     module.add(Arc::new("load_image".into()),
-        load_image, Dfn {
-            lts: vec![Lt::Default],
-            tys: vec![Type::Text],
-            ret: Type::Result(Box::new(Type::F64))
-        }
+        load_image, Dfn::nl(vec![Type::Str], Type::Result(Box::new(Type::F64)))
     );
     module.add(Arc::new("create_image__name_size".into()),
-        create_image__name_size, Dfn {
-            lts: vec![Lt::Default; 2],
-            tys: vec![Type::Text, Type::Vec4],
-            ret: Type::F64
-        }
+        create_image__name_size, Dfn::nl(vec![Type::Str, Type::Vec4], Type::F64)
     );
     module.add(Arc::new("save__image_file".into()),
-        save__image_file, Dfn {
-            lts: vec![Lt::Default; 2],
-            tys: vec![Type::F64, Type::Text],
-            ret: Type::Result(Box::new(Type::Text))
-        }
+        save__image_file, Dfn::nl(vec![Type::F64, Type::Str], Type::Result(Box::new(Type::Str)))
     );
     module.add(Arc::new("image_size".into()),
-        image_size, Dfn {
-            lts: vec![Lt::Default],
-            tys: vec![Type::F64],
-            ret: Type::Vec4
-        }
+        image_size, Dfn::nl(vec![Type::F64], Type::Vec4)
     );
     module.add(Arc::new("pxl__image_pos_color".into()),
-        pxl__image_pos_color, Dfn {
-            lts: vec![Lt::Default; 3],
-            tys: vec![Type::F64, Type::Vec4, Type::Vec4],
-            ret: Type::Void
-        }
+        pxl__image_pos_color, Dfn::nl(vec![Type::F64, Type::Vec4, Type::Vec4], Type::Void)
     );
     module.add(Arc::new("pxl__image_pos".into()),
-        pxl__image_pos, Dfn {
-            lts: vec![Lt::Default; 2],
-            tys: vec![Type::F64, Type::Vec4],
-            ret: Type::Vec4
-        }
+        pxl__image_pos, Dfn::nl(vec![Type::F64, Type::Vec4], Type::Vec4)
     );
 }
 
