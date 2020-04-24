@@ -192,7 +192,7 @@ impl Kind {
             "res" => Kind::Res,
             "ret_type" => Kind::RetType,
             "return_void" => Kind::ReturnVoid,
-            "go" => Kind::Go,
+            #[cfg(feature = "threading")] "go" => Kind::Go,
             "swizzle" => Kind::Swizzle,
             "sw0" => Kind::Sw0,
             "sw1" => Kind::Sw1,
