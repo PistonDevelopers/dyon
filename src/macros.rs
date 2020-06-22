@@ -7,6 +7,43 @@ macro_rules! dyon_macro_items { ($($x:item)+) => ($($x)+) }
 /// This macro is used by some other Dyon macros.
 #[macro_export]
 macro_rules! dyon_fn_pop {
+    (#&mut $rt:ident) => {};
+    (#&mut $rt:ident $arg:ident : $t:ty) => {
+        let $arg: RustObject = $rt.pop()?;
+        let mut $arg = $arg.lock().unwrap();
+        let $arg = $arg.downcast_mut::<$t>().unwrap();
+    };
+    (#&mut $rt:ident $arg:ident : $t:ty, $($args:tt : $ts:ty),+) => {
+        dyon_fn_pop!(#&mut $rt $($args: $ts),+);
+        let $arg: RustObject = $rt.pop()?;
+        let mut $arg = $arg.lock().unwrap();
+        let $arg = $arg.downcast_mut::<$t>().unwrap();
+    };
+    (#& $rt:ident) => {};
+    (#& $rt:ident $arg:ident : $t:ty) => {
+        let $arg: RustObject = $rt.pop()?;
+        let $arg = $arg.lock().unwrap();
+        let $arg = $arg.downcast_ref::<$t>().unwrap();
+    };
+    (#& $rt:ident $arg:ident : $t:ty, $($args:tt : $ts:ty),+) => {
+        dyon_fn_pop!(#& $rt $($args: $ts),+);
+        let $arg: RustObject = $rt.pop()?;
+        let $arg = $arg.lock().unwrap();
+        let $arg = $arg.downcast_ref::<$t>().unwrap();
+    };
+    (# $rt:ident) => {};
+    (# $rt:ident $arg:ident : $t:ty) => {
+        let $arg: RustObject = $rt.pop()?;
+        let $arg = $arg.lock().unwrap();
+        let $arg = *$arg.downcast_ref::<$t>().unwrap();
+    };
+    (# $rt:ident $arg:ident : $t:ty, $($args:tt : $ts:ty),+) => {
+        dyon_fn_pop!(# $rt $($args: $ts),+);
+        let $arg: RustObject = $rt.pop()?;
+        let $arg = $arg.lock().unwrap();
+        let $arg = *$arg.downcast_ref::<$t>().unwrap();
+    };
+    ($rt:ident) => {};
     ($rt:ident $arg:ident : $t:ty) => {
         let $arg: $t = $rt.pop()?;
     };
@@ -22,26 +59,102 @@ macro_rules! dyon_fn_pop {
 /// For example, see "examples/functions.rs".
 #[macro_export]
 macro_rules! dyon_fn {
-    (fn $name:ident () -> $rt:ty $b:block) => {
+    (fn $name:ident () -> # $rt:ty $b:block) => {
         #[allow(non_snake_case)]
         pub fn $name(_rt: &mut $crate::Runtime) -> Result<$crate::Variable, String> {
+            use std::sync::{Arc, Mutex};
+
             fn inner() -> $rt {
                 $b
             }
 
-            Ok($crate::embed::PushVariable::push_var(&inner()))
+            Ok($crate::Variable::RustObject(Arc::new(Mutex::new(inner())) as RustObject))
         }
     };
-    (fn $name:ident ($($arg:tt : $t:ty),+) -> $rt:ty $b:block) => {
+    (fn $name:ident ($($rust_arg:tt : #&$rust_t:ty),+) -> # $rt:ty $b:block) => {
         dyon_macro_items!{
             #[allow(non_snake_case)]
             pub fn $name(rt: &mut $crate::Runtime) -> Result<$crate::Variable, String> {
-                fn inner($($arg: $t),+) -> $rt {
+                use std::sync::{Arc, Mutex};
+
+                fn inner($($rust_arg: &$rust_t),+) -> $rt {
                     $b
                 }
 
+                dyon_fn_pop!(#& rt $($rust_arg: $rust_t),+);
+                Ok($crate::Variable::RustObject(Arc::new(Mutex::new(inner($($rust_arg),+)))))
+            }
+        }
+    };
+    (fn $name:ident ($rust_arg:tt : #&$rust_t:ty, $($arg:tt : $t:ty),+) -> # $rt:ty $b:block) => {
+        dyon_macro_items!{
+            #[allow(non_snake_case)]
+            pub fn $name(rt: &mut $crate::Runtime) -> Result<$crate::Variable, String> {
+                use std::sync::{Arc, Mutex};
+
+                fn inner($rust_arg: &$rust_t, $($arg: $t),+) -> $rt {
+                    $b
+                }
+
+                dyon_fn_pop!(#& rt $rust_arg: $rust_t);
                 dyon_fn_pop!(rt $($arg: $t),+);
-                Ok($crate::embed::PushVariable::push_var(&inner($($arg),+)))
+                Ok($crate::Variable::RustObject(Arc::new(Mutex::new(inner($rust_arg, $($arg),+)))))
+            }
+        }
+    };
+    (fn $name:ident ($rust_arg:tt : #&$rust_t:ty $(, $arg:tt : $t:ty),*) -> $rt:ty $b:block) => {
+        dyon_macro_items!{
+            #[allow(non_snake_case)]
+            pub fn $name(rt: &mut $crate::Runtime) -> Result<$crate::Variable, String> {
+                fn inner($rust_arg: &$rust_t $(, $arg: $t),*) -> $rt {
+                    $b
+                }
+
+                dyon_fn_pop!(#& rt $rust_arg: $rust_t);
+                dyon_fn_pop!(rt $($arg: $t),*);
+                Ok($crate::embed::PushVariable::push_var(&inner($rust_arg, $($arg),*)))
+            }
+        }
+    };
+    (fn $name:ident ($rust_arg:tt : #$rust_t:ty, $($arg:tt : $t:ty),+) -> $rt:ty $b:block) => {
+        dyon_macro_items!{
+            #[allow(non_snake_case)]
+            pub fn $name(rt: &mut $crate::Runtime) -> Result<$crate::Variable, String> {
+                fn inner($rust_arg: $rust_t, $($arg: $t),+) -> $rt {
+                    $b
+                }
+
+                dyon_fn_pop!(# rt $rust_arg: $rust_t);
+                dyon_fn_pop!(rt $($arg: $t),+);
+                Ok($crate::embed::PushVariable::push_var(&inner($rust_arg, $($arg),+)))
+            }
+        }
+    };
+    (fn $name:ident ($($arg:tt : $t:ty),*) -> # $rt:ty $b:block) => {
+        dyon_macro_items!{
+            #[allow(non_snake_case)]
+            pub fn $name(rt: &mut $crate::Runtime) -> Result<$crate::Variable, String> {
+                use std::sync::{Arc, Mutex};
+
+                fn inner($($arg: $t),*) -> $rt {
+                    $b
+                }
+
+                dyon_fn_pop!(rt $($arg: $t),*);
+                Ok($crate::Variable::RustObject(Arc::new(Mutex::new(inner($($arg),*)))))
+            }
+        }
+    };
+    (fn $name:ident ($($arg:tt : $t:ty),*) -> $rt:ty $b:block) => {
+        dyon_macro_items!{
+            #[allow(non_snake_case)]
+            pub fn $name(_rt: &mut $crate::Runtime) -> Result<$crate::Variable, String> {
+                fn inner($($arg: $t),*) -> $rt {
+                    $b
+                }
+
+                dyon_fn_pop!(_rt $($arg: $t),*);
+                Ok($crate::embed::PushVariable::push_var(&inner($($arg),*)))
             }
         }
     };
@@ -54,6 +167,50 @@ macro_rules! dyon_fn {
 
             inner();
             Ok(())
+        }
+    };
+    (fn $name:ident ($($arg:tt : #$t:ty),+) $b:block) => {
+        dyon_macro_items!{
+            #[allow(non_snake_case)]
+            pub fn $name(rt: &mut $crate::Runtime) -> Result<(), String> {
+                fn inner($($arg: $t),+) {
+                    $b
+                }
+
+                dyon_fn_pop!(# rt $($arg: $t),+);
+                inner($($arg),+);
+                Ok(())
+            }
+        }
+    };
+    (fn $name:ident ($rust_arg:tt : #&mut $rust_ty:ty , $($arg:tt : $t:ty),*) $b:block) => {
+        dyon_macro_items!{
+            #[allow(non_snake_case)]
+            pub fn $name(rt: &mut $crate::Runtime) -> Result<(), String> {
+                fn inner($rust_arg: &mut $rust_ty, $($arg: $t),*) {
+                    $b
+                }
+
+                dyon_fn_pop!(#&mut rt $rust_arg: $rust_ty);
+                dyon_fn_pop!(rt $($arg: $t),*);
+                inner($rust_arg, $($arg),+);
+                Ok(())
+            }
+        }
+    };
+    (fn $name:ident ($rust_arg:tt : # $rust_ty:ty , $($arg:tt : $t:ty),*) $b:block) => {
+        dyon_macro_items!{
+            #[allow(non_snake_case)]
+            pub fn $name(rt: &mut $crate::Runtime) -> Result<(), String> {
+                fn inner($rust_arg: $rust_ty, $($arg: $t),*) {
+                    $b
+                }
+
+                dyon_fn_pop!(# rt $rust_arg: $rust_ty);
+                dyon_fn_pop!(rt $($arg: $t),*);
+                inner($rust_arg, $($arg),+);
+                Ok(())
+            }
         }
     };
     (fn $name:ident ($($arg:tt : $t:ty),+) $b:block) => {

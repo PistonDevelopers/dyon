@@ -81,18 +81,51 @@ dyon_fn!{fn origo() -> PhysicalState {
 }}
 
 // Create a custom Rust object.
-dyon_fn!{fn custom_object() -> RustObject {
-    use std::sync::{Arc, Mutex};
-
-    let val: i32 = 42;
-    Arc::new(Mutex::new(val)) as RustObject
-}}
+dyon_fn!{fn custom_object() -> #i32 {42}}
 
 // Print out the content of a custom Rust object.
-dyon_fn!{fn print_custom_object(obj: RustObject) {
-    let a_guard = obj.lock().unwrap();
-    let a = a_guard.downcast_ref::<i32>().unwrap();
+dyon_fn!{fn print_custom_object(a: #i32) {
     println!("Custom value is {}", a);
+}}
+
+// Macro example.
+dyon_fn!{fn foo1(a: #i32, _b: f64) {
+    println!("Custom value is {}", a);
+}}
+
+// Macro example.
+dyon_fn!{fn foo2(a: #i32, b: f64) -> f64 {
+    a as f64 + b
+}}
+
+// Macro example.
+dyon_fn!{fn foo3(a: #&i32, b: f64) -> f64 {
+    *a as f64 + b
+}}
+
+// Macro example.
+dyon_fn!{fn foo4(a: #&i32, b: #&i32) -> #i32 {
+    a + b
+}}
+
+// Macro example.
+dyon_fn!{fn foo5(a: #&i32, b: f64) -> #f64 {
+    *a as f64 + b
+}}
+
+// Macro example.
+dyon_fn!{fn foo6(a: f64) -> #i32 {
+    a as i32
+}}
+
+// Macro example.
+dyon_fn!{fn foo7(a: #&i32) -> f64 {
+    *a as f64
+}}
+
+// Macro example.
+dyon_fn!{fn foo8(a: #&mut f64, b: f64) {
+    *a = b
 }}
 
 dyon_fn!{fn id() -> Mat4 {
