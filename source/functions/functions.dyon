@@ -15,7 +15,7 @@ fn print__function(f) {
         if f.arguments[i].lifetime != none() {
             print(": '" + unwrap(f.arguments[i].lifetime))
             if f.arguments[i].takes != "any" {
-                print(" " + f.argument[i].takes)
+                print(" " + f.arguments[i].takes)
             }
         } else {
             if f.arguments[i].takes != "any" {
