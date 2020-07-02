@@ -26,7 +26,7 @@ macro_rules! iter_val(
             },
             Err(err) => {
                 return Err($rt.module.error($for_in_expr.source_range,
-                &format!("Can not lock In mutex:\n{}", err.description()), $rt));
+                &format!("Can not lock In mutex:\n{}", err.to_string()), $rt));
             }
         }
     };
@@ -71,7 +71,7 @@ macro_rules! iter_val_inc(
             },
             Err(err) => {
                 return Err($rt.module.error($for_in_expr.source_range,
-                &format!("Can not lock In mutex:\n{}", err.description()), $rt));
+                &format!("Can not lock In mutex:\n{}", err.to_string()), $rt));
             }
         }
     };
@@ -82,7 +82,6 @@ impl Runtime {
         &mut self,
         for_in_expr: &ast::ForIn
     ) -> Result<(Option<Variable>, Flow), String> {
-        use std::error::Error;
 
         let prev_st = self.stack.len();
         let prev_lc = self.local_stack.len();
@@ -118,7 +117,6 @@ impl Runtime {
         &mut self,
         for_in_expr: &ast::ForIn
     ) -> Result<(Option<Variable>, Flow), String> {
-        use std::error::Error;
 
         let prev_st = self.stack.len();
         let prev_lc = self.local_stack.len();
@@ -163,7 +161,6 @@ impl Runtime {
         &mut self,
         for_in_expr: &ast::ForIn
     ) -> Result<(Option<Variable>, Flow), String> {
-        use std::error::Error;
 
         let prev_st = self.stack.len();
         let prev_lc = self.local_stack.len();
@@ -208,7 +205,6 @@ impl Runtime {
         &mut self,
         for_in_expr: &ast::ForIn
     ) -> Result<(Option<Variable>, Flow), String> {
-        use std::error::Error;
 
         let prev_st = self.stack.len();
         let prev_lc = self.local_stack.len();
@@ -269,7 +265,6 @@ impl Runtime {
         &mut self,
         for_in_expr: &ast::ForIn
     ) -> Result<(Option<Variable>, Flow), String> {
-        use std::error::Error;
 
         let prev_st = self.stack.len();
         let prev_lc = self.local_stack.len();
@@ -330,7 +325,6 @@ impl Runtime {
         &mut self,
         for_in_expr: &ast::ForIn
     ) -> Result<(Option<Variable>, Flow), String> {
-        use std::error::Error;
 
         let prev_st = self.stack.len();
         let prev_lc = self.local_stack.len();
@@ -393,7 +387,6 @@ impl Runtime {
         &mut self,
         for_in_expr: &ast::ForIn
     ) -> Result<(Option<Variable>, Flow), String> {
-        use std::error::Error;
 
         let prev_st = self.stack.len();
         let prev_lc = self.local_stack.len();
@@ -463,7 +456,6 @@ impl Runtime {
             rt: &mut Runtime,
             for_in_expr: &ast::ForIn
         ) -> Result<(Option<Variable>, Flow), String> {
-            use std::error::Error;
 
             let prev_st = rt.stack.len();
             let prev_lc = rt.local_stack.len();
@@ -588,7 +580,6 @@ impl Runtime {
         &mut self,
         for_in_expr: &ast::ForIn
     ) -> Result<(Option<Variable>, Flow), String> {
-        use std::error::Error;
 
         let prev_st = self.stack.len();
         let prev_lc = self.local_stack.len();

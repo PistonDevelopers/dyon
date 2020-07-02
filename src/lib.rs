@@ -130,7 +130,6 @@ impl Thread {
         rt: &mut Runtime,
         var: Variable
     ) -> Result<JoinHandle<Result<Variable, String>>, String> {
-        use std::error::Error;
 
         let thread = match var {
             Variable::Ref(ind) => {
@@ -152,7 +151,7 @@ impl Thread {
             format!("{}\nCan not access Thread because there is \
             more than one reference to it", rt.stack_trace()))?;
         mutex.into_inner().map_err(|err|
-            format!("{}\nCan not lock Thread mutex:\n{}", rt.stack_trace(), err.description()))
+            format!("{}\nCan not lock Thread mutex:\n{}", rt.stack_trace(), err.to_string()))
     }
 }
 
