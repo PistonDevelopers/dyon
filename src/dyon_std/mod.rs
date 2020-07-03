@@ -872,7 +872,6 @@ pub(crate) fn swap(rt: &mut Runtime) -> Result<(), String> {
 
 pub(crate) fn read_line(_rt: &mut Runtime) -> Result<Variable, String> {
     use std::io::{self, Write};
-    use std::error::Error;
 
     let mut input = String::new();
     io::stdout().flush().unwrap();
@@ -881,7 +880,7 @@ pub(crate) fn read_line(_rt: &mut Runtime) -> Result<Variable, String> {
         Err(error) => Some(error)
     };
     Ok(if let Some(error) = error {
-        return Err(error.description().into())
+        return Err(error.to_string().into())
     } else {
         Variable::Str(Arc::new(input))
     })
@@ -889,7 +888,6 @@ pub(crate) fn read_line(_rt: &mut Runtime) -> Result<Variable, String> {
 
 pub(crate) fn read_number(rt: &mut Runtime) -> Result<Variable, String> {
     use std::io::{self, Write};
-    use std::error::Error;
 
     let err: Arc<String> = rt.pop().expect(TINVOTS);
     let stdin = io::stdin();
@@ -900,7 +898,7 @@ pub(crate) fn read_number(rt: &mut Runtime) -> Result<Variable, String> {
         stdout.flush().unwrap();
         match stdin.read_line(&mut input) {
             Ok(_) => {}
-            Err(error) => return Err(error.description().into()),
+            Err(error) => return Err(error.to_string().into()),
         };
         match input.trim().parse::<f64>() {
             Ok(v) => break v,
@@ -1611,7 +1609,6 @@ dyon_fn!{fn download__url_file(url: Arc<String>, file: Arc<String>) -> Variable 
 #[cfg(feature = "file")]
 dyon_fn!{fn save__string_file(text: Arc<String>, file: Arc<String>) -> Variable {
     use std::fs::File;
-    use std::error::Error as StdError;
     use std::io::Write;
 
     Variable::Result(match File::create(&**file) {
@@ -1619,13 +1616,13 @@ dyon_fn!{fn save__string_file(text: Arc<String>, file: Arc<String>) -> Variable 
             match f.write_all(text.as_bytes()) {
                 Ok(_) => Ok(Box::new(Variable::Str(file))),
                 Err(err) => Err(Box::new(Error {
-                    message: Variable::Str(Arc::new(err.description().into())),
+                    message: Variable::Str(Arc::new(err.to_string().into())),
                     trace: vec![]
                 }))
             }
         }
         Err(err) => Err(Box::new(Error {
-            message: Variable::Str(Arc::new(err.description().into())),
+            message: Variable::Str(Arc::new(err.to_string().into())),
             trace: vec![]
         }))
     })
@@ -1640,7 +1637,6 @@ pub(crate) fn save__string_file(_: &mut Runtime) -> Result<Variable, String> {
 dyon_fn!{fn load_string__file(file: Arc<String>) -> Variable {
     use std::fs::File;
     use std::io::Read;
-    use std::error::Error as StdError;
 
     Variable::Result(match File::open(&**file) {
         Ok(mut f) => {
@@ -1651,14 +1647,14 @@ dyon_fn!{fn load_string__file(file: Arc<String>) -> Variable {
                 }
                 Err(err) => {
                     Err(Box::new(Error {
-                        message: Variable::Str(Arc::new(err.description().into())),
+                        message: Variable::Str(Arc::new(err.to_string().into())),
                         trace: vec![]
                     }))
                 }
             }
         }
         Err(err) => Err(Box::new(Error {
-            message: Variable::Str(Arc::new(err.description().into())),
+            message: Variable::Str(Arc::new(err.to_string().into())),
             trace: vec![]
         }))
     })
@@ -1758,7 +1754,6 @@ pub(crate) fn args_os(_rt: &mut Runtime) -> Result<Variable, String> {
 
 #[cfg(feature = "file")]
 pub(crate) fn save__data_file(rt: &mut Runtime) -> Result<Variable, String> {
-    use std::error::Error;
     use std::fs::File;
     use std::io::BufWriter;
     use write::{write_variable, EscapeString};
@@ -1776,7 +1771,7 @@ pub(crate) fn save__data_file(rt: &mut Runtime) -> Result<Variable, String> {
             return Err({
                 rt.arg_err_index.set(Some(0));
                 format!("Error when creating file `{}`:\n{}",
-                 file, err.description())
+                 file, err.to_string())
             })
         }
     };
@@ -1786,7 +1781,7 @@ pub(crate) fn save__data_file(rt: &mut Runtime) -> Result<Variable, String> {
             Err(Box::new(::Error {
                 message: Variable::Str(Arc::new(format!(
                             "Error when writing to file `{}`:\n{}",
-                            file, err.description()))),
+                            file, err.to_string()))),
                 trace: vec![]
             }))
         }
@@ -1800,7 +1795,6 @@ pub(crate) fn save__data_file(_: &mut Runtime) -> Result<Variable, String> {
 }
 
 pub(crate) fn json_from_meta_data(rt: &mut Runtime) -> Result<Variable, String> {
-    use std::error::Error;
 
     let meta_data = rt.stack.pop().expect(TINVOTS);
     let json = match rt.resolve(&meta_data) {
@@ -1808,7 +1802,7 @@ pub(crate) fn json_from_meta_data(rt: &mut Runtime) -> Result<Variable, String> 
             meta::json_from_meta_data(arr).map_err(|err| {
                 format!("{}\nError when generating JSON:\n{}",
                         rt.stack_trace(),
-                        err.description())
+                        err.to_string())
             })?
         }
         x => return Err(rt.expected_arg(0, x, "array"))
@@ -1902,7 +1896,6 @@ dyon_fn!{fn now() -> f64 {
 dyon_fn!{fn is_nan(v: f64) -> bool {v.is_nan()}}
 
 pub(crate) fn wait_next(rt: &mut Runtime) -> Result<Variable, String> {
-    use std::error::Error;
 
     let v = rt.stack.pop().expect(TINVOTS);
     Ok(match rt.resolve(&v) {
@@ -1913,7 +1906,7 @@ pub(crate) fn wait_next(rt: &mut Runtime) -> Result<Variable, String> {
                     Err(_) => Variable::Option(None),
                 },
                 Err(err) =>
-                    return Err(format!("Can not lock In mutex:\n{}", err.description()))
+                    return Err(format!("Can not lock In mutex:\n{}", err.to_string()))
             }
         }
         x => return Err(rt.expected_arg(0, x, "in"))
@@ -1921,7 +1914,6 @@ pub(crate) fn wait_next(rt: &mut Runtime) -> Result<Variable, String> {
 }
 
 pub(crate) fn next(rt: &mut Runtime) -> Result<Variable, String> {
-    use std::error::Error;
 
     let v = rt.stack.pop().expect(TINVOTS);
     Ok(match rt.resolve(&v) {
@@ -1932,7 +1924,7 @@ pub(crate) fn next(rt: &mut Runtime) -> Result<Variable, String> {
                     Err(_) => Variable::Option(None),
                 },
                 Err(err) =>
-                    return Err(format!("Can not lock In mutex:\n{}", err.description()))
+                    return Err(format!("Can not lock In mutex:\n{}", err.to_string()))
             }
         }
         x => return Err(rt.expected_arg(0, x, "in"))

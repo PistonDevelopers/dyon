@@ -127,7 +127,6 @@ pub fn load_meta_url(_meta: &str, _url: &str) -> Result<Vec<Variable>, String> {
 pub fn download_url_to_file(url: &str, file: &str) -> Result<String, String> {
     use reqwest::{Client, Url, StatusCode};
     use std::io::copy;
-    use std::error::Error;
 
     let url_address = Url::parse(url)
         .map_err(|e| format!("Error parsing url:\n`{}`\n", e))?;
@@ -138,7 +137,7 @@ pub fn download_url_to_file(url: &str, file: &str) -> Result<String, String> {
                              url, e.to_string()))?;
     if response.status() == StatusCode::OK {
         let mut f = File::create(file).map_err(|err| {
-            format!("Could not create file `{}`:\n{}", file, err.description())
+            format!("Could not create file `{}`:\n{}", file, err.to_string())
         })?;
         copy(&mut response, &mut f)
             .map_err(|e| format!("Error fetching file over http `{}`:\n{}\n",
