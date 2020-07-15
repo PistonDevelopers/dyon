@@ -96,8 +96,8 @@ macro_rules! dyon_fn {
                     $b
                 }
 
-                dyon_fn_pop!(#& rt $rust_arg: $rust_t);
                 dyon_fn_pop!(rt $($arg: $t),+);
+                dyon_fn_pop!(#& rt $rust_arg: $rust_t);
                 Ok($crate::Variable::RustObject(Arc::new(Mutex::new(inner($rust_arg, $($arg),+)))))
             }
         }
@@ -110,8 +110,8 @@ macro_rules! dyon_fn {
                     $b
                 }
 
-                dyon_fn_pop!(#& rt $rust_arg: $rust_t);
                 dyon_fn_pop!(rt $($arg: $t),*);
+                dyon_fn_pop!(#& rt $rust_arg: $rust_t);
                 Ok($crate::embed::PushVariable::push_var(&inner($rust_arg, $($arg),*)))
             }
         }
@@ -124,8 +124,8 @@ macro_rules! dyon_fn {
                     $b
                 }
 
-                dyon_fn_pop!(# rt $rust_arg: $rust_t);
                 dyon_fn_pop!(rt $($arg: $t),+);
+                dyon_fn_pop!(# rt $rust_arg: $rust_t);
                 Ok($crate::embed::PushVariable::push_var(&inner($rust_arg, $($arg),+)))
             }
         }
@@ -191,8 +191,8 @@ macro_rules! dyon_fn {
                     $b
                 }
 
-                dyon_fn_pop!(#&mut rt $rust_arg: $rust_ty);
                 dyon_fn_pop!(rt $($arg: $t),*);
+                dyon_fn_pop!(#&mut rt $rust_arg: $rust_ty);
                 inner($rust_arg, $($arg),+);
                 Ok(())
             }
@@ -206,8 +206,8 @@ macro_rules! dyon_fn {
                     $b
                 }
 
-                dyon_fn_pop!(# rt $rust_arg: $rust_ty);
                 dyon_fn_pop!(rt $($arg: $t),*);
+                dyon_fn_pop!(# rt $rust_arg: $rust_ty);
                 inner($rust_arg, $($arg),+);
                 Ok(())
             }
