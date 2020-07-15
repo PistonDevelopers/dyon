@@ -10,38 +10,44 @@ macro_rules! dyon_fn_pop {
     (#&mut $rt:ident) => {};
     (#&mut $rt:ident $arg:ident : $t:ty) => {
         let $arg: RustObject = $rt.pop()?;
-        let mut $arg = $arg.lock().unwrap();
-        let $arg = $arg.downcast_mut::<$t>().unwrap();
+        let mut $arg = $arg.lock().map_err(|_| "Could not get a lock on Rust object")?;
+        let $arg = $arg.downcast_mut::<$t>()
+            .ok_or_else(|| format!("Expected Rust object of type: {}", stringify!($t)))?;
     };
     (#&mut $rt:ident $arg:ident : $t:ty, $($args:tt : $ts:ty),+) => {
         dyon_fn_pop!(#&mut $rt $($args: $ts),+);
         let $arg: RustObject = $rt.pop()?;
-        let mut $arg = $arg.lock().unwrap();
-        let $arg = $arg.downcast_mut::<$t>().unwrap();
+        let mut $arg = $arg.lock().map_err(|_| "Could not get a lock on Rust object")?;
+        let $arg = $arg.downcast_mut::<$t>()
+            .ok_or_else(|| format!("Expected Rust object of type: {}", stringify!($t)))?;
     };
     (#& $rt:ident) => {};
     (#& $rt:ident $arg:ident : $t:ty) => {
         let $arg: RustObject = $rt.pop()?;
-        let $arg = $arg.lock().unwrap();
-        let $arg = $arg.downcast_ref::<$t>().unwrap();
+        let $arg = $arg.lock().map_err(|_| "Could not get a lock on Rust object")?;
+        let $arg = $arg.downcast_ref::<$t>()
+            .ok_or_else(|| format!("Expected Rust object of type: {}", stringify!($t)))?;
     };
     (#& $rt:ident $arg:ident : $t:ty, $($args:tt : $ts:ty),+) => {
         dyon_fn_pop!(#& $rt $($args: $ts),+);
         let $arg: RustObject = $rt.pop()?;
-        let $arg = $arg.lock().unwrap();
-        let $arg = $arg.downcast_ref::<$t>().unwrap();
+        let $arg = $arg.lock().map_err(|_| "Could not get a lock on Rust object")?;
+        let $arg = $arg.downcast_ref::<$t>()
+            .ok_or_else(|| format!("Expected Rust object of type: {}", stringify!($t)))?;
     };
     (# $rt:ident) => {};
     (# $rt:ident $arg:ident : $t:ty) => {
         let $arg: RustObject = $rt.pop()?;
-        let $arg = $arg.lock().unwrap();
-        let $arg = *$arg.downcast_ref::<$t>().unwrap();
+        let $arg = $arg.lock().map_err(|_| "Could not get a lock on Rust object")?;
+        let $arg = *$arg.downcast_ref::<$t>()
+            .ok_or_else(|| format!("Expected Rust object of type: {}", stringify!($t)))?;
     };
     (# $rt:ident $arg:ident : $t:ty, $($args:tt : $ts:ty),+) => {
         dyon_fn_pop!(# $rt $($args: $ts),+);
         let $arg: RustObject = $rt.pop()?;
-        let $arg = $arg.lock().unwrap();
-        let $arg = *$arg.downcast_ref::<$t>().unwrap();
+        let $arg = $arg.lock().map_err(|_| "Could not get a lock on Rust object")?;
+        let $arg = *$arg.downcast_ref::<$t>()
+            .ok_or_else(|| format!("Expected Rust object of type: {}", stringify!($t)))?;
     };
     ($rt:ident) => {};
     ($rt:ident $arg:ident : $t:ty) => {
@@ -102,11 +108,11 @@ macro_rules! dyon_fn {
             }
         }
     };
-    (fn $name:ident ($rust_arg:tt : #&$rust_t:ty $(, $arg:tt : $t:ty),*) -> $rt:ty $b:block) => {
+    (fn $name:ident ($rust_arg:tt : #&$rust_t:ty $(, $arg:tt : $t:ty)*) -> $rt:ty $b:block) => {
         dyon_macro_items!{
             #[allow(non_snake_case)]
             pub fn $name(rt: &mut $crate::Runtime) -> Result<$crate::Variable, String> {
-                fn inner($rust_arg: &$rust_t $(, $arg: $t),*) -> $rt {
+                fn inner($rust_arg: &$rust_t $(, $arg: $t)*) -> $rt {
                     $b
                 }
 
