@@ -190,21 +190,26 @@ macro_rules! dyon_fn {
             Ok(())
         }
     };
-    (fn $name:ident ($($arg:tt : #$t:ty),+) $b:block) => {
+    (fn $name:ident (
+        $rust_arg:tt : #&mut $rust_ty:ty ,
+        $rust_arg2:tt : #$rust_ty2:ty
+        $(, $arg:tt : $t:ty)*) $b:block) => {
         dyon_macro_items!{
             #[allow(non_snake_case)]
             pub fn $name(rt: &mut $crate::Runtime) -> Result<(), String> {
-                fn inner($($arg: $t),+) {
+                fn inner($rust_arg: &mut $rust_ty, $rust_arg2: $rust_ty2, $($arg: $t),*) {
                     $b
                 }
 
-                dyon_fn_pop!(# rt $($arg: $t),+);
-                inner($($arg),+);
+                dyon_fn_pop!(rt $($arg: $t),*);
+                dyon_fn_pop!(# rt $rust_arg2: $rust_ty2);
+                dyon_fn_pop!(#&mut rt $rust_arg: $rust_ty);
+                inner($rust_arg, $rust_arg2, $($arg),*);
                 Ok(())
             }
         }
     };
-    (fn $name:ident ($rust_arg:tt : #&mut $rust_ty:ty , $($arg:tt : $t:ty),*) $b:block) => {
+    (fn $name:ident ($rust_arg:tt : #&mut $rust_ty:ty $(, $arg:tt : $t:ty)*) $b:block) => {
         dyon_macro_items!{
             #[allow(non_snake_case)]
             pub fn $name(rt: &mut $crate::Runtime) -> Result<(), String> {
@@ -230,6 +235,20 @@ macro_rules! dyon_fn {
                 dyon_fn_pop!(rt $($arg: $t),*);
                 dyon_fn_pop!(# rt $rust_arg: $rust_ty);
                 inner($rust_arg, $($arg),+);
+                Ok(())
+            }
+        }
+    };
+    (fn $name:ident ($($arg:tt : #$t:ty),+) $b:block) => {
+        dyon_macro_items!{
+            #[allow(non_snake_case)]
+            pub fn $name(rt: &mut $crate::Runtime) -> Result<(), String> {
+                fn inner($($arg: $t),+) {
+                    $b
+                }
+
+                dyon_fn_pop!(# rt $($arg: $t),+);
+                inner($($arg),+);
                 Ok(())
             }
         }
