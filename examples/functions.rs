@@ -139,6 +139,20 @@ dyon_fn!{fn foo10(a: #&mut f64, b: #f64) -> f64 {
     *a
 }}
 
+// Macro example.
+dyon_fn!{fn foo11(a: #&mut f64, b: #&f64) -> f64 {
+    *a = *b;
+    *a
+}}
+
+// Macro example.
+dyon_fn!{fn foo12(a: #&mut f64, b: #&f64) {
+    *a = *b
+}}
+
+// Macro example.
+dyon_fn!{fn foo13(_a: #&f64, _b: f64) {}}
+
 dyon_fn!{fn id() -> Mat4 {
     [
         [1.0, 0.0, 0.0, 0.0],
