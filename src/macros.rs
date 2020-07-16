@@ -108,6 +108,21 @@ macro_rules! dyon_fn {
             }
         }
     };
+    (fn $name:ident ($rust_arg:tt : #&$rust_t:ty , $rust_arg2:tt : #&$rust_t2:ty $(, $arg:tt : $t:ty)*) -> $rt:ty $b:block) => {
+        dyon_macro_items!{
+            #[allow(non_snake_case)]
+            pub fn $name(rt: &mut $crate::Runtime) -> Result<$crate::Variable, String> {
+                fn inner($rust_arg: &$rust_t, $rust_arg2: &$rust_t2 $(, $arg: $t)*) -> $rt {
+                    $b
+                }
+
+                dyon_fn_pop!(rt $($arg: $t),*);
+                dyon_fn_pop!(#& rt $rust_arg2: $rust_t2);
+                dyon_fn_pop!(#& rt $rust_arg: $rust_t);
+                Ok($crate::embed::PushVariable::push_var(&inner($rust_arg, $rust_arg2, $($arg),*)))
+            }
+        }
+    };
     (fn $name:ident ($rust_arg:tt : #&$rust_t:ty $(, $arg:tt : $t:ty)*) -> $rt:ty $b:block) => {
         dyon_macro_items!{
             #[allow(non_snake_case)]
