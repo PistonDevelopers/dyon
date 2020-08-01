@@ -1,6 +1,6 @@
 [package]
 name = "piston-dyon_interactive"
-version = "0.36.0"
+version = "0.37.0"
 authors = ["Sven Nilsen <bvssvni@gmail.com>"]
 description = "A library for interactive coding with the Piston game engine"
 keywords = ["script", "scripting", "game", "language", "piston"]

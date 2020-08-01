@@ -164,7 +164,7 @@ mod dyon_functions {
     use piston::input::{Event, RenderEvent};
     use piston::event_loop::Events;
     use opengl_graphics::{GlGraphics, GlyphCache, Texture, TextureSettings};
-    use dyon::Runtime;
+    use dyon::{Runtime, Variable};
     use dyon_interactive::{draw_2d, NO_EVENT};
     use current::Current;
     use std::sync::Arc;
@@ -192,7 +192,9 @@ mod dyon_functions {
         }
     }
 
-    pub fn create_texture(rt: &mut Runtime) -> Result<(), String> {
+    pub fn create_texture(rt: &mut Runtime) -> Result<Variable, String> {
+        use dyon::embed::PushVariable;
+
         let images = unsafe { &*Current::<Vec<RgbaImage>>::new() };
         let textures = unsafe { &mut *Current::<Vec<Texture>>::new() };
         let id: usize = rt.pop()?;
@@ -203,8 +205,7 @@ mod dyon_functions {
             return Err("Image id is out of bounds".into());
         };
         textures.push(Texture::from_image(image, &TextureSettings::new()));
-        rt.push(new_id);
-        Ok(())
+        Ok(new_id.push_var())
     }
 
     #[allow(non_snake_case)]
@@ -227,81 +228,54 @@ mod dyon_functions {
         Ok(())
     }
 
-    pub fn next_event(rt: &mut Runtime) -> Result<(), String> {
+    dyon_fn!{fn next_event() -> bool {
         let window = unsafe { &mut *Current::<Sdl2Window>::new() };
         let events = unsafe { &mut *Current::<Events>::new() };
         let e = unsafe { &mut *Current::<Option<Event>>::new() };
         if let Some(new_e) = events.next(window) {
             *e = Some(new_e);
-            rt.push(true);
+            true
         } else {
             *e = None;
-            rt.push(false);
+            false
         }
-        Ok(())
-    }
+    }}
 
-    #[allow(non_snake_case)]
-    pub fn bind_sound__name_file(rt: &mut Runtime) -> Result<(), String> {
-        let file: Arc<String> = rt.pop()?;
-        let name: Arc<String> = rt.pop()?;
+    dyon_fn!{fn bind_sound__name_file(name: Arc<String>, file: Arc<String>) {
         music::bind_sound_file(Sound::Name(name), &**file);
-        Ok(())
-    }
+    }}
 
-    #[allow(non_snake_case)]
-    pub fn bind_music__name_file(rt: &mut Runtime) -> Result<(), String> {
-        let file: Arc<String> = rt.pop()?;
-        let name: Arc<String> = rt.pop()?;
+    dyon_fn!{fn bind_music__name_file(name: Arc<String>, file: Arc<String>) {
         music::bind_music_file(Music::Name(name), &**file);
-        Ok(())
-    }
+    }}
 
-    #[allow(non_snake_case)]
-    pub fn play_sound__name_repeat_volume(rt: &mut Runtime) -> Result<(), String> {
+    dyon_fn!{fn play_sound__name_repeat_volume(name: Arc<String>, repeat: f64, volume: f64) {
         use music::Repeat;
 
-        let volume: f64 = rt.pop()?;
-        let repeat: f64 = rt.pop()?;
-        let name: Arc<String> = rt.pop()?;
         let repeat = if repeat == -1.0 {Repeat::Forever} else {Repeat::Times(repeat as u16)};
         music::play_sound(&Sound::Name(name), repeat, volume);
-        Ok(())
-    }
+    }}
 
-    #[allow(non_snake_case)]
-    pub fn play_sound_forever__name_volume(rt: &mut Runtime) -> Result<(), String> {
+    dyon_fn!{fn play_sound_forever__name_volume(name: Arc<String>, volume: f64) {
         use music::Repeat;
 
-        let volume: f64 = rt.pop()?;
-        let name: Arc<String> = rt.pop()?;
         music::play_sound(&Sound::Name(name), Repeat::Forever, volume);
-        Ok(())
-    }
+    }}
 
-    #[allow(non_snake_case)]
-    pub fn play_music__name_repeat(rt: &mut Runtime) -> Result<(), String> {
+    dyon_fn!{fn play_music__name_repeat(name: Arc<String>, repeat: f64) {
         use music::Repeat;
 
-        let repeat: f64 = rt.pop()?;
-        let name: Arc<String> = rt.pop()?;
         let repeat = if repeat == -1.0 {Repeat::Forever} else {Repeat::Times(repeat as u16)};
         music::play_music(&Music::Name(name), repeat);
-        Ok(())
-    }
+    }}
 
-    #[allow(non_snake_case)]
-    pub fn play_music_forever__name(rt: &mut Runtime) -> Result<(), String> {
+    dyon_fn!{fn play_music_forever__name(name: Arc<String>) {
         use music::Repeat;
 
-        let name: Arc<String> = rt.pop()?;
         music::play_music(&Music::Name(name), Repeat::Forever);
-        Ok(())
-    }
+    }}
 
-    pub fn set_music_volume(rt: &mut Runtime) -> Result<(), String> {
-        let volume: f64 = rt.pop()?;
+    dyon_fn!{fn set_music_volume(volume: f64) {
         music::set_volume(volume);
-        Ok(())
-    }
+    }}
 }
