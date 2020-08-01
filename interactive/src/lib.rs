@@ -133,16 +133,14 @@ pub fn add_functions<W, F, C>(module: &mut Module)
     );
 }
 
-pub fn window_size<W: Any + Window>(rt: &mut Runtime) -> Result<(), String> {
+pub fn window_size<W: Any + Window>(_rt: &mut Runtime) -> Result<Variable, String> {
     let size = unsafe { Current::<W>::new() }.size();
-    rt.push_vec4([size.width as f32, size.height as f32, 0.0, 0.0]);
-    Ok(())
+    Ok(Variable::Vec4([size.width as f32, size.height as f32, 0.0, 0.0]))
 }
 
-pub fn window_draw_size<W: Any + Window>(rt: &mut Runtime) -> Result<(), String> {
+pub fn window_draw_size<W: Any + Window>(_rt: &mut Runtime) -> Result<Variable, String> {
     let draw_size = unsafe { Current::<W>::new() }.draw_size();
-    rt.push_vec4([draw_size.width as f32, draw_size.height as f32, 0.0, 0.0]);
-    Ok(())
+    Ok(Variable::Vec4([draw_size.width as f32, draw_size.height as f32, 0.0, 0.0]))
 }
 
 #[allow(non_snake_case)]
@@ -153,13 +151,12 @@ pub fn set_window__size<W: Any + AdvancedWindow>(rt: &mut Runtime) -> Result<(),
     Ok(())
 }
 
-pub fn window_position<W: Any + AdvancedWindow>(rt: &mut Runtime) -> Result<(), String> {
-    if let Some(pos) = unsafe { Current::<W>::new() }.get_position() {
-        rt.push_vec4([pos.x as f32, pos.y as f32]);
+pub fn window_position<W: Any + AdvancedWindow>(_rt: &mut Runtime) -> Result<Variable, String> {
+    Ok(Variable::Vec4(if let Some(pos) = unsafe { Current::<W>::new() }.get_position() {
+        [pos.x as f32, pos.y as f32, 0.0, 0.0]
     } else {
-        rt.push_vec4([0.0 as f32; 2]);
-    }
-    Ok(())
+        [0.0 as f32; 4]
+    }))
 }
 
 #[allow(non_snake_case)]
@@ -170,289 +167,246 @@ pub fn set_window__position<W: Any + AdvancedWindow>(rt: &mut Runtime) -> Result
     Ok(())
 }
 
-pub fn event_loop_ups(rt: &mut Runtime) -> Result<(), String> {
+dyon_fn!{fn event_loop_ups() -> f64 {
     use piston::event_loop::{EventLoop, Events};
 
-    let ups = unsafe { Current::<Events>::new() }.get_event_settings().ups;
-    rt.push(ups as f64);
-    Ok(())
-}
+    unsafe { Current::<Events>::new() }.get_event_settings().ups as f64
+}}
 
-#[allow(non_snake_case)]
-pub fn set_event_loop__ups(rt: &mut Runtime) -> Result<(), String> {
+dyon_fn!{fn set_event_loop__ups(ups: f64) {
     use piston::event_loop::{EventLoop, Events};
 
-    let ups: f64 = rt.pop()?;
     unsafe { Current::<Events>::new() }.set_ups(ups as u64);
-    Ok(())
-}
+}}
 
-pub fn event_loop_upsreset(rt: &mut Runtime) -> Result<(), String> {
+dyon_fn!{fn event_loop_upsreset() -> f64 {
     use piston::event_loop::{EventLoop, Events};
 
-    let ups_reset = unsafe { Current::<Events>::new() }.get_event_settings().ups_reset;
-    rt.push(ups_reset as f64);
-    Ok(())
-}
+    unsafe { Current::<Events>::new() }.get_event_settings().ups_reset as f64
+}}
 
-#[allow(non_snake_case)]
-pub fn set_event_loop__upsreset(rt: &mut Runtime) -> Result<(), String> {
+dyon_fn!{fn set_event_loop__upsreset(ups_reset: f64) {
     use piston::event_loop::{EventLoop, Events};
 
-    let ups_reset: f64 = rt.pop()?;
     unsafe { Current::<Events>::new() }.set_ups_reset(ups_reset as u64);
-    Ok(())
-}
+}}
 
-pub fn event_loop_maxfps(rt: &mut Runtime) -> Result<(), String> {
+dyon_fn!{fn event_loop_maxfps() -> f64 {
     use piston::event_loop::{EventLoop, Events};
 
-    let max_fps = unsafe { Current::<Events>::new() }.get_event_settings().max_fps;
-    rt.push(max_fps as f64);
-    Ok(())
-}
+    unsafe { Current::<Events>::new() }.get_event_settings().max_fps as f64
+}}
 
-#[allow(non_snake_case)]
-pub fn set_event_loop__maxfps(rt: &mut Runtime) -> Result<(), String> {
+dyon_fn!{fn set_event_loop__maxfps(max_fps: f64) {
     use piston::event_loop::{EventLoop, Events};
 
-    let max_fps: f64 = rt.pop()?;
     unsafe { Current::<Events>::new() }.set_max_fps(max_fps as u64);
-    Ok(())
-}
+}}
 
-pub fn event_loop_swapbuffers(rt: &mut Runtime) -> Result<(), String> {
+dyon_fn!{fn event_loop_swapbuffers() -> bool {
     use piston::event_loop::{EventLoop, Events};
 
-    let swap_buffers = unsafe { Current::<Events>::new() }.get_event_settings().swap_buffers;
-    rt.push(swap_buffers);
-    Ok(())
-}
+    unsafe { Current::<Events>::new() }.get_event_settings().swap_buffers
+}}
 
-#[allow(non_snake_case)]
-pub fn set_event_loop__swapbuffers(rt: &mut Runtime) -> Result<(), String> {
+dyon_fn!{fn set_event_loop__swapbuffers(swap_buffers: bool) {
     use piston::event_loop::{EventLoop, Events};
 
-    let swap_buffers: bool = rt.pop()?;
     unsafe { Current::<Events>::new() }.set_swap_buffers(swap_buffers);
-    Ok(())
-}
+}}
 
 pub fn swap_buffers<W: Any + Window>(_rt: &mut Runtime) -> Result<(), String> {
     unsafe { Current::<W>::new() }.swap_buffers();
     Ok(())
 }
 
-pub fn event_loop_benchmode(rt: &mut Runtime) -> Result<(), String> {
+dyon_fn!{fn event_loop_benchmode() -> bool {
     use piston::event_loop::{EventLoop, Events};
 
-    let bench_mode = unsafe { Current::<Events>::new() }.get_event_settings().bench_mode;
-    rt.push(bench_mode);
-    Ok(())
-}
+    unsafe { Current::<Events>::new() }.get_event_settings().bench_mode
+}}
 
-#[allow(non_snake_case)]
-pub fn set_event_loop__benchmode(rt: &mut Runtime) -> Result<(), String> {
+dyon_fn!{fn set_event_loop__benchmode(bench_mode: bool) {
     use piston::event_loop::{EventLoop, Events};
 
-    let bench_mode: bool = rt.pop()?;
     unsafe { Current::<Events>::new() }.set_bench_mode(bench_mode);
-    Ok(())
-}
+}}
 
-pub fn event_loop_lazy(rt: &mut Runtime) -> Result<(), String> {
+dyon_fn!{fn event_loop_lazy() -> bool {
     use piston::event_loop::{EventLoop, Events};
 
-    let lazy = unsafe { Current::<Events>::new() }.get_event_settings().lazy;
-    rt.push(lazy);
-    Ok(())
-}
+    unsafe { Current::<Events>::new() }.get_event_settings().lazy
+}}
 
-#[allow(non_snake_case)]
-pub fn set_event_loop__lazy(rt: &mut Runtime) -> Result<(), String> {
+dyon_fn!{fn set_event_loop__lazy(lazy: bool) {
     use piston::event_loop::{EventLoop, Events};
 
-    let lazy: bool = rt.pop()?;
     unsafe { Current::<Events>::new() }.set_lazy(lazy);
-    Ok(())
-}
+}}
 
-pub fn render(rt: &mut Runtime) -> Result<(), String> {
-    rt.push(unsafe { Current::<Option<Event>>::new()
-        .as_ref().expect(NO_EVENT).render_args().is_some() });
-    Ok(())
-}
+dyon_fn!{fn render() -> bool {
+    unsafe { Current::<Option<Event>>::new()
+        .as_ref().expect(NO_EVENT).render_args().is_some() }
+}}
 
-pub fn after_render(rt: &mut Runtime) -> Result<(), String> {
-    rt.push(unsafe { Current::<Option<Event>>::new()
-        .as_ref().expect(NO_EVENT).after_render_args().is_some() });
-    Ok(())
-}
+dyon_fn!{fn after_render() -> bool {
+    unsafe { Current::<Option<Event>>::new()
+        .as_ref().expect(NO_EVENT).after_render_args().is_some() }
+}}
 
-pub fn update(rt: &mut Runtime) -> Result<(), String> {
-    rt.push(unsafe { Current::<Option<Event>>::new()
-        .as_ref().expect(NO_EVENT).update_args().is_some() });
-    Ok(())
-}
+dyon_fn!{fn update() -> bool {
+    unsafe { Current::<Option<Event>>::new()
+        .as_ref().expect(NO_EVENT).update_args().is_some() }
+}}
 
-pub fn idle(rt: &mut Runtime) -> Result<(), String> {
-    rt.push(unsafe { Current::<Option<Event>>::new()
-        .as_ref().expect(NO_EVENT).idle_args().is_some() });
-    Ok(())
-}
+dyon_fn!{fn idle() -> bool {
+    unsafe { Current::<Option<Event>>::new()
+        .as_ref().expect(NO_EVENT).idle_args().is_some() }
+}}
 
-pub fn press(rt: &mut Runtime) -> Result<(), String> {
-    rt.push(unsafe { Current::<Option<Event>>::new()
-        .as_ref().expect(NO_EVENT).press_args().is_some() });
-    Ok(())
-}
+dyon_fn!{fn press() -> bool {
+    unsafe { Current::<Option<Event>>::new()
+        .as_ref().expect(NO_EVENT).press_args().is_some() }
+}}
 
-pub fn release(rt: &mut Runtime) -> Result<(), String> {
-    rt.push(unsafe { Current::<Option<Event>>::new()
-        .as_ref().expect(NO_EVENT).release_args().is_some() });
-    Ok(())
-}
+dyon_fn!{fn release() -> bool {
+    unsafe { Current::<Option<Event>>::new()
+        .as_ref().expect(NO_EVENT).release_args().is_some() }
+}}
 
-pub fn resize(rt: &mut Runtime) -> Result<(), String> {
-    rt.push(unsafe { Current::<Option<Event>>::new()
-        .as_ref().expect(NO_EVENT).resize_args().is_some() });
-    Ok(())
-}
+dyon_fn!{fn resize() -> bool {
+    unsafe { Current::<Option<Event>>::new()
+        .as_ref().expect(NO_EVENT).resize_args().is_some() }
+}}
 
-pub fn focus(rt: &mut Runtime) -> Result<(), String> {
-    rt.push(unsafe { Current::<Option<Event>>::new()
-        .as_ref().expect(NO_EVENT).focus_args().is_some() });
-    Ok(())
-}
+dyon_fn!{fn focus() -> bool {
+    unsafe { Current::<Option<Event>>::new()
+        .as_ref().expect(NO_EVENT).focus_args().is_some() }
+}}
 
-pub fn cursor(rt: &mut Runtime) -> Result<(), String> {
-    rt.push(unsafe { Current::<Option<Event>>::new()
-        .as_ref().expect(NO_EVENT).cursor_args().is_some() });
-    Ok(())
-}
+dyon_fn!{fn cursor() -> bool {
+    unsafe { Current::<Option<Event>>::new()
+        .as_ref().expect(NO_EVENT).cursor_args().is_some() }
+}}
 
-pub fn text(rt: &mut Runtime) -> Result<(), String> {
-    rt.push(unsafe { Current::<Option<Event>>::new()
-        .as_ref().expect(NO_EVENT).text(|_| ()).is_some() });
-    Ok(())
-}
+dyon_fn!{fn text() -> bool {
+    unsafe { Current::<Option<Event>>::new()
+        .as_ref().expect(NO_EVENT).text(|_| ()).is_some() }
+}}
 
-pub fn mouse_cursor(rt: &mut Runtime) -> Result<(), String> {
-    rt.push(unsafe { Current::<Option<Event>>::new()
-        .as_ref().expect(NO_EVENT).mouse_cursor_args().is_some() });
-    Ok(())
-}
+dyon_fn!{fn mouse_cursor() -> bool {
+    unsafe { Current::<Option<Event>>::new()
+        .as_ref().expect(NO_EVENT).mouse_cursor_args().is_some() }
+}}
 
-pub fn focus_arg(rt: &mut Runtime) -> Result<(), String> {
-    rt.push(unsafe { Current::<Option<Event>>::new()
-        .as_ref().expect(NO_EVENT).focus_args() });
-    Ok(())
-}
+dyon_fn!{fn focus_arg() -> Option<bool> {
+    unsafe { Current::<Option<Event>>::new()
+        .as_ref().expect(NO_EVENT).focus_args() }
+}}
 
-pub fn cursor_arg(rt: &mut Runtime) -> Result<(), String> {
-    rt.push(unsafe { Current::<Option<Event>>::new()
-        .as_ref().expect(NO_EVENT).cursor_args() });
-    Ok(())
-}
+dyon_fn!{fn cursor_arg() -> Option<bool> {
+    unsafe { Current::<Option<Event>>::new()
+        .as_ref().expect(NO_EVENT).cursor_args() }
+}}
 
-pub fn render_ext_dt(rt: &mut Runtime) -> Result<(), String> {
-    rt.push(unsafe { Current::<Option<Event>>::new()
-        .as_ref().expect(NO_EVENT).render_args().map(|args| args.ext_dt) });
-    Ok(())
-}
+dyon_fn!{fn render_ext_dt() -> Option<f64> {
+    unsafe { Current::<Option<Event>>::new()
+        .as_ref().expect(NO_EVENT).render_args().map(|args| args.ext_dt) }
+}}
 
-pub fn update_dt(rt: &mut Runtime) -> Result<(), String> {
-    rt.push(unsafe { Current::<Option<Event>>::new()
-        .as_ref().expect(NO_EVENT).update_args().map(|args| args.dt) });
-    Ok(())
-}
+dyon_fn!{fn update_dt() -> Option<f64> {
+    unsafe { Current::<Option<Event>>::new()
+        .as_ref().expect(NO_EVENT).update_args().map(|args| args.dt) }
+}}
 
-pub fn idle_dt(rt: &mut Runtime) -> Result<(), String> {
-    rt.push(unsafe { Current::<Option<Event>>::new()
-        .as_ref().expect(NO_EVENT).idle_args().map(|args| args.dt) });
-    Ok(())
-}
+dyon_fn!{fn idle_dt() -> Option<f64> {
+    unsafe { Current::<Option<Event>>::new()
+        .as_ref().expect(NO_EVENT).idle_args().map(|args| args.dt) }
+}}
 
-pub fn mouse_cursor_pos(rt: &mut Runtime) -> Result<(), String> {
-    rt.push::<Option<Vec4>>(unsafe { Current::<Option<Event>>::new()
-        .as_ref().expect(NO_EVENT).mouse_cursor_args().map(|pos| pos.into()) });
-    Ok(())
-}
+dyon_fn!{fn mouse_cursor_pos() -> Option<Vec4> {
+    unsafe { Current::<Option<Event>>::new()
+        .as_ref().expect(NO_EVENT).mouse_cursor_args().map(|pos| pos.into()) }
+}}
 
-pub fn press_keyboard_key(rt: &mut Runtime) -> Result<(), String> {
+pub fn press_keyboard_key(_rt: &mut Runtime) -> Result<Variable, String> {
+    use dyon::embed::PushVariable;
+
     let e = unsafe { &*Current::<Option<Event>>::new() };
     if let &Some(ref e) = e {
-        if let Some(Button::Keyboard(key)) = e.press_args() {
-            rt.push(Some(key as u64 as f64));
+        Ok(if let Some(Button::Keyboard(key)) = e.press_args() {
+            Some(key as u64 as f64)
         } else {
-            rt.push::<Option<f64>>(None);
-        }
-        Ok(())
+            Option::<f64>::None
+        }.push_var())
     } else {
         Err(NO_EVENT.into())
     }
 }
 
-pub fn release_keyboard_key(rt: &mut Runtime) -> Result<(), String> {
+pub fn release_keyboard_key(_rt: &mut Runtime) -> Result<Variable, String> {
+    use dyon::embed::PushVariable;
+
     let e = unsafe { &*Current::<Option<Event>>::new() };
     if let &Some(ref e) = e {
-        if let Some(Button::Keyboard(key)) = e.release_args() {
-            rt.push(Some(key as u64 as f64));
+        Ok(if let Some(Button::Keyboard(key)) = e.release_args() {
+            Some(key as u64 as f64)
         } else {
-            rt.push::<Option<f64>>(None);
-        }
-        Ok(())
+            Option::<f64>::None
+        }.push_var())
     } else {
         Err(NO_EVENT.into())
     }
 }
 
-pub fn press_mouse_button(rt: &mut Runtime) -> Result<(), String> {
+pub fn press_mouse_button(_rt: &mut Runtime) -> Result<Variable, String> {
+    use dyon::embed::PushVariable;
+
     let e = unsafe { &*Current::<Option<Event>>::new() };
     if let &Some(ref e) = e {
-        if let Some(Button::Mouse(button)) = e.press_args() {
-            rt.push(Some(button as u64 as f64));
+        Ok(if let Some(Button::Mouse(button)) = e.press_args() {
+            Some(button as u64 as f64)
         } else {
-            rt.push::<Option<f64>>(None);
-        }
-        Ok(())
+            Option::<f64>::None
+        }.push_var())
     } else {
         Err(NO_EVENT.into())
     }
 }
 
-pub fn release_mouse_button(rt: &mut Runtime) -> Result<(), String> {
+pub fn release_mouse_button(_rt: &mut Runtime) -> Result<Variable, String> {
+    use dyon::embed::PushVariable;
+
     let e = unsafe { &*Current::<Option<Event>>::new() };
     if let &Some(ref e) = e {
-        if let Some(Button::Mouse(button)) = e.release_args() {
-            rt.push(Some(button as u64 as f64));
+        Ok(if let Some(Button::Mouse(button)) = e.release_args() {
+            Some(button as u64 as f64)
         } else {
-            rt.push::<Option<f64>>(None);
-        }
-        Ok(())
+            Option::<f64>::None
+        }.push_var())
     } else {
         Err(NO_EVENT.into())
     }
 }
 
-pub fn text_arg(rt: &mut Runtime) -> Result<(), String> {
+pub fn text_arg(_rt: &mut Runtime) -> Result<Variable, String> {
+    use dyon::embed::PushVariable;
+
     let e = unsafe { &*Current::<Option<Event>>::new() };
     if let &Some(ref e) = e {
-        if let Some(text) = e.text_args() {
-            rt.push(Some(text))
+        Ok(if let Some(text) = e.text_args() {
+            Some(text)
         } else {
-            rt.push::<Option<String>>(None);
-        }
-        Ok(())
+            Option::<String>::None
+        }.push_var())
     } else {
         Err(NO_EVENT.into())
     }
 }
 
-pub fn window_title<W: Any + AdvancedWindow>(rt: &mut Runtime) -> Result<(), String> {
+pub fn window_title<W: Any + AdvancedWindow>(_rt: &mut Runtime) -> Result<Variable, String> {
     let window = unsafe { &mut *Current::<W>::new() };
-    rt.push(Arc::new(window.get_title()));
-    Ok(())
+    Ok(Variable::Str(Arc::new(window.get_title())))
 }
 
 #[allow(non_snake_case)]
@@ -464,14 +418,13 @@ pub fn set_window__title<W: Any + AdvancedWindow>(rt: &mut Runtime) -> Result<()
 }
 
 #[allow(non_snake_case)]
-pub fn width__font_size_string<C: Any + CharacterCache>(rt: &mut Runtime) -> Result<(), String> {
+pub fn width__font_size_string<C: Any + CharacterCache>(rt: &mut Runtime) -> Result<Variable, String> {
     let glyphs = unsafe { &mut *Current::<Vec<C>>::new() };
     let s: Arc<String> = rt.pop()?;
     let size: u32 = rt.pop()?;
     let font: usize = rt.pop()?;
-    rt.push(glyphs.get_mut(font).ok_or_else(|| "Font index outside range".to_owned())?
-        .width(size, &s).map_err(|_| "Could not get glyph".to_owned())?);
-    Ok(())
+    Ok(Variable::f64(glyphs.get_mut(font).ok_or_else(|| "Font index outside range".to_owned())?
+        .width(size, &s).map_err(|_| "Could not get glyph".to_owned())?))
 }
 
 /// Wraps font names as a current object.
@@ -480,18 +433,18 @@ pub struct FontNames(pub Vec<Arc<String>>);
 /// Wraps image names as a current object.
 pub struct ImageNames(pub Vec<Arc<String>>);
 
-pub fn font_names(rt: &mut Runtime) -> Result<(), String> {
+dyon_fn!{fn font_names() -> Vec<Arc<String>> {
     let font_names = unsafe { &*Current::<FontNames>::new() };
-    rt.push(font_names.0.clone());
-    Ok(())
-}
+    font_names.0.clone()
+}}
 
 /// Helper method for loading fonts.
-pub fn load_font<F, T>(rt: &mut Runtime) -> Result<(), String>
+pub fn load_font<F, T>(rt: &mut Runtime) -> Result<Variable, String>
     where F: 'static + Clone, T: 'static +
           CreateTexture<F> + UpdateTexture<F> +
           graphics::ImageSize
 {
+    use dyon::embed::PushVariable;
     use texture::{Filter, TextureSettings};
     use graphics::glyph_cache::rusttype::GlyphCache;
 
@@ -500,88 +453,71 @@ pub fn load_font<F, T>(rt: &mut Runtime) -> Result<(), String>
     let factory = unsafe { &*Current::<F>::new() };
     let file: Arc<String> = rt.pop()?;
     let texture_settings = TextureSettings::new().filter(Filter::Nearest);
-    match GlyphCache::<'static, F, T>::new(&**file, factory.clone(), texture_settings) {
+    Ok(match GlyphCache::<'static, F, T>::new(&**file, factory.clone(), texture_settings) {
         Ok(x) => {
             let id = glyphs.len();
             glyphs.push(x);
             font_names.0.push(file.clone());
-            rt.push(Ok::<usize, Arc<String>>(id));
+            Ok::<usize, Arc<String>>(id).push_var()
         }
         Err(err) => {
-            rt.push(Err::<usize, Arc<String>>(Arc::new(format!("{}", err))));
+            Err::<usize, Arc<String>>(Arc::new(format!("{}", err))).push_var()
         }
-    }
-    Ok(())
+    })
 }
 
-pub fn image_names(rt: &mut Runtime) -> Result<(), String> {
+dyon_fn!{fn image_names() -> Vec<Arc<String>> {
     let image_names = unsafe { &*Current::<ImageNames>::new() };
-    rt.push(image_names.0.clone());
-    Ok(())
-}
+    image_names.0.clone()
+}}
 
-pub fn load_image(rt: &mut Runtime) -> Result<(), String> {
+dyon_fn!{fn load_image(file: Arc<String>) -> Result<usize, Arc<String>> {
     use image::{open, RgbaImage};
 
     let images = unsafe { &mut *Current::<Vec<RgbaImage>>::new() };
     let image_names = unsafe { &mut *Current::<ImageNames>::new() };
-    let file: Arc<String> = rt.pop()?;
     match open(&**file) {
         Ok(x) => {
             let id = images.len();
             images.push(x.to_rgba());
             image_names.0.push(file.clone());
-            rt.push(Ok::<usize, Arc<String>>(id));
+            Ok(id)
         }
         Err(err) => {
-            rt.push(Err::<usize, Arc<String>>(Arc::new(format!("{}", err))));
+            Err(Arc::new(format!("{}", err)))
         }
     }
-    Ok(())
-}
+}}
 
-#[allow(non_snake_case)]
-pub fn create_image__name_size(rt: &mut Runtime) -> Result<(), String> {
+dyon_fn!{fn create_image__name_size(name: Arc<String>, size: Vec4) -> usize {
     use image::RgbaImage;
 
     let image_names = unsafe { &mut *Current::<ImageNames>::new() };
     let images = unsafe { &mut *Current::<Vec<RgbaImage>>::new() };
     let id = images.len();
-    let size: [f64; 2] = rt.pop_vec4()?;
-    let name: Arc<String> = rt.pop()?;
+    let size: [f64; 2] = size.into();
     image_names.0.push(name);
     images.push(RgbaImage::new(size[0] as u32, size[1] as u32));
-    rt.push(id);
-    Ok(())
-}
+    id
+}}
 
-#[allow(non_snake_case)]
-pub fn save__image_file(rt: &mut Runtime) -> Result<(), String> {
+dyon_fn!{fn save__image_file(id: usize, file: Arc<String>) -> Result<Arc<String>, Arc<String>> {
     use image::RgbaImage;
 
     let images = unsafe { &mut *Current::<Vec<RgbaImage>>::new() };
-    let file: Arc<String> = rt.pop()?;
-    let id: usize = rt.pop()?;
     match images[id].save(&**file) {
-        Ok(_) => {
-            rt.push(Ok::<Arc<String>, Arc<String>>(file));
-        },
-        Err(err) => {
-            rt.push(Err::<Arc<String>, Arc<String>>(Arc::new(format!("{}", err))));
-        }
+        Ok(_) => Ok(file),
+        Err(err) => Err(Arc::new(format!("{}", err))),
     }
-    Ok(())
-}
+}}
 
-pub fn image_size(rt: &mut Runtime) -> Result<(), String> {
+dyon_fn!{fn image_size(id: usize) -> Vec4 {
     use image::RgbaImage;
 
     let images = unsafe { &*Current::<Vec<RgbaImage>>::new() };
-    let id: usize = rt.pop()?;
     let (w, h) = images[id].dimensions();
-    rt.push_vec4([w as f64, h as f64]);
-    Ok(())
-}
+    [w as f64, h as f64].into()
+}}
 
 #[allow(non_snake_case)]
 pub fn pxl__image_pos_color(rt: &mut Runtime) -> Result<(), String> {
@@ -612,7 +548,7 @@ pub fn pxl__image_pos_color(rt: &mut Runtime) -> Result<(), String> {
 }
 
 #[allow(non_snake_case)]
-pub fn pxl__image_pos(rt: &mut Runtime) -> Result<(), String> {
+pub fn pxl__image_pos(rt: &mut Runtime) -> Result<Variable, String> {
     use image::RgbaImage;
 
     let images = unsafe { &*Current::<Vec<RgbaImage>>::new() };
@@ -630,13 +566,12 @@ pub fn pxl__image_pos(rt: &mut Runtime) -> Result<(), String> {
         return Err("Pixel is out of image bounds".into());
     }
     let color = image.get_pixel(x, y).0;
-    rt.push_vec4([
+    Ok(Variable::Vec4([
         color[0] as f32 / 255.0,
         color[1] as f32 / 255.0,
         color[2] as f32 / 255.0,
         color[3] as f32 / 255.0
-    ]);
-    Ok(())
+    ]))
 }
 
 /// Helper method for drawing 2D in Dyon environment.
