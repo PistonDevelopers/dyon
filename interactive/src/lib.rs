@@ -479,7 +479,7 @@ dyon_fn!{fn load_image(file: Arc<String>) -> Result<usize, Arc<String>> {
     match open(&**file) {
         Ok(x) => {
             let id = images.len();
-            images.push(x.to_rgba());
+            images.push(x.to_rgba8());
             image_names.0.push(file.clone());
             Ok(id)
         }
