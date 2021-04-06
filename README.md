@@ -1,7 +1,7 @@
 # dyon
 A rusty dynamically typed scripting language
 
-[Tutorial](http://www.piston.rs/dyon-tutorial/)  
+[Tutorial](https://www.piston.rs/dyon-tutorial/)  
 [Dyon-Interactive](https://github.com/PistonDevelopers/dyon/tree/master/interactive)  
 [Dyon Snippets](https://github.com/PistonDevelopers/dyon_snippets)  
 [/r/dyon](https://www.reddit.com/r/dyon/)
