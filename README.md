@@ -72,6 +72,7 @@ dyonrun <file.dyon>
 - [In-types concurrency](https://github.com/PistonDevelopers/dyon/issues/495) `receiver := in foo` with [for-in loops](https://github.com/PistonDevelopers/dyon/issues/520) `for x in a {print(x[0]}`
 - [Closures](https://github.com/PistonDevelopers/dyon/issues/314) `\(x) = x + 1`
 - [Grab expressions](https://github.com/PistonDevelopers/dyon/issues/316) `\(x) = (grab a) + x`
+- [Lazy invariants](https://github.com/PistonDevelopers/dyon/issues/640) `fn intersect(a: [] => [], b: [] => []) -> [] { ... }`
 - [4D vectors with `f32` precision `(x, y, z, w)`](https://github.com/PistonDevelopers/dyon/issues/144)
 - [4D matrices with `f32` precision `mat4 {1,2,3,4; 5,6,7,8; 9,10,11,12; 13,14,15,16}`](https://github.com/PistonDevelopers/dyon/issues/557)
 - [Un-loop for 4D vectors](https://github.com/PistonDevelopers/dyon/issues/201) `vec4 i f(i)`
