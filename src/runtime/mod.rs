@@ -316,13 +316,13 @@ impl Runtime {
 
     /// Pops variable from stack.
     pub fn pop<T: embed::PopVariable>(&mut self) -> Result<T, String> {
-        let v = self.stack.pop().unwrap_or_else(|| panic!(TINVOTS));
+        let v = self.stack.pop().unwrap_or_else(|| panic!("{}", TINVOTS));
         T::pop_var(self, self.resolve(&v))
     }
 
     /// Pops 4D vector from stack.
     pub fn pop_vec4<T: embed::ConvertVec4>(&mut self) -> Result<T, String> {
-        let v = self.stack.pop().unwrap_or_else(|| panic!(TINVOTS));
+        let v = self.stack.pop().unwrap_or_else(|| panic!("{}", TINVOTS));
         match self.resolve(&v) {
             &Variable::Vec4(val) => Ok(T::from(val)),
             x => Err(self.expected(x, "vec4"))
@@ -331,7 +331,7 @@ impl Runtime {
 
     /// Pops 4D matrix from stack.
     pub fn pop_mat4<T: embed::ConvertMat4>(&mut self) -> Result<T, String> {
-        let v = self.stack.pop().unwrap_or_else(|| panic!(TINVOTS));
+        let v = self.stack.pop().unwrap_or_else(|| panic!("{}", TINVOTS));
         match self.resolve(&v) {
             &Variable::Mat4(ref val) => Ok(T::from(**val)),
             x => Err(self.expected(x, "mat4"))
