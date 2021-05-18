@@ -125,5 +125,12 @@ fn zoom__fact(fact: f64) ~ mut draw_list: [[]] {
     push(mut draw_list, ["rel_transform__rx_ry", (fact, 0), (0, fact)])
 }
 
+fn zoom__fact_at(fact: f64, at: vec4) ~ mut draw_list: [[]] {
+    push(mut draw_list, ["rel_transform__rx_ry",
+        (fact, 0, (1 - fact) * x(at)),
+        (0, fact, (1 - fact) * y(at)),
+    ])
+}
+
     ])
 }
