@@ -99,3 +99,9 @@ fn rotate__rad(ang: f64) ~ mut draw_list: [[]] {
     push(mut draw_list, ["rel_transform__rx_ry", (cos(ang), -sin(ang)), (sin(ang), cos(ang))])
 }
 
+fn rotate__rad_at(ang: f64, pos: vec4) ~ mut draw_list: [[]] {
+    push(mut draw_list, ["rel_transform__rx_ry",
+        (cos(ang), -sin(ang), -x(pos) * cos(ang) + y(pos) * sin(ang) + x(pos)),
+        (sin(ang), cos(ang), -x(pos) * sin(ang) - y(pos) * cos(ang) + y(pos)),
+    ])
+}
