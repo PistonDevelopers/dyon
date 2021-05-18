@@ -95,3 +95,7 @@ fn translate__pos(pos: vec4) ~ mut draw_list: [[]] {
     push(mut draw_list, ["rel_transform__rx_ry", (1, 0, x(pos)), (0, 1, y(pos))])
 }
 
+fn rotate__rad(ang: f64) ~ mut draw_list: [[]] {
+    push(mut draw_list, ["rel_transform__rx_ry", (cos(ang), -sin(ang)), (sin(ang), cos(ang))])
+}
+
