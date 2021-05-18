@@ -88,6 +88,5 @@ fn image__texture_pos_alpha_srccorner_srcsize
 }
 
 fn transform__rx_ry(rx: vec4, ry: vec4) ~ mut draw_list: [[]] {
-    push(mut draw_list, ["transform__rx_ry", rx, rx])
-} 
-
+    push(mut draw_list, ["transform__rx_ry", rx, ry])
+}
