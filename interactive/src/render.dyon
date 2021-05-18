@@ -132,5 +132,9 @@ fn zoom__fact_at(fact: f64, at: vec4) ~ mut draw_list: [[]] {
     ])
 }
 
+fn shear__pos(pos: vec4) ~ mut draw_list: [[]] {
+    push(mut draw_list, ["rel_transform__rx_ry", (1, x(pos)), (y(pos), 1)])
+}
+
     ])
 }
