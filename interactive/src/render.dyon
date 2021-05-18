@@ -91,6 +91,10 @@ fn transform__rx_ry(rx: vec4, ry: vec4) ~ mut draw_list: [[]] {
     push(mut draw_list, ["transform__rx_ry", rx, ry])
 }
 
+fn rel_transform__rx_ry(rx: vec4, ry: vec4) ~ mut draw_list: [[]] {
+    push(mut draw_list, ["rel_transform__rx_ry", rx, ry])
+}
+
 fn translate__pos(pos: vec4) ~ mut draw_list: [[]] {
     push(mut draw_list, ["rel_transform__rx_ry", (1, 0, x(pos)), (0, 1, y(pos))])
 }
