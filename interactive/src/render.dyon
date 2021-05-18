@@ -86,3 +86,59 @@ fn image__texture_pos_alpha_srccorner_srcsize
         texture, pos, (xyz #ffffff, alpha), srccorner, srcsize
     ])
 }
+
+fn transform__rx_ry(rx: vec4, ry: vec4) ~ mut draw_list: [[]] {
+    push(mut draw_list, ["transform__rx_ry", rx, ry])
+}
+
+fn rel_transform__rx_ry(rx: vec4, ry: vec4) ~ mut draw_list: [[]] {
+    push(mut draw_list, ["rel_transform__rx_ry", rx, ry])
+}
+
+fn translate__pos(pos: vec4) ~ mut draw_list: [[]] {
+    push(mut draw_list, ["rel_transform__rx_ry", (1, 0, x(pos)), (0, 1, y(pos))])
+}
+
+fn rotate__rad(ang: f64) ~ mut draw_list: [[]] {
+    push(mut draw_list, ["rel_transform__rx_ry", (cos(ang), -sin(ang)), (sin(ang), cos(ang))])
+}
+
+fn rotate__rad_at(ang: f64, pos: vec4) ~ mut draw_list: [[]] {
+    push(mut draw_list, ["rel_transform__rx_ry",
+        (cos(ang), -sin(ang), -x(pos) * cos(ang) + y(pos) * sin(ang) + x(pos)),
+        (sin(ang), cos(ang), -x(pos) * sin(ang) - y(pos) * cos(ang) + y(pos)),
+    ])
+}
+
+fn scale__pos(pos: vec4) ~ mut draw_list: [[]] {
+    push(mut draw_list, ["rel_transform__rx_ry", (x(pos), 0), (0, y(pos))])
+}
+
+fn scale__pos_at(pos: vec4, at: vec4) ~ mut draw_list: [[]] {
+    push(mut draw_list, ["rel_transform__rx_ry",
+        (x(pos), 0, (1 - x(pos)) * x(at)),
+        (0, y(pos), (1 - y(pos)) * y(at)),
+    ])
+}
+
+fn zoom__fact(fact: f64) ~ mut draw_list: [[]] {
+    push(mut draw_list, ["rel_transform__rx_ry", (fact, 0), (0, fact)])
+}
+
+fn zoom__fact_at(fact: f64, at: vec4) ~ mut draw_list: [[]] {
+    push(mut draw_list, ["rel_transform__rx_ry",
+        (fact, 0, (1 - fact) * x(at)),
+        (0, fact, (1 - fact) * y(at)),
+    ])
+}
+
+fn shear__pos(pos: vec4) ~ mut draw_list: [[]] {
+    push(mut draw_list, ["rel_transform__rx_ry", (1, x(pos)), (y(pos), 1)])
+}
+
+fn shear__pos_at(pos: vec4, at: vec4) ~ mut draw_list: [[]] {
+    push(mut draw_list, ["rel_transform__rx_ry",
+        (1, x(pos), x(pos) * -y(at)),
+        (y(pos), 1, y(pos) * -x(at)),
+    ])
+}
