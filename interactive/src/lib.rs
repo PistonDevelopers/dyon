@@ -608,6 +608,16 @@ pub fn draw_2d<C: CharacterCache<Texture = G::Texture>, G: Graphics>(
                         ];
                         transform = math::multiply(c.transform, t);
                     }
+                    "rel_transform__rx_ry" => {
+                        // Changes transform matrix.
+                        let rx: [f32; 4] = rt.var_vec4(&it[1])?;
+                        let ry: [f32; 4] = rt.var_vec4(&it[2])?;
+                        let t: Matrix2d = [
+                            [rx[0] as f64, rx[1] as f64, rx[2] as f64],
+                            [ry[0] as f64, ry[1] as f64, ry[2] as f64]
+                        ];
+                        transform = math::multiply(transform, t);
+                    }
                     "line__color_radius_from_to" => {
                         let color: [f32; 4] = rt.var_vec4(&it[1])?;
                         let radius: f64 = rt.var(&it[2])?;
