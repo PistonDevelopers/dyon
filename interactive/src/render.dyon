@@ -114,3 +114,9 @@ fn scale__pos(pos: vec4) ~ mut draw_list: [[]] {
     push(mut draw_list, ["rel_transform__rx_ry", (x(pos), 0), (0, y(pos))])
 }
 
+fn scale__pos_at(pos: vec4, at: vec4) ~ mut draw_list: [[]] {
+    push(mut draw_list, ["rel_transform__rx_ry",
+        (x(pos), 0, x(pos) * -x(at) + x(at)),
+        (0, y(pos), y(pos) * -y(at) + x(at)),
+    ])
+}
