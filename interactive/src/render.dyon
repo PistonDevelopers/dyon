@@ -121,5 +121,9 @@ fn scale__pos_at(pos: vec4, at: vec4) ~ mut draw_list: [[]] {
     ])
 }
 
+fn zoom__fact(fact: f64) ~ mut draw_list: [[]] {
+    push(mut draw_list, ["rel_transform__rx_ry", (fact, 0), (0, fact)])
+}
+
     ])
 }
