@@ -1,7 +1,7 @@
 [package]
 name = "piston-dyon_interactive"
 version = "0.41.0"
-authors = ["Sven Nilsen <bvssvni@gmail.com>"]
+authors = ["Sven Nilsen <bvssvni@gmail.com>","TheSlam <32799244+salmmanfred@users.noreply.github.com>"]
 description = "A library for interactive coding with the Piston game engine"
 keywords = ["script", "scripting", "game", "language", "piston"]
 license = "MIT OR Apache-2.0"
