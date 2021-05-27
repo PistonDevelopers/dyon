@@ -168,6 +168,10 @@ fn draw_state_clip() ~ mut draw_list: [[]] {
     push(mut draw_list, ["draw_state_clip"])
 }
 
+fn draw_state_increment() ~ mut draw_list: [[]] {
+    push(mut draw_list, ["draw_state_increment"])
+}
+
 fn blend_alpha() ~ mut draw_list: [[]] {
     push(mut draw_list, ["blend_alpha"])
 }
