@@ -714,6 +714,9 @@ pub fn draw_2d<C: CharacterCache<Texture = G::Texture>, G: Graphics>(
                     "draw_state_inside" => {
                         c.draw_state = DrawState::new_inside();
                     }
+                    "draw_state_outside" => {
+                        c.draw_state = DrawState::new_outside();
+                    }
                     "blend_alpha" => {
                         c.draw_state.blend = Some(Blend::Alpha);
                     }

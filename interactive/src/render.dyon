@@ -176,6 +176,10 @@ fn draw_state_inside() ~ mut draw_list: [[]] {
     push(mut draw_list, ["draw_state_inside"])
 }
 
+fn draw_state_outside() ~ mut draw_list: [[]] {
+    push(mut draw_list, ["draw_state_outside"])
+}
+
 fn blend_alpha() ~ mut draw_list: [[]] {
     push(mut draw_list, ["blend_alpha"])
 }
