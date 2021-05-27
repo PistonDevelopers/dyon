@@ -584,7 +584,7 @@ pub fn draw_2d<C: CharacterCache<Texture = G::Texture>, G: Graphics>(
 ) -> Result<(), String> {
     use self::graphics::*;
     use self::graphics::types::Matrix2d;
-    use self::graphics::draw_state::Blend;
+    use self::graphics::draw_state::{Blend, Stencil};
 
     let draw_list = rt.stack.pop().expect(TINVOTS);
     let arr = rt.resolve(&draw_list);
@@ -741,6 +741,10 @@ pub fn draw_2d<C: CharacterCache<Texture = G::Texture>, G: Graphics>(
                             size[0] as u32,
                             size[1] as u32
                         ]);
+                    }
+                    "stencil__clip" => {
+                        let v: f64 = rt.var(&it[1])?;
+                        c.draw_state.stencil = Some(Stencil::Clip(v as u8));
                     }
                     _ => {}
                 }

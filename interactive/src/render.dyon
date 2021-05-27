@@ -204,3 +204,7 @@ fn scissor__corner_size(corner: vec4, size: vec4)
 ~ mut draw_list: [[]] {
     push(mut draw_list, ["scissor__corner_size", corner, size])
 }
+
+fn stencil__clip(v: f64) ~ mut draw_list: [[]] {
+    push(mut draw_list, ["stencil__clip", v])
+}
