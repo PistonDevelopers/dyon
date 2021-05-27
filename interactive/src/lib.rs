@@ -584,7 +584,7 @@ pub fn draw_2d<C: CharacterCache<Texture = G::Texture>, G: Graphics>(
 ) -> Result<(), String> {
     use self::graphics::*;
     use self::graphics::types::Matrix2d;
-    use self::graphics::draw_state::Blend;
+    use self::graphics::draw_state::{Blend, Stencil};
 
     let draw_list = rt.stack.pop().expect(TINVOTS);
     let arr = rt.resolve(&draw_list);
@@ -598,6 +598,14 @@ pub fn draw_2d<C: CharacterCache<Texture = G::Texture>, G: Graphics>(
                     "clear" => {
                         let color: [f32; 4] = rt.var_vec4(&it[1])?;
                         clear(color, g);
+                    }
+                    "clear__stencil" => {
+                        let v: f64 = rt.var(&it[1])?;
+                        g.clear_stencil(v as u8);
+                    }
+                    "clear__colorbuf" => {
+                        let color: [f32; 4] = rt.var_vec4(&it[1])?;
+                        g.clear_color(color);
                     }
                     "transform__rx_ry" => {
                         // Changes transform matrix.
@@ -705,6 +713,18 @@ pub fn draw_2d<C: CharacterCache<Texture = G::Texture>, G: Graphics>(
                     "draw_state_alpha" => {
                         c.draw_state = DrawState::new_alpha();
                     }
+                    "draw_state_clip" => {
+                        c.draw_state = DrawState::new_clip();
+                    }
+                    "draw_state_increment" => {
+                        c.draw_state = DrawState::new_increment();
+                    }
+                    "draw_state_inside" => {
+                        c.draw_state = DrawState::new_inside();
+                    }
+                    "draw_state_outside" => {
+                        c.draw_state = DrawState::new_outside();
+                    }
                     "blend_alpha" => {
                         c.draw_state.blend = Some(Blend::Alpha);
                     }
@@ -719,6 +739,31 @@ pub fn draw_2d<C: CharacterCache<Texture = G::Texture>, G: Graphics>(
                     }
                     "blend_invert" => {
                         c.draw_state.blend = Some(Blend::Invert);
+                    }
+                    "scissor__corner_size" => {
+                        let corner: [f64; 2] = rt.var_vec4(&it[1])?;
+                        let size: [f64; 2] = rt.var_vec4(&it[2])?;
+                        c.draw_state.scissor = Some([
+                            corner[0] as u32,
+                            corner[1] as u32,
+                            size[0] as u32,
+                            size[1] as u32
+                        ]);
+                    }
+                    "stencil__clip" => {
+                        let v: f64 = rt.var(&it[1])?;
+                        c.draw_state.stencil = Some(Stencil::Clip(v as u8));
+                    }
+                    "stencil__inside" => {
+                        let v: f64 = rt.var(&it[1])?;
+                        c.draw_state.stencil = Some(Stencil::Inside(v as u8));
+                    }
+                    "stencil__outside" => {
+                        let v: f64 = rt.var(&it[1])?;
+                        c.draw_state.stencil = Some(Stencil::Outside(v as u8));
+                    }
+                    "stencil_increment" => {
+                        c.draw_state.stencil = Some(Stencil::Increment);
                     }
                     _ => {}
                 }

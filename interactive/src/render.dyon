@@ -2,9 +2,17 @@
 Wraps a nice interface around draw list commands.
 */
 
-fn clear__color(color: vec4)
-~ mut draw_list: [[]] {
+/// Clears both color buffer and stencil buffer.
+fn clear__color(color: vec4) ~ mut draw_list: [[]] {
     push(mut draw_list, ["clear", color])
+}
+
+fn clear__colorbuf(color: vec4) ~ mut draw_list: [[]] {
+    push(mut draw_list, ["clear__colorbuf", color])
+}
+
+fn clear__stencil(v: f64) ~ mut draw_list: [[]] {
+    push(mut draw_list, ["clear__stencil", v])
 }
 
 fn line__color_radius_from_to(color: vec4, radius: f64, from: vec4, to: vec4)
@@ -164,6 +172,22 @@ fn draw_state_alpha() ~ mut draw_list: [[]] {
     push(mut draw_list, ["draw_state_alpha"])
 }
 
+fn draw_state_clip() ~ mut draw_list: [[]] {
+    push(mut draw_list, ["draw_state_clip"])
+}
+
+fn draw_state_increment() ~ mut draw_list: [[]] {
+    push(mut draw_list, ["draw_state_increment"])
+}
+
+fn draw_state_inside() ~ mut draw_list: [[]] {
+    push(mut draw_list, ["draw_state_inside"])
+}
+
+fn draw_state_outside() ~ mut draw_list: [[]] {
+    push(mut draw_list, ["draw_state_outside"])
+}
+
 fn blend_alpha() ~ mut draw_list: [[]] {
     push(mut draw_list, ["blend_alpha"])
 }
@@ -182,4 +206,25 @@ fn blend_multiply() ~ mut draw_list: [[]] {
 
 fn blend_invert() ~ mut draw_list: [[]] {
     push(mut draw_list, ["blend_invert"])
+}
+
+fn scissor__corner_size(corner: vec4, size: vec4)
+~ mut draw_list: [[]] {
+    push(mut draw_list, ["scissor__corner_size", corner, size])
+}
+
+fn stencil__clip(v: f64) ~ mut draw_list: [[]] {
+    push(mut draw_list, ["stencil__clip", v])
+}
+
+fn stencil__inside(v: f64) ~ mut draw_list: [[]] {
+    push(mut draw_list, ["stencil__inside", v])
+}
+
+fn stencil__outside(v: f64) ~ mut draw_list: [[]] {
+    push(mut draw_list, ["stencil__outside", v])
+}
+
+fn stencil_increment() ~ mut draw_list: [[]] {
+    push(mut draw_list, ["stencil_increment"])
 }
