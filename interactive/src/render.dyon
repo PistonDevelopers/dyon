@@ -164,6 +164,10 @@ fn blend_alpha() ~ mut draw_list: [[]] {
     push(mut draw_list, ["blend_alpha"])
 }
 
+fn blend_add() ~ mut draw_list: [[]] {
+    push(mut draw_list, ["blend_add"])
+}
+
 fn blend_invert() ~ mut draw_list: [[]] {
     push(mut draw_list, ["blend_invert"])
 }
