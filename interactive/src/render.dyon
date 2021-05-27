@@ -40,6 +40,11 @@ fn ellipse__border_color_corner_size_resolution
                          radius, color, corner, size, resolution])
 }
 
+fn ellipse__border_color_corner_size(radius: f64, color: vec4, corner: vec4, size: vec4)
+~ mut draw_list: [[]] {
+    ellipse(border: radius, color: color, corner: corner, size: size, resolution: 16)
+}
+
 fn circle__color_center_radius(color: vec4, center: vec4, radius: f64)
 ~ mut draw_list: [[]] {
     width := 2 * radius
