@@ -2,6 +2,7 @@
 Wraps a nice interface around draw list commands.
 */
 
+/// Clears both color buffer and stencil buffer.
 fn clear__color(color: vec4) ~ mut draw_list: [[]] {
     push(mut draw_list, ["clear", color])
 }
