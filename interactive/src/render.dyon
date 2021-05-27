@@ -2,9 +2,12 @@
 Wraps a nice interface around draw list commands.
 */
 
-fn clear__color(color: vec4)
-~ mut draw_list: [[]] {
+fn clear__color(color: vec4) ~ mut draw_list: [[]] {
     push(mut draw_list, ["clear", color])
+}
+
+fn clear__stencil(v: f64) ~ mut draw_list: [[]] {
+    push(mut draw_list, ["clear__stencil", v])
 }
 
 fn line__color_radius_from_to(color: vec4, radius: f64, from: vec4, to: vec4)

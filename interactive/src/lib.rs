@@ -599,6 +599,10 @@ pub fn draw_2d<C: CharacterCache<Texture = G::Texture>, G: Graphics>(
                         let color: [f32; 4] = rt.var_vec4(&it[1])?;
                         clear(color, g);
                     }
+                    "clear__stencil" => {
+                        let v: f64 = rt.var(&it[1])?;
+                        g.clear_stencil(v as u8);
+                    }
                     "transform__rx_ry" => {
                         // Changes transform matrix.
                         let rx: [f32; 4] = rt.var_vec4(&it[1])?;
