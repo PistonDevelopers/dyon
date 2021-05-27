@@ -711,6 +711,9 @@ pub fn draw_2d<C: CharacterCache<Texture = G::Texture>, G: Graphics>(
                     "blend_lighter" => {
                         c.draw_state.blend = Some(Blend::Lighter);
                     }
+                    "blend_multiply" => {
+                        c.draw_state.blend = Some(Blend::Multiply);
+                    }
                     "blend_invert" => {
                         c.draw_state.blend = Some(Blend::Invert);
                     }

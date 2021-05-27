@@ -172,6 +172,10 @@ fn blend_lighter() ~ mut draw_list: [[]] {
     push(mut draw_list, ["blend_lighter"])
 }
 
+fn blend_multiply() ~ mut draw_list: [[]] {
+    push(mut draw_list, ["blend_multiply"])
+}
+
 fn blend_invert() ~ mut draw_list: [[]] {
     push(mut draw_list, ["blend_invert"])
 }
