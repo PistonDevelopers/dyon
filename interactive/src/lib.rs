@@ -702,8 +702,11 @@ pub fn draw_2d<C: CharacterCache<Texture = G::Texture>, G: Graphics>(
                             transform.trans(pos[0], pos[1]), g
                         );
                     }
-                    "blend_alpha" => {
+                    "draw_state_alpha" => {
                         c.draw_state = DrawState::new_alpha();
+                    }
+                    "blend_alpha" => {
+                        c.draw_state.blend = Some(Blend::Alpha);
                     }
                     "blend_add" => {
                         c.draw_state.blend = Some(Blend::Add);
