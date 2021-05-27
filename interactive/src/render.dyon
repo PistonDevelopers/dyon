@@ -159,3 +159,7 @@ fn shear__pos_at(pos: vec4, at: vec4) ~ mut draw_list: [[]] {
         (y(pos), 1, y(pos) * -x(at)),
     ])
 }
+
+fn blend_invert() ~ mut draw_list: [[]] {
+    push(mut draw_list, ["blend_invert"])
+}
