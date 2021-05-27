@@ -705,6 +705,9 @@ pub fn draw_2d<C: CharacterCache<Texture = G::Texture>, G: Graphics>(
                     "draw_state_alpha" => {
                         c.draw_state = DrawState::new_alpha();
                     }
+                    "draw_state_clip" => {
+                        c.draw_state = DrawState::new_clip();
+                    }
                     "blend_alpha" => {
                         c.draw_state.blend = Some(Blend::Alpha);
                     }
