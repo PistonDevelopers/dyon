@@ -6,6 +6,10 @@ fn clear__color(color: vec4) ~ mut draw_list: [[]] {
     push(mut draw_list, ["clear", color])
 }
 
+fn clear__colorbuf(color: vec4) ~ mut draw_list: [[]] {
+    push(mut draw_list, ["clear__colorbuf", color])
+}
+
 fn clear__stencil(v: f64) ~ mut draw_list: [[]] {
     push(mut draw_list, ["clear__stencil", v])
 }
