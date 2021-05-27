@@ -17,9 +17,9 @@ fn rectangle__color_corner_size(color: vec4, corner: vec4, size: vec4)
     push(mut draw_list, ["rectangle__color_corner_size", color, corner, size])
 }
 
-fn rectangle_border__color_radius_corner_size(color: vec4, radius: f64, corner: vec4, size: vec4)
+fn rectangle__border_color_corner_size(radius: f64, color: vec4, corner: vec4, size: vec4)
 ~ mut draw_list: [[]] {
-    push(mut draw_list, ["rectangle_border__color_corner_size", color, radius, corner, size])
+    push(mut draw_list, ["rectangle__border_color_corner_size", radius, color, corner, size])
 }
 
 fn ellipse__color_corner_size(color: vec4, corner: vec4, size: vec4)
@@ -31,6 +31,13 @@ fn ellipse__color_corner_size_resolution
 (color: vec4, corner: vec4, size: vec4, resolution: f64)
 ~ mut draw_list: [[]] {
     push(mut draw_list, ["ellipse__color_corner_size_resolution", color, corner, size, resolution])
+}
+
+fn ellipse__border_color_corner_size_resolution
+(radius: f64, color: vec4, corner: vec4, size: vec4, resolution: f64)
+~ mut draw_list: [[]] {
+    push(mut draw_list, ["ellipse__border_color_corner_size_resolution",
+                         radius, color, corner, size, resolution])
 }
 
 fn circle__color_center_radius(color: vec4, center: vec4, radius: f64)
