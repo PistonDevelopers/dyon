@@ -216,3 +216,7 @@ fn stencil__inside(v: f64) ~ mut draw_list: [[]] {
 fn stencil__outside(v: f64) ~ mut draw_list: [[]] {
     push(mut draw_list, ["stencil__outside", v])
 }
+
+fn stencil_increment() ~ mut draw_list: [[]] {
+    push(mut draw_list, ["stencil_increment"])
+}
