@@ -732,6 +732,16 @@ pub fn draw_2d<C: CharacterCache<Texture = G::Texture>, G: Graphics>(
                     "blend_invert" => {
                         c.draw_state.blend = Some(Blend::Invert);
                     }
+                    "scissor__corner_size" => {
+                        let corner: [f64; 2] = rt.var_vec4(&it[1])?;
+                        let size: [f64; 2] = rt.var_vec4(&it[2])?;
+                        c.draw_state.scissor = Some([
+                            corner[0] as u32,
+                            corner[1] as u32,
+                            size[0] as u32,
+                            size[1] as u32
+                        ]);
+                    }
                     _ => {}
                 }
             }

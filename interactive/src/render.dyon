@@ -199,3 +199,8 @@ fn blend_multiply() ~ mut draw_list: [[]] {
 fn blend_invert() ~ mut draw_list: [[]] {
     push(mut draw_list, ["blend_invert"])
 }
+
+fn scissor__corner_size(corner: vec4, size: vec4)
+~ mut draw_list: [[]] {
+    push(mut draw_list, ["scissor__corner_size", corner, size])
+}
