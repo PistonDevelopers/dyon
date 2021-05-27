@@ -746,6 +746,10 @@ pub fn draw_2d<C: CharacterCache<Texture = G::Texture>, G: Graphics>(
                         let v: f64 = rt.var(&it[1])?;
                         c.draw_state.stencil = Some(Stencil::Clip(v as u8));
                     }
+                    "stencil__inside" => {
+                        let v: f64 = rt.var(&it[1])?;
+                        c.draw_state.stencil = Some(Stencil::Inside(v as u8));
+                    }
                     _ => {}
                 }
             }
