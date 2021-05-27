@@ -579,11 +579,12 @@ pub fn draw_2d<C: CharacterCache<Texture = G::Texture>, G: Graphics>(
     rt: &mut Runtime,
     glyphs: &mut Vec<C>,
     textures: &mut Vec<G::Texture>,
-    c: Context,
+    mut c: Context,
     g: &mut G
 ) -> Result<(), String> {
     use self::graphics::*;
     use self::graphics::types::Matrix2d;
+    use self::graphics::draw_state::Blend;
 
     let draw_list = rt.stack.pop().expect(TINVOTS);
     let arr = rt.resolve(&draw_list);
@@ -623,13 +624,17 @@ pub fn draw_2d<C: CharacterCache<Texture = G::Texture>, G: Graphics>(
                         let radius: f64 = rt.var(&it[2])?;
                         let from: [f64; 2] = rt.var_vec4(&it[3])?;
                         let to: [f64; 2] = rt.var_vec4(&it[4])?;
-                        line(color, radius, [from[0], from[1], to[0], to[1]], transform, g);
+                        Line::new(color, radius)
+                            .draw([from[0], from[1], to[0], to[1]],
+                                  &c.draw_state, transform, g);
                     }
                     "rectangle__color_corner_size" => {
                         let color: [f32; 4] = rt.var_vec4(&it[1])?;
                         let corner: [f64; 2] = rt.var_vec4(&it[2])?;
                         let size: [f64; 2] = rt.var_vec4(&it[3])?;
-                        rectangle(color, [corner[0], corner[1], size[0], size[1]], transform, g);
+                        Rectangle::new(color)
+                            .draw([corner[0], corner[1], size[0], size[1]],
+                                  &c.draw_state, transform, g);
                     }
                     "rectangle__border_color_corner_size" => {
                         let radius: f64 = rt.var(&it[1])?;
@@ -696,6 +701,21 @@ pub fn draw_2d<C: CharacterCache<Texture = G::Texture>, G: Graphics>(
                             &c.draw_state,
                             transform.trans(pos[0], pos[1]), g
                         );
+                    }
+                    "blend_alpha" => {
+                        c.draw_state = DrawState::new_alpha();
+                    }
+                    "blend_add" => {
+                        c.draw_state.blend = Some(Blend::Add);
+                    }
+                    "blend_lighter" => {
+                        c.draw_state.blend = Some(Blend::Lighter);
+                    }
+                    "blend_multiply" => {
+                        c.draw_state.blend = Some(Blend::Multiply);
+                    }
+                    "blend_invert" => {
+                        c.draw_state.blend = Some(Blend::Invert);
                     }
                     _ => {}
                 }
