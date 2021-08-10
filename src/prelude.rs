@@ -1,10 +1,10 @@
-use std::sync::Arc;
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use ast;
+use Lazy;
 use Module;
 use Type;
-use Lazy;
 
 /// Argument lifetime constraint.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -85,7 +85,9 @@ impl Dfn {
     }
 
     /// Returns `true` if the function returns something.
-    pub fn returns(&self) -> bool { self.ret != Type::Void }
+    pub fn returns(&self) -> bool {
+        self.ret != Type::Void
+    }
 }
 
 /// Stores a prelude, used to load standard intrinsics and type check new modules.
@@ -96,7 +98,9 @@ pub struct Prelude {
 }
 
 impl Default for Prelude {
-    fn default() -> Prelude {Prelude::new()}
+    fn default() -> Prelude {
+        Prelude::new()
+    }
 }
 
 impl Prelude {

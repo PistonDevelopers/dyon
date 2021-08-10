@@ -1,8 +1,8 @@
 use ast;
+use std::collections::HashMap;
+use std::sync::Arc;
 use Array;
 use Variable;
-use std::sync::Arc;
-use std::collections::HashMap;
 
 /// Performs a runtime lifetime check on arguments.
 pub fn check(f: &ast::Function, args: &Array) -> Result<(), String> {
@@ -14,7 +14,9 @@ pub fn check(f: &ast::Function, args: &Array) -> Result<(), String> {
         for (i, arg) in f.args.iter().enumerate() {
             if let Some(ref lt) = arg.lifetime {
                 if let Variable::Ref(_) = args[i] {
-                    if &**lt == "return" { continue; }
+                    if &**lt == "return" {
+                        continue;
+                    }
                 } else {
                     return Err(format!("Expected reference in argument {}", i));
                 }
@@ -28,13 +30,17 @@ pub fn check(f: &ast::Function, args: &Array) -> Result<(), String> {
                         match (left, right) {
                             (None, _) => continue,
                             (Some(_), None) => {
-                                return Err(format!("Argument {} does not outlive argument {}",
-                                    i, ind));
+                                return Err(format!(
+                                    "Argument {} does not outlive argument {}",
+                                    i, ind
+                                ));
                             }
                             (Some(a), Some(b)) => {
                                 if a <= b {
-                                    return Err(format!("Argument {} does not outlive argument {}",
-                                        i, ind));
+                                    return Err(format!(
+                                        "Argument {} does not outlive argument {}",
+                                        i, ind
+                                    ));
                                 } else {
                                     continue;
                                 }

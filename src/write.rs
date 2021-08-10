@@ -1,6 +1,6 @@
+use ast;
 use piston_meta::json;
 use std::io;
-use ast;
 use Runtime;
 use Variable;
 
@@ -9,7 +9,7 @@ use std::sync::Arc;
 #[derive(Copy, Clone)]
 pub(crate) enum EscapeString {
     Json,
-    None
+    None,
 }
 
 pub(crate) fn write_variable<W>(
@@ -19,19 +19,16 @@ pub(crate) fn write_variable<W>(
     escape_string: EscapeString,
     tabs: u32,
 ) -> Result<(), io::Error>
-    where W: io::Write
+where
+    W: io::Write,
 {
     match *v {
-        Variable::Str(ref t) => {
-            match escape_string {
-                EscapeString::Json => {
-                    json::write_string(w, t)?;
-                }
-                EscapeString::None => {
-                    write!(w, "{}", t)?
-                }
+        Variable::Str(ref t) => match escape_string {
+            EscapeString::Json => {
+                json::write_string(w, t)?;
             }
-        }
+            EscapeString::None => write!(w, "{}", t)?,
+        },
         Variable::F64(x, _) => {
             write!(w, "{}", x)?;
         }
@@ -49,11 +46,25 @@ pub(crate) fn write_variable<W>(
             }
         }
         Variable::Mat4(ref m) => {
-            write!(w, "mat4 {{{},{},{},{}; {},{},{},{}; {},{},{},{}; {},{},{},{}}}",
-                m[0][0], m[1][0], m[2][0], m[3][0],
-                m[0][1], m[1][1], m[2][1], m[3][1],
-                m[0][2], m[1][2], m[2][2], m[3][2],
-                m[0][3], m[1][3], m[2][3], m[3][3]
+            write!(
+                w,
+                "mat4 {{{},{},{},{}; {},{},{},{}; {},{},{},{}; {},{},{},{}}}",
+                m[0][0],
+                m[1][0],
+                m[2][0],
+                m[3][0],
+                m[0][1],
+                m[1][1],
+                m[2][1],
+                m[3][1],
+                m[0][2],
+                m[1][2],
+                m[2][2],
+                m[3][2],
+                m[0][3],
+                m[1][3],
+                m[2][3],
+                m[3][3]
             )?;
         }
         Variable::Bool(x, _) => {
@@ -93,7 +104,7 @@ pub(crate) fn write_variable<W>(
                 if k.chars().all(|c| c.is_alphanumeric() || c == '_') {
                     write!(w, "{}: ", k)?;
                 } else {
-                    json::write_string(w, &k)?;
+                    json::write_string(w, k)?;
                     write!(w, ": ")?;
                 }
                 write_variable(w, rt, v, EscapeString::Json, tabs)?;
@@ -114,32 +125,26 @@ pub(crate) fn write_variable<W>(
             }
             write!(w, "]")?;
         }
-        Variable::Option(ref opt) => {
-            match *opt {
-                None => {
-                    write!(w, "none()")?
-                }
-                Some(ref v) => {
-                    write!(w, "some(")?;
-                    write_variable(w, rt, v, EscapeString::Json, tabs)?;
-                    write!(w, ")")?;
-                }
+        Variable::Option(ref opt) => match *opt {
+            None => write!(w, "none()")?,
+            Some(ref v) => {
+                write!(w, "some(")?;
+                write_variable(w, rt, v, EscapeString::Json, tabs)?;
+                write!(w, ")")?;
             }
-        }
-        Variable::Result(ref res) => {
-            match *res {
-                Err(ref err) => {
-                    write!(w, "err(")?;
-                    write_variable(w, rt, &err.message, EscapeString::Json, tabs)?;
-                    write!(w, ")")?;
-                }
-                Ok(ref ok) => {
-                    write!(w, "ok(")?;
-                    write_variable(w, rt, ok, EscapeString::Json, tabs)?;
-                    write!(w, ")")?;
-                }
+        },
+        Variable::Result(ref res) => match *res {
+            Err(ref err) => {
+                write!(w, "err(")?;
+                write_variable(w, rt, &err.message, EscapeString::Json, tabs)?;
+                write!(w, ")")?;
             }
-        }
+            Ok(ref ok) => {
+                write!(w, "ok(")?;
+                write_variable(w, rt, ok, EscapeString::Json, tabs)?;
+                write!(w, ")")?;
+            }
+        },
         Variable::Thread(_) => write!(w, "_thread")?,
         Variable::Return => write!(w, "_return")?,
         Variable::UnsafeRef(_) => write!(w, "_unsafe_ref")?,
@@ -166,7 +171,7 @@ fn write_closure<W: io::Write>(
     w: &mut W,
     rt: &Runtime,
     closure: &ast::Closure,
-    tabs: u32
+    tabs: u32,
 ) -> Result<(), io::Error> {
     write!(w, "\\(")?;
     for (i, arg) in closure.args.iter().enumerate() {
@@ -180,10 +185,7 @@ fn write_closure<W: io::Write>(
     Ok(())
 }
 
-fn write_arg<W: io::Write>(
-    w: &mut W,
-    arg: &ast::Arg
-) -> Result<(), io::Error> {
+fn write_arg<W: io::Write>(w: &mut W, arg: &ast::Arg) -> Result<(), io::Error> {
     write!(w, "{}: {}", arg.name, arg.ty.description())
 }
 
@@ -197,8 +199,9 @@ fn write_expr<W: io::Write>(
 
     match *expr {
         E::Item(ref item) => write_item(w, rt, item, tabs)?,
-        E::Variable(ref range_var) =>
-            write_variable(w, rt, &range_var.1, EscapeString::Json, tabs)?,
+        E::Variable(ref range_var) => {
+            write_variable(w, rt, &range_var.1, EscapeString::Json, tabs)?
+        }
         E::Link(ref link) => write_link(w, rt, link, tabs)?,
         E::Object(ref obj) => write_obj(w, rt, obj, tabs)?,
         E::Array(ref arr) => write_arr(w, rt, arr, tabs)?,
@@ -206,8 +209,13 @@ fn write_expr<W: io::Write>(
         E::Call(ref call) => write_call(w, rt, &call.info.name, &call.args, tabs)?,
         E::CallVoid(ref call) => write_call(w, rt, &call.info.name, &call.args, tabs)?,
         E::CallReturn(ref call) => write_call(w, rt, &call.info.name, &call.args, tabs)?,
-        E::CallBinOp(ref call) => write_call(w, rt, &call.info.name,
-                                             &[call.left.clone(), call.right.clone()], tabs)?,
+        E::CallBinOp(ref call) => write_call(
+            w,
+            rt,
+            &call.info.name,
+            &[call.left.clone(), call.right.clone()],
+            tabs,
+        )?,
         E::CallUnOp(ref call) => write_call(w, rt, &call.info.name, &[call.arg.clone()], tabs)?,
         E::CallLazy(ref call) => write_call(w, rt, &call.info.name, &call.args, tabs)?,
         E::CallLoaded(ref call) => write_call(w, rt, &call.info.name, &call.args, tabs)?,
@@ -326,13 +334,12 @@ fn write_expr<W: io::Write>(
         }
         E::Swizzle(ref swizzle) => write_swizzle(w, rt, swizzle, tabs)?,
         E::Closure(ref closure) => write_closure(w, rt, closure, tabs)?,
-        E::Grab(ref grab) =>write_grab(w, rt, grab, tabs)?,
+        E::Grab(ref grab) => write_grab(w, rt, grab, tabs)?,
         E::TryExpr(ref try_expr) => write_try_expr(w, rt, try_expr, tabs)?,
         E::CallClosure(ref call) => write_call_closure(w, rt, call, tabs)?,
         E::In(ref in_expr) => {
             write!(w, "in {}", in_expr.name)?;
-        }
-        // x => panic!("Unimplemented `{:#?}`", x),
+        } // x => panic!("Unimplemented `{:#?}`", x),
     }
     Ok(())
 }
@@ -341,10 +348,10 @@ fn write_norm<W: io::Write>(
     w: &mut W,
     rt: &Runtime,
     expr: &ast::Expression,
-    tabs: u32
+    tabs: u32,
 ) -> Result<(), io::Error> {
     write!(w, "|")?;
-    write_expr(w, rt, &expr, tabs)?;
+    write_expr(w, rt, expr, tabs)?;
     write!(w, "|")?;
     Ok(())
 }
@@ -369,7 +376,7 @@ fn write_block<W: io::Write>(
             for expr in &block.expressions {
                 write_tabs(w, tabs + 1)?;
                 write_expr(w, rt, expr, tabs + 1)?;
-                writeln!(w, "")?;
+                writeln!(w)?;
             }
             write_tabs(w, tabs)?;
             write!(w, "}}")?;
@@ -389,13 +396,14 @@ fn binop_needs_parens(op: ast::BinOp, expr: &ast::Expression, right: bool) -> bo
                     (ast::BINOP_PREC_MUL, ast::BINOP_PREC_ADD) => true,
                     (ast::BINOP_PREC_MUL, ast::BINOP_PREC_MUL) if right => true,
                     (ast::BINOP_PREC_ADD, ast::BINOP_PREC_ADD) if right => true,
-                    _ => false
-                    // TODO: Handle precedence for comparison operators.
+                    _ => false, // TODO: Handle precedence for comparison operators.
                 }
-            } else {false}
+            } else {
+                false
+            }
         }
         // TODO: Handle `E::CallVoid` etc.
-        _ => false
+        _ => false,
     }
 }
 
@@ -435,7 +443,7 @@ fn write_not<W: io::Write>(
     tabs: u32,
 ) -> Result<(), io::Error> {
     write!(w, "!")?;
-    write_expr(w, rt, &expr, tabs)
+    write_expr(w, rt, expr, tabs)
 }
 
 fn write_neg<W: io::Write>(
@@ -445,7 +453,7 @@ fn write_neg<W: io::Write>(
     tabs: u32,
 ) -> Result<(), io::Error> {
     write!(w, "-")?;
-    write_expr(w, rt, &expr, tabs)
+    write_expr(w, rt, expr, tabs)
 }
 
 fn write_item<W: io::Write>(
@@ -664,14 +672,12 @@ fn write_swizzle<W: io::Write>(
     swizzle: &ast::Swizzle,
     tabs: u32,
 ) -> Result<(), io::Error> {
-    let comp = |ind: usize| {
-        match ind {
-            0 => "x",
-            1 => "y",
-            2 => "z",
-            3 => "w",
-            _ => panic!("Wrong swizzle component"),
-        }
+    let comp = |ind: usize| match ind {
+        0 => "x",
+        1 => "y",
+        2 => "z",
+        3 => "w",
+        _ => panic!("Wrong swizzle component"),
     };
     write!(w, "{}", comp(swizzle.sw0))?;
     write!(w, "{}", comp(swizzle.sw1))?;
@@ -724,7 +730,9 @@ fn write_for<W: io::Write>(
 fn standard_binop(name: &Arc<String>, args: &[ast::Expression]) -> Option<ast::BinOp> {
     use ast::BinOp::*;
 
-    if args.len() != 2 {return None};
+    if args.len() != 2 {
+        return None;
+    };
 
     let name: &str = &**name;
     Some(match name {
@@ -744,7 +752,7 @@ fn standard_binop(name: &Arc<String>, args: &[ast::Expression]) -> Option<ast::B
         "greater_or_equal" => GreaterOrEqual,
         "equal" => Equal,
         "not_equal" => NotEqual,
-        _ => return None
+        _ => return None,
     })
 }
 
@@ -752,7 +760,7 @@ fn write_for_n<W: io::Write>(
     w: &mut W,
     rt: &Runtime,
     for_n: &ast::ForN,
-    tabs: u32
+    tabs: u32,
 ) -> Result<(), io::Error> {
     write!(w, "{} ", for_n.name)?;
     if let Some(ref start) = for_n.start {
@@ -773,7 +781,7 @@ fn write_for_in<W: io::Write>(
     w: &mut W,
     rt: &Runtime,
     for_in: &ast::ForIn,
-    tabs: u32
+    tabs: u32,
 ) -> Result<(), io::Error> {
     write!(w, "{} in ", for_in.name)?;
     write_expr(w, rt, &for_in.iter, tabs)?;
@@ -792,8 +800,11 @@ fn write_if<W: io::Write>(
     write_expr(w, rt, &if_expr.cond, tabs)?;
     write!(w, " ")?;
     write_block(w, rt, &if_expr.true_block, tabs)?;
-    for (else_if_cond, else_if_block) in if_expr.else_if_conds.iter()
-        .zip(if_expr.else_if_blocks.iter()) {
+    for (else_if_cond, else_if_block) in if_expr
+        .else_if_conds
+        .iter()
+        .zip(if_expr.else_if_blocks.iter())
+    {
         write!(w, " else if ")?;
         write_expr(w, rt, else_if_cond, tabs)?;
         write!(w, " ")?;

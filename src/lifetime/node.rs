@@ -1,11 +1,11 @@
-use std::sync::Arc;
-use range::Range;
-use super::piston_meta::MetaData;
-use super::piston_meta::bootstrap::Convert;
-use super::lt::{arg_lifetime, Lifetime};
 use super::kind::Kind;
+use super::lt::{arg_lifetime, Lifetime};
+use super::piston_meta::bootstrap::Convert;
+use super::piston_meta::MetaData;
 use super::ArgNames;
 use ast::{AssignOp, BinOp};
+use range::Range;
+use std::sync::Arc;
 use Lt;
 use Type;
 
@@ -50,8 +50,11 @@ pub(crate) struct Node {
 
 impl Node {
     pub fn name(&self) -> Option<&Arc<String>> {
-        if self.names.is_empty() { None }
-        else { Some(&self.names[0]) }
+        if self.names.is_empty() {
+            None
+        } else {
+            Some(&self.names[0])
+        }
     }
 
     pub fn rewrite_unop(i: usize, name: Arc<String>, nodes: &mut [Node]) {
@@ -139,19 +142,30 @@ impl Node {
 
     #[allow(dead_code)]
     pub fn print(&self, nodes: &[Node], indent: u32) {
-        for _ in 0..indent { print!(" ") }
-        println!("kind: {:?}, name: {:?}, type: {:?}, decl: {:?} {{",
-            self.kind, self.name(), self.ty, self.declaration);
+        for _ in 0..indent {
+            print!(" ")
+        }
+        println!(
+            "kind: {:?}, name: {:?}, type: {:?}, decl: {:?} {{",
+            self.kind,
+            self.name(),
+            self.ty,
+            self.declaration
+        );
         for &c in &self.children {
             nodes[c].print(nodes, indent + 1);
         }
-        for _ in 0..indent { print!(" ") }
+        for _ in 0..indent {
+            print!(" ")
+        }
         println!("}}")
     }
 
     pub fn find_child_by_kind(&self, nodes: &[Node], kind: Kind) -> Option<usize> {
         for &ch in &self.children {
-            if nodes[ch].kind == kind { return Some(ch); }
+            if nodes[ch].kind == kind {
+                return Some(ch);
+            }
         }
         None
     }
@@ -165,7 +179,7 @@ impl Node {
             match ty {
                 &Type::Option(ref ty) => (**ty).clone(),
                 &Type::Result(ref ty) => (**ty).clone(),
-                x => x.clone()
+                x => x.clone(),
             }
         } else {
             ty.clone()
@@ -176,27 +190,24 @@ impl Node {
         use super::kind::Kind::*;
 
         match self.kind {
-            Pow | Sum | SumIn | Prod | ProdIn | SumVec4 | Min | MinIn | Max | MaxIn |
-            Any | AnyIn | All | AllIn | LinkIn |
-            Vec4 | Mat4 | Vec4UnLoop | Swizzle |
-            Assign | For | ForN | ForIn | Link | LinkFor |
-            Closure | CallClosure | Grab | TryExpr | Norm | In => false,
+            Pow | Sum | SumIn | Prod | ProdIn | SumVec4 | Min | MinIn | Max | MaxIn | Any
+            | AnyIn | All | AllIn | LinkIn | Vec4 | Mat4 | Vec4UnLoop | Swizzle | Assign | For
+            | ForN | ForIn | Link | LinkFor | Closure | CallClosure | Grab | TryExpr | Norm
+            | In => false,
             Add | Mul | Compare => self.children.len() == 1,
-            _ => true
+            _ => true,
         }
     }
 
-    pub fn lifetime(
-        &self,
-        nodes: &[Node],
-        arg_names: &ArgNames
-    ) -> Option<Lifetime> {
-        if !self.has_lifetime() { return None; }
+    pub fn lifetime(&self, nodes: &[Node], arg_names: &ArgNames) -> Option<Lifetime> {
+        if !self.has_lifetime() {
+            return None;
+        }
         if let Some(declaration) = self.declaration {
             if self.kind == Kind::Item {
                 let arg = &nodes[declaration];
                 if arg.kind == Kind::Arg {
-                    return arg_lifetime(declaration, &arg, nodes, arg_names);
+                    return arg_lifetime(declaration, arg, nodes, arg_names);
                 } else if arg.kind == Kind::Current {
                     return Some(Lifetime::Current(declaration));
                 } else {
@@ -229,8 +240,8 @@ impl Node {
                 if returns_static {
                     return None;
                 }
-            } else if self.kind == Kind::Item
-                && self.name().map(|n| &**n == "return") == Some(true) {
+            } else if self.kind == Kind::Item && self.name().map(|n| &**n == "return") == Some(true)
+            {
                 return Some(Lifetime::Return(vec![]));
             }
         }
@@ -256,7 +267,7 @@ impl Node {
                 (_, Kind::Continue) => {}
                 (_, Kind::Sift) => {}
                 (_, Kind::SiftIn) => {}
-                (_, Kind::Iter) => { continue }
+                (_, Kind::Iter) => continue,
                 (_, Kind::SumVec4) => {}
                 (_, Kind::Sum) => {}
                 (_, Kind::SumIn) => {}
@@ -274,8 +285,8 @@ impl Node {
                 (_, Kind::Vec4UnLoop) => {}
                 (_, Kind::Vec4) => {}
                 (_, Kind::Mat4) => {}
-                (_, Kind::Start) => { continue }
-                (_, Kind::End) => { continue }
+                (_, Kind::Start) => continue,
+                (_, Kind::End) => continue,
                 (_, Kind::Assign) => {}
                 (_, Kind::Object) => {}
                 (_, Kind::KeyValue) => {}
@@ -288,15 +299,15 @@ impl Node {
                 (_, Kind::CallClosure) => {}
                 (_, Kind::Grab) => {}
                 (_, Kind::TryExpr) => {}
-                (_, Kind::Arg) => { continue }
-                (_, Kind::Current) => { continue }
-                (Kind::CallClosure, Kind::Item) => { continue }
+                (_, Kind::Arg) => continue,
+                (_, Kind::Current) => continue,
+                (Kind::CallClosure, Kind::Item) => continue,
                 (_, Kind::Item) => {}
                 (_, Kind::Norm) => {}
                 (_, Kind::Compare) => {
                     // The result of all compare operators does not depend
                     // on the lifetime of the arguments.
-                    continue
+                    continue;
                 }
                 (_, Kind::Left) => {}
                 (_, Kind::Right) => {}
@@ -314,29 +325,32 @@ impl Node {
                 (_, Kind::Cond) => {
                     // A condition controls the flow, but the result does not
                     // depend on its lifetime.
-                    continue
+                    continue;
                 }
                 (_, Kind::ElseIfCond) => {
                     // A condition controls the flow, but the result does not
                     // depend on its lifetime.
-                    continue
+                    continue;
                 }
                 (_, Kind::Fill) => {}
                 (_, Kind::N) => {
                     // The result of array fill does not depend on `n`.
-                    continue
+                    continue;
                 }
-                (Kind::Call, Kind::CallArg) | (Kind::CallClosure, Kind::CallArg) |
-                (Kind::CallArg, Kind::CallArg) => {
+                (Kind::Call, Kind::CallArg)
+                | (Kind::CallClosure, Kind::CallArg)
+                | (Kind::CallArg, Kind::CallArg) => {
                     // If there is no return lifetime on the declared argument,
                     // there is no need to check it, because the computed value
                     // does not depend on the lifetime of that argument.
                     if let Some(declaration) = self.declaration {
-                        if let Some(&arg) = nodes[declaration].children.iter()
+                        if let Some(&arg) = nodes[declaration]
+                            .children
+                            .iter()
                             .filter(|&&i| nodes[i].kind == Kind::Arg)
-                            .nth(call_arg_ind) {
-                            match arg_lifetime(arg, &nodes[arg],
-                                               nodes, arg_names) {
+                            .nth(call_arg_ind)
+                        {
+                            match arg_lifetime(arg, &nodes[arg], nodes, arg_names) {
                                 Some(Lifetime::Return(_)) => {}
                                 _ => {
                                     call_arg_ind += 1;
@@ -347,12 +361,17 @@ impl Node {
                     }
                     call_arg_ind += 1;
                 }
-                x => panic!("Unimplemented `{:?}`. \
-                        Perhaps you need add something to `Node::has_lifetime`?", x),
+                x => panic!(
+                    "Unimplemented `{:?}`. \
+                        Perhaps you need add something to `Node::has_lifetime`?",
+                    x
+                ),
             }
             let lifetime = match nodes[c].lifetime(nodes, arg_names) {
                 Some(lifetime) => lifetime,
-                None => { continue; }
+                None => {
+                    continue;
+                }
             };
             if min.is_none() || min.as_ref().map(|l| l < &lifetime) == Some(true) {
                 min = Some(lifetime);
@@ -364,20 +383,22 @@ impl Node {
 
 pub(crate) fn convert_meta_data(
     nodes: &mut Vec<Node>,
-    data: &[Range<MetaData>]
+    data: &[Range<MetaData>],
 ) -> Result<(), Range<String>> {
     let mut parents: Vec<usize> = vec![];
     let ignored = &mut vec![];
     let mut skip: Option<usize> = None;
     for (i, d) in data.iter().enumerate() {
         if let Some(j) = skip {
-            if j > i { continue; }
+            if j > i {
+                continue;
+            }
         }
         match d.data {
             MetaData::StartNode(ref kind_name) => {
                 let kind = match Kind::new(kind_name) {
                     Some(kind) => kind,
-                    None => return Err(d.range().wrap(format!("Unknown kind `{}`", kind_name)))
+                    None => return Err(d.range().wrap(format!("Unknown kind `{}`", kind_name))),
                 };
 
                 // Parse type information and put it in parent node.
@@ -402,15 +423,18 @@ pub(crate) fn convert_meta_data(
                     Kind::Sum | Kind::SumIn | Kind::Prod | Kind::ProdIn => Some(Type::F64),
                     Kind::Swizzle => Some(Type::F64),
                     Kind::Link | Kind::LinkFor => Some(Type::Link),
-                    Kind::Any | Kind::AnyIn | Kind::All | Kind::AllIn =>
-                        Some(Type::Secret(Box::new(Type::Bool))),
-                    Kind::Min | Kind::MinIn | Kind::Max | Kind::MaxIn =>
-                        Some(Type::Secret(Box::new(Type::F64))),
+                    Kind::Any | Kind::AnyIn | Kind::All | Kind::AllIn => {
+                        Some(Type::Secret(Box::new(Type::Bool)))
+                    }
+                    Kind::Min | Kind::MinIn | Kind::Max | Kind::MaxIn => {
+                        Some(Type::Secret(Box::new(Type::F64)))
+                    }
                     Kind::For | Kind::ForN => Some(Type::Void),
                     Kind::TyArg | Kind::TyRet => {
                         // Parse extra type information.
                         let convert = Convert::new(&data[i..]);
-                        if let Ok((range, val)) = Type::from_meta_data(kind_name, convert, ignored) {
+                        if let Ok((range, val)) = Type::from_meta_data(kind_name, convert, ignored)
+                        {
                             // Skip content of type meta data until end node.
                             skip = Some(range.next_offset() + i - 1);
                             Some(val)
@@ -418,10 +442,10 @@ pub(crate) fn convert_meta_data(
                             None
                         }
                     }
-                    _ => None
+                    _ => None,
                 };
 
-                let parent = parents.last().map(|i| *i);
+                let parent = parents.last().copied();
                 parents.push(nodes.len());
                 nodes.push(Node {
                     kind,
@@ -440,7 +464,7 @@ pub(crate) fn convert_meta_data(
                     declaration: None,
                     op: None,
                     binops: vec![],
-                    lts: vec![]
+                    lts: vec![],
                 });
             }
             MetaData::EndNode(_) => {
@@ -628,23 +652,22 @@ pub(crate) fn convert_meta_data(
                     _ => {}
                 }
             }
-            MetaData::F64(ref n, val) => {
-                match &***n {
-                    "num" => {
-                        let i = *parents.last().unwrap();
-                        nodes[i].ty = Some(Type::F64);
-                    }
-                    "grab_level" => {
-                        if val < 1.0 {
-                            return Err(d.range()
-                                        .wrap("Grab level must be at least `'1`".to_string()));
-                        }
-                        let i = *parents.last().unwrap();
-                        nodes[i].grab_level = val as u16;
-                    }
-                    _ => {}
+            MetaData::F64(ref n, val) => match &***n {
+                "num" => {
+                    let i = *parents.last().unwrap();
+                    nodes[i].ty = Some(Type::F64);
                 }
-            }
+                "grab_level" => {
+                    if val < 1.0 {
+                        return Err(d
+                            .range()
+                            .wrap("Grab level must be at least `'1`".to_string()));
+                    }
+                    let i = *parents.last().unwrap();
+                    nodes[i].grab_level = val as u16;
+                }
+                _ => {}
+            },
         }
     }
     Ok(())

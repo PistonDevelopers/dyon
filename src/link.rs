@@ -1,5 +1,5 @@
-use std::sync::Arc;
 use std::fmt;
+use std::sync::Arc;
 
 use Variable;
 
@@ -14,7 +14,7 @@ const STR: u64 = 0x3;
 /// Stores link memory in chunks of 1024 bytes.
 pub struct Block {
     data: [u64; BLOCK_SIZE],
-    tys: [u64; 4]
+    tys: [u64; 4],
 }
 
 impl Block {
@@ -35,14 +35,8 @@ impl Block {
         match self.tys[i] >> (j * 2) & 0x3 {
             EMPTY => panic!("Reading beyond end"),
             BOOL => Variable::bool(self.data[k] != 0),
-            F64 => {
-                Variable::f64(f64::from_bits(self.data[k]))
-            }
-            STR => {
-                Variable::Str(unsafe {
-                    transmute::<&u64, &Arc<String>>(&self.data[k])
-                }.clone())
-            }
+            F64 => Variable::f64(f64::from_bits(self.data[k])),
+            STR => Variable::Str(unsafe { transmute::<&u64, &Arc<String>>(&self.data[k]) }.clone()),
             _ => panic!("Invalid type"),
         }
     }
@@ -68,7 +62,7 @@ impl Block {
                 self.tys[i] &= !(0x3 << (j * 2));
                 // Sets new bits.
                 self.tys[i] |= F64 << (j * 2);
-                self.data[k] = unsafe { transmute::<f64, u64>(val) };
+                self.data[k] = val.to_bits();
             }
             Variable::Str(ref s) => {
                 // Reset bits.
@@ -77,7 +71,7 @@ impl Block {
                 self.tys[i] |= STR << (j * 2);
                 self.data[k] = unsafe { transmute::<Arc<String>, usize>(s.clone()) as u64 };
             }
-            _ => panic!("Expected `str`, `f64`, `bool`")
+            _ => panic!("Expected `str`, `f64`, `bool`"),
         }
     }
 }
@@ -96,15 +90,17 @@ impl Clone for Block {
                     // Arc<String>
                     unsafe {
                         data[k] = transmute::<Arc<String>, usize>(
-                            transmute::<&usize, &Arc<String>>(
-                                &(self.data[k] as usize)
-                            ).clone()) as u64;
+                            transmute::<&usize, &Arc<String>>(&(self.data[k] as usize)).clone(),
+                        ) as u64;
                     }
                 }
                 _ => {}
             }
         }
-        Block {data, tys: self.tys}
+        Block {
+            data,
+            tys: self.tys,
+        }
     }
 }
 
@@ -119,9 +115,7 @@ impl Drop for Block {
                 EMPTY => break,
                 STR => {
                     // Arc<String>
-                    unsafe {
-                        drop(transmute::<usize, Arc<String>>(self.data[k] as usize))
-                    }
+                    unsafe { drop(transmute::<usize, Arc<String>>(self.data[k] as usize)) }
                 }
                 _ => {}
             }
@@ -159,21 +153,22 @@ pub struct Link {
 }
 
 impl Default for Link {
-    fn default() -> Link {Link::new()}
+    fn default() -> Link {
+        Link::new()
+    }
 }
 
 impl Link {
     /// Creates a new link.
     pub fn new() -> Link {
-        Link {
-            slices: vec![]
-        }
+        Link { slices: vec![] }
     }
 
     /// Gets the first item of the link.
     pub fn head(&self) -> Option<Box<Variable>> {
-        if self.slices.is_empty() { None }
-        else {
+        if self.slices.is_empty() {
+            None
+        } else {
             let first = &self.slices[0];
             if first.start < first.end {
                 Some(Box::new(first.block.var(first.start)))
@@ -191,15 +186,18 @@ impl Link {
             } else {
                 None
             }
-        } else { None }
+        } else {
+            None
+        }
     }
 
     /// Gets the tail of the link.
     ///
     /// The tail is the whole link except the first item.
     pub fn tail(&self) -> Link {
-        if self.slices.is_empty() { Link::new() }
-        else {
+        if self.slices.is_empty() {
+            Link::new()
+        } else {
             let first = &self.slices[0];
             let mut l = Link::new();
             // No danger of overflow since `BLOCK_SIZE = 124`.
@@ -228,22 +226,26 @@ impl Link {
                 l.slices.push(Slice {
                     block: last.block.clone(),
                     start: last.start,
-                    end: last.end - 1
+                    end: last.end - 1,
                 })
             }
             l
-        } else { Link::new() }
+        } else {
+            Link::new()
+        }
     }
 
     /// Returns `true` if the link is empty.
-    pub fn is_empty(&self) -> bool { self.slices.len() == 0 }
+    pub fn is_empty(&self) -> bool {
+        self.slices.len() == 0
+    }
 
     /// Adds another link.
     pub fn add(&self, other: &Link) -> Link {
         let mut slices = Vec::with_capacity(self.slices.len() + other.slices.len());
         slices.extend_from_slice(&self.slices);
         slices.extend_from_slice(&other.slices);
-        Link {slices}
+        Link { slices }
     }
 
     /// Pushes a variable to the link.
@@ -251,9 +253,7 @@ impl Link {
         use crate::Variable::*;
 
         match *v {
-            Bool(_, _) |
-            F64(_, _) |
-            Str(_) => {
+            Bool(_, _) | F64(_, _) | Str(_) => {
                 if !self.slices.is_empty() {
                     let last = self.slices.last_mut().unwrap();
                     if (last.end as usize) < BLOCK_SIZE {
@@ -277,7 +277,7 @@ impl Link {
                 }
                 Ok(())
             }
-            _ => Err("Expected `bool`, `f64` or `str`".into())
+            _ => Err("Expected `bool`, `f64` or `str`".into()),
         }
     }
 }

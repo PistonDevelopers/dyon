@@ -1,11 +1,11 @@
 //! Dyon Abstract Syntax Tree (AST).
 
-use std::collections::HashMap;
-use std::sync::{self, Arc};
-use std::cell::Cell;
-use range::Range;
 use piston_meta::bootstrap::Convert;
 use piston_meta::MetaData;
+use range::Range;
+use std::cell::Cell;
+use std::collections::HashMap;
+use std::sync::{self, Arc};
 
 use FnIndex;
 use Module;
@@ -22,7 +22,7 @@ pub fn convert(
     source: Arc<String>,
     data: &[Range<MetaData>],
     ignored: &mut Vec<Range>,
-    module: &mut Module
+    module: &mut Module,
 ) -> Result<(), ()> {
     let mut convert = Convert::new(data);
 
@@ -42,7 +42,8 @@ pub fn convert(
 
     loop {
         if let Ok((range, function)) =
-        Function::from_meta_data(&namespace, &file, &source, "fn", convert, ignored) {
+            Function::from_meta_data(&namespace, &file, &source, "fn", convert, ignored)
+        {
             convert.update(range);
             module.register(function);
         } else if convert.remaining_data_len() > 0 {
@@ -77,7 +78,9 @@ pub struct UseLookup {
 }
 
 impl Default for UseLookup {
-    fn default() -> UseLookup {UseLookup::new()}
+    fn default() -> UseLookup {
+        UseLookup::new()
+    }
 }
 
 impl UseLookup {
@@ -93,7 +96,9 @@ impl UseLookup {
         let mut aliases = HashMap::new();
         // First, add all glob imports.
         for use_import in &uses.use_imports {
-            if !use_import.fns.is_empty() {continue;}
+            if !use_import.fns.is_empty() {
+                continue;
+            }
             if !aliases.contains_key(&use_import.alias) {
                 aliases.insert(use_import.alias.clone(), HashMap::new());
             }
@@ -111,20 +116,27 @@ impl UseLookup {
         }
         // Second, add specific functions, which shadows glob imports.
         for use_import in &uses.use_imports {
-            if use_import.fns.is_empty() {continue;}
+            if use_import.fns.is_empty() {
+                continue;
+            }
             if !aliases.contains_key(&use_import.alias) {
                 aliases.insert(use_import.alias.clone(), HashMap::new());
             }
             let fns = aliases.get_mut(&use_import.alias).unwrap();
             for use_fn in &use_import.fns {
                 for (i, f) in module.functions.iter().enumerate().rev() {
-                    if *f.namespace != use_import.names {continue;}
+                    if *f.namespace != use_import.names {
+                        continue;
+                    }
                     if f.name == use_fn.0 {
-                        fns.insert(use_fn.1.as_ref().unwrap_or(&use_fn.0).clone(),
-                                   FnAlias::Loaded(i));
-                    } else if f.name.len() > use_fn.0.len() &&
-                              f.name.starts_with(&**use_fn.0) &&
-                              f.name.as_bytes()[use_fn.0.len()] == b'(' {
+                        fns.insert(
+                            use_fn.1.as_ref().unwrap_or(&use_fn.0).clone(),
+                            FnAlias::Loaded(i),
+                        );
+                    } else if f.name.len() > use_fn.0.len()
+                        && f.name.starts_with(&**use_fn.0)
+                        && f.name.as_bytes()[use_fn.0.len()] == b'('
+                    {
                         // A function with mutable information.
                         let mut name: Arc<String> = use_fn.1.as_ref().unwrap_or(&use_fn.0).clone();
                         Arc::make_mut(&mut name).push_str(&f.name.as_str()[use_fn.0.len()..]);
@@ -132,13 +144,18 @@ impl UseLookup {
                     }
                 }
                 for (i, f) in module.ext_prelude.iter().enumerate().rev() {
-                    if *f.namespace != use_import.names {continue;}
+                    if *f.namespace != use_import.names {
+                        continue;
+                    }
                     if f.name == use_fn.0 {
-                        fns.insert(use_fn.1.as_ref().unwrap_or(&use_fn.0).clone(),
-                                   FnAlias::External(i));
-                    } else if f.name.len() > use_fn.0.len() &&
-                              f.name.starts_with(&**use_fn.0) &&
-                              f.name.as_bytes()[use_fn.0.len()] == b'(' {
+                        fns.insert(
+                            use_fn.1.as_ref().unwrap_or(&use_fn.0).clone(),
+                            FnAlias::External(i),
+                        );
+                    } else if f.name.len() > use_fn.0.len()
+                        && f.name.starts_with(&**use_fn.0)
+                        && f.name.as_bytes()[use_fn.0.len()] == b'('
+                    {
                         // A function with mutable information.
                         let mut name: Arc<String> = use_fn.1.as_ref().unwrap_or(&use_fn.0).clone();
                         Arc::make_mut(&mut name).push_str(&f.name.as_str()[use_fn.0.len()..]);
@@ -147,7 +164,7 @@ impl UseLookup {
                 }
             }
         }
-        UseLookup {aliases}
+        UseLookup { aliases }
     }
 
     /// This is called from lifetime/type checker.
@@ -156,7 +173,9 @@ impl UseLookup {
         let mut aliases = HashMap::new();
         // First, add all glob imports.
         for use_import in &uses.use_imports {
-            if !use_import.fns.is_empty() {continue;}
+            if !use_import.fns.is_empty() {
+                continue;
+            }
             if !aliases.contains_key(&use_import.alias) {
                 aliases.insert(use_import.alias.clone(), HashMap::new());
             }
@@ -169,20 +188,27 @@ impl UseLookup {
         }
         // Second, add specific functions, which shadows glob imports.
         for use_import in &uses.use_imports {
-            if use_import.fns.is_empty() {continue;}
+            if use_import.fns.is_empty() {
+                continue;
+            }
             if !aliases.contains_key(&use_import.alias) {
                 aliases.insert(use_import.alias.clone(), HashMap::new());
             }
             let fns = aliases.get_mut(&use_import.alias).unwrap();
             for use_fn in &use_import.fns {
                 for (i, f) in prelude.namespaces.iter().enumerate().rev() {
-                    if *f.0 != use_import.names {continue;}
+                    if *f.0 != use_import.names {
+                        continue;
+                    }
                     if f.1 == use_fn.0 {
-                        fns.insert(use_fn.1.as_ref().unwrap_or(&use_fn.0).clone(),
-                                   FnAlias::Loaded(i));
-                    } else if f.1.len() > use_fn.0.len() &&
-                              f.1.starts_with(&**use_fn.0) &&
-                              f.1.as_bytes()[use_fn.0.len()] == b'(' {
+                        fns.insert(
+                            use_fn.1.as_ref().unwrap_or(&use_fn.0).clone(),
+                            FnAlias::Loaded(i),
+                        );
+                    } else if f.1.len() > use_fn.0.len()
+                        && f.1.starts_with(&**use_fn.0)
+                        && f.1.as_bytes()[use_fn.0.len()] == b'('
+                    {
                         // A function with mutable information.
                         let mut name: Arc<String> = use_fn.1.as_ref().unwrap_or(&use_fn.0).clone();
                         Arc::make_mut(&mut name).push_str(&f.1.as_str()[use_fn.0.len()..]);
@@ -191,7 +217,7 @@ impl UseLookup {
                 }
             }
         }
-        UseLookup {aliases}
+        UseLookup { aliases }
     }
 }
 
@@ -208,7 +234,7 @@ impl Namespace {
     /// Creates namespace from meta data.
     pub fn from_meta_data(
         mut convert: Convert,
-        ignored: &mut Vec<Range>
+        ignored: &mut Vec<Range>,
     ) -> Result<(Range, Namespace), ()> {
         let start = convert;
         let node = "ns";
@@ -230,9 +256,12 @@ impl Namespace {
             }
         }
 
-        Ok((convert.subtract(start), Namespace {
-            names: Arc::new(names)
-        }))
+        Ok((
+            convert.subtract(start),
+            Namespace {
+                names: Arc::new(names),
+            },
+        ))
     }
 }
 
@@ -247,7 +276,7 @@ impl Uses {
     /// Creates uses from meta data.
     pub fn from_meta_data(
         mut convert: Convert,
-        ignored: &mut Vec<Range>
+        ignored: &mut Vec<Range>,
     ) -> Result<(Range, Uses), ()> {
         let start = convert;
         let node = "uses";
@@ -269,7 +298,7 @@ impl Uses {
             }
         }
 
-        Ok((convert.subtract(start), Uses {use_imports}))
+        Ok((convert.subtract(start), Uses { use_imports }))
     }
 }
 
@@ -288,7 +317,7 @@ impl UseImport {
     /// Create use import from meta data.
     pub fn from_meta_data(
         mut convert: Convert,
-        ignored: &mut Vec<Range>
+        ignored: &mut Vec<Range>,
     ) -> Result<(Range, UseImport), ()> {
         let start = convert;
         let node = "use";
@@ -326,11 +355,7 @@ impl UseImport {
         }
 
         let alias = alias.ok_or(())?;
-        Ok((convert.subtract(start), UseImport {
-            names,
-            fns,
-            alias,
-        }))
+        Ok((convert.subtract(start), UseImport { names, fns, alias }))
     }
 }
 
@@ -362,7 +387,7 @@ pub struct Function {
     /// List of senders that receive function input by creating an in-type.
     pub senders: Arc<(
         sync::atomic::AtomicBool,
-        sync::Mutex<Vec<sync::mpsc::Sender<Variable>>>
+        sync::Mutex<Vec<sync::mpsc::Sender<Variable>>>,
     )>,
 }
 
@@ -374,10 +399,10 @@ impl Function {
         source: &Arc<String>,
         node: &str,
         mut convert: Convert,
-        ignored: &mut Vec<Range>
+        ignored: &mut Vec<Range>,
     ) -> Result<(Range, Function), ()> {
-        use std::sync::Mutex;
         use std::sync::atomic::AtomicBool;
+        use std::sync::Mutex;
 
         let start = convert;
         let start_range = convert.start_node(node)?;
@@ -397,32 +422,33 @@ impl Function {
             } else if let Ok((range, val)) = convert.meta_string("name") {
                 convert.update(range);
                 name = Some(val);
-            } else if let Ok((range, val, lazy)) = Arg::from_meta_data(
-                    file, source, convert, ignored) {
+            } else if let Ok((range, val, lazy)) =
+                Arg::from_meta_data(file, source, convert, ignored)
+            {
                 convert.update(range);
                 args.push(val);
                 lazy_inv.push(lazy);
-            } else if let Ok((range, val)) = Current::from_meta_data(
-                    convert, ignored) {
+            } else if let Ok((range, val)) = Current::from_meta_data(convert, ignored) {
                 convert.update(range);
                 currents.push(val);
             } else if let Ok((range, val)) = convert.meta_bool("returns") {
                 convert.update(range);
                 ret = Some(if val { Type::Any } else { Type::Void })
-            } else if let Ok((range, val)) = Type::from_meta_data(
-                    "ret_type", convert, ignored) {
+            } else if let Ok((range, val)) = Type::from_meta_data("ret_type", convert, ignored) {
                 convert.update(range);
                 ret = Some(val);
-            } else if let Ok((range, val)) = Block::from_meta_data(
-                    file, source, "block", convert, ignored) {
+            } else if let Ok((range, val)) =
+                Block::from_meta_data(file, source, "block", convert, ignored)
+            {
                 convert.update(range);
                 block = Some(val);
-            } else if let Ok((range, val)) = Expression::from_meta_data(
-                    file, source, "expr", convert, ignored) {
+            } else if let Ok((range, val)) =
+                Expression::from_meta_data(file, source, "expr", convert, ignored)
+            {
                 convert.update(range);
                 expr = Some(val);
                 ret = Some(Type::Any);
-            } else if let Ok(_) = convert.start_node("ty") {
+            } else if convert.start_node("ty").is_ok() {
                 // Ignore extra type information,
                 // since this is only used by type checker.
                 let range = convert.ignore();
@@ -441,7 +467,7 @@ impl Function {
                 let source_range = expr.source_range();
                 Block {
                     expressions: vec![Expression::Return(Box::new(expr))],
-                    source_range
+                    source_range,
                 }
             }
         };
@@ -451,7 +477,9 @@ impl Function {
             name_plus_args.push('(');
             let mut first = true;
             for arg in &args {
-                if !first { name_plus_args.push(','); }
+                if !first {
+                    name_plus_args.push(',');
+                }
                 name_plus_args.push_str(if arg.mutable { "mut" } else { "_" });
                 first = false;
             }
@@ -460,33 +488,40 @@ impl Function {
         }
         let ret = ret.ok_or(())?;
         // Remove empty lazy invariants.
-        while let Some(true) = lazy_inv.last().map(|lz| lz.len() == 0) {
+        while let Some(true) = lazy_inv.last().map(|lz| lz.is_empty()) {
             lazy_inv.pop();
         }
-        Ok((convert.subtract(start), Function {
-            namespace: namespace.clone(),
-            resolved: Arc::new(AtomicBool::new(false)),
-            name,
-            file: file.clone(),
-            source: source.clone(),
-            args,
-            lazy_inv,
-            currents,
-            block,
-            ret,
-            source_range: convert.source(start).unwrap(),
-            senders: Arc::new((AtomicBool::new(false), Mutex::new(vec![]))),
-        }))
+        Ok((
+            convert.subtract(start),
+            Function {
+                namespace: namespace.clone(),
+                resolved: Arc::new(AtomicBool::new(false)),
+                name,
+                file: file.clone(),
+                source: source.clone(),
+                args,
+                lazy_inv,
+                currents,
+                block,
+                ret,
+                source_range: convert.source(start).unwrap(),
+                senders: Arc::new((AtomicBool::new(false), Mutex::new(vec![]))),
+            },
+        ))
     }
 
     /// Returns `true` if the function returns something.
-    pub fn returns(&self) -> bool { self.ret != Type::Void }
+    pub fn returns(&self) -> bool {
+        self.ret != Type::Void
+    }
 
     fn resolve_locals(&mut self, relative: usize, module: &Module, use_lookup: &UseLookup) {
         use std::sync::atomic::Ordering;
 
         // Ensure sequential order just to be safe.
-        if self.resolved.load(Ordering::SeqCst) { return; }
+        if self.resolved.load(Ordering::SeqCst) {
+            return;
+        }
         let mut stack: Vec<Option<Arc<String>>> = vec![];
         let mut closure_stack: Vec<usize> = vec![];
         if self.returns() {
@@ -499,7 +534,8 @@ impl Function {
         for current in &self.currents {
             stack.push(Some(current.name.clone()));
         }
-        self.block.resolve_locals(relative, &mut stack, &mut closure_stack, module, use_lookup);
+        self.block
+            .resolve_locals(relative, &mut stack, &mut closure_stack, module, use_lookup);
         self.resolved.store(true, Ordering::SeqCst);
     }
 }
@@ -530,7 +566,7 @@ impl Closure {
         source: &Arc<String>,
         node: &str,
         mut convert: Convert,
-        ignored: &mut Vec<Range>
+        ignored: &mut Vec<Range>,
     ) -> Result<(Range, Closure), ()> {
         let start = convert;
         let start_range = convert.start_node(node)?;
@@ -544,23 +580,22 @@ impl Closure {
             if let Ok(range) = convert.end_node(node) {
                 convert.update(range);
                 break;
-            } else if let Ok((range, val, _)) = Arg::from_meta_data(
-                    file, source, convert, ignored) {
+            } else if let Ok((range, val, _)) = Arg::from_meta_data(file, source, convert, ignored)
+            {
                 convert.update(range);
                 args.push(val);
-            } else if let Ok((range, val)) = Current::from_meta_data(
-                    convert, ignored) {
+            } else if let Ok((range, val)) = Current::from_meta_data(convert, ignored) {
                 convert.update(range);
                 currents.push(val);
             } else if let Ok((range, val)) = convert.meta_bool("returns") {
                 convert.update(range);
                 ret = Some(if val { Type::Any } else { Type::Void })
-            } else if let Ok((range, val)) = Type::from_meta_data(
-                    "ret_type", convert, ignored) {
+            } else if let Ok((range, val)) = Type::from_meta_data("ret_type", convert, ignored) {
                 convert.update(range);
                 ret = Some(val);
-            } else if let Ok((range, val)) = Expression::from_meta_data(
-                    file, source, "expr", convert, ignored) {
+            } else if let Ok((range, val)) =
+                Expression::from_meta_data(file, source, "expr", convert, ignored)
+            {
                 convert.update(range);
                 expr = Some(val);
                 ret = Some(Type::Any);
@@ -573,19 +608,24 @@ impl Closure {
 
         let ret = ret.ok_or(())?;
         let expr = expr.ok_or(())?;
-        Ok((convert.subtract(start), Closure {
-            file: file.clone(),
-            source: source.clone(),
-            args,
-            currents,
-            expr,
-            ret,
-            source_range: convert.source(start).unwrap(),
-        }))
+        Ok((
+            convert.subtract(start),
+            Closure {
+                file: file.clone(),
+                source: source.clone(),
+                args,
+                currents,
+                expr,
+                ret,
+                source_range: convert.source(start).unwrap(),
+            },
+        ))
     }
 
     /// Returns `true` if the closure return something.
-    pub fn returns(&self) -> bool { self.ret != Type::Void }
+    pub fn returns(&self) -> bool {
+        self.ret != Type::Void
+    }
 
     fn resolve_locals(
         &mut self,
@@ -610,7 +650,8 @@ impl Closure {
         for current in &self.currents {
             stack.push(Some(current.name.clone()));
         }
-        self.expr.resolve_locals(relative, stack, closure_stack, module, use_lookup);
+        self.expr
+            .resolve_locals(relative, stack, closure_stack, module, use_lookup);
         closure_stack.truncate(cs);
     }
 }
@@ -632,7 +673,7 @@ impl Grab {
         file: &Arc<String>,
         source: &Arc<String>,
         mut convert: Convert,
-        ignored: &mut Vec<Range>
+        ignored: &mut Vec<Range>,
     ) -> Result<(Range, Grab), ()> {
         let start = convert;
         let node = "grab";
@@ -648,8 +689,9 @@ impl Grab {
             } else if let Ok((range, val)) = convert.meta_f64("grab_level") {
                 convert.update(range);
                 level = Some(val as u16);
-            } else if let Ok((range, val)) = Expression::from_meta_data(
-                    file, source, "expr", convert, ignored) {
+            } else if let Ok((range, val)) =
+                Expression::from_meta_data(file, source, "expr", convert, ignored)
+            {
                 convert.update(range);
                 expr = Some(val);
             } else {
@@ -661,11 +703,14 @@ impl Grab {
 
         let level = level.unwrap_or(1);
         let expr = expr.ok_or(())?;
-        Ok((convert.subtract(start), Grab {
-            level,
-            expr,
-            source_range: convert.source(start).unwrap(),
-        }))
+        Ok((
+            convert.subtract(start),
+            Grab {
+                level,
+                expr,
+                source_range: convert.source(start).unwrap(),
+            },
+        ))
     }
 
     fn precompute(&self) -> Option<Variable> {
@@ -682,19 +727,20 @@ impl Grab {
     ) {
         // Get closure environment.
         let d = if closure_stack.len() < self.level as usize {
-                // Ignore negative difference, because
-                // lifetime checker will detect too high grab level.
-                0
-            } else {
-                closure_stack.len() - self.level as usize
-            };
+            // Ignore negative difference, because
+            // lifetime checker will detect too high grab level.
+            0
+        } else {
+            closure_stack.len() - self.level as usize
+        };
         let last = match closure_stack.get(d) {
             None => return,
             Some(&x) => x,
         };
         // Use environment outside closure.
         let mut tmp_stack: Vec<_> = stack[0..last].into();
-        self.expr.resolve_locals(relative, &mut tmp_stack, closure_stack, module, use_lookup)
+        self.expr
+            .resolve_locals(relative, &mut tmp_stack, closure_stack, module, use_lookup)
     }
 }
 
@@ -715,7 +761,7 @@ impl TryExpr {
         file: &Arc<String>,
         source: &Arc<String>,
         mut convert: Convert,
-        ignored: &mut Vec<Range>
+        ignored: &mut Vec<Range>,
     ) -> Result<(Range, TryExpr), ()> {
         let start = convert;
         let node = "try_expr";
@@ -727,8 +773,9 @@ impl TryExpr {
             if let Ok(range) = convert.end_node(node) {
                 convert.update(range);
                 break;
-            } else if let Ok((range, val)) = Expression::from_meta_data(
-                    file, source, "expr", convert, ignored) {
+            } else if let Ok((range, val)) =
+                Expression::from_meta_data(file, source, "expr", convert, ignored)
+            {
                 convert.update(range);
                 expr = Some(val);
             } else {
@@ -739,10 +786,13 @@ impl TryExpr {
         }
 
         let expr = expr.ok_or(())?;
-        Ok((convert.subtract(start), TryExpr {
-            expr,
-            source_range: convert.source(start).unwrap(),
-        }))
+        Ok((
+            convert.subtract(start),
+            TryExpr {
+                expr,
+                source_range: convert.source(start).unwrap(),
+            },
+        ))
     }
 
     fn resolve_locals(
@@ -753,7 +803,8 @@ impl TryExpr {
         module: &Module,
         use_lookup: &UseLookup,
     ) {
-        self.expr.resolve_locals(relative, stack, closure_stack, module, use_lookup)
+        self.expr
+            .resolve_locals(relative, stack, closure_stack, module, use_lookup)
     }
 }
 
@@ -796,7 +847,7 @@ impl Arg {
         file: &Arc<String>,
         source: &Arc<String>,
         mut convert: Convert,
-        ignored: &mut Vec<Range>
+        ignored: &mut Vec<Range>,
     ) -> Result<(Range, Arg, Vec<Lazy>), ()> {
         let start = convert;
         let node = "arg";
@@ -821,15 +872,16 @@ impl Arg {
             } else if let Ok((range, val)) = convert.meta_string("lifetime") {
                 convert.update(range);
                 lifetime = Some(val);
-            } else if let Ok((range, val)) = Type::from_meta_data(
-                    "type", convert, ignored) {
+            } else if let Ok((range, val)) = Type::from_meta_data("type", convert, ignored) {
                 convert.update(range);
                 ty = Some(val);
             } else if let Ok((range, val)) = Grab::from_meta_data(file, source, convert, ignored) {
                 convert.update(range);
                 if let Some(val) = val.precompute() {
                     lazy.push(Lazy::Variable(val));
-                } else {return Err(())}
+                } else {
+                    return Err(());
+                }
             } else if let Ok((range, _)) = convert.meta_bool("ok(_)") {
                 convert.update(range);
                 lazy.push(Lazy::UnwrapOk);
@@ -849,15 +901,19 @@ impl Arg {
         let name = name.ok_or(())?;
         let ty = match ty {
             None => Type::Any,
-            Some(ty) => ty
+            Some(ty) => ty,
         };
-        Ok((convert.subtract(start), Arg {
-            name,
-            lifetime,
-            ty,
-            source_range: convert.source(start).unwrap(),
-            mutable,
-        }, lazy))
+        Ok((
+            convert.subtract(start),
+            Arg {
+                name,
+                lifetime,
+                ty,
+                source_range: convert.source(start).unwrap(),
+                mutable,
+            },
+            lazy,
+        ))
     }
 }
 
@@ -876,8 +932,10 @@ pub struct Current {
 
 impl Current {
     /// Creates current object reference from meta data.
-    pub fn from_meta_data(mut convert: Convert, ignored: &mut Vec<Range>)
-    -> Result<(Range, Current), ()> {
+    pub fn from_meta_data(
+        mut convert: Convert,
+        ignored: &mut Vec<Range>,
+    ) -> Result<(Range, Current), ()> {
         let start = convert;
         let node = "current";
         let start_range = convert.start_node(node)?;
@@ -895,8 +953,7 @@ impl Current {
             } else if let Ok((range, val)) = convert.meta_string("name") {
                 convert.update(range);
                 name = Some(val);
-            } else if let Ok((range, _)) = Type::from_meta_data(
-                    "type", convert, ignored) {
+            } else if let Ok((range, _)) = Type::from_meta_data("type", convert, ignored) {
                 convert.update(range);
                 // Just ignore type for now.
             } else {
@@ -907,11 +964,14 @@ impl Current {
         }
 
         let name = name.ok_or(())?;
-        Ok((convert.subtract(start), Current {
-            name,
-            source_range: convert.source(start).unwrap(),
-            mutable,
-        }))
+        Ok((
+            convert.subtract(start),
+            Current {
+                name,
+                source_range: convert.source(start).unwrap(),
+                mutable,
+            },
+        ))
     }
 }
 
@@ -931,7 +991,7 @@ impl Block {
         source: &Arc<String>,
         node: &str,
         mut convert: Convert,
-        ignored: &mut Vec<Range>
+        ignored: &mut Vec<Range>,
     ) -> Result<(Range, Block), ()> {
         let start = convert;
         let start_range = convert.start_node(node)?;
@@ -942,8 +1002,9 @@ impl Block {
             if let Ok(range) = convert.end_node(node) {
                 convert.update(range);
                 break;
-            } else if let Ok((range, val)) = Expression::from_meta_data(
-                    file, source, "expr", convert, ignored) {
+            } else if let Ok((range, val)) =
+                Expression::from_meta_data(file, source, "expr", convert, ignored)
+            {
                 convert.update(range);
                 expressions.push(val);
             } else {
@@ -953,10 +1014,13 @@ impl Block {
             }
         }
 
-        Ok((convert.subtract(start), Block {
-            expressions,
-            source_range: convert.source(start).unwrap(),
-        }))
+        Ok((
+            convert.subtract(start),
+            Block {
+                expressions,
+                source_range: convert.source(start).unwrap(),
+            },
+        ))
     }
 
     fn resolve_locals(
@@ -1094,8 +1158,8 @@ impl Expression {
         source: &Arc<String>,
         node: &str,
         mut convert: Convert,
-        ignored: &mut Vec<Range>)
-    -> Result<(Range, Expression), ()> {
+        ignored: &mut Vec<Range>,
+    ) -> Result<(Range, Expression), ()> {
         let start = convert;
         let start_range = convert.start_node(node)?;
         convert.update(start_range);
@@ -1108,249 +1172,268 @@ impl Expression {
             } else if let Ok((range, _)) = convert.meta_bool("mut") {
                 // Ignore `mut` since it is handled by lifetime checker.
                 convert.update(range);
-            } else if let Ok((range, val)) = Link::from_meta_data(
-                    file, source, convert, ignored) {
+            } else if let Ok((range, val)) = Link::from_meta_data(file, source, convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::Link(Box::new(val)));
-            } else if let Ok((range, val)) = Object::from_meta_data(
-                    file, source, convert, ignored) {
+            } else if let Ok((range, val)) = Object::from_meta_data(file, source, convert, ignored)
+            {
                 convert.update(range);
                 result = Some(Expression::Object(Box::new(val)));
-            } else if let Ok((range, val)) = Array::from_meta_data(
-                    file, source, convert, ignored) {
+            } else if let Ok((range, val)) = Array::from_meta_data(file, source, convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::Array(Box::new(val)));
-            } else if let Ok((range, val)) = ArrayFill::from_meta_data(
-                    file, source, convert, ignored) {
+            } else if let Ok((range, val)) =
+                ArrayFill::from_meta_data(file, source, convert, ignored)
+            {
                 convert.update(range);
                 result = Some(Expression::ArrayFill(Box::new(val)));
-            } else if let Ok((range, val)) = Expression::from_meta_data(
-                    file, source, "return", convert, ignored) {
+            } else if let Ok((range, val)) =
+                Expression::from_meta_data(file, source, "return", convert, ignored)
+            {
                 convert.update(range);
                 result = Some(Expression::Return(Box::new(val)));
             } else if let Ok((range, _)) = convert.meta_bool("return_void") {
                 convert.update(range);
                 result = Some(Expression::ReturnVoid(Box::new(
-                    convert.source(start).unwrap())));
-            } else if let Ok((range, val)) = Break::from_meta_data(
-                    convert, ignored) {
+                    convert.source(start).unwrap(),
+                )));
+            } else if let Ok((range, val)) = Break::from_meta_data(convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::Break(Box::new(val)));
-            } else if let Ok((range, val)) = Continue::from_meta_data(
-                    convert, ignored) {
+            } else if let Ok((range, val)) = Continue::from_meta_data(convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::Continue(Box::new(val)));
-            } else if let Ok((range, val)) = Block::from_meta_data(
-                    file, source, "block", convert, ignored) {
+            } else if let Ok((range, val)) =
+                Block::from_meta_data(file, source, "block", convert, ignored)
+            {
                 convert.update(range);
                 result = Some(Expression::Block(Box::new(val)));
-            } else if let Ok((range, val)) = BinOpSeq::from_meta_data(
-                    file, source, "add", convert, ignored) {
+            } else if let Ok((range, val)) =
+                BinOpSeq::from_meta_data(file, source, "add", convert, ignored)
+            {
                 convert.update(range);
                 result = Some(val.into_expression());
-            } else if let Ok((range, val)) = UnOpExpression::from_meta_data(
-                    "not", file, source, convert, ignored) {
+            } else if let Ok((range, val)) =
+                UnOpExpression::from_meta_data("not", file, source, convert, ignored)
+            {
                 convert.update(range);
                 result = Some(val);
-            } else if let Ok((range, val)) = BinOpSeq::from_meta_data(
-                    file, source, "mul", convert, ignored) {
+            } else if let Ok((range, val)) =
+                BinOpSeq::from_meta_data(file, source, "mul", convert, ignored)
+            {
                 convert.update(range);
                 result = Some(val.into_expression());
-            } else if let Ok((range, val)) = BinOpSeq::from_meta_data(
-                    file, source, "compare", convert, ignored) {
+            } else if let Ok((range, val)) =
+                BinOpSeq::from_meta_data(file, source, "compare", convert, ignored)
+            {
                 convert.update(range);
                 result = Some(val.into_expression());
-            } else if let Ok((range, val)) = Item::from_meta_data(
-                    file, source, convert, ignored) {
+            } else if let Ok((range, val)) = Item::from_meta_data(file, source, convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::Item(Box::new(val)));
-            } else if let Ok((range, val)) = Norm::from_meta_data(
-                    file, source, convert, ignored) {
+            } else if let Ok((range, val)) = Norm::from_meta_data(file, source, convert, ignored) {
                 convert.update(range);
                 result = Some(val.into_call_expr());
             } else if let Ok((range, val)) = convert.meta_string("text") {
                 convert.update(range);
                 result = Some(Expression::Variable(Box::new((
                     convert.source(start).unwrap(),
-                    Variable::Str(val)
+                    Variable::Str(val),
                 ))));
             } else if let Ok((range, val)) = convert.meta_f64("num") {
                 convert.update(range);
                 result = Some(Expression::Variable(Box::new((
                     convert.source(start).unwrap(),
-                    Variable::f64(val)
+                    Variable::f64(val),
                 ))));
-            } else if let Ok((range, val)) = Vec4::from_meta_data(
-                    file, source, convert, ignored) {
+            } else if let Ok((range, val)) = Vec4::from_meta_data(file, source, convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::Vec4(Box::new(val)));
-            } else if let Ok((range, val)) = Mat4::from_meta_data(
-                    file, source, convert, ignored) {
+            } else if let Ok((range, val)) = Mat4::from_meta_data(file, source, convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::Mat4(Box::new(val)));
-            } else if let Ok((range, val)) = Vec4UnLoop::from_meta_data(
-                    file, source, convert, ignored) {
+            } else if let Ok((range, val)) =
+                Vec4UnLoop::from_meta_data(file, source, convert, ignored)
+            {
                 convert.update(range);
                 result = Some(val.into_expression());
             } else if let Ok((range, val)) = convert.meta_bool("bool") {
                 convert.update(range);
                 result = Some(Expression::Variable(Box::new((
-                    convert.source(start).unwrap(), Variable::bool(val)
+                    convert.source(start).unwrap(),
+                    Variable::bool(val),
                 ))));
             } else if let Ok((range, val)) = convert.meta_string("color") {
                 convert.update(range);
                 if let Some((rgb, a)) = read_color::rgb_maybe_a(&mut val.chars()) {
                     let v = [
-                            f32::from(rgb[0]) / 255.0,
-                            f32::from(rgb[1]) / 255.0,
-                            f32::from(rgb[2]) / 255.0,
-                            f32::from(a.unwrap_or(255)) / 255.0
-                        ];
+                        f32::from(rgb[0]) / 255.0,
+                        f32::from(rgb[1]) / 255.0,
+                        f32::from(rgb[2]) / 255.0,
+                        f32::from(a.unwrap_or(255)) / 255.0,
+                    ];
                     result = Some(Expression::Variable(Box::new((range, Variable::Vec4(v)))));
                 } else {
                     return Err(());
                 }
-            } else if let Ok((range, val)) = Go::from_meta_data(
-                    file, source, convert, ignored) {
+            } else if let Ok((range, val)) = Go::from_meta_data(file, source, convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::Go(Box::new(val)));
-            } else if let Ok((range, val)) = Call::from_meta_data(
-                    file, source, convert, ignored) {
+            } else if let Ok((range, val)) = Call::from_meta_data(file, source, convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::Call(Box::new(val)));
-            } else if let Ok((range, val)) = Call::named_from_meta_data(
-                    file, source, convert, ignored) {
+            } else if let Ok((range, val)) =
+                Call::named_from_meta_data(file, source, convert, ignored)
+            {
                 convert.update(range);
                 result = Some(Expression::Call(Box::new(val)));
-            } else if let Ok((range, val)) = Assign::from_meta_data(
-                    file, source, convert, ignored) {
+            } else if let Ok((range, val)) = Assign::from_meta_data(file, source, convert, ignored)
+            {
                 convert.update(range);
                 result = Some(Expression::Assign(Box::new(val)));
-            } else if let Ok((range, val)) = For::from_meta_data(
-                    file, source, convert, ignored) {
+            } else if let Ok((range, val)) = For::from_meta_data(file, source, convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::For(Box::new(val)));
-            } else if let Ok((range, val)) = ForIn::from_meta_data(
-                    file, source, "for_in", convert, ignored) {
+            } else if let Ok((range, val)) =
+                ForIn::from_meta_data(file, source, "for_in", convert, ignored)
+            {
                 convert.update(range);
                 result = Some(Expression::ForIn(Box::new(val)));
-            } else if let Ok((range, val)) = ForN::from_meta_data(
-                    file, source, "for_n", convert, ignored) {
+            } else if let Ok((range, val)) =
+                ForN::from_meta_data(file, source, "for_n", convert, ignored)
+            {
                 convert.update(range);
                 result = Some(Expression::ForN(Box::new(val)));
-            } else if let Ok((range, val)) = ForN::from_meta_data(
-                    file, source, "sum", convert, ignored) {
+            } else if let Ok((range, val)) =
+                ForN::from_meta_data(file, source, "sum", convert, ignored)
+            {
                 convert.update(range);
                 result = Some(Expression::Sum(Box::new(val)));
-            } else if let Ok((range, val)) = ForIn::from_meta_data(
-                    file, source, "sum_in", convert, ignored) {
+            } else if let Ok((range, val)) =
+                ForIn::from_meta_data(file, source, "sum_in", convert, ignored)
+            {
                 convert.update(range);
                 result = Some(Expression::SumIn(Box::new(val)));
-            } else if let Ok((range, val)) = ForN::from_meta_data(
-                    file, source, "sum_vec4", convert, ignored) {
+            } else if let Ok((range, val)) =
+                ForN::from_meta_data(file, source, "sum_vec4", convert, ignored)
+            {
                 convert.update(range);
                 result = Some(Expression::SumVec4(Box::new(val)));
-            } else if let Ok((range, val)) = ForN::from_meta_data(
-                    file, source, "prod", convert, ignored) {
+            } else if let Ok((range, val)) =
+                ForN::from_meta_data(file, source, "prod", convert, ignored)
+            {
                 convert.update(range);
                 result = Some(Expression::Prod(Box::new(val)));
-            } else if let Ok((range, val)) = ForIn::from_meta_data(
-                    file, source, "prod_in", convert, ignored) {
+            } else if let Ok((range, val)) =
+                ForIn::from_meta_data(file, source, "prod_in", convert, ignored)
+            {
                 convert.update(range);
                 result = Some(Expression::ProdIn(Box::new(val)));
-            } else if let Ok((range, val)) = ForN::from_meta_data(
-                    file, source, "prod_vec4", convert, ignored) {
+            } else if let Ok((range, val)) =
+                ForN::from_meta_data(file, source, "prod_vec4", convert, ignored)
+            {
                 convert.update(range);
                 result = Some(Expression::ProdVec4(Box::new(val)));
-            } else if let Ok((range, val)) = ForN::from_meta_data(
-                    file, source, "min", convert, ignored) {
+            } else if let Ok((range, val)) =
+                ForN::from_meta_data(file, source, "min", convert, ignored)
+            {
                 convert.update(range);
                 result = Some(Expression::Min(Box::new(val)));
-            } else if let Ok((range, val)) = ForIn::from_meta_data(
-                    file, source, "min_in", convert, ignored) {
+            } else if let Ok((range, val)) =
+                ForIn::from_meta_data(file, source, "min_in", convert, ignored)
+            {
                 convert.update(range);
                 result = Some(Expression::MinIn(Box::new(val)));
-            } else if let Ok((range, val)) = ForN::from_meta_data(
-                    file, source, "max", convert, ignored) {
+            } else if let Ok((range, val)) =
+                ForN::from_meta_data(file, source, "max", convert, ignored)
+            {
                 convert.update(range);
                 result = Some(Expression::Max(Box::new(val)));
-            } else if let Ok((range, val)) = ForIn::from_meta_data(
-                    file, source, "max_in", convert, ignored) {
+            } else if let Ok((range, val)) =
+                ForIn::from_meta_data(file, source, "max_in", convert, ignored)
+            {
                 convert.update(range);
                 result = Some(Expression::MaxIn(Box::new(val)));
-            } else if let Ok((range, val)) = ForN::from_meta_data(
-                    file, source, "sift", convert, ignored) {
+            } else if let Ok((range, val)) =
+                ForN::from_meta_data(file, source, "sift", convert, ignored)
+            {
                 convert.update(range);
                 result = Some(Expression::Sift(Box::new(val)));
-            } else if let Ok((range, val)) = ForIn::from_meta_data(
-                    file, source, "sift_in", convert, ignored) {
+            } else if let Ok((range, val)) =
+                ForIn::from_meta_data(file, source, "sift_in", convert, ignored)
+            {
                 convert.update(range);
                 result = Some(Expression::SiftIn(Box::new(val)));
-            } else if let Ok((range, val)) = ForN::from_meta_data(
-                    file, source, "any", convert, ignored) {
+            } else if let Ok((range, val)) =
+                ForN::from_meta_data(file, source, "any", convert, ignored)
+            {
                 convert.update(range);
                 result = Some(Expression::Any(Box::new(val)));
-            } else if let Ok((range, val)) = ForIn::from_meta_data(
-                    file, source, "any_in", convert, ignored) {
+            } else if let Ok((range, val)) =
+                ForIn::from_meta_data(file, source, "any_in", convert, ignored)
+            {
                 convert.update(range);
                 result = Some(Expression::AnyIn(Box::new(val)));
-            } else if let Ok((range, val)) = ForN::from_meta_data(
-                    file, source, "all", convert, ignored) {
+            } else if let Ok((range, val)) =
+                ForN::from_meta_data(file, source, "all", convert, ignored)
+            {
                 convert.update(range);
                 result = Some(Expression::All(Box::new(val)));
-            } else if let Ok((range, val)) = ForIn::from_meta_data(
-                    file, source, "all_in", convert, ignored) {
+            } else if let Ok((range, val)) =
+                ForIn::from_meta_data(file, source, "all_in", convert, ignored)
+            {
                 convert.update(range);
                 result = Some(Expression::AllIn(Box::new(val)));
-            } else if let Ok((range, val)) = ForN::from_meta_data(
-                    file, source, "link_for", convert, ignored) {
+            } else if let Ok((range, val)) =
+                ForN::from_meta_data(file, source, "link_for", convert, ignored)
+            {
                 convert.update(range);
                 result = Some(Expression::LinkFor(Box::new(val)));
-            } else if let Ok((range, val)) = ForIn::from_meta_data(
-                    file, source, "link_in", convert, ignored) {
+            } else if let Ok((range, val)) =
+                ForIn::from_meta_data(file, source, "link_in", convert, ignored)
+            {
                 convert.update(range);
                 result = Some(Expression::LinkIn(Box::new(val)));
-            } else if let Ok((range, val)) = Loop::from_meta_data(
-                    file, source, convert, ignored) {
+            } else if let Ok((range, val)) = Loop::from_meta_data(file, source, convert, ignored) {
                 convert.update(range);
                 result = Some(val.into_expression());
-            } else if let Ok((range, val)) = If::from_meta_data(
-                    file, source, convert, ignored) {
+            } else if let Ok((range, val)) = If::from_meta_data(file, source, convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::If(Box::new(val)));
             } else if let Ok((range, _)) = convert.meta_bool("try") {
                 convert.update(range);
                 result = Some(Expression::Try(Box::new(result.unwrap())));
-            } else if let Ok((range, val)) = Swizzle::from_meta_data(
-                    file, source, convert, ignored) {
+            } else if let Ok((range, val)) = Swizzle::from_meta_data(file, source, convert, ignored)
+            {
                 convert.update(range);
                 result = Some(Expression::Swizzle(Box::new(val)));
-            } else if let Ok((range, val)) = Closure::from_meta_data(
-                    file, source, "closure", convert, ignored) {
+            } else if let Ok((range, val)) =
+                Closure::from_meta_data(file, source, "closure", convert, ignored)
+            {
                 convert.update(range);
                 result = Some(Expression::Closure(Arc::new(val)));
-            } else if let Ok((range, val)) = CallClosure::from_meta_data(
-                    file, source, convert, ignored) {
+            } else if let Ok((range, val)) =
+                CallClosure::from_meta_data(file, source, convert, ignored)
+            {
                 convert.update(range);
                 result = Some(Expression::CallClosure(Box::new(val)));
-            } else if let Ok((range, val)) = CallClosure::named_from_meta_data(
-                    file, source, convert, ignored) {
+            } else if let Ok((range, val)) =
+                CallClosure::named_from_meta_data(file, source, convert, ignored)
+            {
                 convert.update(range);
                 result = Some(Expression::CallClosure(Box::new(val)));
-            } else if let Ok((range, val)) = Grab::from_meta_data(
-                    file, source, convert, ignored) {
+            } else if let Ok((range, val)) = Grab::from_meta_data(file, source, convert, ignored) {
                 convert.update(range);
                 if let Some(v) = val.precompute() {
                     result = Some(Expression::Variable(Box::new((val.source_range, v))));
                 } else {
                     result = Some(Expression::Grab(Box::new(val)));
                 }
-            } else if let Ok((range, val)) = TryExpr::from_meta_data(
-                    file, source, convert, ignored) {
+            } else if let Ok((range, val)) = TryExpr::from_meta_data(file, source, convert, ignored)
+            {
                 convert.update(range);
                 result = Some(Expression::TryExpr(Box::new(val)));
-            } else if let Ok((range, val)) = In::from_meta_data(
-                    "in", convert, ignored) {
+            } else if let Ok((range, val)) = In::from_meta_data("in", convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::In(Box::new(val)));
             } else {
@@ -1374,7 +1457,7 @@ impl Expression {
             Vec4(ref vec4) => vec4.precompute(),
             Link(ref link) => link.precompute(),
             Variable(ref range_var) => Some(range_var.1.clone()),
-            _ => None
+            _ => None,
         }
     }
 
@@ -1448,14 +1531,18 @@ impl Expression {
         use self::Expression::*;
 
         match *self {
-            Link(ref mut link) =>
-                link.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            Object(ref mut obj) =>
-                obj.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            Array(ref mut arr) =>
-                arr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            ArrayFill(ref mut arr_fill) =>
-                arr_fill.resolve_locals(relative, stack, closure_stack, module, use_lookup),
+            Link(ref mut link) => {
+                link.resolve_locals(relative, stack, closure_stack, module, use_lookup)
+            }
+            Object(ref mut obj) => {
+                obj.resolve_locals(relative, stack, closure_stack, module, use_lookup)
+            }
+            Array(ref mut arr) => {
+                arr.resolve_locals(relative, stack, closure_stack, module, use_lookup)
+            }
+            ArrayFill(ref mut arr_fill) => {
+                arr_fill.resolve_locals(relative, stack, closure_stack, module, use_lookup)
+            }
             Return(ref mut expr) => {
                 let st = stack.len();
                 expr.resolve_locals(relative, stack, closure_stack, module, use_lookup);
@@ -1464,10 +1551,10 @@ impl Expression {
             ReturnVoid(_) => {}
             Break(_) => {}
             Continue(_) => {}
-            Block(ref mut bl) =>
-                bl.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            Go(ref mut go) =>
-                go.resolve_locals(relative, stack, closure_stack, module, use_lookup),
+            Block(ref mut bl) => {
+                bl.resolve_locals(relative, stack, closure_stack, module, use_lookup)
+            }
+            Go(ref mut go) => go.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             Call(ref mut call) => {
                 call.resolve_locals(relative, stack, closure_stack, module, use_lookup);
                 match call.f_index {
@@ -1525,73 +1612,110 @@ impl Expression {
             CallLoaded(_) => unimplemented!("`CallLoaded` is transformed from `Call`"),
             CallBinOp(_) => unimplemented!("`CallBinOp` is transformed from `Call`"),
             CallUnOp(_) => unimplemented!("`CallUnOp` is transformed from `Call`"),
-            Item(ref mut it) =>
-                it.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            Assign(ref mut assign) =>
-                assign.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            Vec4(ref mut vec4) =>
-                vec4.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            Mat4(ref mut mat4) =>
-                mat4.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            For(ref mut for_expr) =>
-                for_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            ForN(ref mut for_n_expr) =>
-                for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            ForIn(ref mut for_n_expr) =>
-                for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            Sum(ref mut for_n_expr) =>
-                for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            SumIn(ref mut for_in_expr) =>
-                for_in_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            SumVec4(ref mut for_n_expr) =>
-                for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            Prod(ref mut for_n_expr) =>
-                for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            ProdIn(ref mut for_in_expr) =>
-                for_in_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            ProdVec4(ref mut for_n_expr) =>
-                for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            Min(ref mut for_n_expr) =>
-                for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            MinIn(ref mut for_in_expr) =>
-                for_in_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            Max(ref mut for_n_expr) =>
-                for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            MaxIn(ref mut for_in_expr) =>
-                for_in_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            Sift(ref mut for_n_expr) =>
-                for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            SiftIn(ref mut for_in_expr) =>
-                for_in_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            Any(ref mut for_n_expr) =>
-                for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            AnyIn(ref mut for_in_expr) =>
-                for_in_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            All(ref mut for_n_expr) =>
-                for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            AllIn(ref mut for_in_expr) =>
-                for_in_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            LinkFor(ref mut for_n_expr) =>
-                for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            LinkIn(ref mut for_in_expr) =>
-                for_in_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            If(ref mut if_expr) =>
-                if_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
+            Item(ref mut it) => {
+                it.resolve_locals(relative, stack, closure_stack, module, use_lookup)
+            }
+            Assign(ref mut assign) => {
+                assign.resolve_locals(relative, stack, closure_stack, module, use_lookup)
+            }
+            Vec4(ref mut vec4) => {
+                vec4.resolve_locals(relative, stack, closure_stack, module, use_lookup)
+            }
+            Mat4(ref mut mat4) => {
+                mat4.resolve_locals(relative, stack, closure_stack, module, use_lookup)
+            }
+            For(ref mut for_expr) => {
+                for_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup)
+            }
+            ForN(ref mut for_n_expr) => {
+                for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup)
+            }
+            ForIn(ref mut for_n_expr) => {
+                for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup)
+            }
+            Sum(ref mut for_n_expr) => {
+                for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup)
+            }
+            SumIn(ref mut for_in_expr) => {
+                for_in_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup)
+            }
+            SumVec4(ref mut for_n_expr) => {
+                for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup)
+            }
+            Prod(ref mut for_n_expr) => {
+                for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup)
+            }
+            ProdIn(ref mut for_in_expr) => {
+                for_in_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup)
+            }
+            ProdVec4(ref mut for_n_expr) => {
+                for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup)
+            }
+            Min(ref mut for_n_expr) => {
+                for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup)
+            }
+            MinIn(ref mut for_in_expr) => {
+                for_in_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup)
+            }
+            Max(ref mut for_n_expr) => {
+                for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup)
+            }
+            MaxIn(ref mut for_in_expr) => {
+                for_in_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup)
+            }
+            Sift(ref mut for_n_expr) => {
+                for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup)
+            }
+            SiftIn(ref mut for_in_expr) => {
+                for_in_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup)
+            }
+            Any(ref mut for_n_expr) => {
+                for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup)
+            }
+            AnyIn(ref mut for_in_expr) => {
+                for_in_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup)
+            }
+            All(ref mut for_n_expr) => {
+                for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup)
+            }
+            AllIn(ref mut for_in_expr) => {
+                for_in_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup)
+            }
+            LinkFor(ref mut for_n_expr) => {
+                for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup)
+            }
+            LinkIn(ref mut for_in_expr) => {
+                for_in_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup)
+            }
+            If(ref mut if_expr) => {
+                if_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup)
+            }
             Variable(_) => {}
-            Try(ref mut expr) =>
-                expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            Swizzle(ref mut swizzle) =>
-                swizzle.expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            Closure(ref mut closure) =>
-                Arc::make_mut(closure).resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            CallClosure(ref mut call) =>
-                call.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            Grab(ref mut grab) =>
-                grab.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            TryExpr(ref mut try_expr) =>
-                try_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup),
-            In(ref mut in_expr) =>
-                in_expr.resolve_locals(relative, module, use_lookup),
+            Try(ref mut expr) => {
+                expr.resolve_locals(relative, stack, closure_stack, module, use_lookup)
+            }
+            Swizzle(ref mut swizzle) => {
+                swizzle
+                    .expr
+                    .resolve_locals(relative, stack, closure_stack, module, use_lookup)
+            }
+            Closure(ref mut closure) => Arc::make_mut(closure).resolve_locals(
+                relative,
+                stack,
+                closure_stack,
+                module,
+                use_lookup,
+            ),
+            CallClosure(ref mut call) => {
+                call.resolve_locals(relative, stack, closure_stack, module, use_lookup)
+            }
+            Grab(ref mut grab) => {
+                grab.resolve_locals(relative, stack, closure_stack, module, use_lookup)
+            }
+            TryExpr(ref mut try_expr) => {
+                try_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup)
+            }
+            In(ref mut in_expr) => in_expr.resolve_locals(relative, module, use_lookup),
         }
     }
 }
@@ -1611,8 +1735,8 @@ impl Link {
         file: &Arc<String>,
         source: &Arc<String>,
         mut convert: Convert,
-        ignored: &mut Vec<Range>)
-    -> Result<(Range, Link), ()> {
+        ignored: &mut Vec<Range>,
+    ) -> Result<(Range, Link), ()> {
         let start = convert;
         let node = "link";
         let start_range = convert.start_node(node)?;
@@ -1623,8 +1747,9 @@ impl Link {
             if let Ok(range) = convert.end_node(node) {
                 convert.update(range);
                 break;
-            } else if let Ok((range, val)) = Expression::from_meta_data(
-                    file, source, "link_item", convert, ignored) {
+            } else if let Ok((range, val)) =
+                Expression::from_meta_data(file, source, "link_item", convert, ignored)
+            {
                 convert.update(range);
                 items.push(val);
             } else {
@@ -1634,17 +1759,22 @@ impl Link {
             }
         }
 
-        Ok((convert.subtract(start), Link {
-            items,
-            source_range: convert.source(start).unwrap(),
-        }))
+        Ok((
+            convert.subtract(start),
+            Link {
+                items,
+                source_range: convert.source(start).unwrap(),
+            },
+        ))
     }
 
     fn precompute(&self) -> Option<Variable> {
         let mut link = ::link::Link::new();
         for it in &self.items {
             if let Some(v) = it.precompute() {
-                if link.push(&v).is_err() {return None};
+                if link.push(&v).is_err() {
+                    return None;
+                };
             } else {
                 return None;
             }
@@ -1683,8 +1813,8 @@ impl Object {
         file: &Arc<String>,
         source: &Arc<String>,
         mut convert: Convert,
-        ignored: &mut Vec<Range>)
-    -> Result<(Range, Object), ()> {
+        ignored: &mut Vec<Range>,
+    ) -> Result<(Range, Object), ()> {
         let start = convert;
         let node = "object";
         let start_range = convert.start_node(node)?;
@@ -1695,8 +1825,9 @@ impl Object {
             if let Ok(range) = convert.end_node(node) {
                 convert.update(range);
                 break;
-            } else if let Ok((range, val)) = Object::key_value_from_meta_data(
-                    file, source, convert, ignored) {
+            } else if let Ok((range, val)) =
+                Object::key_value_from_meta_data(file, source, convert, ignored)
+            {
                 convert.update(range);
                 key_values.push(val);
             } else {
@@ -1706,10 +1837,13 @@ impl Object {
             }
         }
 
-        Ok((convert.subtract(start), Object {
-            key_values,
-            source_range: convert.source(start).unwrap(),
-        }))
+        Ok((
+            convert.subtract(start),
+            Object {
+                key_values,
+                source_range: convert.source(start).unwrap(),
+            },
+        ))
     }
 
     fn precompute(&self) -> Option<Variable> {
@@ -1728,8 +1862,8 @@ impl Object {
         file: &Arc<String>,
         source: &Arc<String>,
         mut convert: Convert,
-        ignored: &mut Vec<Range>)
-    -> Result<(Range, (Arc<String>, Expression)), ()> {
+        ignored: &mut Vec<Range>,
+    ) -> Result<(Range, (Arc<String>, Expression)), ()> {
         let start = convert;
         let node = "key_value";
         let start_range = convert.start_node(node)?;
@@ -1744,8 +1878,9 @@ impl Object {
             } else if let Ok((range, val)) = convert.meta_string("key") {
                 convert.update(range);
                 key = Some(val);
-            } else if let Ok((range, val)) = Expression::from_meta_data(
-                    file, source, "val", convert, ignored) {
+            } else if let Ok((range, val)) =
+                Expression::from_meta_data(file, source, "val", convert, ignored)
+            {
                 convert.update(range);
                 value = Some(val);
             } else {
@@ -1791,8 +1926,8 @@ impl Array {
         file: &Arc<String>,
         source: &Arc<String>,
         mut convert: Convert,
-        ignored: &mut Vec<Range>)
-    -> Result<(Range, Array), ()> {
+        ignored: &mut Vec<Range>,
+    ) -> Result<(Range, Array), ()> {
         let start = convert;
         let node = "array";
         let start_range = convert.start_node(node)?;
@@ -1803,8 +1938,9 @@ impl Array {
             if let Ok(range) = convert.end_node(node) {
                 convert.update(range);
                 break;
-            } else if let Ok((range, val)) = Expression::from_meta_data(
-                    file, source, "array_item", convert, ignored) {
+            } else if let Ok((range, val)) =
+                Expression::from_meta_data(file, source, "array_item", convert, ignored)
+            {
                 convert.update(range);
                 items.push(val);
             } else {
@@ -1814,10 +1950,13 @@ impl Array {
             }
         }
 
-        Ok((convert.subtract(start), Array {
-            items,
-            source_range: convert.source(start).unwrap(),
-        }))
+        Ok((
+            convert.subtract(start),
+            Array {
+                items,
+                source_range: convert.source(start).unwrap(),
+            },
+        ))
     }
 
     fn precompute(&self) -> Option<Variable> {
@@ -1865,8 +2004,8 @@ impl ArrayFill {
         file: &Arc<String>,
         source: &Arc<String>,
         mut convert: Convert,
-        ignored: &mut Vec<Range>)
-    -> Result<(Range, ArrayFill), ()> {
+        ignored: &mut Vec<Range>,
+    ) -> Result<(Range, ArrayFill), ()> {
         let start = convert;
         let node = "array_fill";
         let start_range = convert.start_node(node)?;
@@ -1878,12 +2017,14 @@ impl ArrayFill {
             if let Ok(range) = convert.end_node(node) {
                 convert.update(range);
                 break;
-            } else if let Ok((range, val)) = Expression::from_meta_data(
-                    file, source, "fill", convert, ignored) {
+            } else if let Ok((range, val)) =
+                Expression::from_meta_data(file, source, "fill", convert, ignored)
+            {
                 convert.update(range);
                 fill = Some(val);
-            } else if let Ok((range, val)) = Expression::from_meta_data(
-                    file, source, "n", convert, ignored) {
+            } else if let Ok((range, val)) =
+                Expression::from_meta_data(file, source, "n", convert, ignored)
+            {
                 convert.update(range);
                 n = Some(val);
             } else {
@@ -1895,11 +2036,14 @@ impl ArrayFill {
 
         let fill = fill.ok_or(())?;
         let n = n.ok_or(())?;
-        Ok((convert.subtract(start), ArrayFill {
-            fill,
-            n,
-            source_range: convert.source(start).unwrap(),
-        }))
+        Ok((
+            convert.subtract(start),
+            ArrayFill {
+                fill,
+                n,
+                source_range: convert.source(start).unwrap(),
+            },
+        ))
     }
 
     fn precompute(&self) -> Option<Variable> {
@@ -1922,9 +2066,11 @@ impl ArrayFill {
         use_lookup: &UseLookup,
     ) {
         let st = stack.len();
-        self.fill.resolve_locals(relative, stack, closure_stack, module, use_lookup);
+        self.fill
+            .resolve_locals(relative, stack, closure_stack, module, use_lookup);
         stack.truncate(st);
-        self.n.resolve_locals(relative, stack, closure_stack, module, use_lookup);
+        self.n
+            .resolve_locals(relative, stack, closure_stack, module, use_lookup);
         stack.truncate(st);
     }
 }
@@ -1947,8 +2093,8 @@ impl BinOpSeq {
         source: &Arc<String>,
         node: &str,
         mut convert: Convert,
-        ignored: &mut Vec<Range>)
-    -> Result<(Range, BinOpSeq), ()> {
+        ignored: &mut Vec<Range>,
+    ) -> Result<(Range, BinOpSeq), ()> {
         let start = convert;
         let start_range = convert.start_node(node)?;
         convert.update(start_range);
@@ -1959,16 +2105,19 @@ impl BinOpSeq {
             if let Ok(range) = convert.end_node(node) {
                 convert.update(range);
                 break;
-            } else if let Ok((range, val)) = UnOpExpression::from_meta_data(
-                    "neg", file, source, convert, ignored) {
+            } else if let Ok((range, val)) =
+                UnOpExpression::from_meta_data("neg", file, source, convert, ignored)
+            {
                 convert.update(range);
                 items.push(val);
-            } else if let Ok((range, val)) = BinOpSeq::from_meta_data(
-                    file, source, "pow", convert, ignored) {
+            } else if let Ok((range, val)) =
+                BinOpSeq::from_meta_data(file, source, "pow", convert, ignored)
+            {
                 convert.update(range);
                 items.push(val.into_expression());
-            } else if let Ok((range, val)) = Expression::from_meta_data(
-                    file, source, "expr", convert, ignored) {
+            } else if let Ok((range, val)) =
+                Expression::from_meta_data(file, source, "expr", convert, ignored)
+            {
                 convert.update(range);
                 items.push(val);
             } else if let Ok((range, _)) = convert.meta_bool("*.") {
@@ -2027,13 +2176,16 @@ impl BinOpSeq {
         }
 
         if items.is_empty() {
-            return Err(())
+            return Err(());
         }
-        Ok((convert.subtract(start), BinOpSeq {
-            items,
-            ops,
-            source_range: convert.source(start).unwrap(),
-        }))
+        Ok((
+            convert.subtract(start),
+            BinOpSeq {
+                items,
+                ops,
+                source_range: convert.source(start).unwrap(),
+            },
+        ))
     }
 
     fn into_expression(mut self) -> Expression {
@@ -2048,7 +2200,8 @@ impl BinOpSeq {
                 left: self.into_expression(),
                 right: last,
                 source_range,
-            }.into_expression()
+            }
+            .into_expression()
         }
     }
 }
@@ -2123,7 +2276,7 @@ impl BinOp {
         match self {
             BinOp::Add => "or",
             BinOp::Mul => "and",
-            _ => self.symbol()
+            _ => self.symbol(),
         }
     }
 
@@ -2131,13 +2284,15 @@ impl BinOp {
     /// Used to put parentheses in right places when printing out closures.
     pub fn precedence(self) -> u8 {
         match self {
-            BinOp::Less | BinOp::LessOrEqual |
-            BinOp::Greater | BinOp::GreaterOrEqual |
-            BinOp::Equal | BinOp::NotEqual => BINOP_PREC_OR,
+            BinOp::Less
+            | BinOp::LessOrEqual
+            | BinOp::Greater
+            | BinOp::GreaterOrEqual
+            | BinOp::Equal
+            | BinOp::NotEqual => BINOP_PREC_OR,
             BinOp::OrElse | BinOp::AndAlso => BINOP_PREC_OR,
             BinOp::Add | BinOp::Sub => BINOP_PREC_ADD,
-            BinOp::Mul | BinOp::Dot | BinOp::Cross
-            | BinOp::Div | BinOp::Rem => BINOP_PREC_MUL,
+            BinOp::Mul | BinOp::Dot | BinOp::Cross | BinOp::Div | BinOp::Rem => BINOP_PREC_MUL,
             BinOp::Pow => BINOP_PREC_POW,
         }
     }
@@ -2224,7 +2379,7 @@ impl Item {
             try: false,
             ids: vec![],
             try_ids: vec![],
-            source_range
+            source_range,
         }
     }
 
@@ -2236,16 +2391,18 @@ impl Item {
             stack_id: Cell::new(None),
             static_stack_id: Cell::new(None),
             try: self.try,
-            ids: self.ids.iter().take(n).map(|id| id.clone()).collect(),
+            ids: self.ids.iter().take(n).cloned().collect(),
             try_ids: {
                 let mut try_ids = vec![];
                 for &ind in &self.try_ids {
-                    if ind >= n { break }
+                    if ind >= n {
+                        break;
+                    }
                     try_ids.push(ind);
                 }
                 try_ids
             },
-            source_range: self.source_range
+            source_range: self.source_range,
         }
     }
 
@@ -2254,8 +2411,8 @@ impl Item {
         file: &Arc<String>,
         source: &Arc<String>,
         mut convert: Convert,
-        ignored: &mut Vec<Range>)
-    -> Result<(Range, Item), ()> {
+        ignored: &mut Vec<Range>,
+    ) -> Result<(Range, Item), ()> {
         let start = convert;
         let node = "item";
         let start_range = convert.start_node(node)?;
@@ -2292,8 +2449,9 @@ impl Item {
                 let start_id = convert;
                 convert.update(range);
                 ids.push(Id::F64(convert.source(start_id).unwrap(), val));
-            } else if let Ok((range, val)) = Expression::from_meta_data(
-                file, source, "id", convert, ignored) {
+            } else if let Ok((range, val)) =
+                Expression::from_meta_data(file, source, "id", convert, ignored)
+            {
                 convert.update(range);
                 ids.push(Id::Expression(val));
             } else if let Ok((range, _)) = convert.meta_bool("try_id") {
@@ -2308,16 +2466,19 @@ impl Item {
         }
 
         let name = name.ok_or(())?;
-        Ok((convert.subtract(start), Item {
-            name,
-            stack_id: Cell::new(None),
-            static_stack_id: Cell::new(None),
-            current,
-            try,
-            ids,
-            try_ids,
-            source_range: convert.source(start).unwrap(),
-        }))
+        Ok((
+            convert.subtract(start),
+            Item {
+                name,
+                stack_id: Cell::new(None),
+                static_stack_id: Cell::new(None),
+                current,
+                try,
+                ids,
+                try_ids,
+                source_range: convert.source(start).unwrap(),
+            },
+        ))
     }
 
     fn resolve_locals(
@@ -2363,7 +2524,7 @@ impl Go {
         file: &Arc<String>,
         source: &Arc<String>,
         mut convert: Convert,
-        ignored: &mut Vec<Range>
+        ignored: &mut Vec<Range>,
     ) -> Result<(Range, Go), ()> {
         let start = convert;
         let node = "go";
@@ -2375,12 +2536,12 @@ impl Go {
             if let Ok(range) = convert.end_node(node) {
                 convert.update(range);
                 break;
-            } else if let Ok((range, val)) = Call::from_meta_data(
-                    file, source, convert, ignored) {
+            } else if let Ok((range, val)) = Call::from_meta_data(file, source, convert, ignored) {
                 convert.update(range);
                 call = Some(val);
-            } else if let Ok((range, val)) = Call::named_from_meta_data(
-                    file, source, convert, ignored) {
+            } else if let Ok((range, val)) =
+                Call::named_from_meta_data(file, source, convert, ignored)
+            {
                 convert.update(range);
                 call = Some(val);
             } else {
@@ -2391,10 +2552,13 @@ impl Go {
         }
 
         let call = call.ok_or(())?;
-        Ok((convert.subtract(start), Go {
-            call,
-            source_range: convert.source(start).unwrap(),
-        }))
+        Ok((
+            convert.subtract(start),
+            Go {
+                call,
+                source_range: convert.source(start).unwrap(),
+            },
+        ))
     }
 
     fn resolve_locals(
@@ -2517,8 +2681,8 @@ impl Call {
         file: &Arc<String>,
         source: &Arc<String>,
         mut convert: Convert,
-        ignored: &mut Vec<Range>)
-    -> Result<(Range, Call), ()> {
+        ignored: &mut Vec<Range>,
+    ) -> Result<(Range, Call), ()> {
         let start = convert;
         let node = "call";
         let start_range = convert.start_node(node)?;
@@ -2538,15 +2702,16 @@ impl Call {
             } else if let Ok((range, val)) = convert.meta_string("name") {
                 convert.update(range);
                 name = Some(val);
-            } else if let Ok((range, val)) = Expression::from_meta_data(
-                file, source, "call_arg", convert, ignored) {
+            } else if let Ok((range, val)) =
+                Expression::from_meta_data(file, source, "call_arg", convert, ignored)
+            {
                 let mut peek = convert;
                 mutable.push(match peek.start_node("call_arg") {
                     Ok(r) => {
                         peek.update(r);
                         peek.meta_bool("mut").is_ok()
                     }
-                    _ => unreachable!()
+                    _ => unreachable!(),
                 });
                 convert.update(range);
                 args.push(val);
@@ -2565,7 +2730,9 @@ impl Call {
             name_plus_args.push('(');
             let mut first = true;
             for &arg in &mutable {
-                if !first { name_plus_args.push(','); }
+                if !first {
+                    name_plus_args.push(',');
+                }
                 name_plus_args.push_str(if arg { "mut" } else { "_" });
                 first = false;
             }
@@ -2573,16 +2740,19 @@ impl Call {
             name = Arc::new(name_plus_args);
         }
 
-        Ok((convert.subtract(start), Call {
-            args,
-            f_index: FnIndex::None,
-            custom_source: None,
-            info: Box::new(CallInfo {
-                alias,
-                name,
-                source_range: convert.source(start).unwrap(),
-            })
-        }))
+        Ok((
+            convert.subtract(start),
+            Call {
+                args,
+                f_index: FnIndex::None,
+                custom_source: None,
+                info: Box::new(CallInfo {
+                    alias,
+                    name,
+                    source_range: convert.source(start).unwrap(),
+                }),
+            },
+        ))
     }
 
     /// Creates named argument call from meta data.
@@ -2590,8 +2760,8 @@ impl Call {
         file: &Arc<String>,
         source: &Arc<String>,
         mut convert: Convert,
-        ignored: &mut Vec<Range>)
-    -> Result<(Range, Call), ()> {
+        ignored: &mut Vec<Range>,
+    ) -> Result<(Range, Call), ()> {
         let start = convert;
         let node = "named_call";
         let start_range = convert.start_node(node)?;
@@ -2617,15 +2787,16 @@ impl Call {
                     name.push_str(&val);
                     name.push('_');
                 }
-            } else if let Ok((range, val)) = Expression::from_meta_data(
-                file, source, "call_arg", convert, ignored) {
+            } else if let Ok((range, val)) =
+                Expression::from_meta_data(file, source, "call_arg", convert, ignored)
+            {
                 let mut peek = convert;
                 mutable.push(match peek.start_node("call_arg") {
                     Ok(r) => {
                         peek.update(r);
                         peek.meta_bool("mut").is_ok()
                     }
-                    _ => unreachable!()
+                    _ => unreachable!(),
                 });
                 convert.update(range);
                 args.push(val);
@@ -2641,23 +2812,28 @@ impl Call {
             name.push('(');
             let mut first = true;
             for &arg in &mutable {
-                if !first { name.push(','); }
+                if !first {
+                    name.push(',');
+                }
                 name.push_str(if arg { "mut" } else { "_" });
                 first = false;
             }
             name.push(')');
         }
 
-        Ok((convert.subtract(start), Call {
-            args,
-            f_index: FnIndex::None,
-            custom_source: None,
-            info: Box::new(CallInfo {
-                alias,
-                name: Arc::new(name),
-                source_range: convert.source(start).unwrap(),
-            })
-        }))
+        Ok((
+            convert.subtract(start),
+            Call {
+                args,
+                f_index: FnIndex::None,
+                custom_source: None,
+                info: Box::new(CallInfo {
+                    alias,
+                    name: Arc::new(name),
+                    source_range: convert.source(start).unwrap(),
+                }),
+            },
+        ))
     }
 
     fn resolve_locals(
@@ -2668,16 +2844,19 @@ impl Call {
         module: &Module,
         use_lookup: &UseLookup,
     ) {
-        use FnUnOpRef;
         use FnBinOpRef;
-        use FnReturnRef;
-        use FnVoidRef;
         use FnExt;
+        use FnReturnRef;
+        use FnUnOpRef;
+        use FnVoidRef;
 
         let st = stack.len();
         let f_index = if let Some(ref alias) = self.info.alias {
-            if let Some(&i) = use_lookup.aliases.get(alias)
-                .and_then(|map| map.get(&self.info.name)) {
+            if let Some(&i) = use_lookup
+                .aliases
+                .get(alias)
+                .and_then(|map| map.get(&self.info.name))
+            {
                 match i {
                     FnAlias::Loaded(i) => FnIndex::Loaded(i as isize - relative as isize),
                     FnAlias::External(i) => {
@@ -2704,11 +2883,11 @@ impl Call {
                     stack.push(None);
                 }
             }
-            FnIndex::Void(_) |
-            FnIndex::Return(_) |
-            FnIndex::Lazy(_, _) |
-            FnIndex::BinOp(_) |
-            FnIndex::UnOp(_) => {
+            FnIndex::Void(_)
+            | FnIndex::Return(_)
+            | FnIndex::Lazy(_, _)
+            | FnIndex::BinOp(_)
+            | FnIndex::UnOp(_) => {
                 // Don't push return since last value in block
                 // is used as return value.
             }
@@ -2718,8 +2897,8 @@ impl Call {
             let arg_st = stack.len();
             arg.resolve_locals(relative, stack, closure_stack, module, use_lookup);
             stack.truncate(arg_st);
-            if let FnIndex::BinOp(_) = f_index {}
-            else {
+            if let FnIndex::BinOp(_) = f_index {
+            } else {
                 match *arg {
                     Expression::Swizzle(ref swizzle) => {
                         for _ in 0..swizzle.len() {
@@ -2743,7 +2922,9 @@ impl Call {
                 Expression::Swizzle(ref swizzle) => {
                     sum += swizzle.len();
                 }
-                _ => { sum += 1; }
+                _ => {
+                    sum += 1;
+                }
             }
         }
         sum
@@ -2767,8 +2948,8 @@ impl CallClosure {
         file: &Arc<String>,
         source: &Arc<String>,
         mut convert: Convert,
-        ignored: &mut Vec<Range>)
-    -> Result<(Range, CallClosure), ()> {
+        ignored: &mut Vec<Range>,
+    ) -> Result<(Range, CallClosure), ()> {
         let start = convert;
         let node = "call_closure";
         let start_range = convert.start_node(node)?;
@@ -2781,19 +2962,19 @@ impl CallClosure {
             if let Ok(range) = convert.end_node(node) {
                 convert.update(range);
                 break;
-            } else if let Ok((range, val)) = Item::from_meta_data(
-                    file, source, convert, ignored) {
+            } else if let Ok((range, val)) = Item::from_meta_data(file, source, convert, ignored) {
                 convert.update(range);
                 item = Some(val);
-            } else if let Ok((range, val)) = Expression::from_meta_data(
-                    file, source, "call_arg", convert, ignored) {
+            } else if let Ok((range, val)) =
+                Expression::from_meta_data(file, source, "call_arg", convert, ignored)
+            {
                 let mut peek = convert;
                 mutable.push(match peek.start_node("call_arg") {
                     Ok(r) => {
                         peek.update(r);
                         peek.meta_bool("mut").is_ok()
                     }
-                    _ => unreachable!()
+                    _ => unreachable!(),
                 });
                 convert.update(range);
                 args.push(val);
@@ -2805,11 +2986,14 @@ impl CallClosure {
         }
 
         let item = item.ok_or(())?;
-        Ok((convert.subtract(start), CallClosure {
-            item,
-            args,
-            source_range: convert.source(start).unwrap(),
-        }))
+        Ok((
+            convert.subtract(start),
+            CallClosure {
+                item,
+                args,
+                source_range: convert.source(start).unwrap(),
+            },
+        ))
     }
 
     /// Creates named argument closure call from meta data.
@@ -2817,8 +3001,8 @@ impl CallClosure {
         file: &Arc<String>,
         source: &Arc<String>,
         mut convert: Convert,
-        ignored: &mut Vec<Range>)
-    -> Result<(Range, CallClosure), ()> {
+        ignored: &mut Vec<Range>,
+    ) -> Result<(Range, CallClosure), ()> {
         let start = convert;
         let node = "named_call_closure";
         let start_range = convert.start_node(node)?;
@@ -2832,27 +3016,25 @@ impl CallClosure {
             if let Ok(range) = convert.end_node(node) {
                 convert.update(range);
                 break;
-            } else if let Ok((range, val)) = Item::from_meta_data(
-                    file, source, convert, ignored) {
+            } else if let Ok((range, val)) = Item::from_meta_data(file, source, convert, ignored) {
                 convert.update(range);
                 item = Some(val);
             } else if let Ok((range, val)) = convert.meta_string("word") {
                 convert.update(range);
                 if !name.is_empty() {
                     name.push('_');
-                    name.push_str(&val);
-                } else {
-                    name.push_str(&val);
                 }
-            } else if let Ok((range, val)) = Expression::from_meta_data(
-                file, source, "call_arg", convert, ignored) {
+                name.push_str(&val);
+            } else if let Ok((range, val)) =
+                Expression::from_meta_data(file, source, "call_arg", convert, ignored)
+            {
                 let mut peek = convert;
                 mutable.push(match peek.start_node("call_arg") {
                     Ok(r) => {
                         peek.update(r);
                         peek.meta_bool("mut").is_ok()
                     }
-                    _ => unreachable!()
+                    _ => unreachable!(),
                 });
                 convert.update(range);
                 args.push(val);
@@ -2880,11 +3062,14 @@ impl CallClosure {
                 }
             }
         }
-        Ok((convert.subtract(start), CallClosure {
-            item,
-            args,
-            source_range: convert.source(start).unwrap(),
-        }))
+        Ok((
+            convert.subtract(start),
+            CallClosure {
+                item,
+                args,
+                source_range: convert.source(start).unwrap(),
+            },
+        ))
     }
 
     fn resolve_locals(
@@ -2896,7 +3081,8 @@ impl CallClosure {
         use_lookup: &UseLookup,
     ) {
         let st = stack.len();
-        self.item.resolve_locals(relative, stack, closure_stack, module, use_lookup);
+        self.item
+            .resolve_locals(relative, stack, closure_stack, module, use_lookup);
         // All closures must return a value.
         // Use return type because it has the same name.
         stack.push(Some(crate::runtime::RETURN_TYPE.clone()));
@@ -2926,7 +3112,9 @@ impl CallClosure {
                 Expression::Swizzle(ref swizzle) => {
                     sum += swizzle.len();
                 }
-                _ => { sum += 1; }
+                _ => {
+                    sum += 1;
+                }
             }
         }
         sum
@@ -2948,8 +3136,8 @@ impl Norm {
         file: &Arc<String>,
         source: &Arc<String>,
         mut convert: Convert,
-        ignored: &mut Vec<Range>)
-    -> Result<(Range, Norm), ()> {
+        ignored: &mut Vec<Range>,
+    ) -> Result<(Range, Norm), ()> {
         let start = convert;
         let node = "norm";
         let start_range = convert.start_node(node)?;
@@ -2960,8 +3148,9 @@ impl Norm {
             if let Ok(range) = convert.end_node(node) {
                 convert.update(range);
                 break;
-            } else if let Ok((range, val)) = Expression::from_meta_data(
-                file, source, "expr", convert, ignored) {
+            } else if let Ok((range, val)) =
+                Expression::from_meta_data(file, source, "expr", convert, ignored)
+            {
                 convert.update(range);
                 expr = Some(val);
             } else {
@@ -2972,10 +3161,13 @@ impl Norm {
         }
 
         let expr = expr.ok_or(())?;
-        Ok((convert.subtract(start), Norm {
-            expr,
-            source_range: convert.source(start).unwrap()
-        }))
+        Ok((
+            convert.subtract(start),
+            Norm {
+                expr,
+                source_range: convert.source(start).unwrap(),
+            },
+        ))
     }
 
     fn into_call_expr(self) -> Expression {
@@ -2987,7 +3179,7 @@ impl Norm {
                 alias: None,
                 name: crate::NORM.clone(),
                 source_range: self.source_range,
-            })
+            }),
         }))
     }
 }
@@ -3034,7 +3226,7 @@ impl BinOpExpression {
                     NotEqual => crate::NOT_EQUAL.clone(),
                 },
                 source_range: self.source_range,
-            })
+            }),
         }))
     }
 }
@@ -3049,8 +3241,8 @@ impl UnOpExpression {
         file: &Arc<String>,
         source: &Arc<String>,
         mut convert: Convert,
-        ignored: &mut Vec<Range>)
-    -> Result<(Range, Expression), ()> {
+        ignored: &mut Vec<Range>,
+    ) -> Result<(Range, Expression), ()> {
         let start = convert;
         let start_range = convert.start_node(node)?;
         convert.update(start_range);
@@ -3060,8 +3252,9 @@ impl UnOpExpression {
             if let Ok(range) = convert.end_node(node) {
                 convert.update(range);
                 break;
-            } else if let Ok((range, val)) = Expression::from_meta_data(
-                file, source, "expr", convert, ignored) {
+            } else if let Ok((range, val)) =
+                Expression::from_meta_data(file, source, "expr", convert, ignored)
+            {
                 convert.update(range);
                 expr = Some(val);
             } else {
@@ -3076,7 +3269,7 @@ impl UnOpExpression {
             let name = match node {
                 "not" => crate::NOT.clone(),
                 "neg" => crate::NEG.clone(),
-                _ => return Err(())
+                _ => return Err(()),
             };
             Expression::Call(Box::new(Call {
                 args: vec![expr],
@@ -3084,9 +3277,9 @@ impl UnOpExpression {
                 f_index: FnIndex::None,
                 info: Box::new(CallInfo {
                     alias: None,
-                    name: name,
-                    source_range: convert.source(start).unwrap()
-                })
+                    name,
+                    source_range: convert.source(start).unwrap(),
+                }),
             }))
         }))
     }
@@ -3111,8 +3304,8 @@ impl Assign {
         file: &Arc<String>,
         source: &Arc<String>,
         mut convert: Convert,
-        ignored: &mut Vec<Range>)
-    -> Result<(Range, Assign), ()> {
+        ignored: &mut Vec<Range>,
+    ) -> Result<(Range, Assign), ()> {
         let start = convert;
         let node = "assign";
         let start_range = convert.start_node(node)?;
@@ -3149,12 +3342,14 @@ impl Assign {
             } else if let Ok((range, _)) = convert.meta_bool("^=") {
                 convert.update(range);
                 op = Some(AssignOp::Pow);
-            } else if let Ok((range, val)) = Expression::from_meta_data(
-                file, source, "left", convert, ignored) {
+            } else if let Ok((range, val)) =
+                Expression::from_meta_data(file, source, "left", convert, ignored)
+            {
                 convert.update(range);
                 left = Some(val);
-            } else if let Ok((range, val)) = Expression::from_meta_data(
-                file, source, "right", convert, ignored) {
+            } else if let Ok((range, val)) =
+                Expression::from_meta_data(file, source, "right", convert, ignored)
+            {
                 convert.update(range);
                 right = Some(val);
             } else {
@@ -3167,12 +3362,15 @@ impl Assign {
         let op = op.ok_or(())?;
         let left = left.ok_or(())?;
         let right = right.ok_or(())?;
-        Ok((convert.subtract(start), Assign {
-            op,
-            left,
-            right,
-            source_range: convert.source(start).unwrap(),
-        }))
+        Ok((
+            convert.subtract(start),
+            Assign {
+                op,
+                left,
+                right,
+                source_range: convert.source(start).unwrap(),
+            },
+        ))
     }
 
     fn resolve_locals(
@@ -3185,7 +3383,8 @@ impl Assign {
     ) {
         // Declared locals in right expressions are popped from the stack.
         let st = stack.len();
-        self.right.resolve_locals(relative, stack, closure_stack, module, use_lookup);
+        self.right
+            .resolve_locals(relative, stack, closure_stack, module, use_lookup);
         stack.truncate(st);
 
         // Declare new local when there is an item with no extra.
@@ -3196,7 +3395,8 @@ impl Assign {
             }
         }
 
-        self.left.resolve_locals(relative, stack, closure_stack, module, use_lookup);
+        self.left
+            .resolve_locals(relative, stack, closure_stack, module, use_lookup);
         stack.truncate(st);
     }
 }
@@ -3255,8 +3455,8 @@ impl Mat4 {
         file: &Arc<String>,
         source: &Arc<String>,
         mut convert: Convert,
-        ignored: &mut Vec<Range>)
-    -> Result<(Range, Mat4), ()> {
+        ignored: &mut Vec<Range>,
+    ) -> Result<(Range, Mat4), ()> {
         let start = convert;
         let node = "mat4";
         let start_range = convert.start_node(node)?;
@@ -3270,20 +3470,24 @@ impl Mat4 {
             if let Ok(range) = convert.end_node(node) {
                 convert.update(range);
                 break;
-            } else if let Ok((range, val)) = Expression::from_meta_data(
-                file, source, "ex", convert, ignored) {
+            } else if let Ok((range, val)) =
+                Expression::from_meta_data(file, source, "ex", convert, ignored)
+            {
                 convert.update(range);
                 x = Some(val);
-            } else if let Ok((range, val)) = Expression::from_meta_data(
-                file, source, "ey", convert, ignored) {
+            } else if let Ok((range, val)) =
+                Expression::from_meta_data(file, source, "ey", convert, ignored)
+            {
                 convert.update(range);
                 y = Some(val);
-            } else if let Ok((range, val)) = Expression::from_meta_data(
-                file, source, "ez", convert, ignored) {
+            } else if let Ok((range, val)) =
+                Expression::from_meta_data(file, source, "ez", convert, ignored)
+            {
                 convert.update(range);
                 z = Some(val);
-            } else if let Ok((range, val)) = Expression::from_meta_data(
-                file, source, "ew", convert, ignored) {
+            } else if let Ok((range, val)) =
+                Expression::from_meta_data(file, source, "ew", convert, ignored)
+            {
                 convert.update(range);
                 w = Some(val);
             } else {
@@ -3294,16 +3498,31 @@ impl Mat4 {
         }
 
         let x = x.ok_or(())?;
-        let y = y.unwrap_or_else(|| Expression::Variable(Box::new((
-            Range::empty(0), Variable::Vec4([0.0, 1.0, 0.0, 0.0])))));
-        let z = z.unwrap_or_else(|| Expression::Variable(Box::new((
-            Range::empty(0), Variable::Vec4([0.0, 0.0, 1.0, 0.0])))));
-        let w = w.unwrap_or_else(|| Expression::Variable(Box::new((
-            Range::empty(0), Variable::Vec4([0.0, 0.0, 0.0, 1.0])))));
-        Ok((convert.subtract(start), Mat4 {
-            args: vec![x, y, z, w],
-            source_range: convert.source(start).unwrap(),
-        }))
+        let y = y.unwrap_or_else(|| {
+            Expression::Variable(Box::new((
+                Range::empty(0),
+                Variable::Vec4([0.0, 1.0, 0.0, 0.0]),
+            )))
+        });
+        let z = z.unwrap_or_else(|| {
+            Expression::Variable(Box::new((
+                Range::empty(0),
+                Variable::Vec4([0.0, 0.0, 1.0, 0.0]),
+            )))
+        });
+        let w = w.unwrap_or_else(|| {
+            Expression::Variable(Box::new((
+                Range::empty(0),
+                Variable::Vec4([0.0, 0.0, 0.0, 1.0]),
+            )))
+        });
+        Ok((
+            convert.subtract(start),
+            Mat4 {
+                args: vec![x, y, z, w],
+                source_range: convert.source(start).unwrap(),
+            },
+        ))
     }
 
     fn resolve_locals(
@@ -3340,8 +3559,8 @@ impl Vec4 {
         file: &Arc<String>,
         source: &Arc<String>,
         mut convert: Convert,
-        ignored: &mut Vec<Range>)
-    -> Result<(Range, Vec4), ()> {
+        ignored: &mut Vec<Range>,
+    ) -> Result<(Range, Vec4), ()> {
         let start = convert;
         let node = "vec4";
         let start_range = convert.start_node(node)?;
@@ -3355,20 +3574,24 @@ impl Vec4 {
             if let Ok(range) = convert.end_node(node) {
                 convert.update(range);
                 break;
-            } else if let Ok((range, val)) = Expression::from_meta_data(
-                file, source, "x", convert, ignored) {
+            } else if let Ok((range, val)) =
+                Expression::from_meta_data(file, source, "x", convert, ignored)
+            {
                 convert.update(range);
                 x = Some(val);
-            } else if let Ok((range, val)) = Expression::from_meta_data(
-                file, source, "y", convert, ignored) {
+            } else if let Ok((range, val)) =
+                Expression::from_meta_data(file, source, "y", convert, ignored)
+            {
                 convert.update(range);
                 y = Some(val);
-            } else if let Ok((range, val)) = Expression::from_meta_data(
-                file, source, "z", convert, ignored) {
+            } else if let Ok((range, val)) =
+                Expression::from_meta_data(file, source, "z", convert, ignored)
+            {
                 convert.update(range);
                 z = Some(val);
-            } else if let Ok((range, val)) = Expression::from_meta_data(
-                file, source, "w", convert, ignored) {
+            } else if let Ok((range, val)) =
+                Expression::from_meta_data(file, source, "w", convert, ignored)
+            {
                 convert.update(range);
                 w = Some(val);
             } else {
@@ -3379,16 +3602,22 @@ impl Vec4 {
         }
 
         let x = x.ok_or(())?;
-        let y = y.unwrap_or_else(||
-            Expression::Variable(Box::new((Range::empty(0), Variable::f64(0.0)))));
-        let z = z.unwrap_or_else(||
-            Expression::Variable(Box::new((Range::empty(0), Variable::f64(0.0)))));
-        let w = w.unwrap_or_else(||
-            Expression::Variable(Box::new((Range::empty(0), Variable::f64(0.0)))));
-        Ok((convert.subtract(start), Vec4 {
-            args: vec![x, y, z, w],
-            source_range: convert.source(start).unwrap(),
-        }))
+        let y = y.unwrap_or_else(|| {
+            Expression::Variable(Box::new((Range::empty(0), Variable::f64(0.0))))
+        });
+        let z = z.unwrap_or_else(|| {
+            Expression::Variable(Box::new((Range::empty(0), Variable::f64(0.0))))
+        });
+        let w = w.unwrap_or_else(|| {
+            Expression::Variable(Box::new((Range::empty(0), Variable::f64(0.0))))
+        });
+        Ok((
+            convert.subtract(start),
+            Vec4 {
+                args: vec![x, y, z, w],
+                source_range: convert.source(start).unwrap(),
+            },
+        ))
     }
 
     fn precompute(&self) -> Option<Variable> {
@@ -3454,8 +3683,8 @@ impl Vec4UnLoop {
         file: &Arc<String>,
         source: &Arc<String>,
         mut convert: Convert,
-        ignored: &mut Vec<Range>)
-    -> Result<(Range, Vec4UnLoop), ()> {
+        ignored: &mut Vec<Range>,
+    ) -> Result<(Range, Vec4UnLoop), ()> {
         let start = convert;
         let node = "vec4_un_loop";
         let start_range = convert.start_node(node)?;
@@ -3480,8 +3709,9 @@ impl Vec4UnLoop {
             } else if let Ok((range, val)) = convert.meta_string("name") {
                 convert.update(range);
                 name = Some(val);
-            } else if let Ok((range, val)) = Expression::from_meta_data(
-                file, source, "expr", convert, ignored) {
+            } else if let Ok((range, val)) =
+                Expression::from_meta_data(file, source, "expr", convert, ignored)
+            {
                 convert.update(range);
                 expr = Some(val);
             } else {
@@ -3493,12 +3723,15 @@ impl Vec4UnLoop {
 
         let name = name.ok_or(())?;
         let expr = expr.ok_or(())?;
-        Ok((convert.subtract(start), Vec4UnLoop {
-            name,
-            expr,
-            len,
-            source_range: convert.source(start).unwrap(),
-        }))
+        Ok((
+            convert.subtract(start),
+            Vec4UnLoop {
+                name,
+                expr,
+                len,
+                source_range: convert.source(start).unwrap(),
+            },
+        ))
     }
 
     fn into_expression(self) -> Expression {
@@ -3509,15 +3742,15 @@ impl Vec4UnLoop {
         let replace_0 = replace::number(&self.expr, &self.name, 0.0);
         let replace_1 = replace::number(&self.expr, &self.name, 1.0);
         let replace_2 = if self.len > 2 {
-                replace::number(&self.expr, &self.name, 2.0)
-            } else {
-                zero()
-            };
+            replace::number(&self.expr, &self.name, 2.0)
+        } else {
+            zero()
+        };
         let replace_3 = if self.len > 3 {
-                replace::number(&self.expr, &self.name, 3.0)
-            } else {
-                zero()
-            };
+            replace::number(&self.expr, &self.name, 3.0)
+        } else {
+            zero()
+        };
 
         Expression::Vec4(Box::new(Vec4 {
             args: vec![replace_0, replace_1, replace_2, replace_3],
@@ -3549,8 +3782,8 @@ impl Swizzle {
         file: &Arc<String>,
         source: &Arc<String>,
         mut convert: Convert,
-        ignored: &mut Vec<Range>)
-    -> Result<(Range, Swizzle), ()> {
+        ignored: &mut Vec<Range>,
+    ) -> Result<(Range, Swizzle), ()> {
         let start = convert;
         let node = "swizzle";
         let start_range = convert.start_node(node)?;
@@ -3565,24 +3798,21 @@ impl Swizzle {
             if let Ok(range) = convert.end_node(node) {
                 convert.update(range);
                 break;
-            } else if let Ok((range, val)) = Sw::from_meta_data(
-                "sw0", convert, ignored) {
+            } else if let Ok((range, val)) = Sw::from_meta_data("sw0", convert, ignored) {
                 convert.update(range);
                 sw0 = Some(val.ind);
-            } else if let Ok((range, val)) = Sw::from_meta_data(
-                "sw1", convert, ignored) {
+            } else if let Ok((range, val)) = Sw::from_meta_data("sw1", convert, ignored) {
                 convert.update(range);
                 sw1 = Some(val.ind);
-            } else if let Ok((range, val)) = Sw::from_meta_data(
-                "sw2", convert, ignored) {
+            } else if let Ok((range, val)) = Sw::from_meta_data("sw2", convert, ignored) {
                 convert.update(range);
                 sw2 = Some(val.ind);
-            } else if let Ok((range, val)) = Sw::from_meta_data(
-                "sw3", convert, ignored) {
+            } else if let Ok((range, val)) = Sw::from_meta_data("sw3", convert, ignored) {
                 convert.update(range);
                 sw3 = Some(val.ind);
-            } else if let Ok((range, val)) = Expression::from_meta_data(
-                file, source, "expr", convert, ignored) {
+            } else if let Ok((range, val)) =
+                Expression::from_meta_data(file, source, "expr", convert, ignored)
+            {
                 convert.update(range);
                 expr = Some(val);
             } else {
@@ -3595,19 +3825,21 @@ impl Swizzle {
         let sw0 = sw0.ok_or(())?;
         let sw1 = sw1.ok_or(())?;
         let expr = expr.ok_or(())?;
-        Ok((convert.subtract(start), Swizzle {
-            sw0,
-            sw1,
-            sw2,
-            sw3,
-            expr,
-            source_range: convert.source(start).unwrap(),
-        }))
+        Ok((
+            convert.subtract(start),
+            Swizzle {
+                sw0,
+                sw1,
+                sw2,
+                sw3,
+                expr,
+                source_range: convert.source(start).unwrap(),
+            },
+        ))
     }
 
     fn len(&self) -> usize {
-        2 + if self.sw2.is_some() { 1 } else { 0 } +
-            if self.sw3.is_some() { 1 } else { 0 }
+        2 + if self.sw2.is_some() { 1 } else { 0 } + if self.sw3.is_some() { 1 } else { 0 }
     }
 }
 
@@ -3625,8 +3857,8 @@ impl Sw {
     pub fn from_meta_data(
         node: &str,
         mut convert: Convert,
-        ignored: &mut Vec<Range>)
-    -> Result<(Range, Sw), ()> {
+        ignored: &mut Vec<Range>,
+    ) -> Result<(Range, Sw), ()> {
         let start = convert;
         let start_range = convert.start_node(node)?;
         convert.update(start_range);
@@ -3656,10 +3888,13 @@ impl Sw {
         }
 
         let ind = ind.ok_or(())?;
-        Ok((convert.subtract(start), Sw {
-            ind,
-            source_range: convert.source(start).unwrap(),
-        }))
+        Ok((
+            convert.subtract(start),
+            Sw {
+                ind,
+                source_range: convert.source(start).unwrap(),
+            },
+        ))
     }
 }
 
@@ -3686,8 +3921,8 @@ impl For {
         file: &Arc<String>,
         source: &Arc<String>,
         mut convert: Convert,
-        ignored: &mut Vec<Range>)
-    -> Result<(Range, For), ()> {
+        ignored: &mut Vec<Range>,
+    ) -> Result<(Range, For), ()> {
         let start = convert;
         let node = "for";
         let start_range = convert.start_node(node)?;
@@ -3702,20 +3937,24 @@ impl For {
             if let Ok(range) = convert.end_node(node) {
                 convert.update(range);
                 break;
-            } else if let Ok((range, val)) = Expression::from_meta_data(
-                file, source, "init", convert, ignored) {
+            } else if let Ok((range, val)) =
+                Expression::from_meta_data(file, source, "init", convert, ignored)
+            {
                 convert.update(range);
                 init = Some(val);
-            } else if let Ok((range, val)) = Expression::from_meta_data(
-                file, source, "cond", convert, ignored) {
+            } else if let Ok((range, val)) =
+                Expression::from_meta_data(file, source, "cond", convert, ignored)
+            {
                 convert.update(range);
                 cond = Some(val);
-            } else if let Ok((range, val)) = Expression::from_meta_data(
-                file, source, "step", convert, ignored) {
+            } else if let Ok((range, val)) =
+                Expression::from_meta_data(file, source, "step", convert, ignored)
+            {
                 convert.update(range);
                 step = Some(val);
-            } else if let Ok((range, val)) = Block::from_meta_data(
-                    file, source, "block", convert, ignored) {
+            } else if let Ok((range, val)) =
+                Block::from_meta_data(file, source, "block", convert, ignored)
+            {
                 convert.update(range);
                 block = Some(val);
             } else if let Ok((range, val)) = convert.meta_string("label") {
@@ -3732,31 +3971,39 @@ impl For {
         let cond = cond.ok_or(())?;
         let step = step.ok_or(())?;
         let block = block.ok_or(())?;
-        Ok((convert.subtract(start), For {
-            init,
-            cond,
-            step,
-            block,
-            label,
-            source_range: convert.source(start).unwrap(),
-        }))
+        Ok((
+            convert.subtract(start),
+            For {
+                init,
+                cond,
+                step,
+                block,
+                label,
+                source_range: convert.source(start).unwrap(),
+            },
+        ))
     }
 
     fn resolve_locals(
-        &mut self, relative: usize,
+        &mut self,
+        relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
         module: &Module,
         use_lookup: &UseLookup,
     ) {
         let st = stack.len();
-        self.init.resolve_locals(relative, stack, closure_stack, module, use_lookup);
+        self.init
+            .resolve_locals(relative, stack, closure_stack, module, use_lookup);
         let after_init = stack.len();
-        self.cond.resolve_locals(relative, stack, closure_stack, module, use_lookup);
+        self.cond
+            .resolve_locals(relative, stack, closure_stack, module, use_lookup);
         stack.truncate(after_init);
-        self.step.resolve_locals(relative, stack, closure_stack, module, use_lookup);
+        self.step
+            .resolve_locals(relative, stack, closure_stack, module, use_lookup);
         stack.truncate(after_init);
-        self.block.resolve_locals(relative, stack, closure_stack, module, use_lookup);
+        self.block
+            .resolve_locals(relative, stack, closure_stack, module, use_lookup);
         stack.truncate(st);
     }
 }
@@ -3783,8 +4030,8 @@ impl ForIn {
         source: &Arc<String>,
         node: &str,
         mut convert: Convert,
-        ignored: &mut Vec<Range>)
-    -> Result<(Range, ForIn), ()> {
+        ignored: &mut Vec<Range>,
+    ) -> Result<(Range, ForIn), ()> {
         let start = convert;
         let start_range = convert.start_node(node)?;
         convert.update(start_range);
@@ -3800,12 +4047,14 @@ impl ForIn {
             } else if let Ok((range, val)) = convert.meta_string("name") {
                 convert.update(range);
                 name = Some(val);
-            } else if let Ok((range, val)) = Expression::from_meta_data(
-                file, source, "iter", convert, ignored) {
+            } else if let Ok((range, val)) =
+                Expression::from_meta_data(file, source, "iter", convert, ignored)
+            {
                 convert.update(range);
                 iter = Some(val);
-            } else if let Ok((range, val)) = Block::from_meta_data(
-                    file, source, "block", convert, ignored) {
+            } else if let Ok((range, val)) =
+                Block::from_meta_data(file, source, "block", convert, ignored)
+            {
                 convert.update(range);
                 block = Some(val);
             } else if let Ok((range, val)) = convert.meta_string("label") {
@@ -3821,24 +4070,33 @@ impl ForIn {
         let name = name.ok_or(())?;
         let iter = iter.ok_or(())?;
         let block = block.ok_or(())?;
-        Ok((convert.subtract(start), ForIn {
-            name, iter, block, label,
-            source_range: convert.source(start).unwrap(),
-        }))
+        Ok((
+            convert.subtract(start),
+            ForIn {
+                name,
+                iter,
+                block,
+                label,
+                source_range: convert.source(start).unwrap(),
+            },
+        ))
     }
 
     fn resolve_locals(
-        &mut self, relative: usize,
+        &mut self,
+        relative: usize,
         stack: &mut Vec<Option<Arc<String>>>,
         closure_stack: &mut Vec<usize>,
         module: &Module,
         use_lookup: &UseLookup,
     ) {
         let st = stack.len();
-        self.iter.resolve_locals(relative, stack, closure_stack, module, use_lookup);
+        self.iter
+            .resolve_locals(relative, stack, closure_stack, module, use_lookup);
         stack.truncate(st);
         stack.push(Some(self.name.clone()));
-        self.block.resolve_locals(relative, stack, closure_stack, module, use_lookup);
+        self.block
+            .resolve_locals(relative, stack, closure_stack, module, use_lookup);
         stack.truncate(st);
     }
 }
@@ -3871,8 +4129,8 @@ impl ForN {
         source: &Arc<String>,
         node: &str,
         mut convert: Convert,
-        ignored: &mut Vec<Range>)
-    -> Result<(Range, ForN), ()> {
+        ignored: &mut Vec<Range>,
+    ) -> Result<(Range, ForN), ()> {
         let start = convert;
         let start_range = convert.start_node(node)?;
         convert.update(start_range);
@@ -3884,8 +4142,9 @@ impl ForN {
             if let Ok(range) = convert.end_node(node) {
                 convert.update(range);
                 break;
-            } else if let Ok((range, val)) = Block::from_meta_data(
-                    file, source, "block", convert, ignored) {
+            } else if let Ok((range, val)) =
+                Block::from_meta_data(file, source, "block", convert, ignored)
+            {
                 convert.update(range);
                 block = Some(val);
             } else if let Ok((range, val)) = convert.meta_string("label") {
@@ -3895,13 +4154,15 @@ impl ForN {
                 convert.update(range);
                 let mut start_expr: Option<Expression> = None;
                 let mut end_expr: Option<Expression> = None;
-                if let Ok((range, val)) = Expression::from_meta_data(
-                    file, source, "start", convert, ignored) {
+                if let Ok((range, val)) =
+                    Expression::from_meta_data(file, source, "start", convert, ignored)
+                {
                     convert.update(range);
                     start_expr = Some(val);
                 }
-                if let Ok((range, val)) = Expression::from_meta_data(
-                    file, source, "end", convert, ignored) {
+                if let Ok((range, val)) =
+                    Expression::from_meta_data(file, source, "end", convert, ignored)
+                {
                     convert.update(range);
                     end_expr = Some(val);
                 }
@@ -3919,7 +4180,7 @@ impl ForN {
             convert.source(start).unwrap(),
             label,
             &indices,
-            block
+            block,
         )
     }
 
@@ -3929,23 +4190,19 @@ impl ForN {
         source_range: Range,
         label: Option<Arc<String>>,
         indices: &[(Arc<String>, Option<Expression>, Option<Expression>)],
-        mut block: Option<Block>
+        mut block: Option<Block>,
     ) -> Result<(Range, ForN), ()> {
-        if indices.is_empty() { return Err(()); }
+        if indices.is_empty() {
+            return Err(());
+        }
 
         let name: Arc<String> = indices[0].0.clone();
         let start_expr = indices[0].1.clone();
         let mut end_expr = indices[0].2.clone();
 
         if indices.len() > 1 {
-            let (_, new_for_n) = ForN::create(
-                node,
-                range,
-                source_range,
-                None,
-                &indices[1..],
-                block
-            )?;
+            let (_, new_for_n) =
+                ForN::create(node, range, source_range, None, &indices[1..], block)?;
             block = Some(Block {
                 source_range,
                 expressions: vec![match node {
@@ -3960,8 +4217,8 @@ impl ForN {
                     "max" => Expression::Max(Box::new(new_for_n)),
                     "sift" => Expression::Sift(Box::new(new_for_n)),
                     "link_for" => Expression::LinkFor(Box::new(new_for_n)),
-                    _ => return Err(())
-                }]
+                    _ => return Err(()),
+                }],
             });
         }
 
@@ -3973,14 +4230,17 @@ impl ForN {
         }
 
         let end_expr = end_expr.ok_or(())?;
-        Ok((range, ForN {
-            name,
-            start: start_expr,
-            end: end_expr,
-            block,
-            label,
-            source_range,
-        }))
+        Ok((
+            range,
+            ForN {
+                name,
+                start: start_expr,
+                end: end_expr,
+                block,
+                label,
+                source_range,
+            },
+        ))
     }
 
     fn resolve_locals(
@@ -3996,10 +4256,12 @@ impl ForN {
             start.resolve_locals(relative, stack, closure_stack, module, use_lookup);
             stack.truncate(st);
         }
-        self.end.resolve_locals(relative, stack, closure_stack, module, use_lookup);
+        self.end
+            .resolve_locals(relative, stack, closure_stack, module, use_lookup);
         stack.truncate(st);
         stack.push(Some(self.name.clone()));
-        self.block.resolve_locals(relative, stack, closure_stack, module, use_lookup);
+        self.block
+            .resolve_locals(relative, stack, closure_stack, module, use_lookup);
         stack.truncate(st);
     }
 }
@@ -4021,8 +4283,8 @@ impl Loop {
         file: &Arc<String>,
         source: &Arc<String>,
         mut convert: Convert,
-        ignored: &mut Vec<Range>)
-    -> Result<(Range, Loop), ()> {
+        ignored: &mut Vec<Range>,
+    ) -> Result<(Range, Loop), ()> {
         let start = convert;
         let node = "loop";
         let start_range = convert.start_node(node)?;
@@ -4034,8 +4296,9 @@ impl Loop {
             if let Ok(range) = convert.end_node(node) {
                 convert.update(range);
                 break;
-            } else if let Ok((range, val)) = Block::from_meta_data(
-                    file, source, "block", convert, ignored) {
+            } else if let Ok((range, val)) =
+                Block::from_meta_data(file, source, "block", convert, ignored)
+            {
                 convert.update(range);
                 block = Some(val);
             } else if let Ok((range, val)) = convert.meta_string("label") {
@@ -4049,11 +4312,14 @@ impl Loop {
         }
 
         let block = block.ok_or(())?;
-        Ok((convert.subtract(start), Loop {
-            block,
-            label,
-            source_range: convert.source(start).unwrap(),
-        }))
+        Ok((
+            convert.subtract(start),
+            Loop {
+                block,
+                label,
+                source_range: convert.source(start).unwrap(),
+            },
+        ))
     }
 
     fn into_expression(self) -> Expression {
@@ -4088,8 +4354,8 @@ impl Break {
     /// Creates break expression from meta data.
     pub fn from_meta_data(
         mut convert: Convert,
-        ignored: &mut Vec<Range>)
-    -> Result<(Range, Break), ()> {
+        ignored: &mut Vec<Range>,
+    ) -> Result<(Range, Break), ()> {
         let start = convert;
         let node = "break";
         let start_range = convert.start_node(node)?;
@@ -4110,10 +4376,13 @@ impl Break {
             }
         }
 
-        Ok((convert.subtract(start), Break {
-            label,
-            source_range: convert.source(start).unwrap(),
-        }))
+        Ok((
+            convert.subtract(start),
+            Break {
+                label,
+                source_range: convert.source(start).unwrap(),
+            },
+        ))
     }
 }
 
@@ -4130,8 +4399,8 @@ impl Continue {
     /// Creates continue expression from meta data.
     pub fn from_meta_data(
         mut convert: Convert,
-        ignored: &mut Vec<Range>)
-    -> Result<(Range, Continue), ()> {
+        ignored: &mut Vec<Range>,
+    ) -> Result<(Range, Continue), ()> {
         let start = convert;
         let node = "continue";
         let start_range = convert.start_node(node)?;
@@ -4152,10 +4421,13 @@ impl Continue {
             }
         }
 
-        Ok((convert.subtract(start), Continue {
-            label,
-            source_range: convert.source(start).unwrap(),
-        }))
+        Ok((
+            convert.subtract(start),
+            Continue {
+                label,
+                source_range: convert.source(start).unwrap(),
+            },
+        ))
     }
 }
 
@@ -4182,8 +4454,8 @@ impl If {
         file: &Arc<String>,
         source: &Arc<String>,
         mut convert: Convert,
-        ignored: &mut Vec<Range>)
-    -> Result<(Range, If), ()> {
+        ignored: &mut Vec<Range>,
+    ) -> Result<(Range, If), ()> {
         let start = convert;
         let node = "if";
         let start_range = convert.start_node(node)?;
@@ -4198,24 +4470,29 @@ impl If {
             if let Ok(range) = convert.end_node(node) {
                 convert.update(range);
                 break;
-            } else if let Ok((range, val)) = Expression::from_meta_data(
-                file, source, "cond", convert, ignored) {
+            } else if let Ok((range, val)) =
+                Expression::from_meta_data(file, source, "cond", convert, ignored)
+            {
                 convert.update(range);
                 cond = Some(val);
-            } else if let Ok((range, val)) = Block::from_meta_data(
-                    file, source, "true_block", convert, ignored) {
+            } else if let Ok((range, val)) =
+                Block::from_meta_data(file, source, "true_block", convert, ignored)
+            {
                 convert.update(range);
                 true_block = Some(val);
-            } else if let Ok((range, val)) = Expression::from_meta_data(
-                file, source, "else_if_cond", convert, ignored) {
+            } else if let Ok((range, val)) =
+                Expression::from_meta_data(file, source, "else_if_cond", convert, ignored)
+            {
                 convert.update(range);
                 else_if_conds.push(val);
-            } else if let Ok((range, val)) = Block::from_meta_data(
-                    file, source, "else_if_block", convert, ignored) {
+            } else if let Ok((range, val)) =
+                Block::from_meta_data(file, source, "else_if_block", convert, ignored)
+            {
                 convert.update(range);
                 else_if_blocks.push(val);
-            } else if let Ok((range, val)) = Block::from_meta_data(
-                    file, source, "else_block", convert, ignored) {
+            } else if let Ok((range, val)) =
+                Block::from_meta_data(file, source, "else_block", convert, ignored)
+            {
                 convert.update(range);
                 else_block = Some(val);
             } else {
@@ -4227,14 +4504,17 @@ impl If {
 
         let cond = cond.ok_or(())?;
         let true_block = true_block.ok_or(())?;
-        Ok((convert.subtract(start), If {
-            cond,
-            true_block,
-            else_if_conds,
-            else_if_blocks,
-            else_block,
-            source_range: convert.source(start).unwrap(),
-        }))
+        Ok((
+            convert.subtract(start),
+            If {
+                cond,
+                true_block,
+                else_if_conds,
+                else_if_blocks,
+                else_block,
+                source_range: convert.source(start).unwrap(),
+            },
+        ))
     }
 
     fn resolve_locals(
@@ -4246,9 +4526,11 @@ impl If {
         use_lookup: &UseLookup,
     ) {
         let st = stack.len();
-        self.cond.resolve_locals(relative, stack, closure_stack, module, use_lookup);
+        self.cond
+            .resolve_locals(relative, stack, closure_stack, module, use_lookup);
         stack.truncate(st);
-        self.true_block.resolve_locals(relative, stack, closure_stack, module, use_lookup);
+        self.true_block
+            .resolve_locals(relative, stack, closure_stack, module, use_lookup);
         stack.truncate(st);
         // Does not matter that conditions are resolved before blocks,
         // since the stack gets truncated anyway.
@@ -4285,8 +4567,8 @@ impl In {
     pub fn from_meta_data(
         node: &'static str,
         mut convert: Convert,
-        ignored: &mut Vec<Range>)
-    -> Result<(Range, In), ()> {
+        ignored: &mut Vec<Range>,
+    ) -> Result<(Range, In), ()> {
         let start = convert;
         let start_range = convert.start_node(node)?;
         convert.update(start_range);
@@ -4311,28 +4593,30 @@ impl In {
         }
 
         let name = name.ok_or(())?;
-        Ok((convert.subtract(start), In {
-            alias,
-            name,
-            f_index: Cell::new(FnIndex::None),
-            source_range: convert.source(start).unwrap()
-        }))
+        Ok((
+            convert.subtract(start),
+            In {
+                alias,
+                name,
+                f_index: Cell::new(FnIndex::None),
+                source_range: convert.source(start).unwrap(),
+            },
+        ))
     }
 
-    fn resolve_locals(
-        &mut self,
-        relative: usize,
-        module: &Module,
-        use_lookup: &UseLookup
-    ) {
-        use FnUnOpRef;
+    fn resolve_locals(&mut self, relative: usize, module: &Module, use_lookup: &UseLookup) {
         use FnBinOpRef;
-        use FnReturnRef;
-        use FnVoidRef;
         use FnExt;
+        use FnReturnRef;
+        use FnUnOpRef;
+        use FnVoidRef;
 
         let f_index = if let Some(ref alias) = self.alias {
-            if let Some(&i) = use_lookup.aliases.get(alias).and_then(|map| map.get(&self.name)) {
+            if let Some(&i) = use_lookup
+                .aliases
+                .get(alias)
+                .and_then(|map| map.get(&self.name))
+            {
                 match i {
                     FnAlias::Loaded(i) => FnIndex::Loaded(i as isize - relative as isize),
                     FnAlias::External(i) => {

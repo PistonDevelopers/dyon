@@ -1,0 +1,2 @@
+single-char-binding-names-threshold = 5
+too-many-arguments-threshold = 9

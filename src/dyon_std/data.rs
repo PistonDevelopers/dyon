@@ -1,6 +1,6 @@
+use std::collections::HashSet;
 use std::fs::File;
 use std::io::Read;
-use std::collections::HashSet;
 use std::sync::Arc;
 
 use range::Range;
@@ -17,7 +17,9 @@ type Strings = HashSet<Arc<String>>;
 pub fn load_file(file: &str) -> Result<Variable, String> {
     let mut data_file = File::open(file).map_err(|err| io_error("open", file, &err))?;
     let mut d = String::new();
-    data_file.read_to_string(&mut d).map_err(|err| io_error("read", file, &err))?;
+    data_file
+        .read_to_string(&mut d)
+        .map_err(|err| io_error("read", file, &err))?;
     load_data(&d)
 }
 
@@ -38,13 +40,9 @@ static NUMBER_SETTINGS: NumberSettings = NumberSettings {
     allow_underscore: true,
 };
 
-const SEPS: &str = &"(){}[],.:;\n\"\\";
+const SEPS: &str = "(){}[],.:;\n\"\\";
 
-fn expr(
-    read: &mut ReadToken,
-    strings: &mut Strings,
-    data: &str
-) -> Result<Variable, String> {
+fn expr(read: &mut ReadToken, strings: &mut Strings, data: &str) -> Result<Variable, String> {
     if let Some(range) = read.tag("{") {
         // Object.
         *read = read.consume(range.length);
@@ -69,14 +67,18 @@ fn expr(
         let val = read.raw_string(range.length);
         if let Some((rgb, a)) = rgb_maybe_a(&mut val.chars()) {
             let v = [
-                        f32::from(rgb[0]) / 255.0,
-                        f32::from(rgb[1]) / 255.0,
-                        f32::from(rgb[2]) / 255.0,
-                        f32::from(a.unwrap_or(255)) / 255.0
-                    ];
+                f32::from(rgb[0]) / 255.0,
+                f32::from(rgb[1]) / 255.0,
+                f32::from(rgb[2]) / 255.0,
+                f32::from(a.unwrap_or(255)) / 255.0,
+            ];
             return Ok(Variable::Vec4(v));
         } else {
-            return Err(error(range, "Expected hex color in format `FFFFFF`or `FFFFFFFF`", data));
+            return Err(error(
+                range,
+                "Expected hex color in format `FFFFFF`or `FFFFFFFF`",
+                data,
+            ));
         }
     }
     if let Some(range) = read.tag("link") {
@@ -89,17 +91,15 @@ fn expr(
         match read.parse_string(range.length) {
             Ok(s) => {
                 *read = read.consume(range.length);
-                return Ok(Variable::Str(
-                    if let Some(s) = strings.get(&s) {
-                        s.clone()
-                    } else {
-                        Arc::new(s)
-                    }
-                ));
+                return Ok(Variable::Str(if let Some(s) = strings.get(&s) {
+                    s.clone()
+                } else {
+                    Arc::new(s)
+                }));
             }
             Err(err_range) => {
                 let (range, err) = err_range.decouple();
-                return Err(error(range, &format!("{}", err), data))
+                return Err(error(range, &format!("{}", err), data));
             }
         }
     }
@@ -137,16 +137,12 @@ fn expr(
             Ok(Variable::Option(Some(Box::new(res))))
         } else {
             Err(error(read.start(), "Expected `)`", data))
-        }
+        };
     }
     Err(error(read.start(), "Reached end of file", data))
 }
 
-fn object(
-    read: &mut ReadToken,
-    strings: &mut Strings,
-    data: &str
-) -> Result<Variable, String> {
+fn object(read: &mut ReadToken, strings: &mut Strings, data: &str) -> Result<Variable, String> {
     use std::collections::HashMap;
 
     let mut res: HashMap<Arc<String>, Variable> = HashMap::new();
@@ -177,7 +173,7 @@ fn object(
                 }
                 Err(err_range) => {
                     let (range, err) = err_range.decouple();
-                    return Err(error(range, &format!("{}", err), data))
+                    return Err(error(range, &format!("{}", err), data));
                 }
             }
         } else {
@@ -213,11 +209,7 @@ fn object(
     Ok(Variable::Object(Arc::new(res)))
 }
 
-fn array(
-    read: &mut ReadToken,
-    strings: &mut Strings,
-    data: &str
-) -> Result<Variable, String> {
+fn array(read: &mut ReadToken, strings: &mut Strings, data: &str) -> Result<Variable, String> {
     let mut res = vec![];
     let mut was_comma = false;
     loop {
@@ -238,11 +230,7 @@ fn array(
     Ok(Variable::Array(Arc::new(res)))
 }
 
-fn link(
-    read: &mut ReadToken,
-    strings: &mut Strings,
-    data: &str
-) -> Result<Variable, String> {
+fn link(read: &mut ReadToken, strings: &mut Strings, data: &str) -> Result<Variable, String> {
     use Link;
 
     opt_w(read);
@@ -311,12 +299,18 @@ fn vec4(read: &mut ReadToken, data: &str) -> Result<Variable, String> {
                             }
                             Err(err) => return Err(error(range, &format!("{}", err), data)),
                         }
-                    } else { (z, 0.0) }
+                    } else {
+                        (z, 0.0)
+                    }
                 }
                 Err(err) => return Err(error(range, &format!("{}", err), data)),
             }
-        } else { (0.0, 0.0) }
-    } else { (0.0, 0.0) };
+        } else {
+            (0.0, 0.0)
+        }
+    } else {
+        (0.0, 0.0)
+    };
     opt_w(read);
     if let Some(range) = read.tag(")") {
         *read = read.consume(range.length);
@@ -342,7 +336,9 @@ fn opt_w(read: &mut ReadToken) {
 
         multi_line_comment(read);
 
-        if read.subtract(&start).length == 0 { break; }
+        if read.subtract(&start).length == 0 {
+            break;
+        }
     }
 }
 
@@ -377,7 +373,9 @@ fn multi_line_comment(read: &mut ReadToken) {
                 }
             }
 
-            if read.subtract(&start).length == 0 { break; }
+            if read.subtract(&start).length == 0 {
+                break;
+            }
         }
 
         if let Some(range) = read.tag("*/") {

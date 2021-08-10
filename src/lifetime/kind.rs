@@ -1,4 +1,3 @@
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Kind {
     Ns,
@@ -192,7 +191,8 @@ impl Kind {
             "res" => Kind::Res,
             "ret_type" => Kind::RetType,
             "return_void" => Kind::ReturnVoid,
-            #[cfg(feature = "threading")] "go" => Kind::Go,
+            #[cfg(feature = "threading")]
+            "go" => Kind::Go,
             "swizzle" => Kind::Swizzle,
             "sw0" => Kind::Sw0,
             "sw1" => Kind::Sw1,
@@ -214,7 +214,7 @@ impl Kind {
             "ty" => Kind::Ty,
             "ty_arg" => Kind::TyArg,
             "ty_ret" => Kind::TyRet,
-            _ => return None
+            _ => return None,
         })
     }
 
@@ -222,39 +222,30 @@ impl Kind {
     pub fn is_decl_loop(self) -> bool {
         use self::Kind::*;
 
-        match self {
-            ForN | Sum | Prod | SumVec4 | ProdVec4 | Min | Max | Sift
-            | Any | All | LinkFor => true,
-            _ => false
-        }
+        matches!(
+            self,
+            ForN | Sum | Prod | SumVec4 | ProdVec4 | Min | Max | Sift | Any | All | LinkFor
+        )
     }
 
     /// An in-loop receives an object from a receiver channel.
     pub fn is_in_loop(self) -> bool {
         use self::Kind::*;
 
-        match self {
-            ForIn | SumIn | ProdIn | MinIn | MaxIn | AnyIn | AllIn |
-            SiftIn | LinkIn => true,
-            _ => false
-        }
+        matches!(
+            self,
+            ForIn | SumIn | ProdIn | MinIn | MaxIn | AnyIn | AllIn | SiftIn | LinkIn
+        )
     }
 
     /// An un-loop has fixed range and replaces variable in body.
     pub fn is_decl_un_loop(self) -> bool {
-        match self {
-            Kind::Vec4UnLoop => true,
-            _ => false
-        }
+        matches!(self, Kind::Vec4UnLoop)
     }
 
     pub fn is_block(self) -> bool {
         use self::Kind::*;
 
-        match self {
-            Block | ElseIfBlock |
-            TrueBlock | ElseBlock => true,
-            _ => false
-        }
+        matches!(self, Block | ElseIfBlock | TrueBlock | ElseBlock)
     }
 }

@@ -1,5 +1,5 @@
-extern crate piston_meta;
 extern crate dyon;
+extern crate piston_meta;
 
 use dyon::*;
 

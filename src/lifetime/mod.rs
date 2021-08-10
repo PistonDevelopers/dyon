@@ -1,25 +1,25 @@
 extern crate piston_meta;
 extern crate range;
 
-use std::sync::Arc;
-use std::collections::{HashMap, HashSet};
-use self::piston_meta::MetaData;
-use self::range::Range;
 use self::kind::Kind;
+use self::lt::{arg_lifetime, compare_lifetimes, Lifetime};
 use self::node::convert_meta_data;
 pub(crate) use self::node::Node;
-use self::lt::{arg_lifetime, compare_lifetimes, Lifetime};
+use self::piston_meta::MetaData;
+use self::range::Range;
+use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 
-use prelude::{Lt, Prelude};
 use ast::{AssignOp, UseLookup};
+use prelude::{Lt, Prelude};
 
 use Type;
 
 mod kind;
-mod node;
 mod lt;
-mod typecheck;
+mod node;
 mod normalize;
+mod typecheck;
 
 /// Checks lifetime constraints and does type checking.
 /// Returns refined return types of functions to put in AST.
@@ -35,14 +35,15 @@ pub fn check(
 pub(crate) fn check_core(
     nodes: &mut Vec<Node>,
     data: &[Range<MetaData>],
-    prelude: &Prelude
+    prelude: &Prelude,
 ) -> Result<HashMap<Arc<String>, Type>, Range<String>> {
-
     convert_meta_data(nodes, data)?;
 
     // Rewrite multiple binary operators into nested ones.
     for i in 0..nodes.len() {
-        if nodes[i].binops.len() <= 1 {continue};
+        if nodes[i].binops.len() <= 1 {
+            continue;
+        };
 
         let new_child = nodes.len();
         let mut parent = nodes[i].parent;
@@ -72,13 +73,10 @@ pub(crate) fn check_core(
                 end: nodes[i].end,
                 lifetime: None,
                 op: None,
-                binops: vec![nodes[i].binops[n-1]],
+                binops: vec![nodes[i].binops[n - 1]],
                 lts: vec![],
                 parent,
-                children: vec![
-                    if n == 2 {i} else {id + 1},
-                    right
-                ]
+                children: vec![if n == 2 { i } else { id + 1 }, right],
             });
             parent = Some(id);
         }
@@ -114,24 +112,28 @@ pub(crate) fn check_core(
         } else if nodes[i].binops.len() == 1 && nodes[i].children.len() == 2 {
             use ast::BinOp::*;
 
-            Node::rewrite_binop(i, match nodes[i].binops[0] {
-                Add => crate::ADD.clone(),
-                Sub => crate::SUB.clone(),
-                Mul => crate::MUL.clone(),
-                Div => crate::DIV.clone(),
-                Rem => crate::REM.clone(),
-                Pow => crate::POW.clone(),
-                Dot => crate::DOT.clone(),
-                Cross => crate::CROSS.clone(),
-                AndAlso => crate::AND_ALSO.clone(),
-                OrElse => crate::OR_ELSE.clone(),
-                Less => crate::LESS.clone(),
-                LessOrEqual => crate::LESS_OR_EQUAL.clone(),
-                Greater => crate::GREATER.clone(),
-                GreaterOrEqual => crate::GREATER_OR_EQUAL.clone(),
-                Equal => crate::EQUAL.clone(),
-                NotEqual => crate::NOT_EQUAL.clone(),
-            }, nodes);
+            Node::rewrite_binop(
+                i,
+                match nodes[i].binops[0] {
+                    Add => crate::ADD.clone(),
+                    Sub => crate::SUB.clone(),
+                    Mul => crate::MUL.clone(),
+                    Div => crate::DIV.clone(),
+                    Rem => crate::REM.clone(),
+                    Pow => crate::POW.clone(),
+                    Dot => crate::DOT.clone(),
+                    Cross => crate::CROSS.clone(),
+                    AndAlso => crate::AND_ALSO.clone(),
+                    OrElse => crate::OR_ELSE.clone(),
+                    Less => crate::LESS.clone(),
+                    LessOrEqual => crate::LESS_OR_EQUAL.clone(),
+                    Greater => crate::GREATER.clone(),
+                    GreaterOrEqual => crate::GREATER_OR_EQUAL.clone(),
+                    Equal => crate::EQUAL.clone(),
+                    NotEqual => crate::NOT_EQUAL.clone(),
+                },
+                nodes,
+            );
         }
 
         if nodes[i].children.len() == 1 {
@@ -150,10 +152,10 @@ pub(crate) fn check_core(
         match nodes[i].kind {
             Kind::Fn | Kind::Call => {}
             Kind::CallClosure => {
-                let word = nodes[i].name().map(|n| n.clone());
+                let word = nodes[i].name().cloned();
                 if let Some(ref word) = word {
                     // Append named syntax to item.
-                    let item = nodes[i].find_child_by_kind(&nodes, Kind::Item).unwrap();
+                    let item = nodes[i].find_child_by_kind(nodes, Kind::Item).unwrap();
                     if nodes[item].children.is_empty() {
                         Arc::make_mut(&mut nodes[item].names[0]).push_str(&format!("__{}", word));
                     }
@@ -161,22 +163,23 @@ pub(crate) fn check_core(
                     // because the key is unknown anyway.
                 }
             }
-            _ => continue
+            _ => continue,
         };
-        let mutable_args = nodes[i].children.iter()
-            .any(|&arg|
-                (nodes[arg].kind == Kind::Arg ||
-                 nodes[arg].kind == Kind::CallArg) &&
-                nodes[arg].mutable);
+        let mutable_args = nodes[i].children.iter().any(|&arg| {
+            (nodes[arg].kind == Kind::Arg || nodes[arg].kind == Kind::CallArg) && nodes[arg].mutable
+        });
         if mutable_args {
             let mut name_plus_args = String::from(&***nodes[i].name().unwrap());
             name_plus_args.push('(');
             let mut first = true;
-            for &arg in nodes[i].children.iter()
-                .filter(|&&n| match nodes[n].kind {
-                    Kind::Arg | Kind::CallArg => true, _ => false
-                }) {
-                if !first { name_plus_args.push(','); }
+            for &arg in nodes[i]
+                .children
+                .iter()
+                .filter(|&&n| matches!(nodes[n].kind, Kind::Arg | Kind::CallArg))
+            {
+                if !first {
+                    name_plus_args.push(',');
+                }
                 name_plus_args.push_str(if nodes[arg].mutable { "mut" } else { "_" });
                 first = false;
             }
@@ -186,124 +189,159 @@ pub(crate) fn check_core(
     }
 
     // Collect indices to function nodes.
-    let functions: Vec<usize> = nodes.iter().enumerate()
-        .filter(|&(_, n)| n.kind == Kind::Fn).map(|(i, _)| i).collect();
+    let functions: Vec<usize> = nodes
+        .iter()
+        .enumerate()
+        .filter(|&(_, n)| n.kind == Kind::Fn)
+        .map(|(i, _)| i)
+        .collect();
 
     // Stores number of functions arguments with same index as `functions`.
     // To look up number of arguments, use `.enumerate()` on the loop.
     let mut function_args: Vec<usize> = Vec::with_capacity(functions.len());
 
     // Collect indices to call nodes.
-    let calls: Vec<usize> = nodes.iter().enumerate()
-        .filter(|&(_, n)| n.kind == Kind::Call).map(|(i, _)| i).collect();
+    let calls: Vec<usize> = nodes
+        .iter()
+        .enumerate()
+        .filter(|&(_, n)| n.kind == Kind::Call)
+        .map(|(i, _)| i)
+        .collect();
 
     // Collect indices to in-nodes.
-    let ins: Vec<usize> = nodes.iter().enumerate()
-        .filter(|&(_, n)| n.kind == Kind::In).map(|(i, _)| i).collect();
+    let ins: Vec<usize> = nodes
+        .iter()
+        .enumerate()
+        .filter(|&(_, n)| n.kind == Kind::In)
+        .map(|(i, _)| i)
+        .collect();
 
     // Collect indices to returns.
-    let returns: Vec<usize> = nodes.iter().enumerate()
-        .filter(|&(_, n)| n.kind == Kind::Return).map(|(i, _)| i).collect();
+    let returns: Vec<usize> = nodes
+        .iter()
+        .enumerate()
+        .filter(|&(_, n)| n.kind == Kind::Return)
+        .map(|(i, _)| i)
+        .collect();
 
     // Collect indices to expressions in mathematical declared functions.
-    let math_expr: Vec<usize> = nodes.iter().enumerate()
+    let math_expr: Vec<usize> = nodes
+        .iter()
+        .enumerate()
         .filter(|&(_, n)| {
-            if n.kind != Kind::Expr { return false; }
+            if n.kind != Kind::Expr {
+                return false;
+            }
             if let Some(parent) = n.parent {
-                if nodes[parent].kind != Kind::Fn &&
-                   nodes[parent].kind != Kind::Closure { return false; }
+                if nodes[parent].kind != Kind::Fn && nodes[parent].kind != Kind::Closure {
+                    return false;
+                }
             }
             true
         })
-        .map(|(i, _)| i).collect();
+        .map(|(i, _)| i)
+        .collect();
 
     // Collect indices to expressions at end of blocks.
-    let end_of_blocks: Vec<usize> = nodes.iter().enumerate()
+    let end_of_blocks: Vec<usize> = nodes
+        .iter()
+        .enumerate()
         .filter(|&(i, n)| {
-            if n.kind == Kind::Expr &&
-               n.children.len() == 1 {
-                 let ch = n.children[0];
-                 if !nodes[ch].has_lifetime() { return false }
+            if n.kind == Kind::Expr && n.children.len() == 1 {
+                let ch = n.children[0];
+                if !nodes[ch].has_lifetime() {
+                    return false;
+                }
             }
             if let Some(parent) = n.parent {
-                if !nodes[parent].kind.is_block() { return false }
-                if *nodes[parent].children.last().unwrap() != i { return false }
+                if !nodes[parent].kind.is_block() {
+                    return false;
+                }
+                if *nodes[parent].children.last().unwrap() != i {
+                    return false;
+                }
                 true
             } else {
                 false
             }
-        }).map(|(i, _)| i).collect();
+        })
+        .map(|(i, _)| i)
+        .collect();
 
     // Collect indices to declared locals.
     // Stores assign node, item node.
-    let locals: Vec<(usize, usize)> = nodes.iter().enumerate()
+    let locals: Vec<(usize, usize)> = nodes
+        .iter()
+        .enumerate()
         .filter(|&(_, n)| {
-            n.op == Some(AssignOp::Assign) &&
-            !n.children.is_empty() &&
-            !nodes[n.children[0]].children.is_empty()
+            n.op == Some(AssignOp::Assign)
+                && !n.children.is_empty()
+                && !nodes[n.children[0]].children.is_empty()
         })
         .map(|(i, n)| {
-                // Left argument.
-                let j = n.children[0];
-                let node = &nodes[j];
-                // Item in left argument.
-                let j = node.children[0];
-                (i, j)
-            })
+            // Left argument.
+            let j = n.children[0];
+            let node = &nodes[j];
+            // Item in left argument.
+            let j = node.children[0];
+            (i, j)
+        })
         // Filter out assignments to objects or arrays to get locals only.
         .filter(|&(_, j)| !nodes[j].item_ids())
         .collect();
 
     // Collect indices to assignments to object or arrays.
-    let assigned_locals: Vec<(usize, usize)> = nodes.iter().enumerate()
+    let assigned_locals: Vec<(usize, usize)> = nodes
+        .iter()
+        .enumerate()
         .filter(|&(_, n)| {
-            n.op == Some(AssignOp::Assign) &&
-            !n.children.is_empty() &&
-            !nodes[n.children[0]].children.is_empty()
+            n.op == Some(AssignOp::Assign)
+                && !n.children.is_empty()
+                && !nodes[n.children[0]].children.is_empty()
         })
         .map(|(i, n)| {
-                // Left argument.
-                let j = n.children[0];
-                let node = &nodes[j];
-                // Item in left argument.
-                let j = node.children[0];
-                (i, j)
-            })
+            // Left argument.
+            let j = n.children[0];
+            let node = &nodes[j];
+            // Item in left argument.
+            let j = node.children[0];
+            (i, j)
+        })
         // Filter to get assignments to objects or arrays only.
         .filter(|&(_, j)| nodes[j].item_ids())
         .collect();
 
     // Collect indices to mutated locals.
     // Stores assign node, item node.
-    let mutated_locals: Vec<(usize, usize)> = nodes.iter().enumerate()
-        .filter(|&(_, n)| {
-            n.op.is_some() && n.op != Some(AssignOp::Assign)
-        })
+    let mutated_locals: Vec<(usize, usize)> = nodes
+        .iter()
+        .enumerate()
+        .filter(|&(_, n)| n.op.is_some() && n.op != Some(AssignOp::Assign))
         .map(|(i, n)| {
-                // Left argument.
-                let j = n.children[0];
-                let node = &nodes[j];
-                // Item in left argument.
-                let j = node.children[0];
-                (i, j)
-            })
+            // Left argument.
+            let j = n.children[0];
+            let node = &nodes[j];
+            // Item in left argument.
+            let j = node.children[0];
+            (i, j)
+        })
         .collect();
 
     // Collect indices to references that are not declared.
-    let items: Vec<usize> = nodes.iter().enumerate()
+    let items: Vec<usize> = nodes
+        .iter()
+        .enumerate()
         .filter(|&(i, n)| {
-            n.kind == Kind::Item &&
-            locals.binary_search_by(|&(_, it)| it.cmp(&i)).is_err()
+            n.kind == Kind::Item && locals.binary_search_by(|&(_, it)| it.cmp(&i)).is_err()
         })
         .map(|(i, _)| i)
         .collect();
 
     // Collect indices to inferred ranges.
-    let inferred: Vec<usize> = nodes.iter().enumerate()
-        .filter(|&(_, n)| {
-            n.kind.is_decl_loop() &&
-            n.find_child_by_kind(&nodes, Kind::End).is_none()
-        })
+    let inferred: Vec<usize> = nodes
+        .iter()
+        .enumerate()
+        .filter(|&(_, n)| n.kind.is_decl_loop() && n.find_child_by_kind(nodes, Kind::End).is_none())
         .map(|(i, _)| i)
         .collect();
 
@@ -322,9 +360,10 @@ pub(crate) fn check_core(
         let mut grab = 0;
 
         'search: loop {
-            if nodes[parent].kind.is_decl_loop() ||
-               nodes[parent].kind.is_decl_un_loop() ||
-               nodes[parent].kind.is_in_loop() {
+            if nodes[parent].kind.is_decl_loop()
+                || nodes[parent].kind.is_decl_un_loop()
+                || nodes[parent].kind.is_in_loop()
+            {
                 let my_name = nodes[i].name().unwrap();
                 for name in &nodes[parent].names {
                     if name == my_name {
@@ -334,23 +373,32 @@ pub(crate) fn check_core(
                 }
             }
 
-            let me = nodes[parent].children.binary_search(&child)
+            let me = nodes[parent]
+                .children
+                .binary_search(&child)
                 .expect("Expected parent to contain child");
             let children = &nodes[parent].children[..me];
             for &j in children.iter().rev() {
-                if nodes[j].children.is_empty() { continue; }
+                if nodes[j].children.is_empty() {
+                    continue;
+                }
                 // Assign is inside an expression.
                 let j = nodes[j].children[0];
-                if nodes[j].op != Some(AssignOp::Assign) { continue; }
+                if nodes[j].op != Some(AssignOp::Assign) {
+                    continue;
+                }
                 let left = nodes[j].children[0];
                 let item = nodes[left].children[0];
                 if nodes[item].name() == nodes[i].name() {
-                    if nodes[item].item_ids() { continue; }
+                    if nodes[item].item_ids() {
+                        continue;
+                    }
                     if grab > 0 {
-                        return Err(nodes[i].source.wrap(
-                            format!("Grabbed `{}` has same name as variable.\n\
+                        return Err(nodes[i].source.wrap(format!(
+                            "Grabbed `{}` has same name as variable.\n\
                             Perhaps the grab level is set too high?",
-                            nodes[i].name().expect("Expected name"))));
+                            nodes[i].name().expect("Expected name")
+                        )));
                     }
                     it = Some(item);
                     break 'search;
@@ -375,14 +423,14 @@ pub(crate) fn check_core(
                             let arg = &nodes[j];
                             match arg.kind {
                                 Kind::Arg | Kind::Current => {}
-                                _ => continue
+                                _ => continue,
                             };
-                            if Some(true) == arg.name().map(|n|
-                                    **n == **nodes[i].name().unwrap()) {
+                            if Some(true) == arg.name().map(|n| **n == **nodes[i].name().unwrap()) {
                                 if grab > 0 {
-                                    return Err(nodes[i].source.wrap(
-                                        format!("Grabbed `{}` has same name as closure argument",
-                                        nodes[i].name().expect("Expected name"))));
+                                    return Err(nodes[i].source.wrap(format!(
+                                        "Grabbed `{}` has same name as closure argument",
+                                        nodes[i].name().expect("Expected name")
+                                    )));
                                 }
                                 it = Some(j);
                                 break 'search;
@@ -391,15 +439,14 @@ pub(crate) fn check_core(
                         grab -= 1;
                     }
                 }
-                None => break
+                None => break,
             }
         }
 
         match it {
             Some(it) => nodes[i].declaration = Some(it),
             None => {
-                if nodes[parent].kind != Kind::Fn &&
-                   nodes[parent].kind != Kind::Closure {
+                if nodes[parent].kind != Kind::Fn && nodes[parent].kind != Kind::Closure {
                     panic!("Top parent is not a function");
                 }
                 if nodes[i].name().is_none() {
@@ -412,10 +459,9 @@ pub(crate) fn check_core(
                     let arg = &nodes[j];
                     match arg.kind {
                         Kind::Arg | Kind::Current => {}
-                        _ => continue
+                        _ => continue,
                     };
-                    if Some(true) == arg.name().map(|n|
-                        **n == **nodes[i].name().unwrap()) {
+                    if Some(true) == arg.name().map(|n| **n == **nodes[i].name().unwrap()) {
                         found = Some(j);
                         break;
                     }
@@ -425,9 +471,10 @@ pub(crate) fn check_core(
                         nodes[i].declaration = Some(j);
                     }
                     None => {
-                        return Err(nodes[i].source.wrap(
-                            format!("Could not find declaration of `{}`",
-                            nodes[i].name().expect("Expected name"))));
+                        return Err(nodes[i].source.wrap(format!(
+                            "Could not find declaration of `{}`",
+                            nodes[i].name().expect("Expected name")
+                        )));
                     }
                 }
             }
@@ -439,8 +486,12 @@ pub(crate) fn check_core(
         for name in &nodes[inf].names {
             let mut found = false;
             'item: for &i in &items {
-                if nodes[i].declaration != Some(inf) { continue 'item; }
-                if nodes[i].name() != Some(name) { continue 'item; }
+                if nodes[i].declaration != Some(inf) {
+                    continue 'item;
+                }
+                if nodes[i].name() != Some(name) {
+                    continue 'item;
+                }
                 let mut ch = i;
                 while let Some(parent) = nodes[ch].parent {
                     match nodes[parent].kind {
@@ -450,7 +501,9 @@ pub(crate) fn check_core(
                         }
                         Kind::Val | Kind::Expr => {}
                         Kind::Mul | Kind::Add => {
-                            if nodes[parent].children.len() > 1 { continue 'item; }
+                            if nodes[parent].children.len() > 1 {
+                                continue 'item;
+                            }
                         }
                         _ => continue 'item,
                     }
@@ -459,8 +512,9 @@ pub(crate) fn check_core(
             }
 
             if !found {
-                return Err(nodes[inf].source.wrap(
-                    "Can not infer range from body, use `list[i]` syntax".to_string()));
+                return Err(nodes[inf]
+                    .source
+                    .wrap("Can not infer range from body, use `list[i]` syntax".to_string()));
             }
         }
     }
@@ -470,11 +524,16 @@ pub(crate) fn check_core(
     for &f in &functions {
         arg_names.clear();
         let mut n = 0;
-        for &i in nodes[f].children.iter().filter(|&&i| nodes[i].kind == Kind::Arg) {
+        for &i in nodes[f]
+            .children
+            .iter()
+            .filter(|&&i| nodes[i].kind == Kind::Arg)
+        {
             let name = nodes[i].name().expect("Expected name");
             if arg_names.contains(name) {
-                return Err(nodes[i].source.wrap(
-                    format!("Duplicate argument `{}`", name)));
+                return Err(nodes[i]
+                    .source
+                    .wrap(format!("Duplicate argument `{}`", name)));
             } else {
                 arg_names.insert(name.clone());
             }
@@ -488,9 +547,10 @@ pub(crate) fn check_core(
         if nodes[f].ty == Some(Type::Void) {
             for &ch in &nodes[f].children {
                 if nodes[ch].kind == Kind::Ty {
-                    return Err(nodes[ch].source.wrap(
-                        format!("`{}` has extra type information but does not return anything",
-                        nodes[f].name().expect("Expected name"))))
+                    return Err(nodes[ch].source.wrap(format!(
+                        "`{}` has extra type information but does not return anything",
+                        nodes[f].name().expect("Expected name")
+                    )));
                 }
             }
         } else if let Some(ref ret_type) = nodes[f].ty {
@@ -509,9 +569,11 @@ pub(crate) fn check_core(
                                     if arg < n {
                                         if let Some(ref arg_ty) = nodes[nodes[f].children[arg]].ty {
                                             if !arg_ty.goes_with(ty_arg_ty) {
-                                                return Err(nodes[ty_ch].source.wrap(
-                                                    format!("The type `{}` does not work with `{}`",
-                                                            ty_arg_ty.description(), arg_ty.description())))
+                                                return Err(nodes[ty_ch].source.wrap(format!(
+                                                    "The type `{}` does not work with `{}`",
+                                                    ty_arg_ty.description(),
+                                                    arg_ty.description()
+                                                )));
                                             }
                                         }
                                     }
@@ -522,17 +584,20 @@ pub(crate) fn check_core(
                         } else if nodes[ty_ch].kind == Kind::TyRet {
                             if let Some(ref ty_ret) = nodes[ty_ch].ty {
                                 if !ret_type.goes_with(ty_ret) {
-                                    return Err(nodes[ty_ch].source.wrap(
-                                        format!("The type `{}` does not work with `{}`",
-                                                ty_ret.description(), ret_type.description())))
+                                    return Err(nodes[ty_ch].source.wrap(format!(
+                                        "The type `{}` does not work with `{}`",
+                                        ty_ret.description(),
+                                        ret_type.description()
+                                    )));
                                 }
                             }
                         }
                     }
                     if count != n {
-                        return Err(nodes[ch].source.wrap(
-                            format!("Expected {} number of arguments, found {}",
-                                    n, count)))
+                        return Err(nodes[ch].source.wrap(format!(
+                            "Expected {} number of arguments, found {}",
+                            n, count
+                        )));
                     }
                 }
             }
@@ -544,8 +609,9 @@ pub(crate) fn check_core(
     for (i, &f) in functions.iter().enumerate() {
         let name = nodes[f].name().expect("Expected name");
         if function_lookup.contains_key(name) {
-            return Err(nodes[f].source.wrap(
-                format!("Duplicate function `{}`", name)));
+            return Err(nodes[f]
+                .source
+                .wrap(format!("Duplicate function `{}`", name)));
         } else {
             function_lookup.insert(name.clone(), i);
         }
@@ -554,8 +620,8 @@ pub(crate) fn check_core(
     let mut use_lookup: UseLookup = UseLookup::new();
     for node in nodes.iter() {
         if node.kind == Kind::Uses {
-            use piston_meta::bootstrap::Convert;
             use ast::Uses;
+            use piston_meta::bootstrap::Convert;
 
             let convert = Convert::new(&data[node.start..node.end]);
             if let Ok((_, val)) = Uses::from_meta_data(convert, &mut vec![]) {
@@ -569,13 +635,17 @@ pub(crate) fn check_core(
     for &c in &calls {
         let n = {
             let mut sum = 0;
-            for &ch in nodes[c].children.iter()
-                .filter(|&&i| nodes[i].kind == Kind::CallArg) {
-                if let Some(sw) = nodes[ch].find_child_by_kind(&nodes, Kind::Swizzle) {
-                    sum += nodes[sw].children.iter()
-                        .filter(|&&i| match nodes[i].kind {
-                            Kind::Sw0 | Kind::Sw1 | Kind::Sw2 | Kind::Sw3 => true,
-                            _ => false
+            for &ch in nodes[c]
+                .children
+                .iter()
+                .filter(|&&i| nodes[i].kind == Kind::CallArg)
+            {
+                if let Some(sw) = nodes[ch].find_child_by_kind(nodes, Kind::Swizzle) {
+                    sum += nodes[sw]
+                        .children
+                        .iter()
+                        .filter(|&&i| {
+                            matches!(nodes[i].kind, Kind::Sw0 | Kind::Sw1 | Kind::Sw2 | Kind::Sw3)
                         })
                         .count();
                 } else {
@@ -591,12 +661,15 @@ pub(crate) fn check_core(
             use ast::FnAlias;
 
             // External functions are treated as loaded in prelude.
-            if let Some(&FnAlias::Loaded(i)) = use_lookup.aliases.get(alias).and_then(|map| map.get(&name)) {
+            if let Some(&FnAlias::Loaded(i)) =
+                use_lookup.aliases.get(alias).and_then(|map| map.get(&name))
+            {
                 node.lts = prelude.list[i].lts.clone();
                 continue;
             } else {
-                return Err(node.source.wrap(
-                    format!("Could not find function `{}::{}`", alias, name)));
+                return Err(node
+                    .source
+                    .wrap(format!("Could not find function `{}::{}`", alias, name)));
             }
         }
         let i = match function_lookup.get(&name) {
@@ -606,23 +679,28 @@ pub(crate) fn check_core(
                 if let Some(&pf) = prelude.functions.get(&name) {
                     node.lts = prelude.list[pf].lts.clone();
                     if node.lts.len() != n {
-                        return Err(node.source.wrap(
-                            format!("{}: Expected {} arguments, found {}",
-                            name, node.lts.len(), n)));
+                        return Err(node.source.wrap(format!(
+                            "{}: Expected {} arguments, found {}",
+                            name,
+                            node.lts.len(),
+                            n
+                        )));
                     }
                     continue;
                 }
                 let suggestions = suggestions(&**name, &function_lookup, prelude);
-                return Err(node.source.wrap(
-                    format!("Could not find function `{}`{}", name, suggestions)));
+                return Err(node
+                    .source
+                    .wrap(format!("Could not find function `{}`{}", name, suggestions)));
             }
         };
         // Check that number of arguments is the same as in declaration.
         if function_args[i] != n {
-        let suggestions = suggestions(&**name, &function_lookup, prelude);
-            return Err(node.source.wrap(
-                format!("{}: Expected {} arguments, found {}{}",
-                name, function_args[i], n, suggestions)));
+            let suggestions = suggestions(&**name, &function_lookup, prelude);
+            return Err(node.source.wrap(format!(
+                "{}: Expected {} arguments, found {}{}",
+                name, function_args[i], n, suggestions
+            )));
         }
         node.declaration = Some(functions[i]);
     }
@@ -635,22 +713,28 @@ pub(crate) fn check_core(
             use ast::FnAlias;
 
             // External functions are treated as loaded in prelude.
-            if let Some(&FnAlias::Loaded(i)) = use_lookup.aliases.get(alias).and_then(|map| map.get(&name)) {
+            if let Some(&FnAlias::Loaded(i)) =
+                use_lookup.aliases.get(alias).and_then(|map| map.get(&name))
+            {
                 node.lts = prelude.list[i].lts.clone();
                 continue;
             } else {
-                return Err(node.source.wrap(
-                    format!("Could not find function `{}::{}`", alias, name)));
+                return Err(node
+                    .source
+                    .wrap(format!("Could not find function `{}::{}`", alias, name)));
             }
         }
         match function_lookup.get(&name) {
             Some(&i) => i,
             None => {
                 // Check whether it is a prelude function.
-                if prelude.functions.get(&name).is_some() {continue};
+                if prelude.functions.get(&name).is_some() {
+                    continue;
+                };
                 let suggestions = suggestions(&**name, &function_lookup, prelude);
-                return Err(node.source.wrap(
-                    format!("Could not find function `{}`{}", name, suggestions)));
+                return Err(node
+                    .source
+                    .wrap(format!("Could not find function `{}`{}", name, suggestions)));
             }
         };
     }
@@ -659,51 +743,70 @@ pub(crate) fn check_core(
     let mut arg_names: ArgNames = HashMap::new();
     for (i, &f) in functions.iter().enumerate() {
         let function = &nodes[f];
-        for (j, &c) in function.children.iter()
+        for (j, &c) in function
+            .children
+            .iter()
             .filter(|&&c| nodes[c].kind == Kind::Arg)
-            .enumerate() {
+            .enumerate()
+        {
             let name = nodes[c].name().expect("Expected name");
             arg_names.insert((f, name.clone()), (c, j));
         }
         // Check that all lifetimes except `'return` points to another argument.
-        for &c in function.children.iter()
-            .filter(|&&c| nodes[c].kind == Kind::Arg) {
+        for &c in function
+            .children
+            .iter()
+            .filter(|&&c| nodes[c].kind == Kind::Arg)
+        {
             if let Some(ref lt) = nodes[c].lifetime {
-                if &**lt == "return" { continue; }
+                if &**lt == "return" {
+                    continue;
+                }
                 if !arg_names.contains_key(&(f, lt.clone())) {
-                    return Err(nodes[c].source.wrap(
-                        format!("Could not find argument `{}`", lt)));
+                    return Err(nodes[c]
+                        .source
+                        .wrap(format!("Could not find argument `{}`", lt)));
                 }
             }
         }
 
         // Check for cyclic references among lifetimes.
         let mut visited = vec![false; function_args[i]];
-        for (_, &c) in function.children.iter()
+        for (_, &c) in function
+            .children
+            .iter()
             .filter(|&&c| nodes[c].kind == Kind::Arg)
-            .enumerate() {
+            .enumerate()
+        {
             if let Some(ref lt) = nodes[c].lifetime {
-                if &**lt == "return" { break; }
+                if &**lt == "return" {
+                    break;
+                }
                 // Reset visit flags.
-                for it in &mut visited { *it = false; }
+                for it in &mut visited {
+                    *it = false;
+                }
 
-                let (mut arg, mut ind) = *arg_names.get(&(f, lt.clone()))
+                let (mut arg, mut ind) = *arg_names
+                    .get(&(f, lt.clone()))
                     .expect("Expected argument index");
                 loop {
                     if visited[ind] {
-                        return Err(nodes[arg].source.wrap(
-                                format!("Cyclic lifetime for `{}`", lt)));
+                        return Err(nodes[arg]
+                            .source
+                            .wrap(format!("Cyclic lifetime for `{}`", lt)));
                     }
                     visited[ind] = true;
 
                     // Go to next argument by following the lifetime.
                     let name = match nodes[arg].lifetime {
-                            None => break,
-                            Some(ref name) => name.clone()
-                        };
-                    if &**name == "return" { break; }
-                    let (new_arg, new_ind) = *arg_names.get(&(f, name))
-                        .expect("Expected argument");
+                        None => break,
+                        Some(ref name) => name.clone(),
+                    };
+                    if &**name == "return" {
+                        break;
+                    }
+                    let (new_arg, new_ind) = *arg_names.get(&(f, name)).expect("Expected argument");
                     arg = new_arg;
                     ind = new_ind;
                 }
@@ -714,21 +817,23 @@ pub(crate) fn check_core(
     // Check the lifetime of mutated locals.
     for &(a, i) in &mutated_locals {
         // Only `=` needs a lifetime check.
-        if nodes[a].op != Some(AssignOp::Set) { continue }
+        if nodes[a].op != Some(AssignOp::Set) {
+            continue;
+        }
         let right = nodes[a].children[1];
-        let lifetime_left = &nodes[i].lifetime(&nodes, &arg_names);
-        let lifetime_right = &nodes[right].lifetime(&nodes, &arg_names);
-        compare_lifetimes(lifetime_left, lifetime_right, &nodes)
-                .map_err(|err| nodes[right].source.wrap(err))?;
+        let lifetime_left = &nodes[i].lifetime(nodes, &arg_names);
+        let lifetime_right = &nodes[right].lifetime(nodes, &arg_names);
+        compare_lifetimes(lifetime_left, lifetime_right, nodes)
+            .map_err(|err| nodes[right].source.wrap(err))?;
     }
 
     // Check the lifetime of declared locals.
     for &(a, i) in &locals {
         let right = nodes[a].children[1];
         let lifetime_left = &Some(Lifetime::Local(i));
-        let lifetime_right = &nodes[right].lifetime(&nodes, &arg_names);
-        compare_lifetimes(lifetime_left, lifetime_right, &nodes)
-                .map_err(|err| nodes[right].source.wrap(err))?;
+        let lifetime_right = &nodes[right].lifetime(nodes, &arg_names);
+        compare_lifetimes(lifetime_left, lifetime_right, nodes)
+            .map_err(|err| nodes[right].source.wrap(err))?;
     }
 
     // Check the lifetime of assigned locals.
@@ -736,39 +841,43 @@ pub(crate) fn check_core(
         if let Some(j) = nodes[i].declaration {
             let right = nodes[a].children[1];
             let lifetime_left = &Some(Lifetime::Local(j));
-            let lifetime_right = &nodes[right].lifetime(&nodes, &arg_names);
-            compare_lifetimes(lifetime_left, lifetime_right, &nodes)
-                    .map_err(|err| nodes[right].source.wrap(err))?;
+            let lifetime_right = &nodes[right].lifetime(nodes, &arg_names);
+            compare_lifetimes(lifetime_left, lifetime_right, nodes)
+                .map_err(|err| nodes[right].source.wrap(err))?;
         }
     }
 
     // Check the lifetime of returned values.
     for &i in &returns {
         let right = nodes[i].children[0];
-        let lifetime_right = &nodes[right].lifetime(&nodes, &arg_names);
-        compare_lifetimes(
-            &Some(Lifetime::Return(vec![])), lifetime_right, &nodes)
-                .map_err(|err| nodes[right].source.wrap(err))?;
+        let lifetime_right = &nodes[right].lifetime(nodes, &arg_names);
+        compare_lifetimes(&Some(Lifetime::Return(vec![])), lifetime_right, nodes)
+            .map_err(|err| nodes[right].source.wrap(err))?;
     }
 
     // Check the lifetime of expressions that are mathematically declared.
     for &i in &math_expr {
-        let lifetime_right = &nodes[i].lifetime(&nodes, &arg_names);
-        compare_lifetimes(
-            &Some(Lifetime::Return(vec![])), lifetime_right, &nodes)
-                .map_err(|err| nodes[i].source.wrap(err))?;
+        let lifetime_right = &nodes[i].lifetime(nodes, &arg_names);
+        compare_lifetimes(&Some(Lifetime::Return(vec![])), lifetime_right, nodes)
+            .map_err(|err| nodes[i].source.wrap(err))?;
     }
 
     // Check that no function argument has lifetime "'return"
     // while the function does not return anything.
     for &f in &functions {
         if let Some(Type::Void) = nodes[f].ty {
-            for &j in nodes[f].children.iter().filter(|&&i| nodes[i].kind == Kind::Arg) {
+            for &j in nodes[f]
+                .children
+                .iter()
+                .filter(|&&i| nodes[i].kind == Kind::Arg)
+            {
                 if let Some(ref lt) = nodes[j].lifetime {
                     if &**lt == "return" {
                         let name = nodes[j].name().expect("Expected name");
-                        return Err(nodes[j].source
-                            .wrap(format!("`{}: 'return` , but function does not return", name)));
+                        return Err(nodes[j].source.wrap(format!(
+                            "`{}: 'return` , but function does not return",
+                            name
+                        )));
                     }
                 }
             }
@@ -780,9 +889,9 @@ pub(crate) fn check_core(
         let parent = nodes[i].parent.unwrap();
         // Fake a local variable.
         let lifetime_left = &Some(Lifetime::Local(parent));
-        let lifetime_right = &nodes[i].lifetime(&nodes, &arg_names);
-        compare_lifetimes(lifetime_left, lifetime_right, &nodes)
-                .map_err(|err| nodes[i].source.wrap(err))?;
+        let lifetime_right = &nodes[i].lifetime(nodes, &arg_names);
+        compare_lifetimes(lifetime_left, lifetime_right, nodes)
+            .map_err(|err| nodes[i].source.wrap(err))?;
     }
 
     // Check that calls do not have arguments with shorter lifetime than the call.
@@ -790,11 +899,14 @@ pub(crate) fn check_core(
         let call = &nodes[c];
         // Fake a local variable.
         let lifetime_left = &Some(Lifetime::Local(c));
-        for &a in call.children.iter()
-            .filter(|&&i| nodes[i].kind == Kind::CallArg)  {
-            let lifetime_right = &nodes[a].lifetime(&nodes, &arg_names);
-            compare_lifetimes(lifetime_left, lifetime_right, &nodes)
-                    .map_err(|err| nodes[a].source.wrap(err))?;
+        for &a in call
+            .children
+            .iter()
+            .filter(|&&i| nodes[i].kind == Kind::CallArg)
+        {
+            let lifetime_right = &nodes[a].lifetime(nodes, &arg_names);
+            compare_lifetimes(lifetime_left, lifetime_right, nodes)
+                .map_err(|err| nodes[a].source.wrap(err))?;
         }
     }
 
@@ -802,34 +914,42 @@ pub(crate) fn check_core(
     for &c in &calls {
         let call = &nodes[c];
         if let Some(parent) = call.parent {
-            if nodes[parent].kind != Kind::Go { continue }
+            if nodes[parent].kind != Kind::Go {
+                continue;
+            }
         } else {
             continue;
         }
         if let Some(declaration) = call.declaration {
             let function = &nodes[declaration];
-            for (i, &a) in function.children.iter()
+            for (i, &a) in function
+                .children
+                .iter()
                 .enumerate()
-                .filter(|&(_, &i)| nodes[i].kind == Kind::Arg)  {
+                .filter(|&(_, &i)| nodes[i].kind == Kind::Arg)
+            {
                 let arg = &nodes[a];
                 if arg.lifetime.is_some() {
                     return Err(nodes[call.children[i]].source.wrap(
                         "Can not use `go` because this argument has a lifetime constraint"
-                        .to_string()));
+                            .to_string(),
+                    ));
                 }
             }
         } else {
             // Check that call to intrinsic satisfy the declared constraints.
-            for ((i, &lt), _) in
-            call.lts.iter().enumerate()
-                .zip(call.children.iter()
-                .filter(|&&n| nodes[n].kind == Kind::CallArg)) {
+            for ((i, &lt), _) in call.lts.iter().enumerate().zip(
+                call.children
+                    .iter()
+                    .filter(|&&n| nodes[n].kind == Kind::CallArg),
+            ) {
                 match lt {
                     Lt::Default => {}
                     _ => {
                         return Err(nodes[call.children[i]].source.wrap(
                             "Can not use `go` because this argument has a lifetime constraint"
-                            .to_string()));
+                                .to_string(),
+                        ));
                     }
                 }
             }
@@ -844,17 +964,19 @@ pub(crate) fn check_core(
             let mut j = 0;
             let mut new_i = 0;
             for &ch in &call.children {
-                if let Some(sw) = nodes[ch].find_child_by_kind(&nodes, Kind::Swizzle) {
+                if let Some(sw) = nodes[ch].find_child_by_kind(nodes, Kind::Swizzle) {
                     for &ch in &nodes[sw].children {
                         j += match nodes[ch].kind {
                             Kind::Sw0 | Kind::Sw1 | Kind::Sw2 | Kind::Sw3 => 1,
-                            _ => 0
+                            _ => 0,
                         }
-                    };
+                    }
                 } else {
                     j += 1;
                 }
-                if j > i { break; }
+                if j > i {
+                    break;
+                }
                 new_i += 1;
             }
             new_i
@@ -887,20 +1009,24 @@ pub(crate) fn check_core(
 
         if let Some(declaration) = call.declaration {
             let function = &nodes[declaration];
-            for (i, &a) in function.children.iter()
+            for (i, &a) in function
+                .children
+                .iter()
                 .enumerate()
                 .filter(|&(_, &i)| nodes[i].kind == Kind::Arg)
-                .map(|(i, a)| (map_arg_call_arg_index(i), a)) {
+                .map(|(i, a)| (map_arg_call_arg_index(i), a))
+            {
                 let arg = &nodes[a];
                 if let Some(ref lt) = arg.lifetime {
                     // When arguments should outlive the return value,
                     // make sure they are referenced.
-                    let arg_lifetime = arg_lifetime(a, arg, &nodes, &arg_names);
+                    let arg_lifetime = arg_lifetime(a, arg, nodes, &arg_names);
                     match arg_lifetime {
                         Some(Lifetime::Return(_)) | Some(Lifetime::Argument(_)) => {
                             if !is_reference(i) {
-                                return Err(nodes[call.children[i]].source.wrap(
-                                    "Requires reference to variable".to_string()));
+                                return Err(nodes[call.children[i]]
+                                    .source
+                                    .wrap("Requires reference to variable".to_string()));
                             }
                         }
                         _ => {}
@@ -908,45 +1034,49 @@ pub(crate) fn check_core(
 
                     if &**lt != "return" {
                         // Compare the lifetime of the two arguments.
-                        let (_, ind) = *arg_names.get(&(declaration, lt.clone()))
+                        let (_, ind) = *arg_names
+                            .get(&(declaration, lt.clone()))
                             .expect("Expected argument name");
                         let left = call.children[ind];
                         let right = call.children[i];
-                        let lifetime_left = &nodes[left].lifetime(&nodes, &arg_names);
-                        let lifetime_right = &nodes[right].lifetime(&nodes, &arg_names);
-                        compare_lifetimes(
-                            lifetime_left, lifetime_right, &nodes)
-                                .map_err(|err| nodes[right].source.wrap(err))?;
+                        let lifetime_left = &nodes[left].lifetime(nodes, &arg_names);
+                        let lifetime_right = &nodes[right].lifetime(nodes, &arg_names);
+                        compare_lifetimes(lifetime_left, lifetime_right, nodes)
+                            .map_err(|err| nodes[right].source.wrap(err))?;
                     }
                 }
             }
         } else {
             // Check that call to intrinsic satisfy the declared constraints.
-            for (i, &lt) in
-            call.lts.iter().enumerate()
-                .map(|(i, a)| (map_arg_call_arg_index(i), a)) {
+            for (i, &lt) in call
+                .lts
+                .iter()
+                .enumerate()
+                .map(|(i, a)| (map_arg_call_arg_index(i), a))
+            {
                 let arg = &nodes[call.children[i]];
                 match lt {
                     Lt::Default => {}
                     Lt::Return => {
                         if !is_reference(i) {
-                            return Err(arg.source.wrap(
-                                "Requires reference to variable".to_string()));
+                            return Err(arg
+                                .source
+                                .wrap("Requires reference to variable".to_string()));
                         }
                     }
                     Lt::Arg(ind) => {
                         if !is_reference(i) {
-                            return Err(arg.source.wrap(
-                                "Requires reference to variable".to_string()));
+                            return Err(arg
+                                .source
+                                .wrap("Requires reference to variable".to_string()));
                         }
 
                         let left = call.children[ind];
                         let right = call.children[i];
-                        let lifetime_left = &nodes[left].lifetime(&nodes, &arg_names);
-                        let lifetime_right = &nodes[right].lifetime(&nodes, &arg_names);
-                        compare_lifetimes(
-                            lifetime_left, lifetime_right, &nodes)
-                                .map_err(|err| nodes[right].source.wrap(err))?;
+                        let lifetime_left = &nodes[left].lifetime(nodes, &arg_names);
+                        let lifetime_right = &nodes[right].lifetime(nodes, &arg_names);
+                        compare_lifetimes(lifetime_left, lifetime_right, nodes)
+                            .map_err(|err| nodes[right].source.wrap(err))?;
                     }
                 }
             }
@@ -956,13 +1086,12 @@ pub(crate) fn check_core(
     // Check that mutable locals are not immutable arguments.
     for &(_, i) in &mutated_locals {
         if let Some(decl) = nodes[i].declaration {
-            if (nodes[decl].kind == Kind::Arg ||
-               nodes[decl].kind == Kind::Current) &&
-               !nodes[decl].mutable
+            if (nodes[decl].kind == Kind::Arg || nodes[decl].kind == Kind::Current)
+                && !nodes[decl].mutable
             {
-                return Err(nodes[i].source.wrap(
-                    format!("Requires `mut {}`", nodes[i].name().unwrap())
-                ));
+                return Err(nodes[i]
+                    .source
+                    .wrap(format!("Requires `mut {}`", nodes[i].name().unwrap())));
             }
         }
     }
@@ -975,27 +1104,32 @@ pub(crate) fn check_core(
             // Item is 2 levels down inside call_arg/item
             for _ in 0..2 {
                 let node: &Node = &nodes[n];
-                if node.kind == Kind::Item { return Some(n); }
-                if node.children.is_empty() { break; }
+                if node.kind == Kind::Item {
+                    return Some(n);
+                }
+                if node.children.is_empty() {
+                    break;
+                }
                 n = node.children[0];
             }
             None
         };
 
-        for &arg in call.children.iter()
-            .filter(|&&n| nodes[n].kind == Kind::CallArg
-                          && nodes[n].mutable)
+        for &arg in call
+            .children
+            .iter()
+            .filter(|&&n| nodes[n].kind == Kind::CallArg && nodes[n].mutable)
         {
             if let Some(n) = reference(arg) {
                 if let Some(decl) = nodes[n].declaration {
-                   if (nodes[decl].kind == Kind::Arg ||
-                       nodes[decl].kind == Kind::Current) &&
-                       !nodes[decl].mutable {
-                       return Err(nodes[n].source.wrap(
-                           format!("Requires `mut {}`", nodes[n].name().unwrap())
-                       ));
-                   }
-               }
+                    if (nodes[decl].kind == Kind::Arg || nodes[decl].kind == Kind::Current)
+                        && !nodes[decl].mutable
+                    {
+                        return Err(nodes[n]
+                            .source
+                            .wrap(format!("Requires `mut {}`", nodes[n].name().unwrap())));
+                    }
+                }
             }
         }
     }
@@ -1018,10 +1152,10 @@ pub(crate) fn check_core(
 fn suggestions(
     name: &str,
     function_lookup: &HashMap<Arc<String>, usize>,
-    prelude: &Prelude
+    prelude: &Prelude,
 ) -> String {
-    let search_name = if let Some((mut_pos, _)) = name.chars().enumerate()
-        .find(|&(_, c)| c == '(') {
+    let search_name = if let Some((mut_pos, _)) = name.chars().enumerate().find(|&(_, c)| c == '(')
+    {
         &name[..mut_pos - 1]
     } else {
         name

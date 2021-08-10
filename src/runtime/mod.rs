@@ -1,22 +1,22 @@
 //! Dyon runtime.
 
-use std::sync::Arc;
-use std::cell::Cell;
-use std::collections::HashMap;
 use rand;
 use range::Range;
+use std::cell::Cell;
+use std::collections::HashMap;
+use std::sync::Arc;
 
 use ast;
 use embed;
 
 use FnIndex;
 use Module;
-use Variable;
 use UnsafeRef;
+use Variable;
 use TINVOTS;
 
-mod for_n;
 mod for_in;
+mod for_n;
 
 type FlowResult = Result<(Option<Variable>, Flow), String>;
 
@@ -26,7 +26,7 @@ pub enum Side {
     /// Whether to insert key in object when missing.
     LeftInsert(bool),
     /// Evaluating right side of assignment.
-    Right
+    Right,
 }
 
 /// Stores return flow, used to continue executing, return, break out of loop or continue loop.
@@ -99,14 +99,16 @@ pub struct Runtime {
 }
 
 impl Default for Runtime {
-    fn default() -> Runtime {Runtime::new()}
+    fn default() -> Runtime {
+        Runtime::new()
+    }
 }
 
 #[inline(always)]
 fn resolve<'a>(stack: &'a [Variable], var: &'a Variable) -> &'a Variable {
     match *var {
         Variable::Ref(ind) => &stack[ind],
-        _ => var
+        _ => var,
     }
 }
 
@@ -134,25 +136,31 @@ fn item_lookup(
                         let id = start_stack_len + *expr_j;
                         // Resolve reference of computed expression.
                         let id = if let Variable::Ref(ref_id) = stack[id] {
-                                ref_id
-                            } else {
-                                id
-                            };
+                            ref_id
+                        } else {
+                            id
+                        };
                         match stack[id] {
                             Variable::Str(ref id) => {
                                 *expr_j += 1;
                                 id.clone()
                             }
-                            _ => return Err(module.error_fnindex(prop.source_range(),
-                                &format!("{}\nExpected string",
-                                    stack_trace(call_stack)),
-                                    call_stack.last().unwrap().index))
+                            _ => {
+                                return Err(module.error_fnindex(
+                                    prop.source_range(),
+                                    &format!("{}\nExpected string", stack_trace(call_stack)),
+                                    call_stack.last().unwrap().index,
+                                ))
+                            }
                         }
                     }
-                    Id::F64(range, _) => return Err(module.error_fnindex(range,
-                        &format!("{}\nExpected string",
-                            stack_trace(call_stack)),
-                            call_stack.last().unwrap().index))
+                    Id::F64(range, _) => {
+                        return Err(module.error_fnindex(
+                            range,
+                            &format!("{}\nExpected string", stack_trace(call_stack)),
+                            call_stack.last().unwrap().index,
+                        ))
+                    }
                 };
                 let v = match Arc::make_mut(obj).entry(id.clone()) {
                     Entry::Vacant(vac) => {
@@ -160,13 +168,14 @@ fn item_lookup(
                             // Insert a key to overwrite with new value.
                             vac.insert(Variable::Return)
                         } else {
-                            return Err(module.error_fnindex(prop.source_range(),
-                                &format!("{}\nObject has no key `{}`",
-                                    stack_trace(call_stack), id),
-                                    call_stack.last().unwrap().index));
+                            return Err(module.error_fnindex(
+                                prop.source_range(),
+                                &format!("{}\nObject has no key `{}`", stack_trace(call_stack), id),
+                                call_stack.last().unwrap().index,
+                            ));
                         }
                     }
-                    Entry::Occupied(v) => v.into_mut()
+                    Entry::Occupied(v) => v.into_mut(),
                 };
                 // Resolve reference.
                 if let Variable::Ref(id) = *v {
@@ -188,10 +197,10 @@ fn item_lookup(
                         let id = start_stack_len + *expr_j;
                         // Resolve reference of computed expression.
                         let id = if let Variable::Ref(ref_id) = stack[id] {
-                                ref_id
-                            } else {
-                                id
-                            };
+                            ref_id
+                        } else {
+                            id
+                        };
                         let (prev_stack, stack) = stack.split_at_mut(id);
                         match stack[0] {
                             Variable::F64(id, _) => {
@@ -214,18 +223,29 @@ fn item_lookup(
                                 let n = indices.len();
                                 for (i, ind) in indices.iter().enumerate() {
                                     let id = match ind {
-                                        &Variable::F64(id, _) => id,
-                                        &Variable::Ref(x) =>
-                                            if let &Variable::F64(id, _) = &prev_stack[x] {id}
-                                            else {break}
-                                        _ => {break}
+                                        Variable::F64(id, _) => *id,
+                                        Variable::Ref(x) => {
+                                            if let Variable::F64(id, _) = prev_stack[*x] {
+                                                id
+                                            } else {
+                                                break;
+                                            }
+                                        }
+                                        _ => break,
                                     };
                                     let v = match (*arr).get_mut(id as usize) {
-                                        None => return Err(module.error_fnindex(prop.source_range(),
-                                                           &format!("{}\nOut of bounds `{}`",
-                                                                    stack_trace(call_stack), id),
-                                                                    call_stack.last().unwrap().index)),
-                                        Some(x) => x
+                                        None => {
+                                            return Err(module.error_fnindex(
+                                                prop.source_range(),
+                                                &format!(
+                                                    "{}\nOut of bounds `{}`",
+                                                    stack_trace(call_stack),
+                                                    id
+                                                ),
+                                                call_stack.last().unwrap().index,
+                                            ))
+                                        }
+                                        Some(x) => x,
                                     };
                                     if i + 1 == n {
                                         // Resolve reference.
@@ -245,37 +265,52 @@ fn item_lookup(
                                         Variable::Array(ref mut new_arr) => {
                                             arr = Arc::make_mut(new_arr);
                                         }
-                                        Variable::Ref(x) =>
-                                            if let Variable::Array(ref mut new_arr) = prev_stack[x] {
+                                        Variable::Ref(x) => {
+                                            if let Variable::Array(ref mut new_arr) = prev_stack[x]
+                                            {
                                                 arr = Arc::make_mut(new_arr);
                                             } else {
                                                 break;
                                             }
+                                        }
                                         _ => break,
                                     }
                                 }
-                                return Err(module.error_fnindex(prop.source_range(),
-                                            &format!("{}\nArray of indices did not match lookup array",
-                                            stack_trace(call_stack)),
-                                            call_stack.last().unwrap().index))
+                                return Err(module.error_fnindex(
+                                    prop.source_range(),
+                                    &format!(
+                                        "{}\nArray of indices did not match lookup array",
+                                        stack_trace(call_stack)
+                                    ),
+                                    call_stack.last().unwrap().index,
+                                ));
                             }
-                            _ => return Err(module.error_fnindex(prop.source_range(),
-                                            &format!("{}\nExpected number",
-                                                stack_trace(call_stack)),
-                                                call_stack.last().unwrap().index))
+                            _ => {
+                                return Err(module.error_fnindex(
+                                    prop.source_range(),
+                                    &format!("{}\nExpected number", stack_trace(call_stack)),
+                                    call_stack.last().unwrap().index,
+                                ))
+                            }
                         }
                     }
-                    Id::String(range, _) => return Err(module.error_fnindex(range,
-                        &format!("{}\nExpected number",
-                            stack_trace(call_stack)),
-                            call_stack.last().unwrap().index))
+                    Id::String(range, _) => {
+                        return Err(module.error_fnindex(
+                            range,
+                            &format!("{}\nExpected number", stack_trace(call_stack)),
+                            call_stack.last().unwrap().index,
+                        ))
+                    }
                 };
                 let v = match Arc::make_mut(arr).get_mut(id as usize) {
-                    None => return Err(module.error_fnindex(prop.source_range(),
-                                       &format!("{}\nOut of bounds `{}`",
-                                                stack_trace(call_stack), id),
-                                                call_stack.last().unwrap().index)),
-                    Some(x) => x
+                    None => {
+                        return Err(module.error_fnindex(
+                            prop.source_range(),
+                            &format!("{}\nOut of bounds `{}`", stack_trace(call_stack), id),
+                            call_stack.last().unwrap().index,
+                        ))
+                    }
+                    Some(x) => x,
                 };
                 // Resolve reference.
                 if let Variable::Ref(id) = *v {
@@ -290,10 +325,14 @@ fn item_lookup(
                     Ok(v)
                 }
             }
-            _ => Err(module.error_fnindex(prop.source_range(),
-                            &format!("{}\nLook up requires object or array",
-                            stack_trace(call_stack)),
-                            call_stack.last().unwrap().index))
+            _ => Err(module.error_fnindex(
+                prop.source_range(),
+                &format!(
+                    "{}\nLook up requires object or array",
+                    stack_trace(call_stack)
+                ),
+                call_stack.last().unwrap().index,
+            )),
         }
     }
 }
@@ -325,7 +364,7 @@ impl Runtime {
         let v = self.stack.pop().unwrap_or_else(|| panic!("{}", TINVOTS));
         match self.resolve(&v) {
             &Variable::Vec4(val) => Ok(T::from(val)),
-            x => Err(self.expected(x, "vec4"))
+            x => Err(self.expected(x, "vec4")),
         }
     }
 
@@ -334,13 +373,13 @@ impl Runtime {
         let v = self.stack.pop().unwrap_or_else(|| panic!("{}", TINVOTS));
         match self.resolve(&v) {
             &Variable::Mat4(ref val) => Ok(T::from(**val)),
-            x => Err(self.expected(x, "mat4"))
+            x => Err(self.expected(x, "mat4")),
         }
     }
 
     /// Gets variable.
     pub fn var<T: embed::PopVariable>(&self, var: &Variable) -> Result<T, String> {
-        T::pop_var(self, self.resolve(&var))
+        T::pop_var(self, self.resolve(var))
     }
 
     /// Gets Current Object variable from the stack for Current Objects
@@ -366,30 +405,30 @@ impl Runtime {
     /// }
     /// ```
     pub fn current_object<T: embed::PopVariable>(&self, name: &str) -> Result<T, String> {
-        let current_object_index = self.current_stack
+        let current_object_index = self
+            .current_stack
             .iter()
             .rev()
             .find(|(name_found, _)| **name_found == name)
             .map(|x| x.1)
-            .ok_or(format!("Could not find current variable `{}`", name))
-            ?;
+            .ok_or(format!("Could not find current variable `{}`", name))?;
 
         T::pop_var(self, self.resolve(&self.stack[current_object_index]))
     }
 
     /// Gets 4D vector.
     pub fn var_vec4<T: embed::ConvertVec4>(&self, var: &Variable) -> Result<T, String> {
-        match self.resolve(&var) {
+        match self.resolve(var) {
             &Variable::Vec4(val) => Ok(T::from(val)),
-            x => Err(self.expected(x, "vec4"))
+            x => Err(self.expected(x, "vec4")),
         }
     }
 
     /// Gets 4D matrix.
     pub fn var_mat4<T: embed::ConvertMat4>(&self, var: &Variable) -> Result<T, String> {
-        match self.resolve(&var) {
+        match self.resolve(var) {
             &Variable::Mat4(ref val) => Ok(T::from(**val)),
-            x => Err(self.expected(x, "mat4"))
+            x => Err(self.expected(x, "mat4")),
         }
     }
 
@@ -412,7 +451,8 @@ impl Runtime {
     pub fn push_rust<T: 'static>(&mut self, val: T) {
         use std::sync::Mutex;
         use RustObject;
-        self.stack.push(Variable::RustObject(Arc::new(Mutex::new(val)) as RustObject))
+        self.stack
+            .push(Variable::RustObject(Arc::new(Mutex::new(val)) as RustObject))
     }
 
     /// Generates error message that a certain type was expected for argument.
@@ -427,7 +467,12 @@ impl Runtime {
     /// Generates error message that a certain type was expected.
     pub fn expected(&self, var: &Variable, ty: &str) -> String {
         let found_ty = var.typeof_var();
-        format!("{}\nExpected `{}`, found `{}`", self.stack_trace(), ty, found_ty)
+        format!(
+            "{}\nExpected `{}`, found `{}`",
+            self.stack_trace(),
+            ty,
+            found_ty
+        )
     }
 
     /// Resolves a variable reference if any, getting a pointer to the variable on the stack.
@@ -458,7 +503,13 @@ impl Runtime {
     fn pop_fn(&mut self, name: Arc<String>) {
         match self.call_stack.pop() {
             None => panic!("Did not call `{}`", name),
-            Some(Call { fn_name, stack_len: st, local_len: lc, current_len: cu, .. }) => {
+            Some(Call {
+                fn_name,
+                stack_len: st,
+                local_len: lc,
+                current_len: cu,
+                ..
+            }) => {
                 if name != fn_name {
                     panic!("Calling `{}`, did not call `{}`", fn_name, name);
                 }
@@ -469,10 +520,11 @@ impl Runtime {
         }
     }
 
-    pub(crate) fn expression_module(&mut self,
+    pub(crate) fn expression_module(
+        &mut self,
         expr: &ast::Expression,
         side: Side,
-        module: &Arc<Module>
+        module: &Arc<Module>,
     ) -> FlowResult {
         use std::mem::replace;
         let old_module = replace(&mut self.module, module.clone());
@@ -482,7 +534,9 @@ impl Runtime {
     }
 
     fn err(&self, range: Range, msg: &str) -> FlowResult {
-        Err(self.module.error(range, &format!("{}\n{}", self.stack_trace(), msg), self))
+        Err(self
+            .module
+            .error(range, &format!("{}\n{}", self.stack_trace(), msg), self))
     }
 
     pub(crate) fn expression(&mut self, expr: &ast::Expression, side: Side) -> FlowResult {
@@ -497,8 +551,10 @@ impl Runtime {
             Return(ref ret) => {
                 let x = match self.expression(ret, Side::Right)? {
                     (Some(x), Flow::Continue) => x,
-                    (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-                    _ => return self.err(expr.source_range(), "Expected something")
+                    (x, Flow::Return) => {
+                        return Ok((x, Flow::Return));
+                    }
+                    _ => return self.err(expr.source_range(), "Expected something"),
                 };
                 Ok((Some(x), Flow::Return))
             }
@@ -514,12 +570,16 @@ impl Runtime {
             CallReturn(ref call) => self.call_return(&call.args, call.fun, &call.info),
             CallBinOp(ref call) => self.call_binop(&call.left, &call.right, call.fun, &call.info),
             CallUnOp(ref call) => self.call_unop(&call.arg, call.fun, &call.info),
-            CallLazy(ref call) =>
-                self.call_lazy(&call.args, call.fun, call.lazy_inv, &call.info),
+            CallLazy(ref call) => self.call_lazy(&call.args, call.fun, call.lazy_inv, &call.info),
             CallLoaded(ref call) => {
                 let loader = false;
-                self.call_loaded(&call.args, call.fun, &call.info,
-                                 &call.custom_source, loader)
+                self.call_loaded(
+                    &call.args,
+                    call.fun,
+                    &call.info,
+                    &call.custom_source,
+                    loader,
+                )
             }
             Item(ref item) => self.item(item, side),
             Assign(ref assign) => self.assign(assign.op, &assign.left, &assign.right),
@@ -555,16 +615,19 @@ impl Runtime {
             }
             Closure(ref closure) => self.closure(closure),
             CallClosure(ref call) => self.call_closure(call),
-            Grab(ref g) => self.err(g.source_range, "`grab` expressions must be inside a closure"),
+            Grab(ref g) => self.err(
+                g.source_range,
+                "`grab` expressions must be inside a closure",
+            ),
             TryExpr(ref try_expr) => self.try_expr(try_expr),
             In(ref in_expr) => self.in_expr(in_expr),
         }
     }
 
     fn in_expr(&mut self, in_expr: &ast::In) -> FlowResult {
+        use std::sync::atomic::Ordering;
         use std::sync::mpsc::channel;
         use std::sync::Mutex;
-        use std::sync::atomic::Ordering;
 
         match in_expr.f_index.get() {
             FnIndex::Loaded(f_index) => {
@@ -577,9 +640,12 @@ impl Runtime {
                 guard.push(tx);
                 f.senders.0.store(true, Ordering::Relaxed);
                 drop(guard);
-                Ok((Some(::Variable::In(Arc::new(Mutex::new(rx)))), Flow::Continue))
+                Ok((
+                    Some(::Variable::In(Arc::new(Mutex::new(rx)))),
+                    Flow::Continue,
+                ))
             }
-            _ => self.err(in_expr.source_range, "Expected loaded function")
+            _ => self.err(in_expr.source_range, "Expected loaded function"),
         }
     }
 
@@ -591,10 +657,9 @@ impl Runtime {
         let lc = self.local_stack.len();
         let cu = self.current_stack.len();
         match self.expression(&try_expr.expr, Side::Right) {
-            Ok((Some(x), Flow::Continue)) => Ok((
-                Some(Variable::Result(Ok(Box::new(x)))),
-                Flow::Continue
-            )),
+            Ok((Some(x), Flow::Continue)) => {
+                Ok((Some(Variable::Result(Ok(Box::new(x)))), Flow::Continue))
+            }
             Ok((None, Flow::Continue)) => self.err(try_expr.source_range, "Expected something"),
             Ok((x, flow)) => Ok((x, flow)),
             Err(err) => {
@@ -606,9 +671,8 @@ impl Runtime {
                     Some(Variable::Result(Err(Box::new(Error {
                         message: Variable::Str(Arc::new(err)),
                         trace: vec![],
-                    }
-                    )))),
-                    Flow::Continue
+                    })))),
+                    Flow::Continue,
                 ))
             }
         }
@@ -623,22 +687,30 @@ impl Runtime {
         // Evaluate `grab` expressions and generate new AST.
         let new_expr = match grab::grab_expr(1, self, &closure.expr, Side::Right)? {
             (Grabbed::Expression(x), Flow::Continue) => x,
-            (Grabbed::Variable(x), Flow::Return) => { return Ok((x, Flow::Return)); }
-            _ => return self.err(closure.expr.source_range(), "Expected something")
+            (Grabbed::Variable(x), Flow::Return) => {
+                return Ok((x, Flow::Return));
+            }
+            _ => return self.err(closure.expr.source_range(), "Expected something"),
         };
 
-        Ok((Some(::Variable::Closure(Arc::new(ast::Closure {
-            currents: closure.currents.clone(),
-            args: closure.args.clone(),
-            source_range: closure.source_range,
-            ret: closure.ret.clone(),
-            file: closure.file.clone(),
-            source: closure.source.clone(),
-            expr: new_expr,
-        }), Box::new(ClosureEnvironment {
-            module: self.module.clone(),
-            relative
-        }))), Flow::Continue))
+        Ok((
+            Some(::Variable::Closure(
+                Arc::new(ast::Closure {
+                    currents: closure.currents.clone(),
+                    args: closure.args.clone(),
+                    source_range: closure.source_range,
+                    ret: closure.ret.clone(),
+                    file: closure.file.clone(),
+                    source: closure.source.clone(),
+                    expr: new_expr,
+                }),
+                Box::new(ClosureEnvironment {
+                    module: self.module.clone(),
+                    relative,
+                }),
+            )),
+            Flow::Continue,
+        ))
     }
 
     fn try_msg(v: &Variable) -> Option<Result<Box<Variable>, Box<::Error>>> {
@@ -646,106 +718,106 @@ impl Runtime {
 
         Some(match *v {
             Variable::Result(ref res) => res.clone(),
-            Variable::Option(ref opt) => {
-                match *opt {
-                    Some(ref some) => Ok(some.clone()),
-                    None => Err(Box::new(Error {
-                        message: Variable::Str(Arc::new(
-                            "Expected `some(_)`, found `none()`"
-                            .into())),
-                        trace: vec![]
-                    }))
-                }
-            }
-            Variable::Bool(true, None) => {
-                Err(Box::new(Error {
-                    message: Variable::Str(Arc::new(
-                        "This does not make sense, perhaps an array is empty?"
-                        .into())),
-                    trace: vec![]
-                }))
-            }
-            Variable::Bool(false, _) => {
-                Err(Box::new(Error {
-                    message: Variable::Str(Arc::new(
-                        "Must be `true` to have meaning, try add or remove `!`"
-                        .into())),
-                    trace: vec![]
-                }))
-            }
-            Variable::Bool(true, ref sec) => {
-                match *sec {
-                    None => Err(Box::new(Error {
-                        message: Variable::Str(Arc::new(
-                            "Expected `some(_)`, found `none()`"
-                            .into())),
-                        trace: vec![]
-                    })),
-                    Some(_) => {
-                        Ok(Box::new(Variable::Bool(true, sec.clone())))
-                    }
-                }
-            }
+            Variable::Option(ref opt) => match *opt {
+                Some(ref some) => Ok(some.clone()),
+                None => Err(Box::new(Error {
+                    message: Variable::Str(Arc::new("Expected `some(_)`, found `none()`".into())),
+                    trace: vec![],
+                })),
+            },
+            Variable::Bool(true, None) => Err(Box::new(Error {
+                message: Variable::Str(Arc::new(
+                    "This does not make sense, perhaps an array is empty?".into(),
+                )),
+                trace: vec![],
+            })),
+            Variable::Bool(false, _) => Err(Box::new(Error {
+                message: Variable::Str(Arc::new(
+                    "Must be `true` to have meaning, try add or remove `!`".into(),
+                )),
+                trace: vec![],
+            })),
+            Variable::Bool(true, ref sec) => match *sec {
+                None => Err(Box::new(Error {
+                    message: Variable::Str(Arc::new("Expected `some(_)`, found `none()`".into())),
+                    trace: vec![],
+                })),
+                Some(_) => Ok(Box::new(Variable::Bool(true, sec.clone()))),
+            },
             Variable::F64(val, ref sec) => {
                 if val.is_nan() {
                     Err(Box::new(Error {
-                        message: Variable::Str(Arc::new(
-                            "Expected number, found `NaN`"
-                            .into())),
-                        trace: vec![]
+                        message: Variable::Str(Arc::new("Expected number, found `NaN`".into())),
+                        trace: vec![],
                     }))
                 } else if sec.is_none() {
                     Err(Box::new(Error {
                         message: Variable::Str(Arc::new(
-                            "This does not make sense, perhaps an array is empty?"
-                            .into())),
-                        trace: vec![]
+                            "This does not make sense, perhaps an array is empty?".into(),
+                        )),
+                        trace: vec![],
                     }))
                 } else {
                     Ok(Box::new(Variable::F64(val, sec.clone())))
                 }
             }
-            _ => return None
+            _ => return None,
         })
     }
 
     fn try(&mut self, expr: &ast::Expression, side: Side) -> FlowResult {
         let v = match self.expression(expr, side)? {
             (Some(x), Flow::Continue) => x,
-            (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-            _ => return self.err(expr.source_range(), "Expected something")
+            (x, Flow::Return) => {
+                return Ok((x, Flow::Return));
+            }
+            _ => return self.err(expr.source_range(), "Expected something"),
         };
         let v = match Runtime::try_msg(self.resolve(&v)) {
             Some(v) => v,
-            None =>
-                return self.err(expr.source_range(), "Expected `ok(_)`, `err(_)`, `bool`, `f64`")
+            None => {
+                return self.err(
+                    expr.source_range(),
+                    "Expected `ok(_)`, `err(_)`, `bool`, `f64`",
+                )
+            }
         };
         match v {
-            Ok(ok) => {
-                Ok((Some(*ok), Flow::Continue))
-            }
+            Ok(ok) => Ok((Some(*ok), Flow::Continue)),
             Err(mut err) => {
                 let call = self.call_stack.last().unwrap();
                 if call.stack_len == 0 {
-                    return Err(self.module.error(expr.source_range(),
-                        &format!("{}\nRequires `->` on function `{}`",
-                        self.stack_trace(),
-                        &call.fn_name), self));
+                    return Err(self.module.error(
+                        expr.source_range(),
+                        &format!(
+                            "{}\nRequires `->` on function `{}`",
+                            self.stack_trace(),
+                            &call.fn_name
+                        ),
+                        self,
+                    ));
                 }
-                if let Variable::Return = self.stack[call.stack_len - 1] {}
-                else {
-                    return Err(self.module.error(expr.source_range(),
-                        &format!("{}\nRequires `->` on function `{}`",
-                        self.stack_trace(),
-                        &call.fn_name), self));
+                if let Variable::Return = self.stack[call.stack_len - 1] {
+                } else {
+                    return Err(self.module.error(
+                        expr.source_range(),
+                        &format!(
+                            "{}\nRequires `->` on function `{}`",
+                            self.stack_trace(),
+                            &call.fn_name
+                        ),
+                        self,
+                    ));
                 }
                 let file = match call.file {
                     None => "".into(),
-                    Some(ref f) => format!(" ({})", f)
+                    Some(ref f) => format!(" ({})", f),
                 };
-                err.trace.push(self.module.error(expr.source_range(),
-                    &format!("In function `{}`{}",
-                    &call.fn_name, file), self));
+                err.trace.push(self.module.error(
+                    expr.source_range(),
+                    &format!("In function `{}`{}", &call.fn_name, file),
+                    self,
+                ));
                 Ok((Some(Variable::Result(Err(err))), Flow::Return))
             }
         }
@@ -765,15 +837,18 @@ impl Runtime {
                 alias: None,
                 name: name.clone(),
                 source_range: Range::empty(0),
-            })
+            }),
         };
         match call.f_index {
             FnIndex::Loaded(f_index) => {
                 let f = &module.functions[f_index as usize];
                 if !f.args.is_empty() {
                     self.module = old_module;
-                    return Err(module.error(f.args[0].source_range,
-                               "`main` should not have arguments", self))
+                    return Err(module.error(
+                        f.args[0].source_range,
+                        "`main` should not have arguments",
+                        self,
+                    ));
                 }
                 let loader = false;
                 match self.call_internal(&call, loader) {
@@ -789,8 +864,11 @@ impl Runtime {
             }
             _ => {
                 self.module = old_module;
-                Err(module.error(call.info.source_range,
-                               "Could not find function `main`", self))
+                Err(module.error(
+                    call.info.source_range,
+                    "Could not find function `main`",
+                    self,
+                ))
             }
         }
     }
@@ -837,14 +915,22 @@ impl Runtime {
         for (i, arg) in go.call.args.iter().enumerate() {
             let v = match self.expression(arg, Side::Right)? {
                 (Some(x), Flow::Continue) => x,
-                (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-                _ => return self.err(arg.source_range(),
-                                "Expected something. \
-                                Expression did not return a value.")
+                (x, Flow::Return) => {
+                    return Ok((x, Flow::Return));
+                }
+                _ => {
+                    return self.err(
+                        arg.source_range(),
+                        "Expected something. \
+                                Expression did not return a value.",
+                    )
+                }
             };
             stack.push(v.deep_clone(&self.stack));
             fake_call.args.push(ast::Expression::Variable(Box::new((
-                go.call.args[i].source_range(), Variable::Ref(n-i-1)))));
+                go.call.args[i].source_range(),
+                Variable::Ref(n - i - 1),
+            ))));
         }
         stack.reverse();
 
@@ -873,11 +959,10 @@ impl Runtime {
             let loader = false;
             Ok(match new_rt.call_internal(&fake_call, loader) {
                 Err(err) => return Err(err),
-                Ok((None, _)) => {
-                    new_rt.stack.pop().expect(TINVOTS)
-                }
+                Ok((None, _)) => new_rt.stack.pop().expect(TINVOTS),
                 Ok((Some(x), _)) => x,
-            }.deep_clone(&new_rt.stack))
+            }
+            .deep_clone(&new_rt.stack))
         });
         Ok((Some(Variable::Thread(Thread::new(handle))), Flow::Continue))
     }
@@ -887,23 +972,34 @@ impl Runtime {
         // Find item.
         let item = match self.item(&call.item, Side::Right)? {
             (Some(x), Flow::Continue) => x,
-            (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-            _ => return self.err(call.item.source_range,
-                            "Expected something. \
-                            Check that item returns a value.")
+            (x, Flow::Return) => {
+                return Ok((x, Flow::Return));
+            }
+            _ => {
+                return self.err(
+                    call.item.source_range,
+                    "Expected something. \
+                            Check that item returns a value.",
+                )
+            }
         };
 
         let (f, env) = match self.resolve(&item) {
             &Variable::Closure(ref f, ref env) => (f.clone(), env.clone()),
-            x => return self.err(call.source_range, &self.expected(x, "closure"))
+            x => return self.err(call.source_range, &self.expected(x, "closure")),
         };
 
         if call.arg_len() != f.args.len() {
-            return Err(self.module.error(call.source_range,
-                &format!("{}\nExpected {} arguments but found {}",
-                self.stack_trace(),
-                f.args.len(),
-                call.arg_len()), self));
+            return Err(self.module.error(
+                call.source_range,
+                &format!(
+                    "{}\nExpected {} arguments but found {}",
+                    self.stack_trace(),
+                    f.args.len(),
+                    call.arg_len()
+                ),
+                self,
+            ));
         }
         // Arguments must be computed.
         if f.returns() {
@@ -918,10 +1014,16 @@ impl Runtime {
             match self.expression(arg, Side::Right)? {
                 (Some(x), Flow::Continue) => self.stack.push(x),
                 (None, Flow::Continue) => {}
-                (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-                _ => return self.err(arg.source_range(),
-                                "Expected something. \
-                                Check that expression returns a value.")
+                (x, Flow::Return) => {
+                    return Ok((x, Flow::Return));
+                }
+                _ => {
+                    return self.err(
+                        arg.source_range(),
+                        "Expected something. \
+                                Check that expression returns a value.",
+                    )
+                }
             };
         }
 
@@ -936,17 +1038,31 @@ impl Runtime {
                     }
                 }
                 if let Some(ind) = res {
-                    self.local_stack.push((current.name.clone(), self.stack.len()));
+                    self.local_stack
+                        .push((current.name.clone(), self.stack.len()));
                     self.stack.push(Variable::Ref(ind));
                 } else {
-                    return Err(self.module.error(call.source_range, &format!(
-                        "{}\nCould not find current variable `{}`",
-                            self.stack_trace(), current.name), self));
+                    return Err(self.module.error(
+                        call.source_range,
+                        &format!(
+                            "{}\nCould not find current variable `{}`",
+                            self.stack_trace(),
+                            current.name
+                        ),
+                        self,
+                    ));
                 }
             }
         }
 
-        self.push_fn(call.item.name.clone(), env.relative, Some(f.file.clone()), st, lc, cu);
+        self.push_fn(
+            call.item.name.clone(),
+            env.relative,
+            Some(f.file.clone()),
+            st,
+            lc,
+            cu,
+        );
         if f.returns() {
             // Use return type because it has the same name.
             self.local_stack.push((RETURN_TYPE.clone(), st - 1));
@@ -957,31 +1073,47 @@ impl Runtime {
         }
         let (x, flow) = self.expression_module(&f.expr, Side::Right, &env.module)?;
         match flow {
-            Flow::Break(None) =>
-                return self.err(call.source_range, "Can not break from function"),
-            Flow::ContinueLoop(None) =>
-                return self.err(call.source_range, "Can not continue from function"),
-            Flow::Break(Some(ref label)) =>
-                return Err(self.module.error(call.source_range,
-                    &format!("{}\nThere is no loop labeled `{}`",
-                             self.stack_trace(), label), self)),
-            Flow::ContinueLoop(Some(ref label)) =>
-                return Err(self.module.error(call.source_range,
-                    &format!("{}\nThere is no loop labeled `{}`",
-                            self.stack_trace(), label), self)),
+            Flow::Break(None) => return self.err(call.source_range, "Can not break from function"),
+            Flow::ContinueLoop(None) => {
+                return self.err(call.source_range, "Can not continue from function")
+            }
+            Flow::Break(Some(ref label)) => {
+                return Err(self.module.error(
+                    call.source_range,
+                    &format!(
+                        "{}\nThere is no loop labeled `{}`",
+                        self.stack_trace(),
+                        label
+                    ),
+                    self,
+                ))
+            }
+            Flow::ContinueLoop(Some(ref label)) => {
+                return Err(self.module.error(
+                    call.source_range,
+                    &format!(
+                        "{}\nThere is no loop labeled `{}`",
+                        self.stack_trace(),
+                        label
+                    ),
+                    self,
+                ))
+            }
             _ => {}
         }
         self.pop_fn(call.item.name.clone());
         match (f.returns(), x) {
             (true, None) => {
                 match self.stack.pop().expect(TINVOTS) {
-                    Variable::Return => {
-                        Err(self.module.error(
-                            call.source_range, &format!(
+                    Variable::Return => Err(self.module.error(
+                        call.source_range,
+                        &format!(
                             "{}\nFunction `{}` did not return a value",
                             self.stack_trace(),
-                            call.item.name), self))
-                    }
+                            call.item.name
+                        ),
+                        self,
+                    )),
                     x => {
                         // This happens when return is only
                         // assigned to `return = x`.
@@ -989,25 +1121,33 @@ impl Runtime {
                     }
                 }
             }
-            (false, Some(_)) => {
-                Err(self.module.error(call.source_range,
-                    &format!(
-                        "{}\nFunction `{}` should not return a value",
-                        self.stack_trace(),
-                        call.item.name), self))
-            }
+            (false, Some(_)) => Err(self.module.error(
+                call.source_range,
+                &format!(
+                    "{}\nFunction `{}` should not return a value",
+                    self.stack_trace(),
+                    call.item.name
+                ),
+                self,
+            )),
             (true, Some(Variable::Return)) => {
                 // TODO: Could return the last value on the stack.
                 //       Requires .pop_fn delayed after.
-                Err(self.module.error(call.source_range,
+                Err(self.module.error(
+                    call.source_range,
                     &format!(
-                    "{}\nFunction `{}` did not return a value. \
+                        "{}\nFunction `{}` did not return a value. \
                     Did you forget a `return`?",
                         self.stack_trace(),
-                        call.item.name), self))
+                        call.item.name
+                    ),
+                    self,
+                ))
             }
             (returns, b) => {
-                if returns { self.stack.pop(); }
+                if returns {
+                    self.stack.pop();
+                }
                 Ok((b, Flow::Continue))
             }
         }
@@ -1026,15 +1166,21 @@ impl Runtime {
         &mut self,
         args: &[ast::Expression],
         fun: crate::FnVoidRef,
-        info: &Box<ast::CallInfo>,
+        info: &ast::CallInfo,
     ) -> FlowResult {
         for arg in args {
             match self.expression(arg, Side::Right)? {
                 (Some(x), Flow::Continue) => self.stack.push(x),
-                (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-                _ => return self.err(arg.source_range(),
-                                "Expected something. \
-                                Expression did not return a value.")
+                (x, Flow::Return) => {
+                    return Ok((x, Flow::Return));
+                }
+                _ => {
+                    return self.err(
+                        arg.source_range(),
+                        "Expected something. \
+                                Expression did not return a value.",
+                    )
+                }
             };
         }
         (fun.0)(self).map_err(|err| {
@@ -1053,26 +1199,35 @@ impl Runtime {
         &mut self,
         args: &[ast::Expression],
         fun: crate::FnReturnRef,
-        info: &Box<ast::CallInfo>,
+        info: &ast::CallInfo,
     ) -> FlowResult {
         for arg in args {
             match self.expression(arg, Side::Right)? {
                 (Some(x), Flow::Continue) => self.stack.push(x),
-                (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-                _ => return self.err(arg.source_range(),
-                                "Expected something. \
-                                Expression did not return a value.")
+                (x, Flow::Return) => {
+                    return Ok((x, Flow::Return));
+                }
+                _ => {
+                    return self.err(
+                        arg.source_range(),
+                        "Expected something. \
+                                Expression did not return a value.",
+                    )
+                }
             };
         }
-        Ok((Some((fun.0)(self).map_err(|err| {
-            let range = if let Some(ind) = self.arg_err_index.get() {
-                self.arg_err_index.set(None);
-                args[ind].source_range()
-            } else {
-                info.source_range
-            };
-            self.module.error(range, &err, self)
-        })?), Flow::Continue))
+        Ok((
+            Some((fun.0)(self).map_err(|err| {
+                let range = if let Some(ind) = self.arg_err_index.get() {
+                    self.arg_err_index.set(None);
+                    args[ind].source_range()
+                } else {
+                    info.source_range
+                };
+                self.module.error(range, &err, self)
+            })?),
+            Flow::Continue,
+        ))
     }
 
     fn call_binop(
@@ -1080,61 +1235,92 @@ impl Runtime {
         left_expr: &ast::Expression,
         right_expr: &ast::Expression,
         fun: crate::FnBinOpRef,
-        info: &Box<ast::CallInfo>,
+        info: &ast::CallInfo,
     ) -> FlowResult {
         let left = match self.expression(left_expr, Side::Right)? {
             (Some(x), Flow::Continue) => x,
-            (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-            _ => return self.err(left_expr.source_range(),
-                            "Expected something. \
-                            Expression did not return a value.")
+            (x, Flow::Return) => {
+                return Ok((x, Flow::Return));
+            }
+            _ => {
+                return self.err(
+                    left_expr.source_range(),
+                    "Expected something. \
+                            Expression did not return a value.",
+                )
+            }
         };
         let right = match self.expression(right_expr, Side::Right)? {
             (Some(x), Flow::Continue) => x,
-            (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-            _ => return self.err(right_expr.source_range(),
-                            "Expected something. \
-                            Expression did not return a value.")
+            (x, Flow::Return) => {
+                return Ok((x, Flow::Return));
+            }
+            _ => {
+                return self.err(
+                    right_expr.source_range(),
+                    "Expected something. \
+                            Expression did not return a value.",
+                )
+            }
         };
         let left = self.resolve(&left);
         let right = self.resolve(&right);
-        Ok((Some((fun.0)(left, right).map_err(|err| {
-            let range = if let Some(ind) = self.arg_err_index.get() {
-                self.arg_err_index.set(None);
-                if ind == 0 {left_expr.source_range()}
-                else if ind == 1 {right_expr.source_range()}
-                else {info.source_range}
-            } else {
-                info.source_range
-            };
-            self.module.error(range, &err, self)
-        })?), Flow::Continue))
+        Ok((
+            Some((fun.0)(left, right).map_err(|err| {
+                let range = if let Some(ind) = self.arg_err_index.get() {
+                    self.arg_err_index.set(None);
+                    if ind == 0 {
+                        left_expr.source_range()
+                    } else if ind == 1 {
+                        right_expr.source_range()
+                    } else {
+                        info.source_range
+                    }
+                } else {
+                    info.source_range
+                };
+                self.module.error(range, &err, self)
+            })?),
+            Flow::Continue,
+        ))
     }
 
     fn call_unop(
         &mut self,
         expr: &ast::Expression,
         fun: crate::FnUnOpRef,
-        info: &Box<ast::CallInfo>,
+        info: &ast::CallInfo,
     ) -> FlowResult {
         let r = match self.expression(expr, Side::Right)? {
             (Some(x), Flow::Continue) => x,
-            (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-            _ => return self.err(expr.source_range(),
-                            "Expected something. \
-                            Expression did not return a value.")
+            (x, Flow::Return) => {
+                return Ok((x, Flow::Return));
+            }
+            _ => {
+                return self.err(
+                    expr.source_range(),
+                    "Expected something. \
+                            Expression did not return a value.",
+                )
+            }
         };
         let r = self.resolve(&r);
-        Ok((Some((fun.0)(r).map_err(|err| {
-            let range = if let Some(ind) = self.arg_err_index.get() {
-                self.arg_err_index.set(None);
-                if ind == 0 {expr.source_range()}
-                else {info.source_range}
-            } else {
-                info.source_range
-            };
-            self.module.error(range, &err, self)
-        })?), Flow::Continue))
+        Ok((
+            Some((fun.0)(r).map_err(|err| {
+                let range = if let Some(ind) = self.arg_err_index.get() {
+                    self.arg_err_index.set(None);
+                    if ind == 0 {
+                        expr.source_range()
+                    } else {
+                        info.source_range
+                    }
+                } else {
+                    info.source_range
+                };
+                self.module.error(range, &err, self)
+            })?),
+            Flow::Continue,
+        ))
     }
 
     fn call_lazy(
@@ -1142,7 +1328,7 @@ impl Runtime {
         args: &[ast::Expression],
         fun: crate::FnReturnRef,
         lazy_inv: crate::LazyInvariant,
-        info: &Box<ast::CallInfo>,
+        info: &ast::CallInfo,
     ) -> FlowResult {
         for (i, arg) in args.iter().enumerate() {
             match self.expression(arg, Side::Right)? {
@@ -1153,21 +1339,23 @@ impl Runtime {
                         for lazy in ls {
                             match *lazy {
                                 Lazy::Variable(ref val) => {
-                                    if self.resolve(&x) == val {return Ok((Some(x), Flow::Continue))}
+                                    if self.resolve(&x) == val {
+                                        return Ok((Some(x), Flow::Continue));
+                                    }
                                 }
                                 Lazy::UnwrapOk => {
-                                    if let &Variable::Result(Ok(ref x)) = self.resolve(&x) {
-                                        return Ok((Some((**x).clone()), Flow::Continue))
+                                    if let Variable::Result(Ok(ref x)) = self.resolve(&x) {
+                                        return Ok((Some((**x).clone()), Flow::Continue));
                                     }
                                 }
                                 Lazy::UnwrapErr => {
-                                    if let &Variable::Result(Err(ref x)) = self.resolve(&x) {
-                                        return Ok((Some(x.message.clone()), Flow::Continue))
+                                    if let Variable::Result(Err(ref x)) = self.resolve(&x) {
+                                        return Ok((Some(x.message.clone()), Flow::Continue));
                                     }
                                 }
                                 Lazy::UnwrapSome => {
-                                    if let &Variable::Option(Some(ref x)) = self.resolve(&x) {
-                                        return Ok((Some((**x).clone()), Flow::Continue))
+                                    if let Variable::Option(Some(ref x)) = self.resolve(&x) {
+                                        return Ok((Some((**x).clone()), Flow::Continue));
                                     }
                                 }
                             }
@@ -1176,40 +1364,51 @@ impl Runtime {
 
                     self.stack.push(x)
                 }
-                (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-                _ => return self.err(arg.source_range(),
-                                "Expected something. \
-                                Expression did not return a value.")
+                (x, Flow::Return) => {
+                    return Ok((x, Flow::Return));
+                }
+                _ => {
+                    return self.err(
+                        arg.source_range(),
+                        "Expected something. \
+                                Expression did not return a value.",
+                    )
+                }
             };
         }
-        Ok((Some((fun.0)(self).map_err(|err| {
-            let range = if let Some(ind) = self.arg_err_index.get() {
-                self.arg_err_index.set(None);
-                args[ind].source_range()
-            } else {
-                info.source_range
-            };
-            self.module.error(range, &err, self)
-        })?), Flow::Continue))
+        Ok((
+            Some((fun.0)(self).map_err(|err| {
+                let range = if let Some(ind) = self.arg_err_index.get() {
+                    self.arg_err_index.set(None);
+                    args[ind].source_range()
+                } else {
+                    info.source_range
+                };
+                self.module.error(range, &err, self)
+            })?),
+            Flow::Continue,
+        ))
     }
 
     fn call_loaded(
         &mut self,
         args: &[ast::Expression],
         f_index: isize,
-        info: &Box<ast::CallInfo>,
+        info: &ast::CallInfo,
         custom_source: &Option<Arc<String>>,
-        loader: bool
+        loader: bool,
     ) -> FlowResult {
         use std::sync::atomic::Ordering;
 
-        let relative = if loader {0} else {
+        let relative = if loader {
+            0
+        } else {
             self.call_stack.last().map(|c| c.index).unwrap_or(0)
         };
         let new_index = (f_index + relative as isize) as usize;
         // Copy the module to avoid problems with borrow checker.
         let mod_copy = self.module.clone();
-        let ref f = mod_copy.functions[new_index];
+        let f = &mod_copy.functions[new_index];
         // Arguments must be computed.
         if f.returns() {
             // Add return value before arguments on the stack.
@@ -1229,21 +1428,23 @@ impl Runtime {
                         for lazy in lz {
                             match *lazy {
                                 Lazy::Variable(ref val) => {
-                                    if self.resolve(&x) == val {return Ok((Some(x), Flow::Continue))}
+                                    if self.resolve(&x) == val {
+                                        return Ok((Some(x), Flow::Continue));
+                                    }
                                 }
                                 Lazy::UnwrapOk => {
-                                    if let &Variable::Result(Ok(ref x)) = self.resolve(&x) {
-                                        return Ok((Some((**x).clone()), Flow::Continue))
+                                    if let Variable::Result(Ok(ref x)) = self.resolve(&x) {
+                                        return Ok((Some((**x).clone()), Flow::Continue));
                                     }
                                 }
                                 Lazy::UnwrapErr => {
-                                    if let &Variable::Result(Err(ref x)) = self.resolve(&x) {
-                                        return Ok((Some(x.message.clone()), Flow::Continue))
+                                    if let Variable::Result(Err(ref x)) = self.resolve(&x) {
+                                        return Ok((Some(x.message.clone()), Flow::Continue));
                                     }
                                 }
                                 Lazy::UnwrapSome => {
-                                    if let &Variable::Option(Some(ref x)) = self.resolve(&x) {
-                                        return Ok((Some((**x).clone()), Flow::Continue))
+                                    if let Variable::Option(Some(ref x)) = self.resolve(&x) {
+                                        return Ok((Some((**x).clone()), Flow::Continue));
                                     }
                                 }
                             }
@@ -1253,10 +1454,16 @@ impl Runtime {
                     self.stack.push(x)
                 }
                 (None, Flow::Continue) => {}
-                (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-                _ => return self.err(arg.source_range(),
-                                "Expected something. \
-                                Check that expression returns a value.")
+                (x, Flow::Return) => {
+                    return Ok((x, Flow::Return));
+                }
+                _ => {
+                    return self.err(
+                        arg.source_range(),
+                        "Expected something. \
+                                Check that expression returns a value.",
+                    )
+                }
             };
         }
 
@@ -1271,12 +1478,19 @@ impl Runtime {
                     }
                 }
                 if let Some(ind) = res {
-                    self.local_stack.push((current.name.clone(), self.stack.len()));
+                    self.local_stack
+                        .push((current.name.clone(), self.stack.len()));
                     self.stack.push(Variable::Ref(ind));
                 } else {
-                    return Err(self.module.error(info.source_range, &format!(
-                        "{}\nCould not find current variable `{}`",
-                            self.stack_trace(), current.name), self));
+                    return Err(self.module.error(
+                        info.source_range,
+                        &format!(
+                            "{}\nCould not find current variable `{}`",
+                            self.stack_trace(),
+                            current.name
+                        ),
+                        self,
+                    ));
                 }
             }
         }
@@ -1309,7 +1523,14 @@ impl Runtime {
             drop(channels);
         }
 
-        self.push_fn(info.name.clone(), new_index, Some(f.file.clone()), st, lc, cu);
+        self.push_fn(
+            info.name.clone(),
+            new_index,
+            Some(f.file.clone()),
+            st,
+            lc,
+            cu,
+        );
         if f.returns() {
             // Use return type because it has same name.
             self.local_stack.push((RETURN_TYPE.clone(), st - 1));
@@ -1320,18 +1541,32 @@ impl Runtime {
         }
         let (x, flow) = self.block(&f.block)?;
         match flow {
-            Flow::Break(None) =>
-                return self.err(info.source_range, "Can not break from function"),
-            Flow::ContinueLoop(None) =>
-                return self.err(info.source_range, "Can not continue from function"),
-            Flow::Break(Some(ref label)) =>
-                return Err(self.module.error(info.source_range,
-                    &format!("{}\nThere is no loop labeled `{}`",
-                             self.stack_trace(), label), self)),
-            Flow::ContinueLoop(Some(ref label)) =>
-                return Err(self.module.error(info.source_range,
-                    &format!("{}\nThere is no loop labeled `{}`",
-                            self.stack_trace(), label), self)),
+            Flow::Break(None) => return self.err(info.source_range, "Can not break from function"),
+            Flow::ContinueLoop(None) => {
+                return self.err(info.source_range, "Can not continue from function")
+            }
+            Flow::Break(Some(ref label)) => {
+                return Err(self.module.error(
+                    info.source_range,
+                    &format!(
+                        "{}\nThere is no loop labeled `{}`",
+                        self.stack_trace(),
+                        label
+                    ),
+                    self,
+                ))
+            }
+            Flow::ContinueLoop(Some(ref label)) => {
+                return Err(self.module.error(
+                    info.source_range,
+                    &format!(
+                        "{}\nThere is no loop labeled `{}`",
+                        self.stack_trace(),
+                        label
+                    ),
+                    self,
+                ))
+            }
             _ => {}
         }
         self.pop_fn(info.name.clone());
@@ -1340,15 +1575,17 @@ impl Runtime {
                 match self.stack.pop().expect(TINVOTS) {
                     Variable::Return => {
                         let source = custom_source.as_ref().unwrap_or(
-                            &self.module.functions[
-                                self.call_stack.last().unwrap().index
-                            ].source
+                            &self.module.functions[self.call_stack.last().unwrap().index].source,
                         );
                         Err(self.module.error_source(
-                        info.source_range, &format!(
-                        "{}\nFunction `{}` did not return a value",
-                        self.stack_trace(),
-                        f.name), source))
+                            info.source_range,
+                            &format!(
+                                "{}\nFunction `{}` did not return a value",
+                                self.stack_trace(),
+                                f.name
+                            ),
+                            source,
+                        ))
                     }
                     x => {
                         // This happens when return is only
@@ -1359,29 +1596,39 @@ impl Runtime {
             }
             (false, Some(_)) => {
                 let source = custom_source.as_ref().unwrap_or(
-                    &self.module.functions[self.call_stack.last().unwrap().index].source
+                    &self.module.functions[self.call_stack.last().unwrap().index].source,
                 );
-                Err(self.module.error_source(info.source_range,
+                Err(self.module.error_source(
+                    info.source_range,
                     &format!(
                         "{}\nFunction `{}` should not return a value",
                         self.stack_trace(),
-                        f.name), source))
+                        f.name
+                    ),
+                    source,
+                ))
             }
             (true, Some(Variable::Return)) => {
                 // TODO: Could return the last value on the stack.
                 //       Requires .pop_fn delayed after.
                 let source = custom_source.as_ref().unwrap_or(
-                    &self.module.functions[self.call_stack.last().unwrap().index].source
+                    &self.module.functions[self.call_stack.last().unwrap().index].source,
                 );
-                Err(self.module.error_source(info.source_range,
+                Err(self.module.error_source(
+                    info.source_range,
                     &format!(
-                    "{}\nFunction `{}` did not return a value. \
+                        "{}\nFunction `{}` did not return a value. \
                     Did you forget a `return`?",
                         self.stack_trace(),
-                        f.name), source))
+                        f.name
+                    ),
+                    source,
+                ))
             }
             (returns, b) => {
-                if returns { self.stack.pop(); }
+                if returns {
+                    self.stack.pop();
+                }
                 Ok((b, Flow::Continue))
             }
         }
@@ -1394,53 +1641,55 @@ impl Runtime {
     /// The `loader` flag is set to `true` when called from the outside.
     fn call_internal(&mut self, call: &ast::Call, loader: bool) -> FlowResult {
         match call.f_index {
-            FnIndex::Void(f) =>
-                self.call_void(&call.args, f, &call.info),
-            FnIndex::Return(f) =>
-                self.call_return(&call.args, f, &call.info),
-            FnIndex::Lazy(f, lazy_inv) =>
-                self.call_lazy(&call.args, f, lazy_inv, &call.info),
-            FnIndex::BinOp(f) =>
-                self.call_binop(&call.args[0], &call.args[1], f, &call.info),
-            FnIndex::UnOp(f) =>
-                self.call_unop(&call.args[0], f, &call.info),
+            FnIndex::Void(f) => self.call_void(&call.args, f, &call.info),
+            FnIndex::Return(f) => self.call_return(&call.args, f, &call.info),
+            FnIndex::Lazy(f, lazy_inv) => self.call_lazy(&call.args, f, lazy_inv, &call.info),
+            FnIndex::BinOp(f) => self.call_binop(&call.args[0], &call.args[1], f, &call.info),
+            FnIndex::UnOp(f) => self.call_unop(&call.args[0], f, &call.info),
             FnIndex::Loaded(f_index) => {
-                self.call_loaded(&call.args, f_index, &call.info,
-                                 &call.custom_source, loader)
+                self.call_loaded(&call.args, f_index, &call.info, &call.custom_source, loader)
             }
-            FnIndex::None => {
-                Err(self.module.error(call.info.source_range,
-                    &format!("{}\nUnknown function `{}`", self.stack_trace(), call.info.name), self))
-            }
+            FnIndex::None => Err(self.module.error(
+                call.info.source_range,
+                &format!(
+                    "{}\nUnknown function `{}`",
+                    self.stack_trace(),
+                    call.info.name
+                ),
+                self,
+            )),
         }
     }
 
     /// Calls function by name.
-    pub fn call_str(&mut self,
+    pub fn call_str(
+        &mut self,
         function: &str,
         args: &[Variable],
-        module: &Arc<Module>
+        module: &Arc<Module>,
     ) -> Result<(), String> {
         let name: Arc<String> = Arc::new(function.into());
         match module.find_function(&name, 0) {
             FnIndex::Loaded(f_index) => {
                 let call = ast::Call {
                     f_index: FnIndex::Loaded(f_index),
-                    args: args.iter()
-                            .map(|arg| ast::Expression::Variable(Box::new((
-                                       Range::empty(0), arg.clone()))))
-                            .collect(),
+                    args: args
+                        .iter()
+                        .map(|arg| {
+                            ast::Expression::Variable(Box::new((Range::empty(0), arg.clone())))
+                        })
+                        .collect(),
                     custom_source: None,
                     info: Box::new(ast::CallInfo {
                         alias: None,
                         name: name.clone(),
                         source_range: Range::empty(0),
-                    })
+                    }),
                 };
-                self.call(&call, &module)?;
+                self.call(&call, module)?;
                 Ok(())
             }
-            _ => Err(format!("Could not find function `{}`",function))
+            _ => Err(format!("Could not find function `{}`", function)),
         }
     }
 
@@ -1449,7 +1698,7 @@ impl Runtime {
         &mut self,
         function: &str,
         args: &[Variable],
-        module: &Arc<Module>
+        module: &Arc<Module>,
     ) -> Result<Variable, String> {
         let name: Arc<String> = Arc::new(function.into());
         let fn_index = module.find_function(&name, 0);
@@ -1466,11 +1715,11 @@ impl Runtime {
             custom_source: None,
             info: Box::new(ast::CallInfo {
                 alias: None,
-                name: name.clone(),
+                name,
                 source_range: Range::empty(0),
-            })
+            }),
         };
-        match self.call(&call, &module) {
+        match self.call(&call, module) {
             Ok((Some(val), Flow::Continue)) => Ok(val),
             Err(err) => Err(err),
             _ => Err(module.error(
@@ -1484,15 +1733,24 @@ impl Runtime {
     fn swizzle(&mut self, sw: &ast::Swizzle) -> Result<Flow, String> {
         let v = match self.expression(&sw.expr, Side::Right)? {
             (Some(x), Flow::Continue) => x,
-            (_, Flow::Return) => { return Ok(Flow::Return); }
-            _ => return Err(self.module.error(sw.expr.source_range(),
-                            &format!("{}\nExpected something",
-                                self.stack_trace()), self))
+            (_, Flow::Return) => {
+                return Ok(Flow::Return);
+            }
+            _ => {
+                return Err(self.module.error(
+                    sw.expr.source_range(),
+                    &format!("{}\nExpected something", self.stack_trace()),
+                    self,
+                ))
+            }
         };
         let v = match self.resolve(&v) {
             &Variable::Vec4(v) => v,
-            x => return Err(self.module.error(sw.source_range,
-                    &self.expected(x, "vec4"), self))
+            x => {
+                return Err(self
+                    .module
+                    .error(sw.source_range, &self.expected(x, "vec4"), self))
+            }
         };
         self.stack.push(Variable::f64(f64::from(v[sw.sw0])));
         self.stack.push(Variable::f64(f64::from(v[sw.sw1])));
@@ -1508,33 +1766,40 @@ impl Runtime {
     fn link(&mut self, link: &ast::Link) -> FlowResult {
         use Link;
 
-        Ok((Some(if link.items.is_empty() {
-            Variable::Link(Box::new(Link::new()))
-        } else {
-            let st = self.stack.len();
-            let lc = self.local_stack.len();
-            let cu = self.current_stack.len();
-            let mut new_link = Link::new();
-            for item in &link.items {
-                let v = match self.expression(item, Side::Right)? {
-                    (Some(x), Flow::Continue) => x,
-                    (None, Flow::Continue) => continue,
-                    (res, flow) => { return Ok((res, flow)); }
-                };
-                match new_link.push(self.resolve(&v)) {
-                    Err(err) => {
-                        return Err(self.module.error(item.source_range(),
-                            &format!("{}\n{}", self.stack_trace(),
-                            err), self))
+        Ok((
+            Some(if link.items.is_empty() {
+                Variable::Link(Box::new(Link::new()))
+            } else {
+                let st = self.stack.len();
+                let lc = self.local_stack.len();
+                let cu = self.current_stack.len();
+                let mut new_link = Link::new();
+                for item in &link.items {
+                    let v = match self.expression(item, Side::Right)? {
+                        (Some(x), Flow::Continue) => x,
+                        (None, Flow::Continue) => continue,
+                        (res, flow) => {
+                            return Ok((res, flow));
+                        }
+                    };
+                    match new_link.push(self.resolve(&v)) {
+                        Err(err) => {
+                            return Err(self.module.error(
+                                item.source_range(),
+                                &format!("{}\n{}", self.stack_trace(), err),
+                                self,
+                            ))
+                        }
+                        Ok(()) => {}
                     }
-                    Ok(()) => {}
                 }
-            }
-            self.stack.truncate(st);
-            self.local_stack.truncate(lc);
-            self.current_stack.truncate(cu);
-            Variable::Link(Box::new(new_link))
-        }), Flow::Continue))
+                self.stack.truncate(st);
+                self.local_stack.truncate(lc);
+                self.current_stack.truncate(cu);
+                Variable::Link(Box::new(new_link))
+            }),
+            Flow::Continue,
+        ))
     }
 
     fn object(&mut self, obj: &ast::Object) -> FlowResult {
@@ -1542,14 +1807,20 @@ impl Runtime {
         for &(ref key, ref expr) in &obj.key_values {
             let x = match self.expression(expr, Side::Right)? {
                 (Some(x), Flow::Continue) => x,
-                (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-                _ => return self.err(expr.source_range(), "Expected something")
+                (x, Flow::Return) => {
+                    return Ok((x, Flow::Return));
+                }
+                _ => return self.err(expr.source_range(), "Expected something"),
             };
             match object.insert(key.clone(), x) {
                 None => {}
-                Some(_) => return Err(self.module.error(expr.source_range(),
-                    &format!("{}\nDuplicate key in object `{}`",
-                        self.stack_trace(), key), self))
+                Some(_) => {
+                    return Err(self.module.error(
+                        expr.source_range(),
+                        &format!("{}\nDuplicate key in object `{}`", self.stack_trace(), key),
+                        self,
+                    ))
+                }
             }
         }
         Ok((Some(Variable::Object(Arc::new(object))), Flow::Continue))
@@ -1561,7 +1832,7 @@ impl Runtime {
             array.push(match self.expression(item, Side::Right)? {
                 (Some(x), Flow::Continue) => x,
                 (x, Flow::Return) => return Ok((x, Flow::Return)),
-                _ => return self.err(item.source_range(), "Expected something")
+                _ => return self.err(item.source_range(), "Expected something"),
             });
         }
         Ok((Some(Variable::Array(Arc::new(array))), Flow::Continue))
@@ -1571,19 +1842,21 @@ impl Runtime {
         let fill = match self.expression(&array_fill.fill, Side::Right)? {
             (x, Flow::Return) => return Ok((x, Flow::Return)),
             (Some(x), Flow::Continue) => x,
-            _ => return self.err(array_fill.fill.source_range(), "Expected something")
+            _ => return self.err(array_fill.fill.source_range(), "Expected something"),
         };
         let n = match self.expression(&array_fill.n, Side::Right)? {
             (x, Flow::Return) => return Ok((x, Flow::Return)),
             (Some(x), Flow::Continue) => x,
-            _ => return self.err(array_fill.n.source_range(), "Expected something")
+            _ => return self.err(array_fill.n.source_range(), "Expected something"),
         };
         let v = match (self.resolve(&fill), self.resolve(&n)) {
-            (x, &Variable::F64(n, _)) => {
-                Variable::Array(Arc::new(vec![x.clone(); n as usize]))
+            (x, &Variable::F64(n, _)) => Variable::Array(Arc::new(vec![x.clone(); n as usize])),
+            _ => {
+                return self.err(
+                    array_fill.n.source_range(),
+                    "Expected number for length in `[value; length]`",
+                )
             }
-            _ => return self.err(array_fill.n.source_range(),
-                                 "Expected number for length in `[value; length]`")
         };
         Ok((Some(v), Flow::Continue))
     }
@@ -1592,7 +1865,7 @@ impl Runtime {
         &mut self,
         op: ast::AssignOp,
         left: &ast::Expression,
-        right: &ast::Expression
+        right: &ast::Expression,
     ) -> FlowResult {
         use ast::AssignOp::*;
         use ast::Expression;
@@ -1604,12 +1877,17 @@ impl Runtime {
             let b = match self.expression(right, Side::Right)? {
                 (Some(x), Flow::Continue) => x,
                 (x, Flow::Return) => return Ok((x, Flow::Return)),
-                _ => return self.err(right.source_range(), "Expected something from the right side")
+                _ => {
+                    return self.err(
+                        right.source_range(),
+                        "Expected something from the right side",
+                    )
+                }
             };
             let a = match self.expression(left, Side::LeftInsert(false))? {
                 (Some(x), Flow::Continue) => x,
                 (x, Flow::Return) => return Ok((x, Flow::Return)),
-                _ => return self.err(left.source_range(), "Expected something from the left side")
+                _ => return self.err(left.source_range(), "Expected something from the left side"),
             };
             let r = match a {
                 Variable::UnsafeRef(r) => {
@@ -1622,372 +1900,337 @@ impl Runtime {
                     }
                     r
                 }
-                Variable::Ref(ind) => {
-                    UnsafeRef(&mut self.stack[ind] as *mut Variable)
-                }
-                x => panic!("Expected reference, found `{}`", x.typeof_var())
+                Variable::Ref(ind) => UnsafeRef(&mut self.stack[ind] as *mut Variable),
+                x => panic!("Expected reference, found `{}`", x.typeof_var()),
             };
 
             match *self.resolve(&b) {
-                Variable::F64(b, ref sec) => {
-                    unsafe {
-                        match *r.0 {
-                            Variable::F64(ref mut n, ref mut n_sec) => {
-                                match op {
-                                    Set => *n = b,
-                                    Add => *n += b,
-                                    Sub => *n -= b,
-                                    Mul => *n *= b,
-                                    Div => *n /= b,
-                                    Rem => *n %= b,
-                                    Pow => *n = n.powf(b),
-                                    Assign => {}
-                                };
-                                *n_sec = sec.clone()
-                            }
-                            Variable::Vec4(ref mut n) => {
-                                let b = b as f32;
-                                match op {
-                                    Add => *n = [n[0] + b, n[1] + b,
-                                                 n[2] + b, n[3] + b],
-                                    Sub => *n = [n[0] - b, n[1] - b,
-                                                 n[2] - b, n[3] - b],
-                                    Mul => *n = [n[0] * b, n[1] * b,
-                                                 n[2] * b, n[3] * b],
-                                    Div => *n = [n[0] / b, n[1] / b,
-                                                 n[2] / b, n[3] / b],
-                                    Rem => *n = [n[0] % b, n[1] % b,
-                                                 n[2] % b, n[3] % b],
-                                    Pow => *n = [n[0].powf(b), n[1].powf(b),
-                                                 n[2].powf(b), n[3].powf(b)],
-                                    _ => return self.err(left.source_range(),
-                                                         "Expected assigning to a number")
+                Variable::F64(b, ref sec) => unsafe {
+                    match *r.0 {
+                        Variable::F64(ref mut n, ref mut n_sec) => {
+                            match op {
+                                Set => *n = b,
+                                Add => *n += b,
+                                Sub => *n -= b,
+                                Mul => *n *= b,
+                                Div => *n /= b,
+                                Rem => *n %= b,
+                                Pow => *n = n.powf(b),
+                                Assign => {}
+                            };
+                            *n_sec = sec.clone()
+                        }
+                        Variable::Vec4(ref mut n) => {
+                            let b = b as f32;
+                            match op {
+                                Add => *n = [n[0] + b, n[1] + b, n[2] + b, n[3] + b],
+                                Sub => *n = [n[0] - b, n[1] - b, n[2] - b, n[3] - b],
+                                Mul => *n = [n[0] * b, n[1] * b, n[2] * b, n[3] * b],
+                                Div => *n = [n[0] / b, n[1] / b, n[2] / b, n[3] / b],
+                                Rem => *n = [n[0] % b, n[1] % b, n[2] % b, n[3] % b],
+                                Pow => {
+                                    *n = [n[0].powf(b), n[1].powf(b), n[2].powf(b), n[3].powf(b)]
+                                }
+                                _ => {
+                                    return self
+                                        .err(left.source_range(), "Expected assigning to a number")
                                 }
                             }
-                            Variable::Return => {
-                                if let Set = op {
-                                    *r.0 = Variable::F64(b, sec.clone())
-                                } else {
-                                    return self.err(left.source_range(), "Return has no value")
-                                }
+                        }
+                        Variable::Return => {
+                            if let Set = op {
+                                *r.0 = Variable::F64(b, sec.clone())
+                            } else {
+                                return self.err(left.source_range(), "Return has no value");
                             }
-                            Variable::Link(ref mut n) => {
-                                if let Add = op {
-                                    n.push(&Variable::f64(b))?;
-                                } else {
-                                    return self.err(
-                                        left.source_range(),
-                                        "Can not use this assignment \
-                                        operator with `link` and `number`")
-                                }
-                            }
-                            _ => return self.err(
+                        }
+                        Variable::Link(ref mut n) => {
+                            if let Add = op {
+                                n.push(&Variable::f64(b))?;
+                            } else {
+                                return self.err(
                                     left.source_range(),
-                                    "Expected assigning to a number")
-                        };
-                    }
-                }
-                Variable::Vec4(b) => {
-                    unsafe {
-                        match *r.0 {
-                            Variable::Vec4(ref mut n) => {
-                                match op {
-                                    Set => *n = b,
-                                    Add => *n = [n[0] + b[0], n[1] + b[1],
-                                                 n[2] + b[2], n[3] + b[3]],
-                                    Sub => *n = [n[0] - b[0], n[1] - b[1],
-                                                 n[2] - b[2], n[3] - b[3]],
-                                    Mul => *n = [n[0] * b[0], n[1] * b[1],
-                                                 n[2] * b[2], n[3] * b[3]],
-                                    Div => *n = [n[0] / b[0], n[1] / b[1],
-                                                 n[2] / b[2], n[3] / b[3]],
-                                    Rem => *n = [n[0] % b[0], n[1] % b[1],
-                                                 n[2] % b[2], n[3] % b[3]],
-                                    Pow => *n = [n[0].powf(b[0]), n[1].powf(b[1]),
-                                                 n[2].powf(b[2]), n[3].powf(b[3])],
-                                    Assign => {}
-                                }
+                                    "Can not use this assignment \
+                                        operator with `link` and `number`",
+                                );
                             }
-                            Variable::Return => {
-                                if let Set = op {
-                                    *r.0 = Variable::Vec4(b)
-                                } else {
-                                    return self.err(left.source_range(), "Return has no value")
-                                }
+                        }
+                        _ => {
+                            return self.err(left.source_range(), "Expected assigning to a number")
+                        }
+                    };
+                },
+                Variable::Vec4(b) => unsafe {
+                    match *r.0 {
+                        Variable::Vec4(ref mut n) => match op {
+                            Set => *n = b,
+                            Add => *n = [n[0] + b[0], n[1] + b[1], n[2] + b[2], n[3] + b[3]],
+                            Sub => *n = [n[0] - b[0], n[1] - b[1], n[2] - b[2], n[3] - b[3]],
+                            Mul => *n = [n[0] * b[0], n[1] * b[1], n[2] * b[2], n[3] * b[3]],
+                            Div => *n = [n[0] / b[0], n[1] / b[1], n[2] / b[2], n[3] / b[3]],
+                            Rem => *n = [n[0] % b[0], n[1] % b[1], n[2] % b[2], n[3] % b[3]],
+                            Pow => {
+                                *n = [
+                                    n[0].powf(b[0]),
+                                    n[1].powf(b[1]),
+                                    n[2].powf(b[2]),
+                                    n[3].powf(b[3]),
+                                ]
                             }
-                            _ => return self.err(left.source_range(),
-                                                 "Expected assigning to a vec4")
-                        };
-                    }
-                }
-                Variable::Mat4(ref b) => {
-                    unsafe {
-                        match *r.0 {
-                            Variable::Mat4(ref mut n) => {
-                                match op {
-                                    Set => {
-                                        **n = **b;
-                                    }
-                                    Mul => {
-                                        use vecmath::col_mat4_mul;
+                            Assign => {}
+                        },
+                        Variable::Return => {
+                            if let Set = op {
+                                *r.0 = Variable::Vec4(b)
+                            } else {
+                                return self.err(left.source_range(), "Return has no value");
+                            }
+                        }
+                        _ => return self.err(left.source_range(), "Expected assigning to a vec4"),
+                    };
+                },
+                Variable::Mat4(ref b) => unsafe {
+                    match *r.0 {
+                        Variable::Mat4(ref mut n) => match op {
+                            Set => {
+                                **n = **b;
+                            }
+                            Mul => {
+                                use vecmath::col_mat4_mul;
 
-                                        **n = col_mat4_mul(**n, **b);
-                                    }
-                                    Add => {
-                                        use vecmath::mat4_add;
+                                **n = col_mat4_mul(**n, **b);
+                            }
+                            Add => {
+                                use vecmath::mat4_add;
 
-                                        **n = mat4_add(**n, **b);
-                                    }
-                                    Sub => {
-                                        use vecmath::mat4_sub;
+                                **n = mat4_add(**n, **b);
+                            }
+                            Sub => {
+                                use vecmath::mat4_sub;
 
-                                        **n = mat4_sub(**n, **b);
-                                    }
-                                    _ => {
-                                        return self.err(
-                                            left.source_range(),
-                                            "Can not use this assignment \
-                                            operator with `mat4`")
-                                    }
-                                }
+                                **n = mat4_sub(**n, **b);
                             }
-                            Variable::Return => {
-                                if let Set = op {
-                                    *r.0 = Variable::Mat4(b.clone())
-                                } else {
-                                    return self.err(left.source_range(),
-                                                    "Return has no value")
-                                }
+                            _ => {
+                                return self.err(
+                                    left.source_range(),
+                                    "Can not use this assignment \
+                                            operator with `mat4`",
+                                )
                             }
-                            _ => return self.err(left.source_range(),
-                                                 "Expected assigning to a mat4")
+                        },
+                        Variable::Return => {
+                            if let Set = op {
+                                *r.0 = Variable::Mat4(b.clone())
+                            } else {
+                                return self.err(left.source_range(), "Return has no value");
+                            }
+                        }
+                        _ => return self.err(left.source_range(), "Expected assigning to a mat4"),
+                    }
+                },
+                Variable::Bool(b, ref sec) => unsafe {
+                    match *r.0 {
+                        Variable::Bool(ref mut n, ref mut n_sec) => {
+                            match op {
+                                Set => *n = b,
+                                _ => unimplemented!(),
+                            };
+                            *n_sec = sec.clone();
+                        }
+                        Variable::Return => {
+                            if let Set = op {
+                                *r.0 = Variable::Bool(b, sec.clone())
+                            } else {
+                                return self.err(left.source_range(), "Return has no value");
+                            }
+                        }
+                        Variable::Link(ref mut n) => {
+                            if let Add = op {
+                                n.push(&Variable::bool(b))?;
+                            } else {
+                                return self.err(
+                                    left.source_range(),
+                                    "Can not use this assignment \
+                                        operator with `link` and `bool`",
+                                );
+                            }
+                        }
+                        _ => return self.err(left.source_range(), "Expected assigning to a bool"),
+                    };
+                },
+                Variable::Str(ref b) => unsafe {
+                    match *r.0 {
+                        Variable::Str(ref mut n) => match op {
+                            Set => *n = b.clone(),
+                            Add => Arc::make_mut(n).push_str(b),
+                            _ => unimplemented!(),
+                        },
+                        Variable::Return => {
+                            if let Set = op {
+                                *r.0 = Variable::Str(b.clone())
+                            } else {
+                                return self.err(left.source_range(), "Return has no value");
+                            }
+                        }
+                        Variable::Link(ref mut n) => {
+                            if let Add = op {
+                                n.push(&Variable::Str(b.clone()))?;
+                            } else {
+                                return self.err(
+                                    left.source_range(),
+                                    "Can not use this assignment \
+                                        operator with `link` and `text`",
+                                );
+                            }
+                        }
+                        _ => return self.err(left.source_range(), "Expected assigning to text"),
+                    }
+                },
+                Variable::Object(ref b) => unsafe {
+                    match *r.0 {
+                        Variable::Object(_) => {
+                            if let Set = op {
+                                *r.0 = Variable::Object(b.clone())
+                            } else {
+                                unimplemented!()
+                            }
+                        }
+                        Variable::Return => {
+                            if let Set = op {
+                                *r.0 = Variable::Object(b.clone())
+                            } else {
+                                return self.err(left.source_range(), "Return has no value");
+                            }
+                        }
+                        _ => return self.err(left.source_range(), "Expected assigning to object"),
+                    }
+                },
+                Variable::Array(ref b) => unsafe {
+                    match *r.0 {
+                        Variable::Array(_) => {
+                            if let Set = op {
+                                *r.0 = Variable::Array(b.clone())
+                            } else {
+                                unimplemented!()
+                            }
+                        }
+                        Variable::Return => {
+                            if let Set = op {
+                                *r.0 = Variable::Array(b.clone())
+                            } else {
+                                return self.err(left.source_range(), "Return has no value");
+                            }
+                        }
+                        _ => return self.err(left.source_range(), "Expected assigning to array"),
+                    }
+                },
+                Variable::Link(ref b) => unsafe {
+                    match *r.0 {
+                        Variable::Link(ref mut n) => match op {
+                            Set => *n = b.clone(),
+                            Add => **n = n.add(b),
+                            Sub => **n = b.add(n),
+                            _ => unimplemented!(),
+                        },
+                        Variable::Return => {
+                            if let Set = op {
+                                *r.0 = Variable::Link(b.clone())
+                            } else {
+                                return self.err(left.source_range(), "Return has no value");
+                            }
+                        }
+                        _ => return self.err(left.source_range(), "Expected assigning to link"),
+                    }
+                },
+                Variable::Option(ref b) => unsafe {
+                    match *r.0 {
+                        Variable::Option(_) => {
+                            if let Set = op {
+                                *r.0 = Variable::Option(b.clone())
+                            } else {
+                                unimplemented!()
+                            }
+                        }
+                        Variable::Return => {
+                            if let Set = op {
+                                *r.0 = Variable::Option(b.clone())
+                            } else {
+                                return self.err(left.source_range(), "Return has no value");
+                            }
+                        }
+                        _ => return self.err(left.source_range(), "Expected assigning to option"),
+                    }
+                },
+                Variable::Result(ref b) => unsafe {
+                    match *r.0 {
+                        Variable::Result(_) => {
+                            if let Set = op {
+                                *r.0 = Variable::Result(b.clone())
+                            } else {
+                                unimplemented!()
+                            }
+                        }
+                        Variable::Return => {
+                            if let Set = op {
+                                *r.0 = Variable::Result(b.clone())
+                            } else {
+                                return self.err(left.source_range(), "Return has no value");
+                            }
+                        }
+                        _ => return self.err(left.source_range(), "Expected assigning to result"),
+                    }
+                },
+                Variable::RustObject(ref b) => unsafe {
+                    match *r.0 {
+                        Variable::RustObject(_) => {
+                            if let Set = op {
+                                *r.0 = Variable::RustObject(b.clone())
+                            } else {
+                                unimplemented!()
+                            }
+                        }
+                        Variable::Return => {
+                            if let Set = op {
+                                *r.0 = Variable::RustObject(b.clone())
+                            } else {
+                                return self.err(left.source_range(), "Return has no value");
+                            }
+                        }
+                        _ => {
+                            return self
+                                .err(left.source_range(), "Expected assigning to rust_object")
                         }
                     }
-                }
-                Variable::Bool(b, ref sec) => {
-                    unsafe {
-                        match *r.0 {
-                            Variable::Bool(ref mut n, ref mut n_sec) => {
-                                match op {
-                                    Set => *n = b,
-                                    _ => unimplemented!()
-                                };
-                                *n_sec = sec.clone();
+                },
+                Variable::Closure(ref b, ref env) => unsafe {
+                    match *r.0 {
+                        Variable::Closure(_, _) => {
+                            if let Set = op {
+                                *r.0 = Variable::Closure(b.clone(), env.clone())
+                            } else {
+                                unimplemented!()
                             }
-                            Variable::Return => {
-                                if let Set = op {
-                                    *r.0 = Variable::Bool(b, sec.clone())
-                                } else {
-                                    return self.err(left.source_range(), "Return has no value")
-                                }
-                            }
-                            Variable::Link(ref mut n) => {
-                                if let Add = op {
-                                    n.push(&Variable::bool(b))?;
-                                } else {
-                                    return self.err(left.source_range(),
-                                        "Can not use this assignment \
-                                        operator with `link` and `bool`")
-                                }
-                            }
-                            _ => return self.err(left.source_range(),
-                                                 "Expected assigning to a bool")
-                        };
-                    }
-                }
-                Variable::Str(ref b) => {
-                    unsafe {
-                        match *r.0 {
-                            Variable::Str(ref mut n) => {
-                                match op {
-                                    Set => *n = b.clone(),
-                                    Add => Arc::make_mut(n).push_str(b),
-                                    _ => unimplemented!()
-                                }
-                            }
-                            Variable::Return => {
-                                if let Set = op {
-                                    *r.0 = Variable::Str(b.clone())
-                                } else {
-                                    return self.err(left.source_range(),
-                                                    "Return has no value")
-                                }
-                            }
-                            Variable::Link(ref mut n) => {
-                                if let Add = op {
-                                    n.push(&Variable::Str(b.clone()))?;
-                                } else {
-                                    return self.err(left.source_range(),
-                                        "Can not use this assignment \
-                                        operator with `link` and `text`")
-                                }
-                            }
-                            _ => return self.err(left.source_range(),
-                                                 "Expected assigning to text")
                         }
-                    }
-                }
-                Variable::Object(ref b) => {
-                    unsafe {
-                        match *r.0 {
-                            Variable::Object(_) => {
-                                if let Set = op {
-                                    *r.0 = Variable::Object(b.clone())
-                                } else {
-                                    unimplemented!()
-                                }
+                        Variable::Return => {
+                            if let Set = op {
+                                *r.0 = Variable::Closure(b.clone(), env.clone())
+                            } else {
+                                return self.err(left.source_range(), "Return has no value");
                             }
-                            Variable::Return => {
-                                if let Set = op {
-                                    *r.0 = Variable::Object(b.clone())
-                                } else {
-                                    return self.err(left.source_range(), "Return has no value")
-                                }
-                            }
-                            _ => return self.err(left.source_range(),
-                                                 "Expected assigning to object")
                         }
+                        _ => return self.err(left.source_range(), "Expected assigning to closure"),
                     }
-                }
-                Variable::Array(ref b) => {
-                    unsafe {
-                        match *r.0 {
-                            Variable::Array(_) => {
-                                if let Set = op {
-                                    *r.0 = Variable::Array(b.clone())
-                                } else {
-                                    unimplemented!()
-                                }
-                            }
-                            Variable::Return => {
-                                if let Set = op {
-                                    *r.0 = Variable::Array(b.clone())
-                                } else {
-                                    return self.err(left.source_range(),
-                                                    "Return has no value")
-                                }
-                            }
-                            _ => return self.err(left.source_range(),
-                                                 "Expected assigning to array")
-                        }
-                    }
-                }
-                Variable::Link(ref b) => {
-                    unsafe {
-                        match *r.0 {
-                            Variable::Link(ref mut n) => {
-                                match op {
-                                    Set => *n = b.clone(),
-                                    Add => **n = n.add(b),
-                                    Sub => **n = b.add(n),
-                                    _ => unimplemented!()
-                                }
-                            }
-                            Variable::Return => {
-                                if let Set = op {
-                                    *r.0 = Variable::Link(b.clone())
-                                } else {
-                                    return self.err(left.source_range(), "Return has no value")
-                                }
-                            }
-                            _ => return self.err(left.source_range(),
-                                                 "Expected assigning to link")
-                        }
-                    }
-                }
-                Variable::Option(ref b) => {
-                    unsafe {
-                        match *r.0 {
-                            Variable::Option(_) => {
-                                if let Set = op {
-                                    *r.0 = Variable::Option(b.clone())
-                                } else {
-                                    unimplemented!()
-                                }
-                            }
-                            Variable::Return => {
-                                if let Set = op {
-                                    *r.0 = Variable::Option(b.clone())
-                                } else {
-                                    return self.err(left.source_range(), "Return has no value")
-                                }
-                            }
-                            _ => return self.err(left.source_range(),
-                                                 "Expected assigning to option")
-                        }
-                    }
-                }
-                Variable::Result(ref b) => {
-                    unsafe {
-                        match *r.0 {
-                            Variable::Result(_) => {
-                                if let Set = op {
-                                    *r.0 = Variable::Result(b.clone())
-                                } else {
-                                    unimplemented!()
-                                }
-                            }
-                            Variable::Return => {
-                                if let Set = op {
-                                    *r.0 = Variable::Result(b.clone())
-                                } else {
-                                    return self.err(left.source_range(), "Return has no value")
-                                }
-                            }
-                            _ => return self.err(left.source_range(),
-                                                 "Expected assigning to result")
-                        }
-                    }
-                }
-                Variable::RustObject(ref b) => {
-                    unsafe {
-                        match *r.0 {
-                            Variable::RustObject(_) => {
-                                if let Set = op {
-                                    *r.0 = Variable::RustObject(b.clone())
-                                } else {
-                                    unimplemented!()
-                                }
-                            }
-                            Variable::Return => {
-                                if let Set = op {
-                                    *r.0 = Variable::RustObject(b.clone())
-                                } else {
-                                    return self.err(left.source_range(), "Return has no value")
-                                }
-                            }
-                            _ => return self.err(left.source_range(),
-                                                 "Expected assigning to rust_object")
-                        }
-                    }
-                }
-                Variable::Closure(ref b, ref env) => {
-                    unsafe {
-                        match *r.0 {
-                            Variable::Closure(_, _) => {
-                                if let Set = op {
-                                    *r.0 = Variable::Closure(b.clone(), env.clone())
-                                } else {
-                                    unimplemented!()
-                                }
-                            }
-                            Variable::Return => {
-                                if let Set = op {
-                                    *r.0 = Variable::Closure(b.clone(), env.clone())
-                                } else {
-                                    return self.err(left.source_range(), "Return has no value")
-                                }
-                            }
-                            _ => return self.err(left.source_range(),
-                                                 "Expected assigning to closure")
-                        }
-                    }
-                }
+                },
                 ref x => {
                     return Err(self.module.error(
                         left.source_range(),
-                        &format!("{}\nCan not use this assignment operator with `{}`",
-                            self.stack_trace(), x.typeof_var()), self));
+                        &format!(
+                            "{}\nCan not use this assignment operator with `{}`",
+                            self.stack_trace(),
+                            x.typeof_var()
+                        ),
+                        self,
+                    ));
                 }
             };
             Ok((None, Flow::Continue))
@@ -1997,37 +2240,44 @@ impl Runtime {
                     let x = match self.expression(right, Side::Right)? {
                         (x, Flow::Return) => return Ok((x, Flow::Return)),
                         (Some(x), Flow::Continue) => x,
-                        _ => return self.err(right.source_range(),
-                                             "Expected something from the right side")
+                        _ => {
+                            return self.err(
+                                right.source_range(),
+                                "Expected something from the right side",
+                            )
+                        }
                     };
                     let v = match x {
                         // Use a shallow clone of a reference.
                         Variable::Ref(ind) => self.stack[ind].clone(),
-                        x => x
+                        x => x,
                     };
                     if !item.ids.is_empty() {
                         let x = match self.expression(left, Side::LeftInsert(true))? {
                             (Some(x), Flow::Continue) => x,
                             (x, Flow::Return) => return Ok((x, Flow::Return)),
-                            _ => return self.err(left.source_range(),
-                                                 "Expected something from the left side")
+                            _ => {
+                                return self.err(
+                                    left.source_range(),
+                                    "Expected something from the left side",
+                                )
+                            }
                         };
                         match x {
-                            Variable::UnsafeRef(r) => {
-                                unsafe { *r.0 = v }
-                            }
-                            _ => panic!("Expected unsafe reference")
+                            Variable::UnsafeRef(r) => unsafe { *r.0 = v },
+                            _ => panic!("Expected unsafe reference"),
                         }
                     } else {
                         self.local_stack.push((item.name.clone(), self.stack.len()));
                         if item.current {
-                            self.current_stack.push((item.name.clone(), self.stack.len()));
+                            self.current_stack
+                                .push((item.name.clone(), self.stack.len()));
                         }
                         self.stack.push(v);
                     }
                     Ok((None, Flow::Continue))
                 }
-                _ => self.err(left.source_range(), "Expected item")
+                _ => self.err(left.source_range(), "Expected item"),
             }
         }
     }
@@ -2043,34 +2293,44 @@ impl Runtime {
             call_stack: &[Call],
             v: Result<Box<Variable>, Box<Error>>,
             source_range: Range,
-            module: &Module
+            module: &Module,
         ) -> FlowResult {
             match v {
                 Ok(ok) => Ok((Some(*ok), Flow::Continue)),
                 Err(mut err) => {
                     let call = call_stack.last().unwrap();
                     if call.stack_len == 0 {
-                        return Err(module.error_fnindex(source_range,
-                            &format!("{}\nRequires `->` on function `{}`",
-                            stack_trace(call_stack),
-                            &call.fn_name), call.index));
+                        return Err(module.error_fnindex(
+                            source_range,
+                            &format!(
+                                "{}\nRequires `->` on function `{}`",
+                                stack_trace(call_stack),
+                                &call.fn_name
+                            ),
+                            call.index,
+                        ));
                     }
-                    if let Variable::Return = stack[call.stack_len - 1] {}
-                    else {
-                        return Err(module.error_fnindex(source_range,
-                            &format!("{}\nRequires `->` on function `{}`",
-                            stack_trace(call_stack),
-                            &call.fn_name),
-                            call.index));
+                    if let Variable::Return = stack[call.stack_len - 1] {
+                    } else {
+                        return Err(module.error_fnindex(
+                            source_range,
+                            &format!(
+                                "{}\nRequires `->` on function `{}`",
+                                stack_trace(call_stack),
+                                &call.fn_name
+                            ),
+                            call.index,
+                        ));
                     }
                     let file = match call.file {
                         None => "".into(),
-                        Some(ref f) => format!(" ({})", f)
+                        Some(ref f) => format!(" ({})", f),
                     };
                     err.trace.push(module.error_fnindex(
                         source_range,
                         &format!("In function `{}`{}", call.fn_name, file),
-                        call.index));
+                        call.index,
+                    ));
                     Ok((Some(Variable::Result(Err(err))), Flow::Return))
                 }
             }
@@ -2111,14 +2371,25 @@ impl Runtime {
                         if found {
                             self.stack.len() - item.stack_id.get().unwrap()
                         } else if name == "return" {
-                            return Err(self.module.error(item.source_range, &format!(
-                                "{}\nRequires `->` on function `{}`",
-                                self.stack_trace(),
-                                &self.call_stack.last().unwrap().fn_name), self));
+                            return Err(self.module.error(
+                                item.source_range,
+                                &format!(
+                                    "{}\nRequires `->` on function `{}`",
+                                    self.stack_trace(),
+                                    &self.call_stack.last().unwrap().fn_name
+                                ),
+                                self,
+                            ));
                         } else {
-                            return Err(self.module.error(item.source_range, &format!(
-                                "{}\nCould not find local or current variable `{}`",
-                                    self.stack_trace(), name), self));
+                            return Err(self.module.error(
+                                item.source_range,
+                                &format!(
+                                    "{}\nCould not find local or current variable `{}`",
+                                    self.stack_trace(),
+                                    name
+                                ),
+                                self,
+                            ));
                         }
                     }
                 }
@@ -2129,11 +2400,14 @@ impl Runtime {
             for &(ref n, id) in self.local_stack.iter().rev().take(locals) {
                 if **n == **item.name {
                     if stack_id != id {
-                        return Err(self.module.error(item.source_range,
-                            &format!("DEBUG: Not same for {} stack_id `{:?}` vs id `{:?}`",
-                                item.name,
-                                stack_id,
-                                id), self));
+                        return Err(self.module.error(
+                            item.source_range,
+                            &format!(
+                                "DEBUG: Not same for {} stack_id `{:?}` vs id `{:?}`",
+                                item.name, stack_id, id
+                            ),
+                            self,
+                        ));
                     }
                     break;
                 }
@@ -2141,22 +2415,29 @@ impl Runtime {
         }
 
         let stack_id = if let Variable::Ref(ref_id) = self.stack[stack_id] {
-                ref_id
-            } else {
-                stack_id
-            };
+            ref_id
+        } else {
+            stack_id
+        };
         if item.ids.is_empty() {
             if item.try {
                 // Check for `err(_)` or unwrap when `?` follows item.
                 let v = match Runtime::try_msg(&self.stack[stack_id]) {
                     Some(v) => v,
                     None => {
-                        return self.err(item.source_range,
-                                        "Expected `ok(_)`, `err(_)`, `bool`, `f64`")
+                        return self.err(
+                            item.source_range,
+                            "Expected `ok(_)`, `err(_)`, `bool`, `f64`",
+                        )
                     }
                 };
-                return try(&mut self.stack, &self.call_stack, v,
-                           item.source_range, &self.module);
+                return try(
+                    &mut self.stack,
+                    &self.call_stack,
+                    v,
+                    item.source_range,
+                    &self.module,
+                );
             } else {
                 return Ok((Some(Variable::Ref(stack_id)), Flow::Continue));
             }
@@ -2169,8 +2450,7 @@ impl Runtime {
                 match self.expression(expr, Side::Right)? {
                     (x, Flow::Return) => return Ok((x, Flow::Return)),
                     (Some(x), Flow::Continue) => self.stack.push(x),
-                    _ => return self.err(expr.source_range(),
-                                         "Expected something for index")
+                    _ => return self.err(expr.source_range(), "Expected something for index"),
                 };
             }
         }
@@ -2197,20 +2477,26 @@ impl Runtime {
                 start_stack_len,
                 &mut expr_j,
                 insert,
-                item_len == 1
+                item_len == 1,
             )?;
             let mut try_id_ind = 0;
             if !item.try_ids.is_empty() && item.try_ids[try_id_ind] == 0 {
                 // Check for error on `?` for first id.
-                let v = unsafe {match Runtime::try_msg(&*var) {
-                    Some(v) => v,
-                    None => {
-                        return Err(self.module.error_fnindex(item.ids[0].source_range(),
-                            &format!("{}\nExpected `ok(_)` or `err(_)`",
-                                stack_trace(call_stack)),
-                                call_stack.last().unwrap().index));
+                let v = unsafe {
+                    match Runtime::try_msg(&*var) {
+                        Some(v) => v,
+                        None => {
+                            return Err(self.module.error_fnindex(
+                                item.ids[0].source_range(),
+                                &format!(
+                                    "{}\nExpected `ok(_)` or `err(_)`",
+                                    stack_trace(call_stack)
+                                ),
+                                call_stack.last().unwrap().index,
+                            ));
+                        }
                     }
-                }};
+                };
                 match v {
                     Ok(ref ok) => unsafe {
                         *var = (**ok).clone();
@@ -2221,30 +2507,36 @@ impl Runtime {
                         if call.stack_len == 0 {
                             return Err(self.module.error_fnindex(
                                 item.ids[0].source_range(),
-                                &format!("{}\nRequires `->` on function `{}`",
-                                stack_trace(call_stack),
-                                &call.fn_name),
-                                call.index));
+                                &format!(
+                                    "{}\nRequires `->` on function `{}`",
+                                    stack_trace(call_stack),
+                                    &call.fn_name
+                                ),
+                                call.index,
+                            ));
                         }
-                        if let Variable::Return = stack[call.stack_len - 1] {}
-                        else {
+                        if let Variable::Return = stack[call.stack_len - 1] {
+                        } else {
                             return Err(self.module.error_fnindex(
                                 item.ids[0].source_range(),
-                                &format!("{}\nRequires `->` on function `{}`",
-                                stack_trace(call_stack),
-                                &call.fn_name),
-                                call.index));
+                                &format!(
+                                    "{}\nRequires `->` on function `{}`",
+                                    stack_trace(call_stack),
+                                    &call.fn_name
+                                ),
+                                call.index,
+                            ));
                         }
                         let mut err = err.clone();
                         let file = match call.file.as_ref() {
                             None => "".into(),
-                            Some(f) => format!(" ({})", f)
+                            Some(f) => format!(" ({})", f),
                         };
                         err.trace.push(self.module.error_fnindex(
                             item.ids[0].source_range(),
-                            &format!("In function `{}`{}",
-                                &call.fn_name, file),
-                                call.index));
+                            &format!("In function `{}`{}", &call.fn_name, file),
+                            call.index,
+                        ));
                         return Ok((Some(Variable::Result(Err(err))), Flow::Return));
                     }
                 }
@@ -2261,21 +2553,26 @@ impl Runtime {
                     &mut expr_j,
                     insert,
                     // `i` skips first index.
-                    i + 2 == item_len
+                    i + 2 == item_len,
                 )?;
 
-                if item.try_ids.len() > try_id_ind &&
-                   item.try_ids[try_id_ind] == i + 1 {
+                if item.try_ids.len() > try_id_ind && item.try_ids[try_id_ind] == i + 1 {
                     // Check for error on `?` for rest of ids.
-                    let v = unsafe {match Runtime::try_msg(&*var) {
-                        Some(v) => v,
-                        None => {
-                            return Err(self.module.error_fnindex(prop.source_range(),
-                                &format!("{}\nExpected `ok(_)`, `err(_)`, `bool`, `f64`",
-                                    stack_trace(call_stack)),
-                                    call_stack.last().unwrap().index));
+                    let v = unsafe {
+                        match Runtime::try_msg(&*var) {
+                            Some(v) => v,
+                            None => {
+                                return Err(self.module.error_fnindex(
+                                    prop.source_range(),
+                                    &format!(
+                                        "{}\nExpected `ok(_)`, `err(_)`, `bool`, `f64`",
+                                        stack_trace(call_stack)
+                                    ),
+                                    call_stack.last().unwrap().index,
+                                ));
+                            }
                         }
-                    }};
+                    };
                     match v {
                         Ok(ref ok) => unsafe {
                             *var = (**ok).clone();
@@ -2286,30 +2583,36 @@ impl Runtime {
                             if call.stack_len == 0 {
                                 return Err(self.module.error_fnindex(
                                     prop.source_range(),
-                                    &format!("{}\nRequires `->` on function `{}`",
+                                    &format!(
+                                        "{}\nRequires `->` on function `{}`",
                                         stack_trace(call_stack),
-                                        &call.fn_name),
-                                        call.index));
+                                        &call.fn_name
+                                    ),
+                                    call.index,
+                                ));
                             }
-                            if let Variable::Return = stack[call.stack_len - 1] {}
-                            else {
+                            if let Variable::Return = stack[call.stack_len - 1] {
+                            } else {
                                 return Err(self.module.error_fnindex(
                                     prop.source_range(),
-                                    &format!("{}\nRequires `->` on function `{}`",
+                                    &format!(
+                                        "{}\nRequires `->` on function `{}`",
                                         stack_trace(call_stack),
-                                        &call.fn_name),
-                                        call.index));
+                                        &call.fn_name
+                                    ),
+                                    call.index,
+                                ));
                             }
                             let mut err = err.clone();
                             let file = match call.file.as_ref() {
                                 None => "".into(),
-                                Some(f) => format!(" ({})", f)
+                                Some(f) => format!(" ({})", f),
                             };
                             err.trace.push(self.module.error_fnindex(
                                 prop.source_range(),
-                                &format!("In function `{}`{}",
-                                    &call.fn_name, file),
-                                    call.index));
+                                &format!("In function `{}`{}", &call.fn_name, file),
+                                call.index,
+                            ));
                             return Ok((Some(Variable::Result(Err(err))), Flow::Return));
                         }
                     }
@@ -2317,46 +2620,56 @@ impl Runtime {
             }
 
             match side {
-                Side::Right => unsafe {&*var}.clone(),
-                Side::LeftInsert(_) => Variable::UnsafeRef(UnsafeRef(var))
+                Side::Right => unsafe { &*var }.clone(),
+                Side::LeftInsert(_) => Variable::UnsafeRef(UnsafeRef(var)),
             }
         };
         stack.truncate(start_stack_len);
         Ok((Some(v), Flow::Continue))
     }
-    fn if_expr(
-        &mut self,
-        if_expr: &ast::If
-    ) -> FlowResult {
+    fn if_expr(&mut self, if_expr: &ast::If) -> FlowResult {
         let cond = match self.expression(&if_expr.cond, Side::Right)? {
             (Some(x), Flow::Continue) => x,
-            (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-            _ => return self.err(if_expr.cond.source_range(),
-                                 "Expected bool from if condition")
+            (x, Flow::Return) => {
+                return Ok((x, Flow::Return));
+            }
+            _ => {
+                return self.err(
+                    if_expr.cond.source_range(),
+                    "Expected bool from if condition",
+                )
+            }
         };
         let val = match *self.resolve(&cond) {
             Variable::Bool(val, _) => val,
-            _ => return self.err(if_expr.cond.source_range(),
-                                 "Expected bool from if condition")
+            _ => {
+                return self.err(
+                    if_expr.cond.source_range(),
+                    "Expected bool from if condition",
+                )
+            }
         };
         if val {
             return self.block(&if_expr.true_block);
         }
-        for (cond, body) in if_expr.else_if_conds.iter()
-            .zip(if_expr.else_if_blocks.iter()) {
+        for (cond, body) in if_expr
+            .else_if_conds
+            .iter()
+            .zip(if_expr.else_if_blocks.iter())
+        {
             let else_if_cond = match self.expression(cond, Side::Right)? {
                 (Some(x), Flow::Continue) => x,
                 (x, Flow::Return) => {
                     return Ok((x, Flow::Return));
                 }
-                _ => return self.err(cond.source_range(), "Expected bool from else if condition")
+                _ => return self.err(cond.source_range(), "Expected bool from else if condition"),
             };
             match *self.resolve(&else_if_cond) {
                 Variable::Bool(false, _) => {}
                 Variable::Bool(true, _) => {
                     return self.block(body);
                 }
-                _ => return self.err(cond.source_range(), "Expected bool from else if condition")
+                _ => return self.err(cond.source_range(), "Expected bool from else if condition"),
             }
         }
         if let Some(ref block) = if_expr.else_block {
@@ -2369,9 +2682,16 @@ impl Runtime {
         let prev_st = self.stack.len();
         let prev_lc = self.local_stack.len();
         match self.expression(&for_expr.init, Side::Right)? {
-        (None, Flow::Continue) => {}
-            (x, Flow::Return) => { return Ok((x, Flow::Return)); }
-            _ => return self.err(for_expr.init.source_range(), "Expected nothing from for init")
+            (None, Flow::Continue) => {}
+            (x, Flow::Return) => {
+                return Ok((x, Flow::Return));
+            }
+            _ => {
+                return self.err(
+                    for_expr.init.source_range(),
+                    "Expected nothing from for init",
+                )
+            }
         };
         let st = self.stack.len();
         let lc = self.local_stack.len();
@@ -2380,23 +2700,30 @@ impl Runtime {
             let val = match self.expression(&for_expr.cond, Side::Right)? {
                 (Some(x), Flow::Continue) => x,
                 (x, Flow::Return) => return Ok((x, Flow::Return)),
-                _ => return self.err(for_expr.cond.source_range(),
-                                     "Expected bool from for condition")
+                _ => {
+                    return self.err(
+                        for_expr.cond.source_range(),
+                        "Expected bool from for condition",
+                    )
+                }
             };
             let val = match val {
                 Variable::Bool(val, _) => val,
-                _ => return self.err(for_expr.cond.source_range(), "Expected bool")
+                _ => return self.err(for_expr.cond.source_range(), "Expected bool"),
             };
-            if !val { break }
+            if !val {
+                break;
+            }
             match self.block(&for_expr.block)? {
                 (x, Flow::Return) => return Ok((x, Flow::Return)),
                 (_, Flow::Continue) => {}
                 (_, Flow::Break(x)) => {
                     if let Some(label) = x {
-                        let same =
-                        if let Some(ref for_label) = for_expr.label {
+                        let same = if let Some(ref for_label) = for_expr.label {
                             &label == for_label
-                        } else { false };
+                        } else {
+                            false
+                        };
                         if !same {
                             flow = Flow::Break(Some(label))
                         }
@@ -2405,10 +2732,11 @@ impl Runtime {
                 }
                 (_, Flow::ContinueLoop(x)) => {
                     if let Some(label) = x {
-                        let same =
-                        if let Some(ref for_label) = for_expr.label {
+                        let same = if let Some(ref for_label) = for_expr.label {
                             &label == for_label
-                        } else { false };
+                        } else {
+                            false
+                        };
                         if !same {
                             flow = Flow::ContinueLoop(Some(label));
                             break;
@@ -2417,8 +2745,12 @@ impl Runtime {
                     match self.expression(&for_expr.step, Side::Right)? {
                         (None, Flow::Continue) => {}
                         (x, Flow::Return) => return Ok((x, Flow::Return)),
-                        _ => return self.err(for_expr.step.source_range(),
-                                             "Expected nothing from for step")
+                        _ => {
+                            return self.err(
+                                for_expr.step.source_range(),
+                                "Expected nothing from for step",
+                            )
+                        }
                     };
                     continue;
                 }
@@ -2426,12 +2758,16 @@ impl Runtime {
             match self.expression(&for_expr.step, Side::Right)? {
                 (None, Flow::Continue) => {}
                 (x, Flow::Return) => return Ok((x, Flow::Return)),
-                _ =>
-                    return self.err(for_expr.step.source_range(), "Expected nothing from for step")
+                _ => {
+                    return self.err(
+                        for_expr.step.source_range(),
+                        "Expected nothing from for step",
+                    )
+                }
             };
             self.stack.truncate(st);
             self.local_stack.truncate(lc);
-        };
+        }
         self.stack.truncate(prev_st);
         self.local_stack.truncate(prev_lc);
         Ok((None, flow))
@@ -2443,32 +2779,37 @@ impl Runtime {
                 (None, Flow::Continue) => {}
                 (Some(x), Flow::Continue) => self.stack.push(x),
                 (x, Flow::Return) => return Ok((x, Flow::Return)),
-                _ => return self.err(expr.source_range(), "Expected something from vec4 argument")
+                _ => return self.err(expr.source_range(), "Expected something from vec4 argument"),
             };
             // Skip the rest if swizzling pushes arguments.
-            if self.stack.len() - st > 3 { break; }
+            if self.stack.len() - st > 3 {
+                break;
+            }
         }
         let w = self.stack.pop().expect(TINVOTS);
         let w = match self.resolve(&w) {
             &Variable::F64(val, _) => val,
-            x => return self.err(vec4.args[3].source_range(), &self.expected(x, "number"))
+            x => return self.err(vec4.args[3].source_range(), &self.expected(x, "number")),
         };
         let z = self.stack.pop().expect(TINVOTS);
         let z = match self.resolve(&z) {
             &Variable::F64(val, _) => val,
-            x => return self.err(vec4.args[2].source_range(), &self.expected(x, "number"))
+            x => return self.err(vec4.args[2].source_range(), &self.expected(x, "number")),
         };
         let y = self.stack.pop().expect(TINVOTS);
         let y = match self.resolve(&y) {
             &Variable::F64(val, _) => val,
-            x => return self.err(vec4.args[1].source_range(), &self.expected(x, "number"))
+            x => return self.err(vec4.args[1].source_range(), &self.expected(x, "number")),
         };
         let x = self.stack.pop().expect(TINVOTS);
         let x = match self.resolve(&x) {
             &Variable::F64(val, _) => val,
-            x => return self.err(vec4.args[0].source_range(), &self.expected(x, "number"))
+            x => return self.err(vec4.args[0].source_range(), &self.expected(x, "number")),
         };
-        Ok((Some(Variable::Vec4([x as f32, y as f32, z as f32, w as f32])), Flow::Continue))
+        Ok((
+            Some(Variable::Vec4([x as f32, y as f32, z as f32, w as f32])),
+            Flow::Continue,
+        ))
     }
     fn mat4(&mut self, mat4: &ast::Mat4, side: Side) -> FlowResult {
         for expr in &mat4.args {
@@ -2476,38 +2817,43 @@ impl Runtime {
                 (None, Flow::Continue) => {}
                 (Some(x), Flow::Continue) => self.stack.push(x),
                 (x, Flow::Return) => return Ok((x, Flow::Return)),
-                _ => return self.err(expr.source_range(), "Expected something from mat4 argument")
+                _ => return self.err(expr.source_range(), "Expected something from mat4 argument"),
             };
         }
         let w = self.stack.pop().expect(TINVOTS);
         let w = match self.resolve(&w) {
             &Variable::Vec4(val) => val,
-            x => return self.err(mat4.args[3].source_range(), &self.expected(x, "vec4"))
+            x => return self.err(mat4.args[3].source_range(), &self.expected(x, "vec4")),
         };
         let z = self.stack.pop().expect(TINVOTS);
         let z = match self.resolve(&z) {
             &Variable::Vec4(val) => val,
-            x => return self.err(mat4.args[2].source_range(), &self.expected(x, "vec4"))
+            x => return self.err(mat4.args[2].source_range(), &self.expected(x, "vec4")),
         };
         let y = self.stack.pop().expect(TINVOTS);
         let y = match self.resolve(&y) {
             &Variable::Vec4(val) => val,
-            x => return self.err(mat4.args[1].source_range(), &self.expected(x, "vec4"))
+            x => return self.err(mat4.args[1].source_range(), &self.expected(x, "vec4")),
         };
         let x = self.stack.pop().expect(TINVOTS);
         let x = match self.resolve(&x) {
             &Variable::Vec4(val) => val,
-            x => return self.err(mat4.args[0].source_range(), &self.expected(x, "vec4"))
+            x => return self.err(mat4.args[0].source_range(), &self.expected(x, "vec4")),
         };
-        Ok((Some(Variable::Mat4(Box::new([
-            [x[0], y[0], z[0], w[0]],
-            [x[1], y[1], z[1], w[1]],
-            [x[2], y[2], z[2], w[2]],
-            [x[3], y[3], z[3], w[3]],
-        ]))), Flow::Continue))
+        Ok((
+            Some(Variable::Mat4(Box::new([
+                [x[0], y[0], z[0], w[0]],
+                [x[1], y[1], z[1], w[1]],
+                [x[2], y[2], z[2], w[2]],
+                [x[3], y[3], z[3], w[3]],
+            ]))),
+            Flow::Continue,
+        ))
     }
 
-    pub(crate) fn stack_trace(&self) -> String {stack_trace(&self.call_stack)}
+    pub(crate) fn stack_trace(&self) -> String {
+        stack_trace(&self.call_stack)
+    }
 }
 
 fn stack_trace(call_stack: &[Call]) -> String {
