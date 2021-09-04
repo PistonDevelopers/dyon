@@ -1,16 +1,17 @@
 use embed::{ConvertVec4, PopVariable, PushVariable};
-use {
-    Runtime,
-    Variable,
-};
+use {Runtime, Variable};
 
 /// Wraps a 4D vector for easier embedding with Dyon.
 #[derive(Debug, Copy, Clone)]
 pub struct Vec4(pub [f32; 4]);
 
 impl ConvertVec4 for Vec4 {
-    fn from(val: [f32; 4]) -> Self { Vec4(val) }
-    fn to(&self) -> [f32; 4] { self.0 }
+    fn from(val: [f32; 4]) -> Self {
+        Vec4(val)
+    }
+    fn to(&self) -> [f32; 4] {
+        self.0
+    }
 }
 
 impl PopVariable for Vec4 {
@@ -24,7 +25,9 @@ impl PopVariable for Vec4 {
 }
 
 impl PushVariable for Vec4 {
-    fn push_var(&self) -> Variable { Variable::Vec4(self.0) }
+    fn push_var(&self) -> Variable {
+        Variable::Vec4(self.0)
+    }
 }
 
 impl From<[f32; 2]> for Vec4 {
@@ -113,15 +116,23 @@ impl From<(u32, u32)> for Vec4 {
 
 impl From<[u8; 4]> for Vec4 {
     fn from(val: [u8; 4]) -> Vec4 {
-        Vec4([f32::from(val[0]) / 255.0, f32::from(val[1]) / 255.0,
-              f32::from(val[2]) / 255.0, f32::from(val[3]) / 255.0])
+        Vec4([
+            f32::from(val[0]) / 255.0,
+            f32::from(val[1]) / 255.0,
+            f32::from(val[2]) / 255.0,
+            f32::from(val[3]) / 255.0,
+        ])
     }
 }
 
 impl From<(u8, u8, u8, u8)> for Vec4 {
     fn from(val: (u8, u8, u8, u8)) -> Vec4 {
-        Vec4([f32::from(val.0) / 255.0, f32::from(val.1) / 255.0,
-              f32::from(val.2) / 255.0, f32::from(val.3) / 255.0])
+        Vec4([
+            f32::from(val.0) / 255.0,
+            f32::from(val.1) / 255.0,
+            f32::from(val.2) / 255.0,
+            f32::from(val.3) / 255.0,
+        ])
     }
 }
 
@@ -151,13 +162,22 @@ impl Into<[f64; 2]> for Vec4 {
 
 impl Into<[f64; 3]> for Vec4 {
     fn into(self) -> [f64; 3] {
-        [f64::from(self.0[0]), f64::from(self.0[1]), f64::from(self.0[2])]
+        [
+            f64::from(self.0[0]),
+            f64::from(self.0[1]),
+            f64::from(self.0[2]),
+        ]
     }
 }
 
 impl Into<[f64; 4]> for Vec4 {
     fn into(self) -> [f64; 4] {
-        [f64::from(self.0[0]), f64::from(self.0[1]), f64::from(self.0[2]), f64::from(self.0[3])]
+        [
+            f64::from(self.0[0]),
+            f64::from(self.0[1]),
+            f64::from(self.0[2]),
+            f64::from(self.0[3]),
+        ]
     }
 }
 
@@ -187,13 +207,22 @@ impl Into<(f64, f64)> for Vec4 {
 
 impl Into<(f64, f64, f64)> for Vec4 {
     fn into(self) -> (f64, f64, f64) {
-        (f64::from(self.0[0]), f64::from(self.0[1]), f64::from(self.0[2]))
+        (
+            f64::from(self.0[0]),
+            f64::from(self.0[1]),
+            f64::from(self.0[2]),
+        )
     }
 }
 
 impl Into<(f64, f64, f64, f64)> for Vec4 {
     fn into(self) -> (f64, f64, f64, f64) {
-        (f64::from(self.0[0]), f64::from(self.0[1]), f64::from(self.0[2]), f64::from(self.0[3]))
+        (
+            f64::from(self.0[0]),
+            f64::from(self.0[1]),
+            f64::from(self.0[2]),
+            f64::from(self.0[3]),
+        )
     }
 }
 
@@ -211,14 +240,22 @@ impl Into<(u32, u32)> for Vec4 {
 
 impl Into<(u8, u8, u8, u8)> for Vec4 {
     fn into(self) -> (u8, u8, u8, u8) {
-        ((self.0[0] * 255.0) as u8, (self.0[1] * 255.0) as u8,
-         (self.0[2] * 255.0) as u8, (self.0[3] * 255.0) as u8)
+        (
+            (self.0[0] * 255.0) as u8,
+            (self.0[1] * 255.0) as u8,
+            (self.0[2] * 255.0) as u8,
+            (self.0[3] * 255.0) as u8,
+        )
     }
 }
 
 impl Into<[u8; 4]> for Vec4 {
     fn into(self) -> [u8; 4] {
-        [(self.0[0] * 255.0) as u8, (self.0[1] * 255.0) as u8,
-         (self.0[2] * 255.0) as u8, (self.0[3] * 255.0) as u8]
+        [
+            (self.0[0] * 255.0) as u8,
+            (self.0[1] * 255.0) as u8,
+            (self.0[2] * 255.0) as u8,
+            (self.0[3] * 255.0) as u8,
+        ]
     }
 }

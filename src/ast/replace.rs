@@ -1,28 +1,10 @@
 use std::sync::Arc;
 
-use Variable;
 use super::{
-    Array,
-    ArrayFill,
-    Assign,
-    Block,
-    Call,
-    CallClosure,
-    Expression,
-    For,
-    ForN,
-    ForIn,
-    Go,
-    Id,
-    If,
-    Item,
-    Link,
-    Object,
-    Swizzle,
-    Vec4,
-    Mat4,
-    TryExpr,
+    Array, ArrayFill, Assign, Block, Call, CallClosure, Expression, For, ForIn, ForN, Go, Id, If,
+    Item, Link, Mat4, Object, Swizzle, TryExpr, Vec4,
 };
+use Variable;
 
 /// Replaces an item with a number.
 /// Returns `(true, new_expression)` if item found declared with same name.
@@ -66,31 +48,24 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
                 }))
             }
         }
-        E::Block(ref block) => {
-            E::Block(Box::new(number_block(block, name, val)))
-        }
-        E::Assign(ref assign_expr) => {
-            E::Assign(Box::new(Assign {
-                op: assign_expr.op,
-                left: number(&assign_expr.left, name, val),
-                right: number(&assign_expr.right, name, val),
-                source_range: assign_expr.source_range,
-            }))
-        }
+        E::Block(ref block) => E::Block(Box::new(number_block(block, name, val))),
+        E::Assign(ref assign_expr) => E::Assign(Box::new(Assign {
+            op: assign_expr.op,
+            left: number(&assign_expr.left, name, val),
+            right: number(&assign_expr.right, name, val),
+            source_range: assign_expr.source_range,
+        })),
         E::Object(ref obj_expr) => {
             let mut new_key_values: Vec<(Arc<String>, Expression)> = vec![];
             for key_value in &obj_expr.key_values {
-                new_key_values.push((key_value.0.clone(),
-                    number(&key_value.1, name, val)));
+                new_key_values.push((key_value.0.clone(), number(&key_value.1, name, val)));
             }
             E::Object(Box::new(Object {
                 key_values: new_key_values,
                 source_range: obj_expr.source_range,
             }))
         }
-        E::Call(ref call_expr) => {
-            E::Call(Box::new(number_call(call_expr, name, val)))
-        }
+        E::Call(ref call_expr) => E::Call(Box::new(number_call(call_expr, name, val))),
         E::CallVoid(_) => unimplemented!("`CallVoid` is transformed from `Call` later"),
         E::CallReturn(_) => unimplemented!("`CallVoid` is transformed from `Call` later"),
         E::CallLazy(_) => unimplemented!("`CallLazy` is transformed from `Call` later"),
@@ -107,25 +82,19 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
                 source_range: array_expr.source_range,
             }))
         }
-        E::ArrayFill(ref array_fill_expr) => {
-            E::ArrayFill(Box::new(ArrayFill {
-                fill: number(&array_fill_expr.fill, name, val),
-                n: number(&array_fill_expr.n, name, val),
-                source_range: array_fill_expr.source_range,
-            }))
-        }
-        E::Return(ref ret_expr) => {
-            E::Return(Box::new(number(ret_expr, name, val)))
-        }
+        E::ArrayFill(ref array_fill_expr) => E::ArrayFill(Box::new(ArrayFill {
+            fill: number(&array_fill_expr.fill, name, val),
+            n: number(&array_fill_expr.n, name, val),
+            source_range: array_fill_expr.source_range,
+        })),
+        E::Return(ref ret_expr) => E::Return(Box::new(number(ret_expr, name, val))),
         E::ReturnVoid(_) => expr.clone(),
         E::Break(_) => expr.clone(),
         E::Continue(_) => expr.clone(),
-        E::Go(ref go) => {
-            E::Go(Box::new(Go {
-                call: number_call(&go.call, name, val),
-                source_range: go.source_range,
-            }))
-        }
+        E::Go(ref go) => E::Go(Box::new(Go {
+            call: number_call(&go.call, name, val),
+            source_range: go.source_range,
+        })),
         E::Vec4(ref vec4_expr) => {
             let mut new_args: Vec<Expression> = vec![];
             for arg in &vec4_expr.args {
@@ -181,120 +150,80 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
                 }))
             }
         }
-        E::ForIn(ref for_in_expr) => {
-            E::ForIn(Box::new(ForIn {
-                label: for_in_expr.label.clone(),
-                name: for_in_expr.name.clone(),
-                iter: number(&for_in_expr.iter, name, val),
-                block: number_block(&for_in_expr.block, name, val),
-                source_range: for_in_expr.source_range,
-            }))
-        }
-        E::SumIn(ref for_in_expr) => {
-            E::SumIn(Box::new(ForIn {
-                label: for_in_expr.label.clone(),
-                name: for_in_expr.name.clone(),
-                iter: number(&for_in_expr.iter, name, val),
-                block: number_block(&for_in_expr.block, name, val),
-                source_range: for_in_expr.source_range,
-            }))
-        }
-        E::ProdIn(ref for_in_expr) => {
-            E::ProdIn(Box::new(ForIn {
-                label: for_in_expr.label.clone(),
-                name: for_in_expr.name.clone(),
-                iter: number(&for_in_expr.iter, name, val),
-                block: number_block(&for_in_expr.block, name, val),
-                source_range: for_in_expr.source_range,
-            }))
-        }
-        E::MinIn(ref for_in_expr) => {
-            E::MinIn(Box::new(ForIn {
-                label: for_in_expr.label.clone(),
-                name: for_in_expr.name.clone(),
-                iter: number(&for_in_expr.iter, name, val),
-                block: number_block(&for_in_expr.block, name, val),
-                source_range: for_in_expr.source_range,
-            }))
-        }
-        E::MaxIn(ref for_in_expr) => {
-            E::MaxIn(Box::new(ForIn {
-                label: for_in_expr.label.clone(),
-                name: for_in_expr.name.clone(),
-                iter: number(&for_in_expr.iter, name, val),
-                block: number_block(&for_in_expr.block, name, val),
-                source_range: for_in_expr.source_range,
-            }))
-        }
-        E::AnyIn(ref for_in_expr) => {
-            E::AnyIn(Box::new(ForIn {
-                label: for_in_expr.label.clone(),
-                name: for_in_expr.name.clone(),
-                iter: number(&for_in_expr.iter, name, val),
-                block: number_block(&for_in_expr.block, name, val),
-                source_range: for_in_expr.source_range,
-            }))
-        }
-        E::AllIn(ref for_in_expr) => {
-            E::AllIn(Box::new(ForIn {
-                label: for_in_expr.label.clone(),
-                name: for_in_expr.name.clone(),
-                iter: number(&for_in_expr.iter, name, val),
-                block: number_block(&for_in_expr.block, name, val),
-                source_range: for_in_expr.source_range,
-            }))
-        }
-        E::SiftIn(ref for_in_expr) => {
-            E::SiftIn(Box::new(ForIn {
-                label: for_in_expr.label.clone(),
-                name: for_in_expr.name.clone(),
-                iter: number(&for_in_expr.iter, name, val),
-                block: number_block(&for_in_expr.block, name, val),
-                source_range: for_in_expr.source_range,
-            }))
-        }
-        E::LinkIn(ref for_in_expr) => {
-            E::LinkIn(Box::new(ForIn {
-                label: for_in_expr.label.clone(),
-                name: for_in_expr.name.clone(),
-                iter: number(&for_in_expr.iter, name, val),
-                block: number_block(&for_in_expr.block, name, val),
-                source_range: for_in_expr.source_range,
-            }))
-        }
-        E::ForN(ref for_n_expr) => {
-            E::ForN(Box::new(number_for_n(for_n_expr, name, val)))
-        }
-        E::Sum(ref for_n_expr) => {
-            E::Sum(Box::new(number_for_n(for_n_expr, name, val)))
-        }
-        E::SumVec4(ref for_n_expr) => {
-            E::SumVec4(Box::new(number_for_n(for_n_expr, name, val)))
-        }
-        E::Prod(ref for_n_expr) => {
-            E::Prod(Box::new(number_for_n(for_n_expr, name, val)))
-        }
-        E::ProdVec4(ref for_n_expr) => {
-            E::ProdVec4(Box::new(number_for_n(for_n_expr, name, val)))
-        }
-        E::Min(ref for_n_expr) => {
-            E::Min(Box::new(number_for_n(for_n_expr, name, val)))
-        }
-        E::Max(ref for_n_expr) => {
-            E::Max(Box::new(number_for_n(for_n_expr, name, val)))
-        }
-        E::Sift(ref for_n_expr) => {
-            E::Sift(Box::new(number_for_n(for_n_expr, name, val)))
-        }
-        E::Any(ref for_n_expr) => {
-            E::Any(Box::new(number_for_n(for_n_expr, name, val)))
-        }
-        E::All(ref for_n_expr) => {
-            E::All(Box::new(number_for_n(for_n_expr, name, val)))
-        }
-        E::LinkFor(ref for_n_expr) => {
-            E::LinkFor(Box::new(number_for_n(for_n_expr, name, val)))
-        }
+        E::ForIn(ref for_in_expr) => E::ForIn(Box::new(ForIn {
+            label: for_in_expr.label.clone(),
+            name: for_in_expr.name.clone(),
+            iter: number(&for_in_expr.iter, name, val),
+            block: number_block(&for_in_expr.block, name, val),
+            source_range: for_in_expr.source_range,
+        })),
+        E::SumIn(ref for_in_expr) => E::SumIn(Box::new(ForIn {
+            label: for_in_expr.label.clone(),
+            name: for_in_expr.name.clone(),
+            iter: number(&for_in_expr.iter, name, val),
+            block: number_block(&for_in_expr.block, name, val),
+            source_range: for_in_expr.source_range,
+        })),
+        E::ProdIn(ref for_in_expr) => E::ProdIn(Box::new(ForIn {
+            label: for_in_expr.label.clone(),
+            name: for_in_expr.name.clone(),
+            iter: number(&for_in_expr.iter, name, val),
+            block: number_block(&for_in_expr.block, name, val),
+            source_range: for_in_expr.source_range,
+        })),
+        E::MinIn(ref for_in_expr) => E::MinIn(Box::new(ForIn {
+            label: for_in_expr.label.clone(),
+            name: for_in_expr.name.clone(),
+            iter: number(&for_in_expr.iter, name, val),
+            block: number_block(&for_in_expr.block, name, val),
+            source_range: for_in_expr.source_range,
+        })),
+        E::MaxIn(ref for_in_expr) => E::MaxIn(Box::new(ForIn {
+            label: for_in_expr.label.clone(),
+            name: for_in_expr.name.clone(),
+            iter: number(&for_in_expr.iter, name, val),
+            block: number_block(&for_in_expr.block, name, val),
+            source_range: for_in_expr.source_range,
+        })),
+        E::AnyIn(ref for_in_expr) => E::AnyIn(Box::new(ForIn {
+            label: for_in_expr.label.clone(),
+            name: for_in_expr.name.clone(),
+            iter: number(&for_in_expr.iter, name, val),
+            block: number_block(&for_in_expr.block, name, val),
+            source_range: for_in_expr.source_range,
+        })),
+        E::AllIn(ref for_in_expr) => E::AllIn(Box::new(ForIn {
+            label: for_in_expr.label.clone(),
+            name: for_in_expr.name.clone(),
+            iter: number(&for_in_expr.iter, name, val),
+            block: number_block(&for_in_expr.block, name, val),
+            source_range: for_in_expr.source_range,
+        })),
+        E::SiftIn(ref for_in_expr) => E::SiftIn(Box::new(ForIn {
+            label: for_in_expr.label.clone(),
+            name: for_in_expr.name.clone(),
+            iter: number(&for_in_expr.iter, name, val),
+            block: number_block(&for_in_expr.block, name, val),
+            source_range: for_in_expr.source_range,
+        })),
+        E::LinkIn(ref for_in_expr) => E::LinkIn(Box::new(ForIn {
+            label: for_in_expr.label.clone(),
+            name: for_in_expr.name.clone(),
+            iter: number(&for_in_expr.iter, name, val),
+            block: number_block(&for_in_expr.block, name, val),
+            source_range: for_in_expr.source_range,
+        })),
+        E::ForN(ref for_n_expr) => E::ForN(Box::new(number_for_n(for_n_expr, name, val))),
+        E::Sum(ref for_n_expr) => E::Sum(Box::new(number_for_n(for_n_expr, name, val))),
+        E::SumVec4(ref for_n_expr) => E::SumVec4(Box::new(number_for_n(for_n_expr, name, val))),
+        E::Prod(ref for_n_expr) => E::Prod(Box::new(number_for_n(for_n_expr, name, val))),
+        E::ProdVec4(ref for_n_expr) => E::ProdVec4(Box::new(number_for_n(for_n_expr, name, val))),
+        E::Min(ref for_n_expr) => E::Min(Box::new(number_for_n(for_n_expr, name, val))),
+        E::Max(ref for_n_expr) => E::Max(Box::new(number_for_n(for_n_expr, name, val))),
+        E::Sift(ref for_n_expr) => E::Sift(Box::new(number_for_n(for_n_expr, name, val))),
+        E::Any(ref for_n_expr) => E::Any(Box::new(number_for_n(for_n_expr, name, val))),
+        E::All(ref for_n_expr) => E::All(Box::new(number_for_n(for_n_expr, name, val))),
+        E::LinkFor(ref for_n_expr) => E::LinkFor(Box::new(number_for_n(for_n_expr, name, val))),
         E::If(ref if_expr) => {
             let mut new_else_if_conds: Vec<Expression> = vec![];
             for else_if_cond in &if_expr.else_if_conds {
@@ -309,23 +238,23 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
                 true_block: number_block(&if_expr.true_block, name, val),
                 else_if_conds: new_else_if_conds,
                 else_if_blocks: new_else_if_blocks,
-                else_block: if_expr.else_block.as_ref()
+                else_block: if_expr
+                    .else_block
+                    .as_ref()
                     .map(|else_block| number_block(else_block, name, val)),
                 source_range: if_expr.source_range,
             }))
         }
         E::Variable(_) => expr.clone(),
         E::Try(ref expr) => E::Try(Box::new(number(expr, name, val))),
-        E::Swizzle(ref swizzle_expr) => {
-            E::Swizzle(Box::new(Swizzle {
-                sw0: swizzle_expr.sw0,
-                sw1: swizzle_expr.sw1,
-                sw2: swizzle_expr.sw2,
-                sw3: swizzle_expr.sw3,
-                expr: number(&swizzle_expr.expr, name, val),
-                source_range: swizzle_expr.source_range,
-            }))
-        }
+        E::Swizzle(ref swizzle_expr) => E::Swizzle(Box::new(Swizzle {
+            sw0: swizzle_expr.sw0,
+            sw1: swizzle_expr.sw1,
+            sw2: swizzle_expr.sw2,
+            sw3: swizzle_expr.sw3,
+            expr: number(&swizzle_expr.expr, name, val),
+            source_range: swizzle_expr.source_range,
+        })),
         E::Closure(_) => expr.clone(),
         E::CallClosure(ref call_expr) => {
             E::CallClosure(Box::new(number_call_closure(call_expr, name, val)))
@@ -333,7 +262,7 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
         E::Grab(_) => expr.clone(),
         E::TryExpr(ref try_expr) => E::TryExpr(Box::new(TryExpr {
             expr: number(&try_expr.expr, name, val),
-            source_range: try_expr.source_range
+            source_range: try_expr.source_range,
         })),
         E::In(_) => expr.clone(),
     }
@@ -346,7 +275,7 @@ fn number_call(call_expr: &Call, name: &Arc<String>, val: f64) -> Call {
     }
     Call {
         args: new_args,
-        f_index: call_expr.f_index.clone(),
+        f_index: call_expr.f_index,
         custom_source: None,
         info: call_expr.info.clone(),
     }
@@ -402,7 +331,9 @@ fn number_for_n(for_n_expr: &ForN, name: &Arc<String>, val: f64) -> ForN {
         ForN {
             label: for_n_expr.label.clone(),
             name: for_n_expr.name.clone(),
-            start: for_n_expr.start.as_ref()
+            start: for_n_expr
+                .start
+                .as_ref()
                 .map(|start| number(start, name, val)),
             end: number(&for_n_expr.end, name, val),
             block: number_block(&for_n_expr.block, name, val),

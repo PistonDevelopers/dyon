@@ -1,6 +1,6 @@
-use std::cmp::{PartialOrd, Ordering};
 use super::node::Node;
 use super::ArgNames;
+use std::cmp::{Ordering, PartialOrd};
 
 /// Describes the lifetime of a variable.
 /// When a lifetime `a` > `b` it means `a` outlives `b`.
@@ -35,16 +35,14 @@ impl PartialOrd for Lifetime {
             (&Local(a), &Local(b)) => b.cmp(&a),
             (&Return(_), &Local(_)) => Ordering::Greater,
             (&Local(_), &Return(_)) => Ordering::Less,
-            (&Return(ref a), &Return(ref b)) => {
-                match (a.len(), b.len()) {
-                    (0, 0) => Ordering::Equal,
-                    (0, _) => Ordering::Less,
-                    (_, 0) => Ordering::Greater,
-                    (_, _) => {
-                        return compare_argument_outlives(a, b);
-                    }
+            (&Return(ref a), &Return(ref b)) => match (a.len(), b.len()) {
+                (0, 0) => Ordering::Equal,
+                (0, _) => Ordering::Less,
+                (_, 0) => Ordering::Greater,
+                (_, _) => {
+                    return compare_argument_outlives(a, b);
                 }
-            }
+            },
             (&Argument(_), &Local(_)) => Ordering::Greater,
             (&Local(_), &Argument(_)) => Ordering::Less,
             (&Return(_), &Argument(_)) => return None,
@@ -76,7 +74,7 @@ pub(crate) fn arg_lifetime(
     declaration: usize,
     arg: &Node,
     nodes: &[Node],
-    arg_names: &ArgNames
+    arg_names: &ArgNames,
 ) -> Option<Lifetime> {
     Some(if let Some(ref lt) = arg.lifetime {
         if &**lt == "return" {
@@ -84,11 +82,11 @@ pub(crate) fn arg_lifetime(
         } else {
             // Resolve lifetimes among arguments.
             let parent = arg.parent.expect("Expected parent");
-            let mut args: Vec<usize> = vec![];
-            args.push(declaration);
+            let mut args: Vec<usize> = vec![declaration];
             let mut name = lt.clone();
             loop {
-                let (arg, _) = *arg_names.get(&(parent, name))
+                let (arg, _) = *arg_names
+                    .get(&(parent, name))
                     .expect("Expected argument name");
                 args.push(arg);
                 if let Some(ref lt) = nodes[arg].lifetime {
@@ -111,11 +109,11 @@ pub(crate) fn arg_lifetime(
 pub(crate) fn compare_lifetimes(
     l: &Option<Lifetime>,
     r: &Option<Lifetime>,
-    nodes: &[Node]
+    nodes: &[Node],
 ) -> Result<(), String> {
     match (l, r) {
         (&Some(ref l), &Some(ref r)) => {
-            match l.partial_cmp(&r) {
+            match l.partial_cmp(r) {
                 Some(Ordering::Greater) | Some(Ordering::Equal) => {
                     match *r {
                         Lifetime::Local(r) => {
@@ -127,8 +125,10 @@ pub(crate) fn compare_lifetimes(
                                 a[0] = b    // <--- attempting to put 'b' inside 'a'.
                             }
                             */
-                            return Err(format!("`{}` does not live long enough",
-                                nodes[r].name().expect("Expected name")));
+                            return Err(format!(
+                                "`{}` does not live long enough",
+                                nodes[r].name().expect("Expected name")
+                            ));
                         }
                         Lifetime::Argument(ref r) => {
                             // This gets triggered in cases like these:
@@ -142,8 +142,10 @@ pub(crate) fn compare_lifetimes(
                             // to attempt overwrite `a` with `b`.
                             // Notice that `b: 'b` is required to trigger the case,
                             // since `a` and `b` must have some lifetime in common to get an order.
-                            return Err(format!("`{}` does not live long enough",
-                                nodes[r[0]].name().expect("Expected name")));
+                            return Err(format!(
+                                "`{}` does not live long enough",
+                                nodes[r[0]].name().expect("Expected name")
+                            ));
                         }
                         Lifetime::Current(r) => {
                             // This gets triggered in cases like these:
@@ -158,8 +160,10 @@ pub(crate) fn compare_lifetimes(
                             // so this can only happen when attempting to overwrite
                             // the same current object with itself.
                             // For this reason, this case is rarely seen in practice.
-                            return Err(format!("`{}` does not live long enough",
-                                nodes[r].name().expect("Expected name")));
+                            return Err(format!(
+                                "`{}` does not live long enough",
+                                nodes[r].name().expect("Expected name")
+                            ));
                         }
                         Lifetime::Return(ref r) => {
                             // This gets triggered in cases like these:
@@ -175,8 +179,10 @@ pub(crate) fn compare_lifetimes(
                             // since `a` and `b` must have some lifetime in common to get an order.
                             // In addition they both need `'return` lifetime.
                             // `a` has an implicit `'return` lifetime through `b`.
-                            return Err(format!("`{}` does not live long enough",
-                                nodes[r[0]].name().expect("Expected name")));
+                            return Err(format!(
+                                "`{}` does not live long enough",
+                                nodes[r[0]].name().expect("Expected name")
+                            ));
                         }
                     }
                 }
@@ -184,27 +190,32 @@ pub(crate) fn compare_lifetimes(
                     match (l, r) {
                         (&Lifetime::Argument(ref l), &Lifetime::Argument(ref r)) => {
                             // TODO: Report function name for other cases.
-                            let func = nodes[nodes[r[0]].parent.unwrap()]
-                                .name().unwrap();
-                            return Err(format!("Function `{}` requires `{}: '{}`",
+                            let func = nodes[nodes[r[0]].parent.unwrap()].name().unwrap();
+                            return Err(format!(
+                                "Function `{}` requires `{}: '{}`",
                                 func,
                                 nodes[r[0]].name().expect("Expected name"),
-                                nodes[l[0]].name().expect("Expected name")));
+                                nodes[l[0]].name().expect("Expected name")
+                            ));
                         }
                         (&Lifetime::Argument(ref l), &Lifetime::Return(ref r)) => {
                             if !r.is_empty() {
-                                return Err(format!("Requires `{}: '{}`",
+                                return Err(format!(
+                                    "Requires `{}: '{}`",
                                     nodes[r[0]].name().expect("Expected name"),
-                                    nodes[l[0]].name().expect("Expected name")));
+                                    nodes[l[0]].name().expect("Expected name")
+                                ));
                             } else {
                                 unimplemented!();
                             }
                         }
                         (&Lifetime::Return(ref l), &Lifetime::Return(ref r)) => {
                             if !l.is_empty() && !r.is_empty() {
-                                return Err(format!("Requires `{}: '{}`",
+                                return Err(format!(
+                                    "Requires `{}: '{}`",
                                     nodes[r[0]].name().expect("Expected name"),
-                                    nodes[l[0]].name().expect("Expected name")));
+                                    nodes[l[0]].name().expect("Expected name")
+                                ));
                             } else {
                                 unimplemented!();
                             }
@@ -212,22 +223,30 @@ pub(crate) fn compare_lifetimes(
                         (&Lifetime::Return(ref l), &Lifetime::Argument(ref r)) => {
                             if l.is_empty() {
                                 let last = *r.last().expect("Expected argument index");
-                                return Err(format!("Requires `{}: 'return`",
-                                    nodes[last].name().expect("Expected name")));
+                                return Err(format!(
+                                    "Requires `{}: 'return`",
+                                    nodes[last].name().expect("Expected name")
+                                ));
                             } else {
-                                return Err(format!("`{}` does not live long enough",
-                                    nodes[r[0]].name().expect("Expected name")));
+                                return Err(format!(
+                                    "`{}` does not live long enough",
+                                    nodes[r[0]].name().expect("Expected name")
+                                ));
                             }
                         }
                         (&Lifetime::Current(n), _) => {
-                            return Err(format!("`{}` is a current object, use `clone(_)`",
-                                nodes[n].name().expect("Expected name")));
+                            return Err(format!(
+                                "`{}` is a current object, use `clone(_)`",
+                                nodes[n].name().expect("Expected name")
+                            ));
                         }
                         (_, &Lifetime::Current(n)) => {
-                            return Err(format!("`{}` is a current object, use `clone(_)`",
-                                nodes[n].name().expect("Expected name")));
+                            return Err(format!(
+                                "`{}` is a current object, use `clone(_)`",
+                                nodes[n].name().expect("Expected name")
+                            ));
                         }
-                        x => panic!("Unknown case {:?}", x)
+                        x => panic!("Unknown case {:?}", x),
                     }
                 }
                 _ => {}

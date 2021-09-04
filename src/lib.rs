@@ -18,46 +18,46 @@ extern crate read_token;
 extern crate reqwest;
 #[macro_use]
 extern crate lazy_static;
-extern crate vecmath;
 extern crate tree_mem_sort;
+extern crate vecmath;
 
-use std::any::Any;
-use std::fmt;
-use std::thread::JoinHandle;
-use std::sync::{Arc, Mutex};
-use std::collections::HashMap;
-use range::Range;
 use piston_meta::{parse_errstr, syntax_errstr, MetaData, Syntax};
+use range::Range;
+use std::any::Any;
+use std::collections::HashMap;
+use std::fmt;
+use std::sync::{Arc, Mutex};
+use std::thread::JoinHandle;
 
 pub mod ast;
-pub mod runtime;
-mod lifetime;
-mod prelude;
 pub mod embed;
-mod ty;
+mod lifetime;
 mod link;
 pub mod macros;
-mod vec4;
 mod mat4;
-mod write;
 mod module;
+mod prelude;
+pub mod runtime;
+mod ty;
+mod vec4;
+mod write;
 
-mod grab;
 mod dyon_std;
+mod grab;
 
-pub use runtime::Runtime;
-pub use prelude::{Lt, Prelude, Dfn};
-pub use ty::Type;
-pub use link::Link;
-pub use vec4::Vec4;
-pub use mat4::Mat4;
 pub use ast::Lazy;
+pub use link::Link;
+pub use mat4::Mat4;
 pub use module::Module;
+pub use prelude::{Dfn, Lt, Prelude};
+pub use runtime::Runtime;
+pub use ty::Type;
+pub use vec4::Vec4;
 
 /// A common error message when there is no value on the stack.
 pub const TINVOTS: &str = "There is no value on the stack";
 
-lazy_static!{
+lazy_static! {
     pub(crate) static ref LESS: Arc<String> = Arc::new("less".into());
     pub(crate) static ref LESS_OR_EQUAL: Arc<String> = Arc::new("less_or_equal".into());
     pub(crate) static ref GREATER: Arc<String> = Arc::new("greater".into());
@@ -120,7 +120,7 @@ impl Thread {
     /// Creates a new thread handle.
     pub fn new(handle: JoinHandle<Result<Variable, String>>) -> Thread {
         Thread {
-            handle: Some(Arc::new(Mutex::new(handle)))
+            handle: Some(Arc::new(Mutex::new(handle))),
         }
     }
 
@@ -128,30 +128,41 @@ impl Thread {
     /// This is to prevent an extra reference when resolving the variable.
     pub fn invalidate_handle(
         rt: &mut Runtime,
-        var: Variable
+        var: Variable,
     ) -> Result<JoinHandle<Result<Variable, String>>, String> {
-
         let thread = match var {
             Variable::Ref(ind) => {
                 use std::mem::replace;
 
-                match replace(&mut rt.stack[ind], Variable::Thread(Thread { handle: None })) {
+                match replace(
+                    &mut rt.stack[ind],
+                    Variable::Thread(Thread { handle: None }),
+                ) {
                     Variable::Thread(th) => th,
-                    x => return Err(rt.expected(&x, "Thread"))
+                    x => return Err(rt.expected(&x, "Thread")),
                 }
             }
             Variable::Thread(thread) => thread,
-            x => return Err(rt.expected(&x, "Thread"))
+            x => return Err(rt.expected(&x, "Thread")),
         };
         let handle = match thread.handle {
             None => return Err("The Thread has already been invalidated".into()),
-            Some(thread) => thread
+            Some(thread) => thread,
         };
-        let mutex = Arc::try_unwrap(handle).map_err(|_|
-            format!("{}\nCan not access Thread because there is \
-            more than one reference to it", rt.stack_trace()))?;
-        mutex.into_inner().map_err(|err|
-            format!("{}\nCan not lock Thread mutex:\n{}", rt.stack_trace(), err.to_string()))
+        let mutex = Arc::try_unwrap(handle).map_err(|_| {
+            format!(
+                "{}\nCan not access Thread because there is \
+            more than one reference to it",
+                rt.stack_trace()
+            )
+        })?;
+        mutex.into_inner().map_err(|err| {
+            format!(
+                "{}\nCan not lock Thread mutex:\n{}",
+                rt.stack_trace(),
+                err.to_string()
+            )
+        })
     }
 }
 
@@ -288,9 +299,7 @@ impl Variable {
                 Array(res)
             }
             Link(_) => self.clone(),
-            Ref(ind) => {
-                stack[ind].deep_clone(stack)
-            }
+            Ref(ind) => stack[ind].deep_clone(stack),
             UnsafeRef(_) => panic!("Unsafe reference can not be cloned"),
             RustObject(_) => self.clone(),
             Option(None) => Variable::Option(None),
@@ -497,7 +506,7 @@ impl Call {
     pub fn new(name: &str) -> Call {
         Call {
             args: vec![],
-            name: Arc::new(name.into())
+            name: Arc::new(name.into()),
         }
     }
 
@@ -515,7 +524,8 @@ impl Call {
 
     /// Push Rust object to argument list.
     pub fn rust<T: 'static>(mut self, val: T) -> Self {
-        self.args.push(Variable::RustObject(Arc::new(Mutex::new(val)) as RustObject));
+        self.args
+            .push(Variable::RustObject(Arc::new(Mutex::new(val)) as RustObject));
         self
     }
 
@@ -525,17 +535,25 @@ impl Call {
     }
 
     /// Run call with return value.
-    pub fn run_ret<T: embed::PopVariable>(&self, runtime: &mut Runtime, module: &Arc<Module>) -> Result<T, String> {
+    pub fn run_ret<T: embed::PopVariable>(
+        &self,
+        runtime: &mut Runtime,
+        module: &Arc<Module>,
+    ) -> Result<T, String> {
         let val = runtime.call_str_ret(&self.name, &self.args, module)?;
         T::pop_var(runtime, runtime.resolve(&val))
     }
 
     /// Convert return value to a Vec4 convertible type.
-    pub fn run_vec4<T: embed::ConvertVec4>(&self, runtime: &mut Runtime, module: &Arc<Module>) -> Result<T, String> {
+    pub fn run_vec4<T: embed::ConvertVec4>(
+        &self,
+        runtime: &mut Runtime,
+        module: &Arc<Module>,
+    ) -> Result<T, String> {
         let val = runtime.call_str_ret(&self.name, &self.args, module)?;
         match runtime.resolve(&val) {
             &Variable::Vec4(val) => Ok(T::from(val)),
-            x => Err(runtime.expected(x, "vec4"))
+            x => Err(runtime.expected(x, "vec4")),
         }
     }
 }
@@ -545,8 +563,8 @@ pub fn load(source: &str, module: &mut Module) -> Result<(), String> {
     use std::fs::File;
     use std::io::Read;
 
-    let mut data_file = File::open(source).map_err(|err|
-        format!("Could not open `{}`, {}", source, err))?;
+    let mut data_file =
+        File::open(source).map_err(|err| format!("Could not open `{}`, {}", source, err))?;
     let mut data = Arc::new(String::new());
     data_file.read_to_string(Arc::make_mut(&mut data)).unwrap();
     load_str(source, data, module)
@@ -568,14 +586,13 @@ lazy_static! {
 pub(crate) fn check_str(
     source: &str,
     d: Arc<String>,
-    module: &Module
+    module: &Module,
 ) -> Result<Vec<lifetime::Node>, String> {
     let syntax_rules = SYNTAX_RULES.as_ref().map_err(|err| err.clone())?;
 
     let mut data = vec![];
-    parse_errstr(syntax_rules, &d, &mut data).map_err(
-        |err| format!("In `{}:`\n{}", source, err)
-    )?;
+    parse_errstr(syntax_rules, &d, &mut data)
+        .map_err(|err| format!("In `{}:`\n{}", source, err))?;
 
     let check_data = data.clone();
     let prelude = Arc::new(Prelude::from_module(module));
@@ -596,9 +613,8 @@ pub fn load_str(source: &str, d: Arc<String>, module: &mut Module) -> Result<(),
     let syntax_rules = SYNTAX_RULES.as_ref().map_err(|err| err.clone())?;
 
     let mut data = vec![];
-    parse_errstr(syntax_rules, &d, &mut data).map_err(
-        |err| format!("In `{}:`\n{}", source, err)
-    )?;
+    parse_errstr(syntax_rules, &d, &mut data)
+        .map_err(|err| format!("In `{}:`\n{}", source, err))?;
 
     let check_data = data.clone();
     let prelude = Arc::new(Prelude::from_module(module));
@@ -611,7 +627,13 @@ pub fn load_str(source: &str, d: Arc<String>, module: &mut Module) -> Result<(),
 
     // Convert to AST.
     let mut ignored = vec![];
-    let conv_res = ast::convert(Arc::new(source.into()), d.clone(), &data, &mut ignored, module);
+    let conv_res = ast::convert(
+        Arc::new(source.into()),
+        d.clone(),
+        &data,
+        &mut ignored,
+        module,
+    );
 
     // Check that lifetime checking succeeded.
     match handle.join().unwrap() {
@@ -624,8 +646,8 @@ pub fn load_str(source: &str, d: Arc<String>, module: &mut Module) -> Result<(),
             }
         }
         Err(err_msg) => {
-            use std::io::Write;
             use piston_meta::ParseErrorHandler;
+            use std::io::Write;
 
             let (range, msg) = err_msg.decouple();
 
@@ -634,7 +656,7 @@ pub fn load_str(source: &str, d: Arc<String>, module: &mut Module) -> Result<(),
             ParseErrorHandler::new(&d)
                 .write_msg(&mut buf, range, &msg)
                 .unwrap();
-            return Err(String::from_utf8(buf).unwrap())
+            return Err(String::from_utf8(buf).unwrap());
         }
     }
 
@@ -647,11 +669,17 @@ pub fn load_meta(
     source: &str,
     d: Arc<String>,
     data: &[Range<MetaData>],
-    module: &mut Module
+    module: &mut Module,
 ) -> Result<(), String> {
     // Convert to AST.
     let mut ignored = vec![];
-    let conv_res = ast::convert(Arc::new(source.into()), d.clone(), &data, &mut ignored, module);
+    let conv_res = ast::convert(
+        Arc::new(source.into()),
+        d.clone(),
+        data,
+        &mut ignored,
+        module,
+    );
 
     check_ignored_meta_data(conv_res, source, &d, data, &ignored)
 }
@@ -666,8 +694,8 @@ fn check_ignored_meta_data(
     use piston_meta::json;
 
     if !ignored.is_empty() || conv_res.is_err() {
-        use std::io::Write;
         use piston_meta::ParseErrorHandler;
+        use std::io::Write;
 
         let mut buf: Vec<u8> = vec![];
         if !ignored.is_empty() {
@@ -677,10 +705,12 @@ fn check_ignored_meta_data(
             writeln!(&mut buf, "END IGNORED").unwrap();
 
             writeln!(&mut buf, "In `{}`:\n", source).unwrap();
-            ParseErrorHandler::new(&d)
-                .write_msg(&mut buf,
-                           data[ignored[0].iter()][0].range(),
-                           "Could not understand this")
+            ParseErrorHandler::new(d)
+                .write_msg(
+                    &mut buf,
+                    data[ignored[0].iter()][0].range(),
+                    "Could not understand this",
+                )
                 .unwrap();
         }
         if let Err(()) = conv_res {
@@ -701,7 +731,7 @@ pub fn error(res: Result<(), String>) -> bool {
             println!("{}", err);
             true
         }
-        Ok(()) => false
+        Ok(()) => false,
     }
 }
 
@@ -709,14 +739,14 @@ pub fn error(res: Result<(), String>) -> bool {
 mod tests {
     extern crate test;
 
-    use super::run;
     use self::test::Bencher;
+    use super::run;
 
     #[test]
     fn variable_size() {
+        use super::*;
         use std::mem::size_of;
         use std::sync::Arc;
-        use super::*;
 
         /*
         Ref(usize),
@@ -748,8 +778,8 @@ mod tests {
 
     #[test]
     fn expression_size() {
-        use std::mem::size_of;
         use super::*;
+        use std::mem::size_of;
 
         assert_eq!(size_of::<ast::Expression>(), 16);
     }

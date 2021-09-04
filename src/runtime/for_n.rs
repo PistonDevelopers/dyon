@@ -109,7 +109,7 @@ macro_rules! inc(
 impl Runtime {
     pub(crate) fn for_n_expr(
         &mut self,
-        for_n_expr: &ast::ForN
+        for_n_expr: &ast::ForN,
     ) -> Result<(Option<Variable>, Flow), String> {
         let prev_st = self.stack.len();
         let prev_lc = self.local_stack.len();
@@ -118,7 +118,8 @@ impl Runtime {
         let end = end!(self, for_n_expr);
 
         // Initialize counter.
-        self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
+        self.local_stack
+            .push((for_n_expr.name.clone(), self.stack.len()));
         self.stack.push(Variable::f64(start));
 
         let st = self.stack.len();
@@ -127,7 +128,9 @@ impl Runtime {
         loop {
             cond!(self, for_n_expr, st, end);
             match self.block(&for_n_expr.block)? {
-                (x, Flow::Return) => { return Ok((x, Flow::Return)); }
+                (x, Flow::Return) => {
+                    return Ok((x, Flow::Return));
+                }
                 (_, Flow::Continue) => {}
                 (_, Flow::Break(x)) => break_!(x, for_n_expr, flow),
                 (_, Flow::ContinueLoop(x)) => continue_!(x, for_n_expr, flow),
@@ -135,7 +138,7 @@ impl Runtime {
             inc!(self, for_n_expr, st);
             self.stack.truncate(st);
             self.local_stack.truncate(lc);
-        };
+        }
         self.stack.truncate(prev_st);
         self.local_stack.truncate(prev_lc);
         Ok((None, flow))
@@ -153,7 +156,8 @@ impl Runtime {
         let end = end!(self, for_n_expr);
 
         // Initialize counter.
-        self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
+        self.local_stack
+            .push((for_n_expr.name.clone(), self.stack.len()));
         self.stack.push(Variable::f64(start));
 
         let st = self.stack.len();
@@ -165,14 +169,24 @@ impl Runtime {
                 (Some(x), Flow::Continue) => {
                     match self.resolve(&x) {
                         &Variable::F64(val, _) => sum += val,
-                        x => return Err(self.module.error(for_n_expr.block.source_range,
-                                &self.expected(x, "number"), self))
+                        x => {
+                            return Err(self.module.error(
+                                for_n_expr.block.source_range,
+                                &self.expected(x, "number"),
+                                self,
+                            ))
+                        }
                     };
                 }
-                (x, Flow::Return) => { return Ok((x, Flow::Return)); }
+                (x, Flow::Return) => {
+                    return Ok((x, Flow::Return));
+                }
                 (None, Flow::Continue) => {
-                    return Err(self.module.error(for_n_expr.block.source_range,
-                                "Expected `number`", self))
+                    return Err(self.module.error(
+                        for_n_expr.block.source_range,
+                        "Expected `number`",
+                        self,
+                    ))
                 }
                 (_, Flow::Break(x)) => break_!(x, for_n_expr, flow),
                 (_, Flow::ContinueLoop(x)) => continue_!(x, for_n_expr, flow),
@@ -180,7 +194,7 @@ impl Runtime {
             inc!(self, for_n_expr, st);
             self.stack.truncate(st);
             self.local_stack.truncate(lc);
-        };
+        }
         self.stack.truncate(prev_st);
         self.local_stack.truncate(prev_lc);
         Ok((Some(Variable::f64(sum)), flow))
@@ -188,7 +202,7 @@ impl Runtime {
 
     pub(crate) fn prod_n_expr(
         &mut self,
-        for_n_expr: &ast::ForN
+        for_n_expr: &ast::ForN,
     ) -> Result<(Option<Variable>, Flow), String> {
         let prev_st = self.stack.len();
         let prev_lc = self.local_stack.len();
@@ -198,7 +212,8 @@ impl Runtime {
         let end = end!(self, for_n_expr);
 
         // Initialize counter.
-        self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
+        self.local_stack
+            .push((for_n_expr.name.clone(), self.stack.len()));
         self.stack.push(Variable::f64(start));
 
         let st = self.stack.len();
@@ -210,14 +225,24 @@ impl Runtime {
                 (Some(x), Flow::Continue) => {
                     match self.resolve(&x) {
                         &Variable::F64(val, _) => prod *= val,
-                        x => return Err(self.module.error(for_n_expr.block.source_range,
-                                &self.expected(x, "number"), self))
+                        x => {
+                            return Err(self.module.error(
+                                for_n_expr.block.source_range,
+                                &self.expected(x, "number"),
+                                self,
+                            ))
+                        }
                     };
                 }
-                (x, Flow::Return) => { return Ok((x, Flow::Return)); }
+                (x, Flow::Return) => {
+                    return Ok((x, Flow::Return));
+                }
                 (None, Flow::Continue) => {
-                    return Err(self.module.error(for_n_expr.block.source_range,
-                                "Expected `number`", self))
+                    return Err(self.module.error(
+                        for_n_expr.block.source_range,
+                        "Expected `number`",
+                        self,
+                    ))
                 }
                 (_, Flow::Break(x)) => break_!(x, for_n_expr, flow),
                 (_, Flow::ContinueLoop(x)) => continue_!(x, for_n_expr, flow),
@@ -225,7 +250,7 @@ impl Runtime {
             inc!(self, for_n_expr, st);
             self.stack.truncate(st);
             self.local_stack.truncate(lc);
-        };
+        }
         self.stack.truncate(prev_st);
         self.local_stack.truncate(prev_lc);
         Ok((Some(Variable::f64(prod)), flow))
@@ -233,7 +258,7 @@ impl Runtime {
 
     pub(crate) fn min_n_expr(
         &mut self,
-        for_n_expr: &ast::ForN
+        for_n_expr: &ast::ForN,
     ) -> Result<(Option<Variable>, Flow), String> {
         let prev_st = self.stack.len();
         let prev_lc = self.local_stack.len();
@@ -244,7 +269,8 @@ impl Runtime {
         let mut min = ::std::f64::NAN;
         let mut sec = None;
         // Initialize counter.
-        self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
+        self.local_stack
+            .push((for_n_expr.name.clone(), self.stack.len()));
         self.stack.push(Variable::f64(start));
         let st = self.stack.len();
         let lc = self.local_stack.len();
@@ -258,9 +284,7 @@ impl Runtime {
                             if min.is_nan() || min > val {
                                 min = val;
                                 sec = match *val_sec {
-                                    None => {
-                                        Some(Box::new(vec![Variable::f64(ind)]))
-                                    }
+                                    None => Some(Box::new(vec![Variable::f64(ind)])),
                                     Some(ref arr) => {
                                         let mut arr = arr.clone();
                                         arr.push(Variable::f64(ind));
@@ -268,15 +292,25 @@ impl Runtime {
                                     }
                                 };
                             }
-                        },
-                        x => return Err(self.module.error(for_n_expr.block.source_range,
-                                &self.expected(x, "number"), self))
+                        }
+                        x => {
+                            return Err(self.module.error(
+                                for_n_expr.block.source_range,
+                                &self.expected(x, "number"),
+                                self,
+                            ))
+                        }
                     };
                 }
-                (x, Flow::Return) => { return Ok((x, Flow::Return)); }
+                (x, Flow::Return) => {
+                    return Ok((x, Flow::Return));
+                }
                 (None, Flow::Continue) => {
-                    return Err(self.module.error(for_n_expr.block.source_range,
-                                "Expected `number or option`", self))
+                    return Err(self.module.error(
+                        for_n_expr.block.source_range,
+                        "Expected `number or option`",
+                        self,
+                    ))
                 }
                 (_, Flow::Break(x)) => break_!(x, for_n_expr, flow),
                 (_, Flow::ContinueLoop(x)) => continue_!(x, for_n_expr, flow),
@@ -284,7 +318,7 @@ impl Runtime {
             inc!(self, for_n_expr, st);
             self.stack.truncate(st);
             self.local_stack.truncate(lc);
-        };
+        }
         self.stack.truncate(prev_st);
         self.local_stack.truncate(prev_lc);
         Ok((Some(Variable::F64(min, sec)), flow))
@@ -292,7 +326,7 @@ impl Runtime {
 
     pub(crate) fn max_n_expr(
         &mut self,
-        for_n_expr: &ast::ForN
+        for_n_expr: &ast::ForN,
     ) -> Result<(Option<Variable>, Flow), String> {
         let prev_st = self.stack.len();
         let prev_lc = self.local_stack.len();
@@ -303,7 +337,8 @@ impl Runtime {
         let mut max = ::std::f64::NAN;
         let mut sec = None;
         // Initialize counter.
-        self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
+        self.local_stack
+            .push((for_n_expr.name.clone(), self.stack.len()));
         self.stack.push(Variable::f64(start));
 
         let st = self.stack.len();
@@ -318,9 +353,7 @@ impl Runtime {
                             if max.is_nan() || max < val {
                                 max = val;
                                 sec = match *val_sec {
-                                    None => {
-                                        Some(Box::new(vec![Variable::f64(ind)]))
-                                    }
+                                    None => Some(Box::new(vec![Variable::f64(ind)])),
                                     Some(ref arr) => {
                                         let mut arr = arr.clone();
                                         arr.push(Variable::f64(ind));
@@ -328,15 +361,25 @@ impl Runtime {
                                     }
                                 };
                             }
-                        },
-                        x => return Err(self.module.error(for_n_expr.block.source_range,
-                                &self.expected(x, "number"), self))
+                        }
+                        x => {
+                            return Err(self.module.error(
+                                for_n_expr.block.source_range,
+                                &self.expected(x, "number"),
+                                self,
+                            ))
+                        }
                     };
                 }
-                (x, Flow::Return) => { return Ok((x, Flow::Return)); }
+                (x, Flow::Return) => {
+                    return Ok((x, Flow::Return));
+                }
                 (None, Flow::Continue) => {
-                    return Err(self.module.error(for_n_expr.block.source_range,
-                                "Expected `number`", self))
+                    return Err(self.module.error(
+                        for_n_expr.block.source_range,
+                        "Expected `number`",
+                        self,
+                    ))
                 }
                 (_, Flow::Break(x)) => break_!(x, for_n_expr, flow),
                 (_, Flow::ContinueLoop(x)) => continue_!(x, for_n_expr, flow),
@@ -344,7 +387,7 @@ impl Runtime {
             inc!(self, for_n_expr, st);
             self.stack.truncate(st);
             self.local_stack.truncate(lc);
-        };
+        }
         self.stack.truncate(prev_st);
         self.local_stack.truncate(prev_lc);
         Ok((Some(Variable::F64(max, sec)), flow))
@@ -352,7 +395,7 @@ impl Runtime {
 
     pub(crate) fn any_n_expr(
         &mut self,
-        for_n_expr: &ast::ForN
+        for_n_expr: &ast::ForN,
     ) -> Result<(Option<Variable>, Flow), String> {
         let prev_st = self.stack.len();
         let prev_lc = self.local_stack.len();
@@ -363,7 +406,8 @@ impl Runtime {
         let mut any = false;
         let mut sec = None;
         // Initialize counter.
-        self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
+        self.local_stack
+            .push((for_n_expr.name.clone(), self.stack.len()));
         self.stack.push(Variable::f64(start));
 
         let st = self.stack.len();
@@ -378,9 +422,7 @@ impl Runtime {
                             if val {
                                 any = true;
                                 sec = match *val_sec {
-                                    None => {
-                                        Some(Box::new(vec![Variable::f64(ind)]))
-                                    }
+                                    None => Some(Box::new(vec![Variable::f64(ind)])),
                                     Some(ref arr) => {
                                         let mut arr = arr.clone();
                                         arr.push(Variable::f64(ind));
@@ -389,15 +431,25 @@ impl Runtime {
                                 };
                                 break;
                             }
-                        },
-                        x => return Err(self.module.error(for_n_expr.block.source_range,
-                                &self.expected(x, "boolean"), self))
+                        }
+                        x => {
+                            return Err(self.module.error(
+                                for_n_expr.block.source_range,
+                                &self.expected(x, "boolean"),
+                                self,
+                            ))
+                        }
                     };
                 }
-                (x, Flow::Return) => { return Ok((x, Flow::Return)); }
+                (x, Flow::Return) => {
+                    return Ok((x, Flow::Return));
+                }
                 (None, Flow::Continue) => {
-                    return Err(self.module.error(for_n_expr.block.source_range,
-                                "Expected `boolean`", self))
+                    return Err(self.module.error(
+                        for_n_expr.block.source_range,
+                        "Expected `boolean`",
+                        self,
+                    ))
                 }
                 (_, Flow::Break(x)) => break_!(x, for_n_expr, flow),
                 (_, Flow::ContinueLoop(x)) => continue_!(x, for_n_expr, flow),
@@ -405,7 +457,7 @@ impl Runtime {
             inc!(self, for_n_expr, st);
             self.stack.truncate(st);
             self.local_stack.truncate(lc);
-        };
+        }
         self.stack.truncate(prev_st);
         self.local_stack.truncate(prev_lc);
         Ok((Some(Variable::Bool(any, sec)), flow))
@@ -413,7 +465,7 @@ impl Runtime {
 
     pub(crate) fn all_n_expr(
         &mut self,
-        for_n_expr: &ast::ForN
+        for_n_expr: &ast::ForN,
     ) -> Result<(Option<Variable>, Flow), String> {
         let prev_st = self.stack.len();
         let prev_lc = self.local_stack.len();
@@ -424,7 +476,8 @@ impl Runtime {
         let mut all = true;
         let mut sec = None;
         // Initialize counter.
-        self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
+        self.local_stack
+            .push((for_n_expr.name.clone(), self.stack.len()));
         self.stack.push(Variable::f64(start));
 
         let st = self.stack.len();
@@ -439,9 +492,7 @@ impl Runtime {
                             if !val {
                                 all = false;
                                 sec = match *val_sec {
-                                    None => {
-                                        Some(Box::new(vec![Variable::f64(ind)]))
-                                    }
+                                    None => Some(Box::new(vec![Variable::f64(ind)])),
                                     Some(ref arr) => {
                                         let mut arr = arr.clone();
                                         arr.push(Variable::f64(ind));
@@ -450,15 +501,25 @@ impl Runtime {
                                 };
                                 break;
                             }
-                        },
-                        x => return Err(self.module.error(for_n_expr.block.source_range,
-                                &self.expected(x, "boolean"), self))
+                        }
+                        x => {
+                            return Err(self.module.error(
+                                for_n_expr.block.source_range,
+                                &self.expected(x, "boolean"),
+                                self,
+                            ))
+                        }
                     };
                 }
-                (x, Flow::Return) => { return Ok((x, Flow::Return)); }
+                (x, Flow::Return) => {
+                    return Ok((x, Flow::Return));
+                }
                 (None, Flow::Continue) => {
-                    return Err(self.module.error(for_n_expr.block.source_range,
-                                "Expected `boolean`", self))
+                    return Err(self.module.error(
+                        for_n_expr.block.source_range,
+                        "Expected `boolean`",
+                        self,
+                    ))
                 }
                 (_, Flow::Break(x)) => break_!(x, for_n_expr, flow),
                 (_, Flow::ContinueLoop(x)) => continue_!(x, for_n_expr, flow),
@@ -466,7 +527,7 @@ impl Runtime {
             inc!(self, for_n_expr, st);
             self.stack.truncate(st);
             self.local_stack.truncate(lc);
-        };
+        }
         self.stack.truncate(prev_st);
         self.local_stack.truncate(prev_lc);
         Ok((Some(Variable::Bool(all, sec)), flow))
@@ -474,14 +535,14 @@ impl Runtime {
 
     pub(crate) fn link_for_n_expr(
         &mut self,
-        for_n_expr: &ast::ForN
+        for_n_expr: &ast::ForN,
     ) -> Result<(Option<Variable>, Flow), String> {
         use Link;
 
         fn sub_link_for_n_expr(
             res: &mut Link,
             rt: &mut Runtime,
-            for_n_expr: &ast::ForN
+            for_n_expr: &ast::ForN,
         ) -> Result<(Option<Variable>, Flow), String> {
             let prev_st = rt.stack.len();
             let prev_lc = rt.local_stack.len();
@@ -490,7 +551,8 @@ impl Runtime {
             let end = end!(rt, for_n_expr);
 
             // Initialize counter.
-            rt.local_stack.push((for_n_expr.name.clone(), rt.stack.len()));
+            rt.local_stack
+                .push((for_n_expr.name.clone(), rt.stack.len()));
             rt.stack.push(Variable::f64(start));
 
             let st = rt.stack.len();
@@ -505,38 +567,39 @@ impl Runtime {
                         // Evaluate link items directly.
                         'inner: for item in &link.items {
                             match rt.expression(item, Side::Right)? {
-                                (Some(ref x), Flow::Continue) => {
-                                    match res.push(rt.resolve(x)) {
-                                        Err(err) => {
-                                            return Err(rt.module.error(for_n_expr.source_range,
-                                                &format!("{}\n{}", rt.stack_trace(),
-                                                err), rt))
-                                        }
-                                        Ok(()) => {}
+                                (Some(ref x), Flow::Continue) => match res.push(rt.resolve(x)) {
+                                    Err(err) => {
+                                        return Err(rt.module.error(
+                                            for_n_expr.source_range,
+                                            &format!("{}\n{}", rt.stack_trace(), err),
+                                            rt,
+                                        ))
                                     }
+                                    Ok(()) => {}
+                                },
+                                (x, Flow::Return) => {
+                                    return Ok((x, Flow::Return));
                                 }
-                                (x, Flow::Return) => { return Ok((x, Flow::Return)); }
                                 (None, Flow::Continue) => {}
                                 (_, Flow::Break(x)) => break_!(x, for_n_expr, flow, 'outer),
-                                (_, Flow::ContinueLoop(x)) => {
-                                    match x {
-                                        Some(label) => {
-                                            let same =
-                                            if let Some(ref for_label) = for_n_expr.label {
-                                                &label == for_label
-                                            } else { false };
-                                            if !same {
-                                                flow = Flow::ContinueLoop(Some(label));
-                                                break 'outer;
-                                            } else {
-                                                break 'inner;
-                                            }
-                                        }
-                                        None => {
+                                (_, Flow::ContinueLoop(x)) => match x {
+                                    Some(label) => {
+                                        let same = if let Some(ref for_label) = for_n_expr.label {
+                                            &label == for_label
+                                        } else {
+                                            false
+                                        };
+                                        if !same {
+                                            flow = Flow::ContinueLoop(Some(label));
+                                            break 'outer;
+                                        } else {
                                             break 'inner;
                                         }
                                     }
-                                }
+                                    None => {
+                                        break 'inner;
+                                    }
+                                },
                             }
                         }
                     }
@@ -547,17 +610,18 @@ impl Runtime {
                             Ok((_, Flow::Break(x))) => break_!(x, for_n_expr, flow, 'outer),
                             Ok((_, Flow::ContinueLoop(x))) => {
                                 if let Some(label) = x {
-                                    let same =
-                                    if let Some(ref for_label) = for_n_expr.label {
+                                    let same = if let Some(ref for_label) = for_n_expr.label {
                                         &label == for_label
-                                    } else { false };
+                                    } else {
+                                        false
+                                    };
                                     if !same {
                                         flow = Flow::ContinueLoop(Some(label));
                                         break 'outer;
                                     }
                                 }
                             }
-                            x => return x
+                            x => return x,
                         }
                     }
                     _ => {
@@ -568,7 +632,7 @@ impl Runtime {
                 inc!(rt, for_n_expr, st);
                 rt.stack.truncate(st);
                 rt.local_stack.truncate(lc);
-            };
+            }
             rt.stack.truncate(prev_st);
             rt.local_stack.truncate(prev_lc);
             Ok((None, flow))
@@ -576,15 +640,14 @@ impl Runtime {
 
         let mut res: Link = Link::new();
         match sub_link_for_n_expr(&mut res, self, for_n_expr) {
-            Ok((None, Flow::Continue)) =>
-                Ok((Some(Variable::Link(Box::new(res))), Flow::Continue)),
-            x => x
+            Ok((None, Flow::Continue)) => Ok((Some(Variable::Link(Box::new(res))), Flow::Continue)),
+            x => x,
         }
     }
 
     pub(crate) fn sift_n_expr(
         &mut self,
-        for_n_expr: &ast::ForN
+        for_n_expr: &ast::ForN,
     ) -> Result<(Option<Variable>, Flow), String> {
         let prev_st = self.stack.len();
         let prev_lc = self.local_stack.len();
@@ -594,7 +657,8 @@ impl Runtime {
         let end = end!(self, for_n_expr);
 
         // Initialize counter.
-        self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
+        self.local_stack
+            .push((for_n_expr.name.clone(), self.stack.len()));
         self.stack.push(Variable::f64(start));
 
         let st = self.stack.len();
@@ -604,10 +668,15 @@ impl Runtime {
             cond!(self, for_n_expr, st, end);
             match self.block(&for_n_expr.block)? {
                 (Some(x), Flow::Continue) => res.push(x),
-                (x, Flow::Return) => { return Ok((x, Flow::Return)); }
+                (x, Flow::Return) => {
+                    return Ok((x, Flow::Return));
+                }
                 (None, Flow::Continue) => {
-                    return Err(self.module.error(for_n_expr.block.source_range,
-                                "Expected variable", self))
+                    return Err(self.module.error(
+                        for_n_expr.block.source_range,
+                        "Expected variable",
+                        self,
+                    ))
                 }
                 (_, Flow::Break(x)) => break_!(x, for_n_expr, flow),
                 (_, Flow::ContinueLoop(x)) => continue_!(x, for_n_expr, flow),
@@ -615,7 +684,7 @@ impl Runtime {
             inc!(self, for_n_expr, st);
             self.stack.truncate(st);
             self.local_stack.truncate(lc);
-        };
+        }
         self.stack.truncate(prev_st);
         self.local_stack.truncate(prev_lc);
         Ok((Some(Variable::Array(Arc::new(res))), flow))
@@ -623,7 +692,7 @@ impl Runtime {
 
     pub(crate) fn sum_vec4_n_expr(
         &mut self,
-        for_n_expr: &ast::ForN
+        for_n_expr: &ast::ForN,
     ) -> Result<(Option<Variable>, Flow), String> {
         let prev_st = self.stack.len();
         let prev_lc = self.local_stack.len();
@@ -633,7 +702,8 @@ impl Runtime {
         let end = end!(self, for_n_expr);
 
         // Initialize counter.
-        self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
+        self.local_stack
+            .push((for_n_expr.name.clone(), self.stack.len()));
         self.stack.push(Variable::f64(start));
 
         let st = self.stack.len();
@@ -649,14 +719,24 @@ impl Runtime {
                                 sum[i] += val[i]
                             }
                         }
-                        x => return Err(self.module.error(for_n_expr.block.source_range,
-                                &self.expected(x, "vec4"), self))
+                        x => {
+                            return Err(self.module.error(
+                                for_n_expr.block.source_range,
+                                &self.expected(x, "vec4"),
+                                self,
+                            ))
+                        }
                     };
                 }
-                (x, Flow::Return) => { return Ok((x, Flow::Return)); }
+                (x, Flow::Return) => {
+                    return Ok((x, Flow::Return));
+                }
                 (None, Flow::Continue) => {
-                    return Err(self.module.error(for_n_expr.block.source_range,
-                                "Expected `vec4`", self))
+                    return Err(self.module.error(
+                        for_n_expr.block.source_range,
+                        "Expected `vec4`",
+                        self,
+                    ))
                 }
                 (_, Flow::Break(x)) => break_!(x, for_n_expr, flow),
                 (_, Flow::ContinueLoop(x)) => continue_!(x, for_n_expr, flow),
@@ -664,7 +744,7 @@ impl Runtime {
             inc!(self, for_n_expr, st);
             self.stack.truncate(st);
             self.local_stack.truncate(lc);
-        };
+        }
         self.stack.truncate(prev_st);
         self.local_stack.truncate(prev_lc);
         Ok((Some(Variable::Vec4(sum)), flow))
@@ -672,7 +752,7 @@ impl Runtime {
 
     pub(crate) fn prod_vec4_n_expr(
         &mut self,
-        for_n_expr: &ast::ForN
+        for_n_expr: &ast::ForN,
     ) -> Result<(Option<Variable>, Flow), String> {
         let prev_st = self.stack.len();
         let prev_lc = self.local_stack.len();
@@ -682,7 +762,8 @@ impl Runtime {
         let end = end!(self, for_n_expr);
 
         // Initialize counter.
-        self.local_stack.push((for_n_expr.name.clone(), self.stack.len()));
+        self.local_stack
+            .push((for_n_expr.name.clone(), self.stack.len()));
         self.stack.push(Variable::f64(start));
 
         let st = self.stack.len();
@@ -698,14 +779,24 @@ impl Runtime {
                                 prod[i] *= val[i]
                             }
                         }
-                        x => return Err(self.module.error(for_n_expr.block.source_range,
-                                &self.expected(x, "vec4"), self))
+                        x => {
+                            return Err(self.module.error(
+                                for_n_expr.block.source_range,
+                                &self.expected(x, "vec4"),
+                                self,
+                            ))
+                        }
                     };
                 }
-                (x, Flow::Return) => { return Ok((x, Flow::Return)); }
+                (x, Flow::Return) => {
+                    return Ok((x, Flow::Return));
+                }
                 (None, Flow::Continue) => {
-                    return Err(self.module.error(for_n_expr.block.source_range,
-                                "Expected `vec4`", self))
+                    return Err(self.module.error(
+                        for_n_expr.block.source_range,
+                        "Expected `vec4`",
+                        self,
+                    ))
                 }
                 (_, Flow::Break(x)) => break_!(x, for_n_expr, flow),
                 (_, Flow::ContinueLoop(x)) => continue_!(x, for_n_expr, flow),
@@ -713,7 +804,7 @@ impl Runtime {
             inc!(self, for_n_expr, st);
             self.stack.truncate(st);
             self.local_stack.truncate(lc);
-        };
+        }
         self.stack.truncate(prev_st);
         self.local_stack.truncate(prev_lc);
         Ok((Some(Variable::Vec4(prod)), flow))
