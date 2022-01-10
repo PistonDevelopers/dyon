@@ -79,6 +79,34 @@ lazy_static! {
     pub(crate) static ref MAIN: Arc<String> = Arc::new("main".into());
 }
 
+/// Module resolver
+#[cfg(feature = "dynload")]
+pub trait ModuleResolver {
+    /// Resolve target module
+    fn resolve_module(&self, source: &str, target: &mut String) -> Result<(), String>;
+}
+
+/// The default module resolver
+#[cfg(feature = "dynload")]
+pub struct FileModuleResolver;
+
+#[cfg(feature = "dynload")]
+impl ModuleResolver for FileModuleResolver {
+    fn resolve_module(&self, source: &str, target: &mut String) -> Result<(), String> {
+        if cfg!(feature = "file") {
+            use std::fs::File;
+            use std::io::Read;
+
+            let mut data_file =
+                File::open(source).map_err(|err| format!("Could not open `{}`, {}", source, err))?;
+            data_file.read_to_string(target).unwrap();
+            Ok(())
+        } else {
+            Err(super::dyon_std::FILE_SUPPORT_DISABLED.into())
+        }
+    }
+}
+
 /// Stores data needed for running a Dyon program.
 pub struct Runtime {
     /// Stores the current module in use.
@@ -96,6 +124,9 @@ pub struct Runtime {
     pub current_stack: Vec<(Arc<String>, usize)>,
     #[cfg(feature = "rand")]
     pub(crate) rng: rand::rngs::StdRng,
+    /// The module resolver instance
+    #[cfg(feature = "dynload")]
+    pub module_resolver: Box<dyn ModuleResolver>,
     /// External functions can choose to report an error on an argument.
     pub arg_err_index: Cell<Option<usize>>,
 }
@@ -353,6 +384,8 @@ impl Runtime {
             current_stack: vec![],
             #[cfg(feature = "rand")]
             rng: rand::rngs::StdRng::from_entropy(),
+            #[cfg(feature = "dynload")]
+            module_resolver: Box::new(FileModuleResolver),
             arg_err_index: Cell::new(None),
         }
     }
@@ -2859,6 +2892,10 @@ impl Runtime {
 
     pub(crate) fn stack_trace(&self) -> String {
         stack_trace(&self.call_stack)
+    }
+
+    pub(crate) fn resolve_module(&self, source: &str, target: &mut String) -> Result<(), String> {
+        self.module_resolver.resolve_module(source, target)
     }
 }
 

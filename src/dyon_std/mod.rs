@@ -12,8 +12,7 @@ mod meta;
 #[cfg(not(all(not(target_family = "wasm"), feature = "http")))]
 const HTTP_SUPPORT_DISABLED: &'static str = "Http support is disabled";
 
-#[cfg(not(feature = "file"))]
-const FILE_SUPPORT_DISABLED: &'static str = "File support is disabled";
+pub(crate) const FILE_SUPPORT_DISABLED: &'static str = "File support is disabled";
 
 pub(crate) fn and_also(rt: &mut Runtime) -> Result<Variable, String> {
     use Variable::*;
@@ -1053,14 +1052,21 @@ pub(crate) fn backtrace(rt: &mut Runtime) -> Result<(), String> {
 
 #[cfg(feature = "dynload")]
 pub(crate) fn load(rt: &mut Runtime) -> Result<Variable, String> {
-    use load;
-
     let v = rt.stack.pop().expect(TINVOTS);
     Ok(match rt.resolve(&v) {
         &Variable::Str(ref text) => {
             let mut m = Module::empty();
             m.import_ext_prelude(&rt.module);
-            if let Err(err) = load(text, &mut m) {
+            let mut data = Arc::new(String::new());
+            if let Err(err) = rt.resolve_module(text, Arc::make_mut(&mut data)) {
+                Variable::Result(Err(Box::new(Error {
+                    message: Variable::Str(Arc::new(format!(
+                        "When attempting to load module:\n{}",
+                        err
+                    ))),
+                    trace: vec![],
+                })))
+            } else if let Err(err) = load_str(text, data, &mut m) {
                 Variable::Result(Err(Box::new(Error {
                     message: Variable::Str(Arc::new(format!(
                         "When attempting to load module:\n{}",
