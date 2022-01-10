@@ -36,7 +36,8 @@ default-features = false
 optional = true
 
 [features]
-default = ["debug_resolve", "http", "file", "threading", "stdio"]
+default = ["debug_resolve", "http", "dynload", "file", "threading", "stdio"]
+dynload = ["file"]
 debug_resolve = []
 http = ["reqwest"]
 file = []

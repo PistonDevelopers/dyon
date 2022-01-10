@@ -550,7 +550,9 @@ impl Module {
         );
         m.add_str("now", now, Dfn::nl(vec![], F64));
         m.add_str("is_nan", is_nan, Dfn::nl(vec![F64], Bool));
+        #[cfg(feature = "dynload")]
         m.add_str("load", load, Dfn::nl(vec![Str], Type::result()));
+        #[cfg(feature = "dynload")]
         m.add_str(
             "load__source_imports",
             load__source_imports,

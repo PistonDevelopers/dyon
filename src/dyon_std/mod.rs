@@ -1051,6 +1051,7 @@ pub(crate) fn backtrace(rt: &mut Runtime) -> Result<(), String> {
     Ok(())
 }
 
+#[cfg(feature = "dynload")]
 pub(crate) fn load(rt: &mut Runtime) -> Result<Variable, String> {
     use load;
 
@@ -1079,6 +1080,7 @@ pub(crate) fn load(rt: &mut Runtime) -> Result<Variable, String> {
     })
 }
 
+#[cfg(feature = "dynload")]
 pub(crate) fn load__source_imports(rt: &mut Runtime) -> Result<Variable, String> {
     use load;
 
