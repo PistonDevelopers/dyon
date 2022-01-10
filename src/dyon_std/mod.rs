@@ -609,6 +609,7 @@ pub(crate) fn is_empty(rt: &mut Runtime) -> Result<Variable, String> {
     }))
 }
 
+#[cfg(feature = "rand")]
 pub(crate) fn random(rt: &mut Runtime) -> Result<Variable, String> {
     use rand::Rng;
 

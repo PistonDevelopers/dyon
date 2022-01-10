@@ -1,5 +1,6 @@
 //! Dyon runtime.
 
+#[cfg(feature = "rand")]
 use rand;
 use range::Range;
 use std::cell::Cell;
@@ -93,6 +94,7 @@ pub struct Runtime {
     /// When a current object is used, the runtime searches backwards
     /// until it finds the last current variable with the name.
     pub current_stack: Vec<(Arc<String>, usize)>,
+    #[cfg(feature = "rand")]
     pub(crate) rng: rand::rngs::StdRng,
     /// External functions can choose to report an error on an argument.
     pub arg_err_index: Cell<Option<usize>>,
@@ -340,6 +342,7 @@ fn item_lookup(
 impl Runtime {
     /// Creates a new Runtime.
     pub fn new() -> Runtime {
+        #[cfg(feature = "rand")]
         use rand::FromEntropy;
 
         Runtime {
@@ -348,6 +351,7 @@ impl Runtime {
             call_stack: vec![],
             local_stack: vec![],
             current_stack: vec![],
+            #[cfg(feature = "rand")]
             rng: rand::rngs::StdRng::from_entropy(),
             arg_err_index: Cell::new(None),
         }

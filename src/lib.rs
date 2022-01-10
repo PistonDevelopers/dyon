@@ -10,6 +10,7 @@
 #![cfg_attr(test, feature(test))]
 #![deny(missing_docs)]
 extern crate piston_meta;
+#[cfg(feature = "rand")]
 extern crate rand;
 extern crate range;
 extern crate read_color;

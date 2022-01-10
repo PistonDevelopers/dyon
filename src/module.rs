@@ -450,6 +450,7 @@ impl Module {
         m.add_str("ceil", ceil, Dfn::nl(vec![F64], F64));
         #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         m.add_str("sleep", sleep, Dfn::nl(vec![F64], Void));
+        #[cfg(feature = "rand")]
         m.add_str("random", random, Dfn::nl(vec![], F64));
         m.add_str("tau", tau, Dfn::nl(vec![], F64));
         #[cfg(feature = "stdio")]
