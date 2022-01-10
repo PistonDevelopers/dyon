@@ -1061,6 +1061,7 @@ pub enum Expression {
     /// Block expression.
     Block(Box<Block>),
     /// Go call expression.
+    #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
     Go(Box<Go>),
     /// Call expression.
     Call(Box<Call>),
@@ -1276,9 +1277,6 @@ impl Expression {
                 } else {
                     return Err(());
                 }
-            } else if let Ok((range, val)) = Go::from_meta_data(file, source, convert, ignored) {
-                convert.update(range);
-                result = Some(Expression::Go(Box::new(val)));
             } else if let Ok((range, val)) = Call::from_meta_data(file, source, convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::Call(Box::new(val)));
@@ -1437,9 +1435,18 @@ impl Expression {
                 convert.update(range);
                 result = Some(Expression::In(Box::new(val)));
             } else {
-                let range = convert.ignore();
-                convert.update(range);
-                ignored.push(range);
+                loop {
+                    #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
+                    if let Ok((range, val)) = Go::from_meta_data(file, source, convert, ignored) {
+                        convert.update(range);
+                        result = Some(Expression::Go(Box::new(val)));
+                        break;
+                    }
+                    let range = convert.ignore();
+                    convert.update(range);
+                    ignored.push(range);
+                    break;
+                }
             }
         }
 
@@ -1475,6 +1482,7 @@ impl Expression {
             Break(ref br) => br.source_range,
             Continue(ref c) => c.source_range,
             Block(ref bl) => bl.source_range,
+            #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             Go(ref go) => go.source_range,
             Call(ref call) => call.info.source_range,
             CallVoid(ref call) => call.info.source_range,
@@ -1554,6 +1562,7 @@ impl Expression {
             Block(ref mut bl) => {
                 bl.resolve_locals(relative, stack, closure_stack, module, use_lookup)
             }
+            #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             Go(ref mut go) => go.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             Call(ref mut call) => {
                 call.resolve_locals(relative, stack, closure_stack, module, use_lookup);
@@ -2510,6 +2519,7 @@ impl Item {
 }
 
 /// Go call.
+#[cfg(all(not(target_family = "wasm"), feature = "threading"))]
 #[derive(Debug, Clone)]
 pub struct Go {
     /// Function call.
@@ -2518,6 +2528,7 @@ pub struct Go {
     pub source_range: Range,
 }
 
+#[cfg(all(not(target_family = "wasm"), feature = "threading"))]
 impl Go {
     /// Creates go call from meta data.
     pub fn from_meta_data(

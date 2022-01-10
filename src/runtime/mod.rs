@@ -561,6 +561,7 @@ impl Runtime {
             ReturnVoid(_) => Ok((None, Flow::Return)),
             Break(ref b) => Ok((None, Flow::Break(b.label.clone()))),
             Continue(ref b) => Ok((None, Flow::ContinueLoop(b.label.clone()))),
+            #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             Go(ref go) => self.go(go),
             Call(ref call) => {
                 let loader = false;
@@ -897,6 +898,7 @@ impl Runtime {
     }
 
     /// Start a new thread and return the handle.
+    #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
     pub fn go(&mut self, go: &ast::Go) -> FlowResult {
         use std::thread::{self, JoinHandle};
         use Thread;

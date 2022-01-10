@@ -21,7 +21,7 @@ lazy_static = "1.0.0"
 vecmath = "1.0.0"
 advancedresearch-tree_mem_sort = "0.2.0"
 
-[dependencies.reqwest]
+[target.'cfg(not(target_family = "wasm"))'.dependencies.reqwest]
 version = "0.9.22"
 default-features = false
 optional = true

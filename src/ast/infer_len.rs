@@ -91,6 +91,7 @@ fn infer_expr(expr: &Expression, name: &str, decls: &mut Vec<Arc<String>>) -> Op
                 return res;
             }
         }
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         Go(ref go) => {
             let res = infer_call(&go.call, name, decls);
             if res.is_some() {

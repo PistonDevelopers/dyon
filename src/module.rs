@@ -521,6 +521,7 @@ impl Module {
             load_string__url,
             Dfn::nl(vec![Str], Type::Result(Box::new(Str))),
         );
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         m.add_str(
             "join__thread",
             join__thread,

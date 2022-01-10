@@ -259,6 +259,7 @@ impl Node {
                 (_, Kind::ReturnVoid) => {}
                 (_, Kind::Swizzle) => {}
                 (_, Kind::Loop) => {}
+                #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
                 (_, Kind::Go) => {}
                 (_, Kind::For) => {}
                 (_, Kind::ForN) => {}

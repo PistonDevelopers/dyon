@@ -155,6 +155,7 @@ pub fn grab_expr(
             }))),
             Flow::Continue,
         )),
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         E::Go(ref go) => {
             let call = &go.call;
             Ok((

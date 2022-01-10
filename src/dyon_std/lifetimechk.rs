@@ -74,6 +74,7 @@ fn min_ref(v: &Variable, min: &mut Option<usize>) {
         RustObject(_) => {}
         Option(_) => {}
         Result(_) => {}
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         Thread(_) => {}
         Array(ref arr) => {
             for v in arr.iter() {

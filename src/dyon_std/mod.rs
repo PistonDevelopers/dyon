@@ -4,14 +4,15 @@ use *;
 
 mod data;
 mod functions;
+#[cfg(all(not(target_family = "wasm"), feature = "file"))]
 mod io;
 mod lifetimechk;
 mod meta;
 
-#[cfg(not(feature = "http"))]
+#[cfg(not(all(not(target_family = "wasm"), feature = "http")))]
 const HTTP_SUPPORT_DISABLED: &'static str = "Http support is disabled";
 
-#[cfg(not(feature = "file"))]
+#[cfg(not(all(not(target_family = "wasm"), feature = "file")))]
 const FILE_SUPPORT_DISABLED: &'static str = "File support is disabled";
 
 pub(crate) fn and_also(rt: &mut Runtime) -> Result<Variable, String> {
@@ -1025,6 +1026,7 @@ pub(crate) fn _typeof(rt: &mut Runtime) -> Result<Variable, String> {
         RustObject(_) => RUST_OBJECT_TYPE.clone(),
         Option(_) => OPTION_TYPE.clone(),
         Result(_) => RESULT_TYPE.clone(),
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         Thread(_) => THREAD_TYPE.clone(),
         Closure(_, _) => CLOSURE_TYPE.clone(),
         In(_) => IN_TYPE.clone(),
@@ -1655,7 +1657,7 @@ dyon_fn! {fn download__url_file(url: Arc<String>, file: Arc<String>) -> Variable
     })
 }}
 
-#[cfg(feature = "file")]
+#[cfg(all(not(target_family = "wasm"), feature = "file"))]
 dyon_fn! {fn save__string_file(text: Arc<String>, file: Arc<String>) -> Variable {
     use std::fs::File;
     use std::io::Write;
@@ -1677,12 +1679,12 @@ dyon_fn! {fn save__string_file(text: Arc<String>, file: Arc<String>) -> Variable
     })
 }}
 
-#[cfg(not(feature = "file"))]
+#[cfg(not(all(not(target_family = "wasm"), feature = "file")))]
 pub(crate) fn save__string_file(_: &mut Runtime) -> Result<Variable, String> {
     Err(FILE_SUPPORT_DISABLED.into())
 }
 
-#[cfg(feature = "file")]
+#[cfg(all(not(target_family = "wasm"), feature = "file"))]
 dyon_fn! {fn load_string__file(file: Arc<String>) -> Variable {
     use std::fs::File;
     use std::io::Read;
@@ -1709,7 +1711,7 @@ dyon_fn! {fn load_string__file(file: Arc<String>) -> Variable {
     })
 }}
 
-#[cfg(not(feature = "file"))]
+#[cfg(not(all(not(target_family = "wasm"), feature = "file")))]
 pub(crate) fn load_string__file(_: &mut Runtime) -> Result<Variable, String> {
     Err(FILE_SUPPORT_DISABLED.into())
 }
@@ -1728,6 +1730,7 @@ dyon_fn! {fn load_string__url(url: Arc<String>) -> Variable {
     })
 }}
 
+#[cfg(all(not(target_family = "wasm"), feature = "threading"))]
 pub(crate) fn join__thread(rt: &mut Runtime) -> Result<Variable, String> {
     let thread = rt.stack.pop().expect(TINVOTS);
     let handle_res = Thread::invalidate_handle(rt, thread);
@@ -1796,7 +1799,7 @@ pub(crate) fn args_os(_rt: &mut Runtime) -> Result<Variable, String> {
     Ok(Variable::Array(Arc::new(arr)))
 }
 
-#[cfg(feature = "file")]
+#[cfg(all(not(target_family = "wasm"), feature = "file"))]
 pub(crate) fn save__data_file(rt: &mut Runtime) -> Result<Variable, String> {
     use std::fs::File;
     use std::io::BufWriter;
@@ -1832,7 +1835,7 @@ pub(crate) fn save__data_file(rt: &mut Runtime) -> Result<Variable, String> {
     Ok(Variable::Result(res))
 }
 
-#[cfg(not(feature = "file"))]
+#[cfg(not(all(not(target_family = "wasm"), feature = "file")))]
 pub(crate) fn save__data_file(_: &mut Runtime) -> Result<Variable, String> {
     Err(FILE_SUPPORT_DISABLED.into())
 }

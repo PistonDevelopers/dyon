@@ -14,7 +14,7 @@ extern crate rand;
 extern crate range;
 extern crate read_color;
 extern crate read_token;
-#[cfg(feature = "http")]
+#[cfg(all(not(target_family = "wasm"), feature = "http"))]
 extern crate reqwest;
 #[macro_use]
 extern crate lazy_static;
@@ -27,6 +27,7 @@ use std::any::Any;
 use std::collections::HashMap;
 use std::fmt;
 use std::sync::{Arc, Mutex};
+#[cfg(all(not(target_family = "wasm"), feature = "threading"))]
 use std::thread::JoinHandle;
 
 pub mod ast;
@@ -110,12 +111,14 @@ pub struct Error {
 }
 
 /// Stores a thread handle.
+#[cfg(all(not(target_family = "wasm"), feature = "threading"))]
 #[derive(Clone)]
 pub struct Thread {
     /// The handle of the thread.
     pub handle: Option<Arc<Mutex<JoinHandle<Result<Variable, String>>>>>,
 }
 
+#[cfg(all(not(target_family = "wasm"), feature = "threading"))]
 impl Thread {
     /// Creates a new thread handle.
     pub fn new(handle: JoinHandle<Result<Variable, String>>) -> Thread {
@@ -166,6 +169,7 @@ impl Thread {
     }
 }
 
+#[cfg(all(not(target_family = "wasm"), feature = "threading"))]
 impl fmt::Debug for Thread {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "thread")
@@ -223,6 +227,7 @@ pub enum Variable {
     /// Result.
     Result(Result<Box<Variable>, Box<Error>>),
     /// Thread handle.
+    #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
     Thread(Thread),
     /// Stores closure together with a closure environment,
     /// which makes sure that the closure can be called correctly
@@ -268,6 +273,7 @@ impl Variable {
             RustObject(_) => RUST_OBJECT_TYPE.clone(),
             Option(_) => OPTION_TYPE.clone(),
             Result(_) => RESULT_TYPE.clone(),
+            #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             Thread(_) => THREAD_TYPE.clone(),
             Closure(_, _) => CLOSURE_TYPE.clone(),
             In(_) => IN_TYPE.clone(),
@@ -309,6 +315,7 @@ impl Variable {
             Result(Ok(ref ok)) => Result(Ok(ok.clone())),
             // `err(x)` always uses deep clone, so it does not contain references.
             Result(Err(ref err)) => Result(Err(err.clone())),
+            #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             Thread(_) => self.clone(),
             Closure(_, _) => self.clone(),
             In(_) => self.clone(),
@@ -768,6 +775,7 @@ mod tests {
         println!("Link {}", size_of::<Box<Link>>());
         println!("[f32; 4] {}", size_of::<[f32; 4]>());
         println!("Result {}", size_of::<Result<Box<Variable>, Box<Error>>>());
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         println!("Thread {}", size_of::<Thread>());
         println!("Secret {}", size_of::<Option<Box<Vec<Variable>>>>());
         println!("Text {}", size_of::<Arc<String>>());

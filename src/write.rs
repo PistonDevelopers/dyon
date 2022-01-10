@@ -145,6 +145,7 @@ where
                 write!(w, ")")?;
             }
         },
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         Variable::Thread(_) => write!(w, "_thread")?,
         Variable::Return => write!(w, "_return")?,
         Variable::UnsafeRef(_) => write!(w, "_unsafe_ref")?,
@@ -239,6 +240,7 @@ fn write_expr<W: io::Write>(
             }
         }
         E::Block(ref b) => write_block(w, rt, b, tabs)?,
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         E::Go(ref go) => {
             write!(w, "go ")?;
             write_call(w, rt, &go.call.info.name, &go.call.args, tabs)?;
