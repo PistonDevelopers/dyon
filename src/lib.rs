@@ -235,6 +235,7 @@ pub enum Variable {
     /// no matter where it goes.
     Closure(Arc<ast::Closure>, Box<ClosureEnvironment>),
     /// In-type.
+    #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
     In(Arc<Mutex<::std::sync::mpsc::Receiver<Variable>>>),
 }
 
@@ -277,6 +278,7 @@ impl Variable {
             #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             Thread(_) => THREAD_TYPE.clone(),
             Closure(_, _) => CLOSURE_TYPE.clone(),
+            #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             In(_) => IN_TYPE.clone(),
         }
     }
@@ -319,6 +321,7 @@ impl Variable {
             #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             Thread(_) => self.clone(),
             Closure(_, _) => self.clone(),
+            #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             In(_) => self.clone(),
         }
     }

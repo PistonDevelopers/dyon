@@ -190,10 +190,17 @@ impl Node {
         use super::kind::Kind::*;
 
         match self.kind {
+            #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             Pow | Sum | SumIn | Prod | ProdIn | SumVec4 | Min | MinIn | Max | MaxIn | Any
             | AnyIn | All | AllIn | LinkIn | Vec4 | Mat4 | Vec4UnLoop | Swizzle | Assign | For
             | ForN | ForIn | Link | LinkFor | Closure | CallClosure | Grab | TryExpr | Norm
             | In => false,
+            #[cfg(any(target_family = "wasm", not(feature = "threading")))]
+            Pow | Sum | SumIn | Prod | ProdIn | SumVec4 | Min | MinIn | Max | MaxIn | Any
+            | AnyIn | All | AllIn | LinkIn | Vec4 | Mat4 | Vec4UnLoop | Swizzle | Assign | For
+            | ForN | ForIn | Link | LinkFor | Closure | CallClosure | Grab | TryExpr | Norm => {
+                false
+            }
             Add | Mul | Compare => self.children.len() == 1,
             _ => true,
         }
@@ -295,6 +302,7 @@ impl Node {
                 (_, Kind::Add) => {}
                 (_, Kind::Mul) => {}
                 (_, Kind::Call) => {}
+                #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
                 (_, Kind::In) => {}
                 (_, Kind::Closure) => {}
                 (_, Kind::CallClosure) => {}
@@ -418,6 +426,7 @@ pub(crate) fn convert_meta_data(
                     Kind::Vec4 | Kind::Vec4UnLoop => Some(Type::Vec4),
                     Kind::Mat4 => Some(Type::Mat4),
                     Kind::EX | Kind::EY | Kind::EZ | Kind::EW => Some(Type::Vec4),
+                    #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
                     Kind::In => Some(Type::In(Box::new(Type::array()))),
                     Kind::Object => Some(Type::object()),
                     Kind::Sift | Kind::SiftIn => Some(Type::array()),

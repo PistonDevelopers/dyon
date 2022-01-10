@@ -209,6 +209,7 @@ pub(crate) fn check_core(
         .collect();
 
     // Collect indices to in-nodes.
+    #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
     let ins: Vec<usize> = nodes
         .iter()
         .enumerate()
@@ -706,6 +707,7 @@ pub(crate) fn check_core(
     }
 
     // Check in-nodes.
+    #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
     for &c in &ins {
         let node = &mut nodes[c];
         let name = node.name().expect("Expected name").clone();

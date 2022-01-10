@@ -1,11 +1,11 @@
 use std::sync::Arc;
 
-#[cfg(all(not(target_family = "wasm"), feature = "threading"))]
-use super::Go;
 use super::{
-    Array, ArrayFill, Assign, Block, Call, CallClosure, Expression, For, ForIn, ForN, Id, If, Item,
-    Link, Mat4, Object, Swizzle, TryExpr, Vec4,
+    Array, ArrayFill, Assign, Block, Call, CallClosure, Expression, For, ForN, Id, If, Item, Link,
+    Mat4, Object, Swizzle, TryExpr, Vec4,
 };
+#[cfg(all(not(target_family = "wasm"), feature = "threading"))]
+use super::{ForIn, Go};
 use Variable;
 
 /// Replaces an item with a number.
@@ -153,6 +153,7 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
                 }))
             }
         }
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         E::ForIn(ref for_in_expr) => E::ForIn(Box::new(ForIn {
             label: for_in_expr.label.clone(),
             name: for_in_expr.name.clone(),
@@ -160,6 +161,7 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
             block: number_block(&for_in_expr.block, name, val),
             source_range: for_in_expr.source_range,
         })),
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         E::SumIn(ref for_in_expr) => E::SumIn(Box::new(ForIn {
             label: for_in_expr.label.clone(),
             name: for_in_expr.name.clone(),
@@ -167,6 +169,7 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
             block: number_block(&for_in_expr.block, name, val),
             source_range: for_in_expr.source_range,
         })),
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         E::ProdIn(ref for_in_expr) => E::ProdIn(Box::new(ForIn {
             label: for_in_expr.label.clone(),
             name: for_in_expr.name.clone(),
@@ -174,6 +177,7 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
             block: number_block(&for_in_expr.block, name, val),
             source_range: for_in_expr.source_range,
         })),
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         E::MinIn(ref for_in_expr) => E::MinIn(Box::new(ForIn {
             label: for_in_expr.label.clone(),
             name: for_in_expr.name.clone(),
@@ -181,6 +185,7 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
             block: number_block(&for_in_expr.block, name, val),
             source_range: for_in_expr.source_range,
         })),
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         E::MaxIn(ref for_in_expr) => E::MaxIn(Box::new(ForIn {
             label: for_in_expr.label.clone(),
             name: for_in_expr.name.clone(),
@@ -188,6 +193,7 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
             block: number_block(&for_in_expr.block, name, val),
             source_range: for_in_expr.source_range,
         })),
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         E::AnyIn(ref for_in_expr) => E::AnyIn(Box::new(ForIn {
             label: for_in_expr.label.clone(),
             name: for_in_expr.name.clone(),
@@ -195,6 +201,7 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
             block: number_block(&for_in_expr.block, name, val),
             source_range: for_in_expr.source_range,
         })),
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         E::AllIn(ref for_in_expr) => E::AllIn(Box::new(ForIn {
             label: for_in_expr.label.clone(),
             name: for_in_expr.name.clone(),
@@ -202,6 +209,7 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
             block: number_block(&for_in_expr.block, name, val),
             source_range: for_in_expr.source_range,
         })),
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         E::SiftIn(ref for_in_expr) => E::SiftIn(Box::new(ForIn {
             label: for_in_expr.label.clone(),
             name: for_in_expr.name.clone(),
@@ -209,6 +217,7 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
             block: number_block(&for_in_expr.block, name, val),
             source_range: for_in_expr.source_range,
         })),
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         E::LinkIn(ref for_in_expr) => E::LinkIn(Box::new(ForIn {
             label: for_in_expr.label.clone(),
             name: for_in_expr.name.clone(),
@@ -267,6 +276,7 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
             expr: number(&try_expr.expr, name, val),
             source_range: try_expr.source_range,
         })),
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         E::In(_) => expr.clone(),
     }
 }

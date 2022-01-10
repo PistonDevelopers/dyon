@@ -723,7 +723,9 @@ impl Module {
             chars,
             Dfn::nl(vec![Str], Type::Array(Box::new(Str))),
         );
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         m.add_str("wait_next", wait_next, Dfn::nl(vec![Type::in_ty()], Any));
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         m.add_str("next", next, Dfn::nl(vec![Type::in_ty()], Type::option()));
 
         m.no_ns();

@@ -39,6 +39,7 @@ pub enum Type {
     #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
     Thread(Box<Type>),
     /// In-type.
+    #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
     In(Box<Type>),
     /// Ad-hoc type.
     AdHoc(Arc<String>, Box<Type>),
@@ -124,6 +125,7 @@ impl Type {
                     res
                 }
             }
+            #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             In(ref ty) => {
                 if let Any = **ty {
                     "in".into()
@@ -178,6 +180,7 @@ impl Type {
     }
 
     /// Returns an in-type with an `any` as inner type.
+    #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
     pub fn in_ty() -> Type {
         Type::In(Box::new(Type::Any))
     }
@@ -290,6 +293,7 @@ impl Type {
             (&Result(ref x), &Result(ref y)) if x.ambiguous(y) => true,
             #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             (&Thread(ref x), &Thread(ref y)) if x.ambiguous(y) => true,
+            #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             (&In(ref x), &In(ref y)) if x.ambiguous(y) => true,
             (&Bool, &Any) => true,
             (&F64, &Any) => true,
@@ -303,6 +307,7 @@ impl Type {
             #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             (&Thread(_), &Any) => true,
             (&Secret(_), &Any) => true,
+            #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             (&In(_), &Any) => true,
             _ => false,
         }
@@ -390,6 +395,7 @@ impl Type {
                     false
                 }
             }
+            #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             &In(ref in_ty) => {
                 if let In(ref other_ty) = *other {
                     in_ty.goes_with(other_ty)
@@ -512,9 +518,6 @@ impl Type {
             } else if let Ok((range, _)) = convert.meta_bool("obj_any") {
                 convert.update(range);
                 ty = Some(Type::Object);
-            } else if let Ok((range, _)) = convert.meta_bool("in_any") {
-                convert.update(range);
-                ty = Some(Type::In(Box::new(Type::Any)));
             } else if let Ok((range, val)) = Type::from_meta_data("opt", convert, ignored) {
                 convert.update(range);
                 ty = Some(Type::Option(Box::new(val)));
@@ -524,9 +527,6 @@ impl Type {
             } else if let Ok((range, val)) = Type::from_meta_data("arr", convert, ignored) {
                 convert.update(range);
                 ty = Some(Type::Array(Box::new(val)));
-            } else if let Ok((range, val)) = Type::from_meta_data("in", convert, ignored) {
-                convert.update(range);
-                ty = Some(Type::In(Box::new(val)));
             } else if let Ok((range, val)) = convert.meta_string("ad_hoc") {
                 convert.update(range);
                 let inner_ty =
@@ -571,6 +571,18 @@ impl Type {
                     if let Ok((range, val)) = Type::from_meta_data("thr", convert, ignored) {
                         convert.update(range);
                         ty = Some(Type::Thread(Box::new(val)));
+                        break;
+                    }
+                    #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
+                    if let Ok((range, _)) = convert.meta_bool("in_any") {
+                        convert.update(range);
+                        ty = Some(Type::In(Box::new(Type::Any)));
+                        break;
+                    }
+                    #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
+                    if let Ok((range, val)) = Type::from_meta_data("in", convert, ignored) {
+                        convert.update(range);
+                        ty = Some(Type::In(Box::new(val)));
                         break;
                     }
                     let range = convert.ignore();

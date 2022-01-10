@@ -146,6 +146,7 @@ fn infer_expr(expr: &Expression, name: &str, decls: &mut Vec<Arc<String>>) -> Op
             }
         }
         ForN(ref for_n_expr) => return infer_for_n(for_n_expr, name, decls),
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         ForIn(ref for_in_expr) => {
             let res = infer_expr(&for_in_expr.iter, name, decls);
             if res.is_some() {
@@ -153,48 +154,56 @@ fn infer_expr(expr: &Expression, name: &str, decls: &mut Vec<Arc<String>>) -> Op
             }
         }
         Sum(ref for_n_expr) => return infer_for_n(for_n_expr, name, decls),
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         SumIn(ref for_in_expr) => {
             let res = infer_expr(&for_in_expr.iter, name, decls);
             if res.is_some() {
                 return res;
             }
         }
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         ProdIn(ref for_in_expr) => {
             let res = infer_expr(&for_in_expr.iter, name, decls);
             if res.is_some() {
                 return res;
             }
         }
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         MinIn(ref for_in_expr) => {
             let res = infer_expr(&for_in_expr.iter, name, decls);
             if res.is_some() {
                 return res;
             }
         }
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         MaxIn(ref for_in_expr) => {
             let res = infer_expr(&for_in_expr.iter, name, decls);
             if res.is_some() {
                 return res;
             }
         }
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         AnyIn(ref for_in_expr) => {
             let res = infer_expr(&for_in_expr.iter, name, decls);
             if res.is_some() {
                 return res;
             }
         }
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         AllIn(ref for_in_expr) => {
             let res = infer_expr(&for_in_expr.iter, name, decls);
             if res.is_some() {
                 return res;
             }
         }
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         SiftIn(ref for_in_expr) => {
             let res = infer_expr(&for_in_expr.iter, name, decls);
             if res.is_some() {
                 return res;
             }
         }
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         LinkIn(ref for_in_expr) => {
             let res = infer_expr(&for_in_expr.iter, name, decls);
             if res.is_some() {
@@ -267,6 +276,7 @@ fn infer_expr(expr: &Expression, name: &str, decls: &mut Vec<Arc<String>>) -> Op
                 return res;
             }
         }
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         In(_) => {}
     };
     None

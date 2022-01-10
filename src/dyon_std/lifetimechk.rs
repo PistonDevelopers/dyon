@@ -87,6 +87,7 @@ fn min_ref(v: &Variable, min: &mut Option<usize>) {
             }
         }
         Closure(_, _) => {}
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         In(_) => {}
     }
 }

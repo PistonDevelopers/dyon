@@ -16,6 +16,7 @@ use UnsafeRef;
 use Variable;
 use TINVOTS;
 
+#[cfg(all(not(target_family = "wasm"), feature = "threading"))]
 mod for_in;
 mod for_n;
 
@@ -625,24 +626,33 @@ impl Runtime {
             Mat4(ref mat4) => self.mat4(mat4, side),
             For(ref for_expr) => self.for_expr(for_expr),
             ForN(ref for_n_expr) => self.for_n_expr(for_n_expr),
+            #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             ForIn(ref for_in_expr) => self.for_in_expr(for_in_expr),
             Sum(ref for_n_expr) => self.sum_n_expr(for_n_expr),
+            #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             SumIn(ref sum_in_expr) => self.sum_in_expr(sum_in_expr),
             SumVec4(ref for_n_expr) => self.sum_vec4_n_expr(for_n_expr),
             Prod(ref for_n_expr) => self.prod_n_expr(for_n_expr),
+            #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             ProdIn(ref for_in_expr) => self.prod_in_expr(for_in_expr),
             ProdVec4(ref for_n_expr) => self.prod_vec4_n_expr(for_n_expr),
             Min(ref for_n_expr) => self.min_n_expr(for_n_expr),
+            #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             MinIn(ref for_in_expr) => self.min_in_expr(for_in_expr),
             Max(ref for_n_expr) => self.max_n_expr(for_n_expr),
+            #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             MaxIn(ref for_in_expr) => self.max_in_expr(for_in_expr),
             Sift(ref for_n_expr) => self.sift_n_expr(for_n_expr),
+            #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             SiftIn(ref for_in_expr) => self.sift_in_expr(for_in_expr),
             Any(ref for_n_expr) => self.any_n_expr(for_n_expr),
+            #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             AnyIn(ref for_in_expr) => self.any_in_expr(for_in_expr),
             All(ref for_n_expr) => self.all_n_expr(for_n_expr),
+            #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             AllIn(ref for_in_expr) => self.all_in_expr(for_in_expr),
             LinkFor(ref for_n_expr) => self.link_for_n_expr(for_n_expr),
+            #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             LinkIn(ref for_in_expr) => self.link_for_in_expr(for_in_expr),
             If(ref if_expr) => self.if_expr(if_expr),
             Variable(ref range_var) => Ok((Some(range_var.1.clone()), Flow::Continue)),
@@ -658,10 +668,12 @@ impl Runtime {
                 "`grab` expressions must be inside a closure",
             ),
             TryExpr(ref try_expr) => self.try_expr(try_expr),
+            #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             In(ref in_expr) => self.in_expr(in_expr),
         }
     }
 
+    #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
     fn in_expr(&mut self, in_expr: &ast::In) -> FlowResult {
         use std::sync::atomic::Ordering;
         use std::sync::mpsc::channel;

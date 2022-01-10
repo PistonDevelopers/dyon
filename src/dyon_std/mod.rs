@@ -1034,6 +1034,7 @@ pub(crate) fn _typeof(rt: &mut Runtime) -> Result<Variable, String> {
         #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         Thread(_) => THREAD_TYPE.clone(),
         Closure(_, _) => CLOSURE_TYPE.clone(),
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         In(_) => IN_TYPE.clone(),
     }))
 }
@@ -1954,6 +1955,7 @@ dyon_fn! {fn now() -> f64 {
 
 dyon_fn! {fn is_nan(v: f64) -> bool {v.is_nan()}}
 
+#[cfg(all(not(target_family = "wasm"), feature = "threading"))]
 pub(crate) fn wait_next(rt: &mut Runtime) -> Result<Variable, String> {
     let v = rt.stack.pop().expect(TINVOTS);
     Ok(match rt.resolve(&v) {
@@ -1968,6 +1970,7 @@ pub(crate) fn wait_next(rt: &mut Runtime) -> Result<Variable, String> {
     })
 }
 
+#[cfg(all(not(target_family = "wasm"), feature = "threading"))]
 pub(crate) fn next(rt: &mut Runtime) -> Result<Variable, String> {
     let v = rt.stack.pop().expect(TINVOTS);
     Ok(match rt.resolve(&v) {
