@@ -1,14 +1,14 @@
 use std::collections::HashSet;
-#[cfg(all(not(target_family = "wasm"), feature = "file"))]
+#[cfg(feature = "file")]
 use std::fs::File;
-#[cfg(all(not(target_family = "wasm"), feature = "file"))]
+#[cfg(feature = "file")]
 use std::io::Read;
 use std::sync::Arc;
 
 use range::Range;
 use read_token::{NumberSettings, ReadToken};
 
-#[cfg(all(not(target_family = "wasm"), feature = "file"))]
+#[cfg(feature = "file")]
 use super::io::io_error;
 
 use Variable;
@@ -16,7 +16,7 @@ use Variable;
 type Strings = HashSet<Arc<String>>;
 
 /// Loads data from a file.
-#[cfg(all(not(target_family = "wasm"), feature = "file"))]
+#[cfg(feature = "file")]
 pub fn load_file(file: &str) -> Result<Variable, String> {
     let mut data_file = File::open(file).map_err(|err| io_error("open", file, &err))?;
     let mut d = String::new();
@@ -26,7 +26,7 @@ pub fn load_file(file: &str) -> Result<Variable, String> {
     load_data(&d)
 }
 
-#[cfg(not(all(not(target_family = "wasm"), feature = "file")))]
+#[cfg(not(feature = "file"))]
 pub fn load_file(_: &str) -> Result<Variable, String> {
     Err(super::FILE_SUPPORT_DISABLED.into())
 }

@@ -1,12 +1,12 @@
-#[cfg(all(not(target_family = "wasm"), feature = "file"))]
+#[cfg(feature = "file")]
 use super::io::io_error;
 use piston_meta::{parse_errstr, MetaData, Syntax};
-#[cfg(all(not(target_family = "wasm"), feature = "file"))]
+#[cfg(feature = "file")]
 use piston_meta::syntax_errstr;
-#[cfg(all(not(target_family = "wasm"), feature = "file"))]
+#[cfg(feature = "file")]
 use std::fs::File;
 use std::io;
-#[cfg(all(not(target_family = "wasm"), feature = "file"))]
+#[cfg(feature = "file")]
 use std::io::Read;
 use std::sync::Arc;
 
@@ -57,7 +57,7 @@ pub fn parse_syntax_data(rules: &Syntax, file: &str, d: &str) -> Result<Vec<Vari
     Ok(res)
 }
 
-#[cfg(all(not(target_family = "wasm"), feature = "file"))]
+#[cfg(feature = "file")]
 fn load_metarules_data(meta: &str, s: &str, file: &str, d: &str) -> Result<Vec<Variable>, String> {
     let rules = syntax_errstr(s)
         .map_err(|err| format!("When parsing meta syntax in `{}`:\n{}", meta, err))?;
@@ -65,7 +65,7 @@ fn load_metarules_data(meta: &str, s: &str, file: &str, d: &str) -> Result<Vec<V
 }
 
 /// Loads a file using a meta file as syntax.
-#[cfg(all(not(target_family = "wasm"), feature = "file"))]
+#[cfg(feature = "file")]
 pub fn load_meta_file(meta: &str, file: &str) -> Result<Vec<Variable>, String> {
     let mut syntax_file = File::open(meta).map_err(|err| io_error("open", meta, &err))?;
     let mut s = String::new();
@@ -80,7 +80,7 @@ pub fn load_meta_file(meta: &str, file: &str) -> Result<Vec<Variable>, String> {
     load_metarules_data(meta, &s, file, &d)
 }
 
-#[cfg(not(all(not(target_family = "wasm"), feature = "file")))]
+#[cfg(not(feature = "file"))]
 pub fn load_meta_file(_: &str, _: &str) -> Result<Vec<Variable>, String> {
     Err(super::FILE_SUPPORT_DISABLED.into())
 }

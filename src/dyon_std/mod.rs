@@ -4,7 +4,7 @@ use *;
 
 mod data;
 mod functions;
-#[cfg(all(not(target_family = "wasm"), feature = "file"))]
+#[cfg(feature = "file")]
 mod io;
 mod lifetimechk;
 mod meta;
@@ -12,7 +12,7 @@ mod meta;
 #[cfg(not(all(not(target_family = "wasm"), feature = "http")))]
 const HTTP_SUPPORT_DISABLED: &'static str = "Http support is disabled";
 
-#[cfg(not(all(not(target_family = "wasm"), feature = "file")))]
+#[cfg(not(feature = "file"))]
 const FILE_SUPPORT_DISABLED: &'static str = "File support is disabled";
 
 pub(crate) fn and_also(rt: &mut Runtime) -> Result<Variable, String> {
@@ -1663,7 +1663,7 @@ dyon_fn! {fn download__url_file(url: Arc<String>, file: Arc<String>) -> Variable
     })
 }}
 
-#[cfg(all(not(target_family = "wasm"), feature = "file"))]
+#[cfg(feature = "file")]
 dyon_fn! {fn save__string_file(text: Arc<String>, file: Arc<String>) -> Variable {
     use std::fs::File;
     use std::io::Write;
@@ -1685,12 +1685,12 @@ dyon_fn! {fn save__string_file(text: Arc<String>, file: Arc<String>) -> Variable
     })
 }}
 
-#[cfg(not(all(not(target_family = "wasm"), feature = "file")))]
+#[cfg(not(feature = "file"))]
 pub(crate) fn save__string_file(_: &mut Runtime) -> Result<Variable, String> {
     Err(FILE_SUPPORT_DISABLED.into())
 }
 
-#[cfg(all(not(target_family = "wasm"), feature = "file"))]
+#[cfg(feature = "file")]
 dyon_fn! {fn load_string__file(file: Arc<String>) -> Variable {
     use std::fs::File;
     use std::io::Read;
@@ -1717,7 +1717,7 @@ dyon_fn! {fn load_string__file(file: Arc<String>) -> Variable {
     })
 }}
 
-#[cfg(not(all(not(target_family = "wasm"), feature = "file")))]
+#[cfg(not(feature = "file"))]
 pub(crate) fn load_string__file(_: &mut Runtime) -> Result<Variable, String> {
     Err(FILE_SUPPORT_DISABLED.into())
 }
@@ -1805,7 +1805,7 @@ pub(crate) fn args_os(_rt: &mut Runtime) -> Result<Variable, String> {
     Ok(Variable::Array(Arc::new(arr)))
 }
 
-#[cfg(all(not(target_family = "wasm"), feature = "file"))]
+#[cfg(feature = "file")]
 pub(crate) fn save__data_file(rt: &mut Runtime) -> Result<Variable, String> {
     use std::fs::File;
     use std::io::BufWriter;
@@ -1841,7 +1841,7 @@ pub(crate) fn save__data_file(rt: &mut Runtime) -> Result<Variable, String> {
     Ok(Variable::Result(res))
 }
 
-#[cfg(not(all(not(target_family = "wasm"), feature = "file")))]
+#[cfg(not(feature = "file"))]
 pub(crate) fn save__data_file(_: &mut Runtime) -> Result<Variable, String> {
     Err(FILE_SUPPORT_DISABLED.into())
 }
