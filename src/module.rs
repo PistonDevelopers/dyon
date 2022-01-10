@@ -428,7 +428,9 @@ impl Module {
         m.add_str("clone", clone, Dfn::nl(vec![Any], Any));
         m.add_str("rv", rv, Dfn::nl(vec![Mat4, Type::F64], Vec4));
         m.add_str("s", s, Dfn::nl(vec![Vec4, F64], F64));
+        #[cfg(feature = "stdio")]
         m.add_str("println", println, Dfn::nl(vec![Any], Void));
+        #[cfg(feature = "stdio")]
         m.add_str("print", print, Dfn::nl(vec![Any], Void));
         m.add_str("sqrt", sqrt, Dfn::nl(vec![F64], F64));
         m.add_str("sin", sin, Dfn::nl(vec![F64], F64));
@@ -446,10 +448,13 @@ impl Module {
         m.add_str("abs", abs, Dfn::nl(vec![F64], F64));
         m.add_str("floor", floor, Dfn::nl(vec![F64], F64));
         m.add_str("ceil", ceil, Dfn::nl(vec![F64], F64));
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         m.add_str("sleep", sleep, Dfn::nl(vec![F64], Void));
         m.add_str("random", random, Dfn::nl(vec![], F64));
         m.add_str("tau", tau, Dfn::nl(vec![], F64));
+        #[cfg(feature = "stdio")]
         m.add_str("read_line", read_line, Dfn::nl(vec![], Str));
+        #[cfg(feature = "stdio")]
         m.add_str("read_number", read_number, Dfn::nl(vec![Str], F64));
         m.add_str(
             "parse_number",

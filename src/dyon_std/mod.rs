@@ -524,6 +524,7 @@ pub(crate) fn explain_where(rt: &mut Runtime) -> Result<Variable, String> {
     Ok(Variable::F64(val, Some(wh)))
 }
 
+#[cfg(feature = "stdio")]
 pub(crate) fn println(rt: &mut Runtime) -> Result<(), String> {
     use write::{print_variable, EscapeString};
 
@@ -533,6 +534,7 @@ pub(crate) fn println(rt: &mut Runtime) -> Result<(), String> {
     Ok(())
 }
 
+#[cfg(feature = "stdio")]
 pub(crate) fn print(rt: &mut Runtime) -> Result<(), String> {
     use write::{print_variable, EscapeString};
 
@@ -557,6 +559,7 @@ dyon_fn! {fn round(a: f64) -> f64 {a.round()}}
 dyon_fn! {fn abs(a: f64) -> f64 {a.abs()}}
 dyon_fn! {fn floor(a: f64) -> f64 {a.floor()}}
 dyon_fn! {fn ceil(a: f64) -> f64 {a.ceil()}}
+#[cfg(all(not(target_family = "wasm"), feature = "threading"))]
 dyon_fn! {fn sleep(v: f64) {
     use std::thread::sleep;
     use std::time::Duration;
@@ -895,6 +898,7 @@ pub(crate) fn swap(rt: &mut Runtime) -> Result<(), String> {
     Ok(())
 }
 
+#[cfg(feature = "stdio")]
 pub(crate) fn read_line(_rt: &mut Runtime) -> Result<Variable, String> {
     use std::io::{self, Write};
 
@@ -911,6 +915,7 @@ pub(crate) fn read_line(_rt: &mut Runtime) -> Result<Variable, String> {
     })
 }
 
+#[cfg(feature = "stdio")]
 pub(crate) fn read_number(rt: &mut Runtime) -> Result<Variable, String> {
     use std::io::{self, Write};
 

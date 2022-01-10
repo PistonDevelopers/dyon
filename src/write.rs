@@ -157,6 +157,7 @@ where
     Ok(())
 }
 
+#[cfg(feature = "stdio")]
 pub(crate) fn print_variable(rt: &Runtime, v: &Variable, escape_string: EscapeString) {
     write_variable(&mut io::stdout(), rt, v, escape_string, 0).unwrap();
 }
