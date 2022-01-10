@@ -615,7 +615,40 @@ pub(crate) fn check_str(
 /// - d - The data of source file
 /// - module - The module to load the source
 pub fn load_str(source: &str, d: Arc<String>, module: &mut Module) -> Result<(), String> {
-    use std::thread;
+    #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
+    use std::thread::{self, JoinHandle};
+
+    #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
+    struct MaybeThread<T>(JoinHandle<T>);
+
+    #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
+    impl<T> MaybeThread<T>
+    where
+        T: Send + 'static,
+    {
+        fn spawn<F>(func: F) -> Self
+        where
+            F: FnOnce() -> T + Send + 'static,
+        {
+            Self(thread::spawn(func))
+        }
+        fn join(self) -> T {
+            self.0.join().unwrap()
+        }
+    }
+
+    #[cfg(any(target_family = "wasm", not(feature = "threading")))]
+    struct MaybeThread<T>(T);
+
+    #[cfg(any(target_family = "wasm", not(feature = "threading")))]
+    impl<T> MaybeThread<T> {
+        fn spawn<F>(func: F) -> Self where F: FnOnce() -> T {
+            Self(func())
+        }
+        fn join(self) -> T {
+            self.0
+        }
+    }
 
     let syntax_rules = SYNTAX_RULES.as_ref().map_err(|err| err.clone())?;
 
@@ -626,8 +659,8 @@ pub fn load_str(source: &str, d: Arc<String>, module: &mut Module) -> Result<(),
     let check_data = data.clone();
     let prelude = Arc::new(Prelude::from_module(module));
 
-    // Do lifetime checking in parallel directly on meta data.
-    let handle = thread::spawn(move || {
+    // Do lifetime checking in parallel directly on meta data if possible.
+    let handle = MaybeThread::spawn(move || {
         let check_data = check_data;
         lifetime::check(&check_data, &prelude)
     });
@@ -643,7 +676,7 @@ pub fn load_str(source: &str, d: Arc<String>, module: &mut Module) -> Result<(),
     );
 
     // Check that lifetime checking succeeded.
-    match handle.join().unwrap() {
+    match handle.join() {
         Ok(refined_rets) => {
             for (name, ty) in &refined_rets {
                 if let FnIndex::Loaded(f_index) = module.find_function(name, 0) {
