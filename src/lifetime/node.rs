@@ -190,17 +190,10 @@ impl Node {
         use super::kind::Kind::*;
 
         match self.kind {
-            #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             Pow | Sum | SumIn | Prod | ProdIn | SumVec4 | Min | MinIn | Max | MaxIn | Any
             | AnyIn | All | AllIn | LinkIn | Vec4 | Mat4 | Vec4UnLoop | Swizzle | Assign | For
             | ForN | ForIn | Link | LinkFor | Closure | CallClosure | Grab | TryExpr | Norm
             | In => false,
-            #[cfg(any(target_family = "wasm", not(feature = "threading")))]
-            Pow | Sum | SumIn | Prod | ProdIn | SumVec4 | Min | MinIn | Max | MaxIn | Any
-            | AnyIn | All | AllIn | LinkIn | Vec4 | Mat4 | Vec4UnLoop | Swizzle | Assign | For
-            | ForN | ForIn | Link | LinkFor | Closure | CallClosure | Grab | TryExpr | Norm => {
-                false
-            }
             Add | Mul | Compare => self.children.len() == 1,
             _ => true,
         }

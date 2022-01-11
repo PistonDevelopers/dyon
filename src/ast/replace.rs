@@ -98,6 +98,8 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
             call: number_call(&go.call, name, val),
             source_range: go.source_range,
         })),
+        #[cfg(not(all(not(target_family = "wasm"), feature = "threading")))]
+        E::Go(ref go) => match **go {},
         E::Vec4(ref vec4_expr) => {
             let mut new_args: Vec<Expression> = vec![];
             for arg in &vec4_expr.args {
@@ -161,6 +163,16 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
             block: number_block(&for_in_expr.block, name, val),
             source_range: for_in_expr.source_range,
         })),
+        #[cfg(not(all(not(target_family = "wasm"), feature = "threading")))]
+        E::ForIn(ref for_in_expr) |
+        E::SumIn(ref for_in_expr) |
+        E::ProdIn(ref for_in_expr) |
+        E::MinIn(ref for_in_expr) |
+        E::MaxIn(ref for_in_expr) |
+        E::SiftIn(ref for_in_expr) |
+        E::AnyIn(ref for_in_expr) |
+        E::AllIn(ref for_in_expr) |
+        E::LinkIn(ref for_in_expr) => match **for_in_expr {},
         #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         E::SumIn(ref for_in_expr) => E::SumIn(Box::new(ForIn {
             label: for_in_expr.label.clone(),
@@ -276,7 +288,6 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
             expr: number(&try_expr.expr, name, val),
             source_range: try_expr.source_range,
         })),
-        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         E::In(_) => expr.clone(),
     }
 }

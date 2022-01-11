@@ -247,6 +247,8 @@ fn write_expr<W: io::Write>(
             write!(w, "go ")?;
             write_call(w, rt, &go.call.info.name, &go.call.args, tabs)?;
         }
+        #[cfg(not(all(not(target_family = "wasm"), feature = "threading")))]
+        E::Go(ref go) => match **go {},
         E::Assign(ref assign) => write_assign(w, rt, assign, tabs)?,
         E::Vec4(ref vec4) => write_vec4(w, rt, vec4, tabs)?,
         E::Mat4(ref mat4) => write_mat4(w, rt, mat4, tabs)?,
@@ -260,6 +262,16 @@ fn write_expr<W: io::Write>(
             write!(w, "for ")?;
             write_for_in(w, rt, for_in, tabs)?;
         }
+        #[cfg(not(all(not(target_family = "wasm"), feature = "threading")))]
+        E::ForIn(ref for_in) |
+        E::SumIn(ref for_in) |
+        E::ProdIn(ref for_in) |
+        E::MinIn(ref for_in) |
+        E::MaxIn(ref for_in) |
+        E::SiftIn(ref for_in) |
+        E::AnyIn(ref for_in) |
+        E::AllIn(ref for_in) |
+        E::LinkIn(ref for_in) => match **for_in {},
         E::Sum(ref for_n) => {
             write!(w, "sum ")?;
             write_for_n(w, rt, for_n, tabs)?;
@@ -354,6 +366,8 @@ fn write_expr<W: io::Write>(
         E::In(ref in_expr) => {
             write!(w, "in {}", in_expr.name)?;
         } // x => panic!("Unimplemented `{:#?}`", x),
+        #[cfg(not(all(not(target_family = "wasm"), feature = "threading")))]
+        E::In(ref in_expr) => match **in_expr {},
     }
     Ok(())
 }

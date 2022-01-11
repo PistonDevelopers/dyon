@@ -98,6 +98,8 @@ fn infer_expr(expr: &Expression, name: &str, decls: &mut Vec<Arc<String>>) -> Op
                 return res;
             }
         }
+        #[cfg(not(all(not(target_family = "wasm"), feature = "threading")))]
+        Go(ref go) => match **go {},
         Call(ref call) => {
             let res = infer_call(call, name, decls);
             if res.is_some() {
@@ -153,6 +155,16 @@ fn infer_expr(expr: &Expression, name: &str, decls: &mut Vec<Arc<String>>) -> Op
                 return res;
             }
         }
+        #[cfg(not(all(not(target_family = "wasm"), feature = "threading")))]
+        ForIn(ref for_in_expr) |
+        SumIn(ref for_in_expr) |
+        ProdIn(ref for_in_expr) |
+        MinIn(ref for_in_expr) |
+        MaxIn(ref for_in_expr) |
+        SiftIn(ref for_in_expr) |
+        AnyIn(ref for_in_expr) |
+        AllIn(ref for_in_expr) |
+        LinkIn(ref for_in_expr) => match **for_in_expr {},
         Sum(ref for_n_expr) => return infer_for_n(for_n_expr, name, decls),
         #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         SumIn(ref for_in_expr) => {
@@ -276,7 +288,6 @@ fn infer_expr(expr: &Expression, name: &str, decls: &mut Vec<Arc<String>>) -> Op
                 return res;
             }
         }
-        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         In(_) => {}
     };
     None
