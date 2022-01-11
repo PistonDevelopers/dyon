@@ -155,6 +155,7 @@ pub fn grab_expr(
             }))),
             Flow::Continue,
         )),
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         E::Go(ref go) => {
             let call = &go.call;
             Ok((
@@ -500,6 +501,7 @@ pub fn grab_expr(
             }))),
             Flow::Continue,
         )),
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         E::ForIn(ref for_in_expr) => Ok((
             Grabbed::Expression(E::ForIn(Box::new(ast::ForIn {
                 name: for_in_expr.name.clone(),
@@ -516,6 +518,7 @@ pub fn grab_expr(
             }))),
             Flow::Continue,
         )),
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         E::SumIn(ref for_in_expr) => Ok((
             Grabbed::Expression(E::SumIn(Box::new(ast::ForIn {
                 name: for_in_expr.name.clone(),
@@ -532,6 +535,7 @@ pub fn grab_expr(
             }))),
             Flow::Continue,
         )),
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         E::ProdIn(ref for_in_expr) => Ok((
             Grabbed::Expression(E::ProdIn(Box::new(ast::ForIn {
                 name: for_in_expr.name.clone(),
@@ -548,6 +552,7 @@ pub fn grab_expr(
             }))),
             Flow::Continue,
         )),
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         E::MinIn(ref for_in_expr) => Ok((
             Grabbed::Expression(E::MinIn(Box::new(ast::ForIn {
                 name: for_in_expr.name.clone(),
@@ -564,6 +569,7 @@ pub fn grab_expr(
             }))),
             Flow::Continue,
         )),
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         E::MaxIn(ref for_in_expr) => Ok((
             Grabbed::Expression(E::MaxIn(Box::new(ast::ForIn {
                 name: for_in_expr.name.clone(),
@@ -580,6 +586,7 @@ pub fn grab_expr(
             }))),
             Flow::Continue,
         )),
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         E::AnyIn(ref for_in_expr) => Ok((
             Grabbed::Expression(E::AnyIn(Box::new(ast::ForIn {
                 name: for_in_expr.name.clone(),
@@ -596,6 +603,7 @@ pub fn grab_expr(
             }))),
             Flow::Continue,
         )),
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         E::AllIn(ref for_in_expr) => Ok((
             Grabbed::Expression(E::AllIn(Box::new(ast::ForIn {
                 name: for_in_expr.name.clone(),
@@ -612,6 +620,7 @@ pub fn grab_expr(
             }))),
             Flow::Continue,
         )),
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         E::SiftIn(ref for_in_expr) => Ok((
             Grabbed::Expression(E::SiftIn(Box::new(ast::ForIn {
                 name: for_in_expr.name.clone(),
@@ -628,6 +637,7 @@ pub fn grab_expr(
             }))),
             Flow::Continue,
         )),
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         E::LinkIn(ref for_in_expr) => Ok((
             Grabbed::Expression(E::LinkIn(Box::new(ast::ForIn {
                 name: for_in_expr.name.clone(),
@@ -668,6 +678,7 @@ pub fn grab_expr(
             }))),
             Flow::Continue,
         )),
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         E::In(_) => Ok((Grabbed::Expression(expr.clone()), Flow::Continue)),
     }
 }

@@ -1,11 +1,14 @@
 use std::collections::HashSet;
+#[cfg(feature = "file")]
 use std::fs::File;
+#[cfg(feature = "file")]
 use std::io::Read;
 use std::sync::Arc;
 
 use range::Range;
 use read_token::{NumberSettings, ReadToken};
 
+#[cfg(feature = "file")]
 use super::io::io_error;
 
 use Variable;

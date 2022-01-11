@@ -70,6 +70,7 @@ pub(crate) fn run(
             match kind {
                 // No further work required for these statements.
                 Kind::Uses | Kind::Start | Kind::End => continue 'node,
+                #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
                 Kind::Go => {
                     // Infer thread type from function.
                     if !nodes[i].children.is_empty() {
@@ -695,6 +696,7 @@ pub(crate) fn run(
                     )));
                 }
             }
+            #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             Kind::Go => {
                 if !nodes[i].children.is_empty() {
                     if let Some(decl) = nodes[nodes[i].children[0]].declaration {

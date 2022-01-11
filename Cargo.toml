@@ -14,21 +14,32 @@ exclude = ["images/*"]
 [dependencies]
 piston_meta = "2.0.0"
 range = "1.0.0"
-rand = "0.6.1"
 read_color = "1.0.0"
 read_token = "1.0.0"
 lazy_static = "1.0.0"
 vecmath = "1.0.0"
 advancedresearch-tree_mem_sort = "0.2.0"
 
-[dependencies.reqwest]
+[target.'cfg(not(target_family = "wasm"))'.dependencies.reqwest]
 version = "0.9.22"
 default-features = false
 optional = true
 
+[target.'cfg(not(target_family = "wasm"))'.dependencies.rand]
+version = "0.6.1"
+default-features = true
+optional = true
+
+[target.'cfg(target_family = "wasm")'.dependencies.rand]
+version = "0.6.1"
+default-features = false
+optional = true
+
 [features]
-default = ["debug_resolve", "http", "file", "threading"]
+default = ["debug_resolve", "http", "dynload", "file", "threading", "stdio"]
+dynload = []
 debug_resolve = []
 http = ["reqwest"]
 file = []
 threading = []
+stdio = []

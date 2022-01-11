@@ -145,17 +145,20 @@ where
                 write!(w, ")")?;
             }
         },
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         Variable::Thread(_) => write!(w, "_thread")?,
         Variable::Return => write!(w, "_return")?,
         Variable::UnsafeRef(_) => write!(w, "_unsafe_ref")?,
         Variable::RustObject(_) => write!(w, "_rust_object")?,
         Variable::Closure(ref closure, _) => write_closure(w, rt, closure, tabs)?,
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         Variable::In(_) => write!(w, "_in")?,
         // ref x => panic!("Could not print out `{:?}`", x)
     }
     Ok(())
 }
 
+#[cfg(feature = "stdio")]
 pub(crate) fn print_variable(rt: &Runtime, v: &Variable, escape_string: EscapeString) {
     write_variable(&mut io::stdout(), rt, v, escape_string, 0).unwrap();
 }
@@ -239,6 +242,7 @@ fn write_expr<W: io::Write>(
             }
         }
         E::Block(ref b) => write_block(w, rt, b, tabs)?,
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         E::Go(ref go) => {
             write!(w, "go ")?;
             write_call(w, rt, &go.call.info.name, &go.call.args, tabs)?;
@@ -251,6 +255,7 @@ fn write_expr<W: io::Write>(
             write!(w, "for ")?;
             write_for_n(w, rt, for_n, tabs)?;
         }
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         E::ForIn(ref for_in) => {
             write!(w, "for ")?;
             write_for_in(w, rt, for_in, tabs)?;
@@ -259,6 +264,7 @@ fn write_expr<W: io::Write>(
             write!(w, "sum ")?;
             write_for_n(w, rt, for_n, tabs)?;
         }
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         E::SumIn(ref for_in) => {
             write!(w, "sum ")?;
             write_for_in(w, rt, for_in, tabs)?;
@@ -271,6 +277,7 @@ fn write_expr<W: io::Write>(
             write!(w, "prod ")?;
             write_for_n(w, rt, for_n, tabs)?;
         }
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         E::ProdIn(ref for_in) => {
             write!(w, "prod ")?;
             write_for_in(w, rt, for_in, tabs)?;
@@ -283,6 +290,7 @@ fn write_expr<W: io::Write>(
             write!(w, "min ")?;
             write_for_n(w, rt, for_n, tabs)?;
         }
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         E::MinIn(ref for_in) => {
             write!(w, "min ")?;
             write_for_in(w, rt, for_in, tabs)?;
@@ -291,6 +299,7 @@ fn write_expr<W: io::Write>(
             write!(w, "max ")?;
             write_for_n(w, rt, for_n, tabs)?;
         }
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         E::MaxIn(ref for_in) => {
             write!(w, "max ")?;
             write_for_in(w, rt, for_in, tabs)?;
@@ -299,6 +308,7 @@ fn write_expr<W: io::Write>(
             write!(w, "sift ")?;
             write_for_n(w, rt, for_n, tabs)?;
         }
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         E::SiftIn(ref for_in) => {
             write!(w, "sift ")?;
             write_for_in(w, rt, for_in, tabs)?;
@@ -307,6 +317,7 @@ fn write_expr<W: io::Write>(
             write!(w, "any ")?;
             write_for_n(w, rt, for_n, tabs)?;
         }
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         E::AnyIn(ref for_in) => {
             write!(w, "any ")?;
             write_for_in(w, rt, for_in, tabs)?;
@@ -315,6 +326,7 @@ fn write_expr<W: io::Write>(
             write!(w, "all ")?;
             write_for_n(w, rt, for_n, tabs)?;
         }
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         E::AllIn(ref for_in) => {
             write!(w, "all ")?;
             write_for_in(w, rt, for_in, tabs)?;
@@ -323,6 +335,7 @@ fn write_expr<W: io::Write>(
             write!(w, "link ")?;
             write_for_n(w, rt, for_n, tabs)?;
         }
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         E::LinkIn(ref for_in) => {
             write!(w, "link ")?;
             write_for_in(w, rt, for_in, tabs)?;
@@ -337,6 +350,7 @@ fn write_expr<W: io::Write>(
         E::Grab(ref grab) => write_grab(w, rt, grab, tabs)?,
         E::TryExpr(ref try_expr) => write_try_expr(w, rt, try_expr, tabs)?,
         E::CallClosure(ref call) => write_call_closure(w, rt, call, tabs)?,
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         E::In(ref in_expr) => {
             write!(w, "in {}", in_expr.name)?;
         } // x => panic!("Unimplemented `{:#?}`", x),
@@ -777,6 +791,7 @@ fn write_for_n<W: io::Write>(
     Ok(())
 }
 
+#[cfg(all(not(target_family = "wasm"), feature = "threading"))]
 fn write_for_in<W: io::Write>(
     w: &mut W,
     rt: &Runtime,

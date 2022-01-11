@@ -209,6 +209,7 @@ pub(crate) fn check_core(
         .collect();
 
     // Collect indices to in-nodes.
+    #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
     let ins: Vec<usize> = nodes
         .iter()
         .enumerate()
@@ -706,6 +707,7 @@ pub(crate) fn check_core(
     }
 
     // Check in-nodes.
+    #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
     for &c in &ins {
         let node = &mut nodes[c];
         let name = node.name().expect("Expected name").clone();
@@ -913,11 +915,16 @@ pub(crate) fn check_core(
     // Check that `go` functions does not have lifetime constraints.
     for &c in &calls {
         let call = &nodes[c];
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         if let Some(parent) = call.parent {
             if nodes[parent].kind != Kind::Go {
                 continue;
             }
         } else {
+            continue;
+        }
+        #[cfg(any(target_family = "wasm", not(feature = "threading")))]
+        if call.parent.is_none() {
             continue;
         }
         if let Some(declaration) = call.declaration {

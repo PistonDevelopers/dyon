@@ -4,15 +4,15 @@ use *;
 
 mod data;
 mod functions;
+#[cfg(feature = "file")]
 mod io;
 mod lifetimechk;
 mod meta;
 
-#[cfg(not(feature = "http"))]
+#[cfg(not(all(not(target_family = "wasm"), feature = "http")))]
 const HTTP_SUPPORT_DISABLED: &'static str = "Http support is disabled";
 
-#[cfg(not(feature = "file"))]
-const FILE_SUPPORT_DISABLED: &'static str = "File support is disabled";
+pub(crate) const FILE_SUPPORT_DISABLED: &'static str = "File support is disabled";
 
 pub(crate) fn and_also(rt: &mut Runtime) -> Result<Variable, String> {
     use Variable::*;
@@ -523,6 +523,7 @@ pub(crate) fn explain_where(rt: &mut Runtime) -> Result<Variable, String> {
     Ok(Variable::F64(val, Some(wh)))
 }
 
+#[cfg(feature = "stdio")]
 pub(crate) fn println(rt: &mut Runtime) -> Result<(), String> {
     use write::{print_variable, EscapeString};
 
@@ -532,6 +533,7 @@ pub(crate) fn println(rt: &mut Runtime) -> Result<(), String> {
     Ok(())
 }
 
+#[cfg(feature = "stdio")]
 pub(crate) fn print(rt: &mut Runtime) -> Result<(), String> {
     use write::{print_variable, EscapeString};
 
@@ -556,6 +558,7 @@ dyon_fn! {fn round(a: f64) -> f64 {a.round()}}
 dyon_fn! {fn abs(a: f64) -> f64 {a.abs()}}
 dyon_fn! {fn floor(a: f64) -> f64 {a.floor()}}
 dyon_fn! {fn ceil(a: f64) -> f64 {a.ceil()}}
+#[cfg(all(not(target_family = "wasm"), feature = "threading"))]
 dyon_fn! {fn sleep(v: f64) {
     use std::thread::sleep;
     use std::time::Duration;
@@ -605,6 +608,7 @@ pub(crate) fn is_empty(rt: &mut Runtime) -> Result<Variable, String> {
     }))
 }
 
+#[cfg(feature = "rand")]
 pub(crate) fn random(rt: &mut Runtime) -> Result<Variable, String> {
     use rand::Rng;
 
@@ -894,6 +898,7 @@ pub(crate) fn swap(rt: &mut Runtime) -> Result<(), String> {
     Ok(())
 }
 
+#[cfg(feature = "stdio")]
 pub(crate) fn read_line(_rt: &mut Runtime) -> Result<Variable, String> {
     use std::io::{self, Write};
 
@@ -910,6 +915,7 @@ pub(crate) fn read_line(_rt: &mut Runtime) -> Result<Variable, String> {
     })
 }
 
+#[cfg(feature = "stdio")]
 pub(crate) fn read_number(rt: &mut Runtime) -> Result<Variable, String> {
     use std::io::{self, Write};
 
@@ -1025,8 +1031,10 @@ pub(crate) fn _typeof(rt: &mut Runtime) -> Result<Variable, String> {
         RustObject(_) => RUST_OBJECT_TYPE.clone(),
         Option(_) => OPTION_TYPE.clone(),
         Result(_) => RESULT_TYPE.clone(),
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         Thread(_) => THREAD_TYPE.clone(),
         Closure(_, _) => CLOSURE_TYPE.clone(),
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         In(_) => IN_TYPE.clone(),
     }))
 }
@@ -1043,15 +1051,23 @@ pub(crate) fn backtrace(rt: &mut Runtime) -> Result<(), String> {
     Ok(())
 }
 
+#[cfg(feature = "dynload")]
 pub(crate) fn load(rt: &mut Runtime) -> Result<Variable, String> {
-    use load;
-
     let v = rt.stack.pop().expect(TINVOTS);
     Ok(match rt.resolve(&v) {
         &Variable::Str(ref text) => {
             let mut m = Module::empty();
             m.import_ext_prelude(&rt.module);
-            if let Err(err) = load(text, &mut m) {
+            let mut data = Arc::new(String::new());
+            if let Err(err) = rt.resolve_module(text, Arc::make_mut(&mut data)) {
+                Variable::Result(Err(Box::new(Error {
+                    message: Variable::Str(Arc::new(format!(
+                        "When attempting to load module:\n{}",
+                        err
+                    ))),
+                    trace: vec![],
+                })))
+            } else if let Err(err) = load_str(text, data, &mut m) {
                 Variable::Result(Err(Box::new(Error {
                     message: Variable::Str(Arc::new(format!(
                         "When attempting to load module:\n{}",
@@ -1071,6 +1087,7 @@ pub(crate) fn load(rt: &mut Runtime) -> Result<Variable, String> {
     })
 }
 
+#[cfg(feature = "dynload")]
 pub(crate) fn load__source_imports(rt: &mut Runtime) -> Result<Variable, String> {
     use load;
 
@@ -1728,6 +1745,7 @@ dyon_fn! {fn load_string__url(url: Arc<String>) -> Variable {
     })
 }}
 
+#[cfg(all(not(target_family = "wasm"), feature = "threading"))]
 pub(crate) fn join__thread(rt: &mut Runtime) -> Result<Variable, String> {
     let thread = rt.stack.pop().expect(TINVOTS);
     let handle_res = Thread::invalidate_handle(rt, thread);
@@ -1937,6 +1955,7 @@ dyon_fn! {fn now() -> f64 {
 
 dyon_fn! {fn is_nan(v: f64) -> bool {v.is_nan()}}
 
+#[cfg(all(not(target_family = "wasm"), feature = "threading"))]
 pub(crate) fn wait_next(rt: &mut Runtime) -> Result<Variable, String> {
     let v = rt.stack.pop().expect(TINVOTS);
     Ok(match rt.resolve(&v) {
@@ -1951,6 +1970,7 @@ pub(crate) fn wait_next(rt: &mut Runtime) -> Result<Variable, String> {
     })
 }
 
+#[cfg(all(not(target_family = "wasm"), feature = "threading"))]
 pub(crate) fn next(rt: &mut Runtime) -> Result<Variable, String> {
     let v = rt.stack.pop().expect(TINVOTS);
     Ok(match rt.resolve(&v) {

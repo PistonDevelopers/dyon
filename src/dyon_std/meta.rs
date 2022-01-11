@@ -1,7 +1,13 @@
+#[cfg(feature = "file")]
 use super::io::io_error;
-use piston_meta::{parse_errstr, syntax_errstr, MetaData, Syntax};
+use piston_meta::{parse_errstr, MetaData, Syntax};
+#[cfg(feature = "file")]
+use piston_meta::syntax_errstr;
+#[cfg(feature = "file")]
 use std::fs::File;
-use std::io::{self, Read};
+use std::io;
+#[cfg(feature = "file")]
+use std::io::Read;
 use std::sync::Arc;
 
 use Variable;
@@ -51,6 +57,7 @@ pub fn parse_syntax_data(rules: &Syntax, file: &str, d: &str) -> Result<Vec<Vari
     Ok(res)
 }
 
+#[cfg(feature = "file")]
 fn load_metarules_data(meta: &str, s: &str, file: &str, d: &str) -> Result<Vec<Variable>, String> {
     let rules = syntax_errstr(s)
         .map_err(|err| format!("When parsing meta syntax in `{}`:\n{}", meta, err))?;
@@ -79,7 +86,7 @@ pub fn load_meta_file(_: &str, _: &str) -> Result<Vec<Variable>, String> {
 }
 
 /// Loads a text file from url.
-#[cfg(feature = "http")]
+#[cfg(all(not(target_family = "wasm"), feature = "http"))]
 pub fn load_text_file_from_url(url: &str) -> Result<String, String> {
     use reqwest::{Client, StatusCode, Url};
 
@@ -112,13 +119,13 @@ pub fn load_text_file_from_url(url: &str) -> Result<String, String> {
     }
 }
 
-#[cfg(not(feature = "http"))]
+#[cfg(not(all(not(target_family = "wasm"), feature = "http")))]
 pub fn load_text_file_from_url(_url: &str) -> Result<String, String> {
     Err(super::HTTP_SUPPORT_DISABLED.into())
 }
 
 /// Loads an url using a meta file as syntax.
-#[cfg(feature = "http")]
+#[cfg(all(not(target_family = "wasm"), feature = "http"))]
 pub fn load_meta_url(meta: &str, url: &str) -> Result<Vec<Variable>, String> {
     let mut syntax_file = File::open(meta).map_err(|err| io_error("open", meta, &err))?;
     let mut s = String::new();
@@ -129,13 +136,13 @@ pub fn load_meta_url(meta: &str, url: &str) -> Result<Vec<Variable>, String> {
     load_metarules_data(meta, &s, url, &d)
 }
 
-#[cfg(not(feature = "http"))]
+#[cfg(not(all(not(target_family = "wasm"), feature = "http")))]
 pub fn load_meta_url(_meta: &str, _url: &str) -> Result<Vec<Variable>, String> {
     Err(super::HTTP_SUPPORT_DISABLED.into())
 }
 
 // Downloads a file from url.
-#[cfg(feature = "http")]
+#[cfg(all(not(target_family = "wasm"), feature = "http"))]
 pub fn download_url_to_file(url: &str, file: &str) -> Result<String, String> {
     use reqwest::{Client, StatusCode, Url};
     use std::io::copy;
@@ -170,7 +177,7 @@ pub fn download_url_to_file(url: &str, file: &str) -> Result<String, String> {
     }
 }
 
-#[cfg(not(feature = "http"))]
+#[cfg(not(all(not(target_family = "wasm"), feature = "http")))]
 pub fn download_url_to_file(_url: &str, _file: &str) -> Result<String, String> {
     Err(super::HTTP_SUPPORT_DISABLED.into())
 }

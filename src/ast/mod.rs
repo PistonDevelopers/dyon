@@ -1061,6 +1061,7 @@ pub enum Expression {
     /// Block expression.
     Block(Box<Block>),
     /// Go call expression.
+    #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
     Go(Box<Go>),
     /// Call expression.
     Call(Box<Call>),
@@ -1089,42 +1090,51 @@ pub enum Expression {
     /// For-n expression.
     ForN(Box<ForN>),
     /// For-in expression.
+    #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
     ForIn(Box<ForIn>),
     /// Sum for-n expression.
     Sum(Box<ForN>),
     /// Sum-in for-n expression.
+    #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
     SumIn(Box<ForIn>),
     /// Component-wise 4D vector sum for-n-loop.
     SumVec4(Box<ForN>),
     /// Product for-n expression.
     Prod(Box<ForN>),
     /// Product-in for-n loop.
+    #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
     ProdIn(Box<ForIn>),
     /// Component-wise 4D vector product for-n-loop.
     ProdVec4(Box<ForN>),
     /// Min for-n expression.
     Min(Box<ForN>),
     /// Min-in for-n expression.
+    #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
     MinIn(Box<ForIn>),
     /// Max for-n expression.
     Max(Box<ForN>),
     /// Max-in for-n expression.
+    #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
     MaxIn(Box<ForIn>),
     /// Sift for-n expression.
     Sift(Box<ForN>),
     /// Sift-in expression.
+    #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
     SiftIn(Box<ForIn>),
     /// Any expression.
     Any(Box<ForN>),
     /// Any-in expression.
+    #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
     AnyIn(Box<ForIn>),
     /// All-for expression.
     All(Box<ForN>),
     /// All-in expression.
+    #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
     AllIn(Box<ForIn>),
     /// Link-for expression.
     LinkFor(Box<ForN>),
     /// Link-in expression.
+    #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
     LinkIn(Box<ForIn>),
     /// If-expression.
     If(Box<If>),
@@ -1145,6 +1155,7 @@ pub enum Expression {
     /// Try expression, e.g. `try x`.
     TryExpr(Box<TryExpr>),
     /// In-type expression.
+    #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
     In(Box<In>),
 }
 
@@ -1276,9 +1287,6 @@ impl Expression {
                 } else {
                     return Err(());
                 }
-            } else if let Ok((range, val)) = Go::from_meta_data(file, source, convert, ignored) {
-                convert.update(range);
-                result = Some(Expression::Go(Box::new(val)));
             } else if let Ok((range, val)) = Call::from_meta_data(file, source, convert, ignored) {
                 convert.update(range);
                 result = Some(Expression::Call(Box::new(val)));
@@ -1295,11 +1303,6 @@ impl Expression {
                 convert.update(range);
                 result = Some(Expression::For(Box::new(val)));
             } else if let Ok((range, val)) =
-                ForIn::from_meta_data(file, source, "for_in", convert, ignored)
-            {
-                convert.update(range);
-                result = Some(Expression::ForIn(Box::new(val)));
-            } else if let Ok((range, val)) =
                 ForN::from_meta_data(file, source, "for_n", convert, ignored)
             {
                 convert.update(range);
@@ -1309,11 +1312,6 @@ impl Expression {
             {
                 convert.update(range);
                 result = Some(Expression::Sum(Box::new(val)));
-            } else if let Ok((range, val)) =
-                ForIn::from_meta_data(file, source, "sum_in", convert, ignored)
-            {
-                convert.update(range);
-                result = Some(Expression::SumIn(Box::new(val)));
             } else if let Ok((range, val)) =
                 ForN::from_meta_data(file, source, "sum_vec4", convert, ignored)
             {
@@ -1325,11 +1323,6 @@ impl Expression {
                 convert.update(range);
                 result = Some(Expression::Prod(Box::new(val)));
             } else if let Ok((range, val)) =
-                ForIn::from_meta_data(file, source, "prod_in", convert, ignored)
-            {
-                convert.update(range);
-                result = Some(Expression::ProdIn(Box::new(val)));
-            } else if let Ok((range, val)) =
                 ForN::from_meta_data(file, source, "prod_vec4", convert, ignored)
             {
                 convert.update(range);
@@ -1340,60 +1333,30 @@ impl Expression {
                 convert.update(range);
                 result = Some(Expression::Min(Box::new(val)));
             } else if let Ok((range, val)) =
-                ForIn::from_meta_data(file, source, "min_in", convert, ignored)
-            {
-                convert.update(range);
-                result = Some(Expression::MinIn(Box::new(val)));
-            } else if let Ok((range, val)) =
                 ForN::from_meta_data(file, source, "max", convert, ignored)
             {
                 convert.update(range);
                 result = Some(Expression::Max(Box::new(val)));
-            } else if let Ok((range, val)) =
-                ForIn::from_meta_data(file, source, "max_in", convert, ignored)
-            {
-                convert.update(range);
-                result = Some(Expression::MaxIn(Box::new(val)));
             } else if let Ok((range, val)) =
                 ForN::from_meta_data(file, source, "sift", convert, ignored)
             {
                 convert.update(range);
                 result = Some(Expression::Sift(Box::new(val)));
             } else if let Ok((range, val)) =
-                ForIn::from_meta_data(file, source, "sift_in", convert, ignored)
-            {
-                convert.update(range);
-                result = Some(Expression::SiftIn(Box::new(val)));
-            } else if let Ok((range, val)) =
                 ForN::from_meta_data(file, source, "any", convert, ignored)
             {
                 convert.update(range);
                 result = Some(Expression::Any(Box::new(val)));
-            } else if let Ok((range, val)) =
-                ForIn::from_meta_data(file, source, "any_in", convert, ignored)
-            {
-                convert.update(range);
-                result = Some(Expression::AnyIn(Box::new(val)));
             } else if let Ok((range, val)) =
                 ForN::from_meta_data(file, source, "all", convert, ignored)
             {
                 convert.update(range);
                 result = Some(Expression::All(Box::new(val)));
             } else if let Ok((range, val)) =
-                ForIn::from_meta_data(file, source, "all_in", convert, ignored)
-            {
-                convert.update(range);
-                result = Some(Expression::AllIn(Box::new(val)));
-            } else if let Ok((range, val)) =
                 ForN::from_meta_data(file, source, "link_for", convert, ignored)
             {
                 convert.update(range);
                 result = Some(Expression::LinkFor(Box::new(val)));
-            } else if let Ok((range, val)) =
-                ForIn::from_meta_data(file, source, "link_in", convert, ignored)
-            {
-                convert.update(range);
-                result = Some(Expression::LinkIn(Box::new(val)));
             } else if let Ok((range, val)) = Loop::from_meta_data(file, source, convert, ignored) {
                 convert.update(range);
                 result = Some(val.into_expression());
@@ -1433,13 +1396,97 @@ impl Expression {
             {
                 convert.update(range);
                 result = Some(Expression::TryExpr(Box::new(val)));
-            } else if let Ok((range, val)) = In::from_meta_data("in", convert, ignored) {
-                convert.update(range);
-                result = Some(Expression::In(Box::new(val)));
             } else {
-                let range = convert.ignore();
-                convert.update(range);
-                ignored.push(range);
+                loop {
+                    #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
+                    if let Ok((range, val)) = Go::from_meta_data(file, source, convert, ignored) {
+                        convert.update(range);
+                        result = Some(Expression::Go(Box::new(val)));
+                        break;
+                    }
+                    #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
+                    if let Ok((range, val)) = In::from_meta_data("in", convert, ignored) {
+                        convert.update(range);
+                        result = Some(Expression::In(Box::new(val)));
+                        break;
+                    }
+                    #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
+                    if let Ok((range, val)) =
+                        ForIn::from_meta_data(file, source, "for_in", convert, ignored)
+                    {
+                        convert.update(range);
+                        result = Some(Expression::ForIn(Box::new(val)));
+                        break;
+                    }
+                    #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
+                    if let Ok((range, val)) =
+                        ForIn::from_meta_data(file, source, "sum_in", convert, ignored)
+                    {
+                        convert.update(range);
+                        result = Some(Expression::SumIn(Box::new(val)));
+                        break;
+                    }
+                    #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
+                    if let Ok((range, val)) =
+                        ForIn::from_meta_data(file, source, "prod_in", convert, ignored)
+                    {
+                        convert.update(range);
+                        result = Some(Expression::ProdIn(Box::new(val)));
+                        break;
+                    }
+                    #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
+                    if let Ok((range, val)) =
+                        ForIn::from_meta_data(file, source, "min_in", convert, ignored)
+                    {
+                        convert.update(range);
+                        result = Some(Expression::MinIn(Box::new(val)));
+                        break;
+                    }
+                    #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
+                    if let Ok((range, val)) =
+                        ForIn::from_meta_data(file, source, "max_in", convert, ignored)
+                    {
+                        convert.update(range);
+                        result = Some(Expression::MaxIn(Box::new(val)));
+                        break;
+                    }
+                    #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
+                    if let Ok((range, val)) =
+                        ForIn::from_meta_data(file, source, "sift_in", convert, ignored)
+                    {
+                        convert.update(range);
+                        result = Some(Expression::SiftIn(Box::new(val)));
+                        break;
+                    }
+                    #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
+                    if let Ok((range, val)) =
+                        ForIn::from_meta_data(file, source, "any_in", convert, ignored)
+                    {
+                        convert.update(range);
+                        result = Some(Expression::AnyIn(Box::new(val)));
+                        break;
+                    }
+                    #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
+                    if let Ok((range, val)) =
+                        ForIn::from_meta_data(file, source, "all_in", convert, ignored)
+                    {
+                        convert.update(range);
+                        result = Some(Expression::AllIn(Box::new(val)));
+                        break;
+                    }
+                    #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
+                    if let Ok((range, val)) =
+                        ForIn::from_meta_data(file, source, "link_in", convert, ignored)
+                    {
+                        convert.update(range);
+                        result = Some(Expression::LinkIn(Box::new(val)));
+                        break;
+                    }
+                    let range = convert.ignore();
+                    convert.update(range);
+                    ignored.push(range);
+                    break;
+                }
             }
         }
 
@@ -1475,6 +1522,7 @@ impl Expression {
             Break(ref br) => br.source_range,
             Continue(ref c) => c.source_range,
             Block(ref bl) => bl.source_range,
+            #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             Go(ref go) => go.source_range,
             Call(ref call) => call.info.source_range,
             CallVoid(ref call) => call.info.source_range,
@@ -1489,24 +1537,33 @@ impl Expression {
             Mat4(ref mat4) => mat4.source_range,
             For(ref for_expr) => for_expr.source_range,
             ForN(ref for_n_expr) => for_n_expr.source_range,
+            #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             ForIn(ref for_in_expr) => for_in_expr.source_range,
             Sum(ref for_n_expr) => for_n_expr.source_range,
+            #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             SumIn(ref for_in_expr) => for_in_expr.source_range,
             SumVec4(ref for_n_expr) => for_n_expr.source_range,
             Prod(ref for_n_expr) => for_n_expr.source_range,
+            #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             ProdIn(ref for_in_expr) => for_in_expr.source_range,
             ProdVec4(ref for_n_expr) => for_n_expr.source_range,
             Min(ref for_n_expr) => for_n_expr.source_range,
+            #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             MinIn(ref for_in_expr) => for_in_expr.source_range,
             Max(ref for_n_expr) => for_n_expr.source_range,
+            #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             MaxIn(ref for_in_expr) => for_in_expr.source_range,
             Sift(ref for_n_expr) => for_n_expr.source_range,
+            #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             SiftIn(ref for_in_expr) => for_in_expr.source_range,
             Any(ref for_n_expr) => for_n_expr.source_range,
+            #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             AnyIn(ref for_in_expr) => for_in_expr.source_range,
             All(ref for_n_expr) => for_n_expr.source_range,
+            #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             AllIn(ref for_in_expr) => for_in_expr.source_range,
             LinkFor(ref for_n_expr) => for_n_expr.source_range,
+            #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             LinkIn(ref for_in_expr) => for_in_expr.source_range,
             If(ref if_expr) => if_expr.source_range,
             Variable(ref range_var) => range_var.0,
@@ -1516,6 +1573,7 @@ impl Expression {
             CallClosure(ref call) => call.source_range,
             Grab(ref grab) => grab.source_range,
             TryExpr(ref try_expr) => try_expr.source_range,
+            #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             In(ref in_expr) => in_expr.source_range,
         }
     }
@@ -1554,6 +1612,7 @@ impl Expression {
             Block(ref mut bl) => {
                 bl.resolve_locals(relative, stack, closure_stack, module, use_lookup)
             }
+            #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             Go(ref mut go) => go.resolve_locals(relative, stack, closure_stack, module, use_lookup),
             Call(ref mut call) => {
                 call.resolve_locals(relative, stack, closure_stack, module, use_lookup);
@@ -1630,12 +1689,14 @@ impl Expression {
             ForN(ref mut for_n_expr) => {
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup)
             }
+            #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             ForIn(ref mut for_n_expr) => {
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup)
             }
             Sum(ref mut for_n_expr) => {
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup)
             }
+            #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             SumIn(ref mut for_in_expr) => {
                 for_in_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup)
             }
@@ -1645,6 +1706,7 @@ impl Expression {
             Prod(ref mut for_n_expr) => {
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup)
             }
+            #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             ProdIn(ref mut for_in_expr) => {
                 for_in_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup)
             }
@@ -1654,36 +1716,42 @@ impl Expression {
             Min(ref mut for_n_expr) => {
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup)
             }
+            #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             MinIn(ref mut for_in_expr) => {
                 for_in_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup)
             }
             Max(ref mut for_n_expr) => {
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup)
             }
+            #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             MaxIn(ref mut for_in_expr) => {
                 for_in_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup)
             }
             Sift(ref mut for_n_expr) => {
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup)
             }
+            #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             SiftIn(ref mut for_in_expr) => {
                 for_in_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup)
             }
             Any(ref mut for_n_expr) => {
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup)
             }
+            #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             AnyIn(ref mut for_in_expr) => {
                 for_in_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup)
             }
             All(ref mut for_n_expr) => {
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup)
             }
+            #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             AllIn(ref mut for_in_expr) => {
                 for_in_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup)
             }
             LinkFor(ref mut for_n_expr) => {
                 for_n_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup)
             }
+            #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             LinkIn(ref mut for_in_expr) => {
                 for_in_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup)
             }
@@ -1715,6 +1783,7 @@ impl Expression {
             TryExpr(ref mut try_expr) => {
                 try_expr.resolve_locals(relative, stack, closure_stack, module, use_lookup)
             }
+            #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             In(ref mut in_expr) => in_expr.resolve_locals(relative, module, use_lookup),
         }
     }
@@ -2510,6 +2579,7 @@ impl Item {
 }
 
 /// Go call.
+#[cfg(all(not(target_family = "wasm"), feature = "threading"))]
 #[derive(Debug, Clone)]
 pub struct Go {
     /// Function call.
@@ -2518,6 +2588,7 @@ pub struct Go {
     pub source_range: Range,
 }
 
+#[cfg(all(not(target_family = "wasm"), feature = "threading"))]
 impl Go {
     /// Creates go call from meta data.
     pub fn from_meta_data(
@@ -4010,6 +4081,7 @@ impl For {
 
 /// For-In expression.
 #[derive(Debug, Clone)]
+#[cfg(all(not(target_family = "wasm"), feature = "threading"))]
 pub struct ForIn {
     /// Name of the loop variable.
     pub name: Arc<String>,
@@ -4023,6 +4095,7 @@ pub struct ForIn {
     pub source_range: Range,
 }
 
+#[cfg(all(not(target_family = "wasm"), feature = "threading"))]
 impl ForIn {
     /// Creates For-In expression from meta data.
     pub fn from_meta_data(
@@ -4551,6 +4624,7 @@ impl If {
 
 /// Stores `in <function>` expression.
 #[derive(Debug, Clone)]
+#[cfg(all(not(target_family = "wasm"), feature = "threading"))]
 pub struct In {
     /// Alias, e.g. `in foo::my_function`.
     pub alias: Option<Arc<String>>,
@@ -4562,6 +4636,7 @@ pub struct In {
     pub source_range: Range,
 }
 
+#[cfg(all(not(target_family = "wasm"), feature = "threading"))]
 impl In {
     /// Creates in expression from meta data.
     pub fn from_meta_data(

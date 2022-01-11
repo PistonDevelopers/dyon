@@ -1,5 +1,6 @@
 //! Dyon runtime.
 
+#[cfg(feature = "rand")]
 use rand;
 use range::Range;
 use std::cell::Cell;
@@ -15,6 +16,7 @@ use UnsafeRef;
 use Variable;
 use TINVOTS;
 
+#[cfg(all(not(target_family = "wasm"), feature = "threading"))]
 mod for_in;
 mod for_n;
 
@@ -78,6 +80,34 @@ lazy_static! {
     pub(crate) static ref MAIN: Arc<String> = Arc::new("main".into());
 }
 
+/// Module resolver
+#[cfg(feature = "dynload")]
+pub trait ModuleResolver {
+    /// Resolve target module
+    fn resolve_module(&self, source: &str, target: &mut String) -> Result<(), String>;
+}
+
+/// The default module resolver
+#[cfg(feature = "dynload")]
+pub struct FileModuleResolver;
+
+#[cfg(feature = "dynload")]
+impl ModuleResolver for FileModuleResolver {
+    fn resolve_module(&self, source: &str, target: &mut String) -> Result<(), String> {
+        if cfg!(feature = "file") {
+            use std::fs::File;
+            use std::io::Read;
+
+            let mut data_file =
+                File::open(source).map_err(|err| format!("Could not open `{}`, {}", source, err))?;
+            data_file.read_to_string(target).unwrap();
+            Ok(())
+        } else {
+            Err(super::dyon_std::FILE_SUPPORT_DISABLED.into())
+        }
+    }
+}
+
 /// Stores data needed for running a Dyon program.
 pub struct Runtime {
     /// Stores the current module in use.
@@ -93,7 +123,11 @@ pub struct Runtime {
     /// When a current object is used, the runtime searches backwards
     /// until it finds the last current variable with the name.
     pub current_stack: Vec<(Arc<String>, usize)>,
+    #[cfg(feature = "rand")]
     pub(crate) rng: rand::rngs::StdRng,
+    /// The module resolver instance
+    #[cfg(feature = "dynload")]
+    pub module_resolver: Box<dyn ModuleResolver>,
     /// External functions can choose to report an error on an argument.
     pub arg_err_index: Cell<Option<usize>>,
 }
@@ -340,6 +374,7 @@ fn item_lookup(
 impl Runtime {
     /// Creates a new Runtime.
     pub fn new() -> Runtime {
+        #[cfg(feature = "rand")]
         use rand::FromEntropy;
 
         Runtime {
@@ -348,7 +383,10 @@ impl Runtime {
             call_stack: vec![],
             local_stack: vec![],
             current_stack: vec![],
+            #[cfg(feature = "rand")]
             rng: rand::rngs::StdRng::from_entropy(),
+            #[cfg(feature = "dynload")]
+            module_resolver: Box::new(FileModuleResolver),
             arg_err_index: Cell::new(None),
         }
     }
@@ -561,6 +599,7 @@ impl Runtime {
             ReturnVoid(_) => Ok((None, Flow::Return)),
             Break(ref b) => Ok((None, Flow::Break(b.label.clone()))),
             Continue(ref b) => Ok((None, Flow::ContinueLoop(b.label.clone()))),
+            #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             Go(ref go) => self.go(go),
             Call(ref call) => {
                 let loader = false;
@@ -587,24 +626,33 @@ impl Runtime {
             Mat4(ref mat4) => self.mat4(mat4, side),
             For(ref for_expr) => self.for_expr(for_expr),
             ForN(ref for_n_expr) => self.for_n_expr(for_n_expr),
+            #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             ForIn(ref for_in_expr) => self.for_in_expr(for_in_expr),
             Sum(ref for_n_expr) => self.sum_n_expr(for_n_expr),
+            #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             SumIn(ref sum_in_expr) => self.sum_in_expr(sum_in_expr),
             SumVec4(ref for_n_expr) => self.sum_vec4_n_expr(for_n_expr),
             Prod(ref for_n_expr) => self.prod_n_expr(for_n_expr),
+            #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             ProdIn(ref for_in_expr) => self.prod_in_expr(for_in_expr),
             ProdVec4(ref for_n_expr) => self.prod_vec4_n_expr(for_n_expr),
             Min(ref for_n_expr) => self.min_n_expr(for_n_expr),
+            #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             MinIn(ref for_in_expr) => self.min_in_expr(for_in_expr),
             Max(ref for_n_expr) => self.max_n_expr(for_n_expr),
+            #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             MaxIn(ref for_in_expr) => self.max_in_expr(for_in_expr),
             Sift(ref for_n_expr) => self.sift_n_expr(for_n_expr),
+            #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             SiftIn(ref for_in_expr) => self.sift_in_expr(for_in_expr),
             Any(ref for_n_expr) => self.any_n_expr(for_n_expr),
+            #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             AnyIn(ref for_in_expr) => self.any_in_expr(for_in_expr),
             All(ref for_n_expr) => self.all_n_expr(for_n_expr),
+            #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             AllIn(ref for_in_expr) => self.all_in_expr(for_in_expr),
             LinkFor(ref for_n_expr) => self.link_for_n_expr(for_n_expr),
+            #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             LinkIn(ref for_in_expr) => self.link_for_in_expr(for_in_expr),
             If(ref if_expr) => self.if_expr(if_expr),
             Variable(ref range_var) => Ok((Some(range_var.1.clone()), Flow::Continue)),
@@ -620,10 +668,12 @@ impl Runtime {
                 "`grab` expressions must be inside a closure",
             ),
             TryExpr(ref try_expr) => self.try_expr(try_expr),
+            #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             In(ref in_expr) => self.in_expr(in_expr),
         }
     }
 
+    #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
     fn in_expr(&mut self, in_expr: &ast::In) -> FlowResult {
         use std::sync::atomic::Ordering;
         use std::sync::mpsc::channel;
@@ -897,6 +947,7 @@ impl Runtime {
     }
 
     /// Start a new thread and return the handle.
+    #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
     pub fn go(&mut self, go: &ast::Go) -> FlowResult {
         use std::thread::{self, JoinHandle};
         use Thread;
@@ -2853,6 +2904,10 @@ impl Runtime {
 
     pub(crate) fn stack_trace(&self) -> String {
         stack_trace(&self.call_stack)
+    }
+
+    pub(crate) fn resolve_module(&self, source: &str, target: &mut String) -> Result<(), String> {
+        self.module_resolver.resolve_module(source, target)
     }
 }
 

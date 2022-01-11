@@ -428,7 +428,9 @@ impl Module {
         m.add_str("clone", clone, Dfn::nl(vec![Any], Any));
         m.add_str("rv", rv, Dfn::nl(vec![Mat4, Type::F64], Vec4));
         m.add_str("s", s, Dfn::nl(vec![Vec4, F64], F64));
+        #[cfg(feature = "stdio")]
         m.add_str("println", println, Dfn::nl(vec![Any], Void));
+        #[cfg(feature = "stdio")]
         m.add_str("print", print, Dfn::nl(vec![Any], Void));
         m.add_str("sqrt", sqrt, Dfn::nl(vec![F64], F64));
         m.add_str("sin", sin, Dfn::nl(vec![F64], F64));
@@ -446,10 +448,14 @@ impl Module {
         m.add_str("abs", abs, Dfn::nl(vec![F64], F64));
         m.add_str("floor", floor, Dfn::nl(vec![F64], F64));
         m.add_str("ceil", ceil, Dfn::nl(vec![F64], F64));
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         m.add_str("sleep", sleep, Dfn::nl(vec![F64], Void));
+        #[cfg(feature = "rand")]
         m.add_str("random", random, Dfn::nl(vec![], F64));
         m.add_str("tau", tau, Dfn::nl(vec![], F64));
+        #[cfg(feature = "stdio")]
         m.add_str("read_line", read_line, Dfn::nl(vec![], Str));
+        #[cfg(feature = "stdio")]
         m.add_str("read_number", read_number, Dfn::nl(vec![Str], F64));
         m.add_str(
             "parse_number",
@@ -521,6 +527,7 @@ impl Module {
             load_string__url,
             Dfn::nl(vec![Str], Type::Result(Box::new(Str))),
         );
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         m.add_str(
             "join__thread",
             join__thread,
@@ -543,7 +550,9 @@ impl Module {
         );
         m.add_str("now", now, Dfn::nl(vec![], F64));
         m.add_str("is_nan", is_nan, Dfn::nl(vec![F64], Bool));
+        #[cfg(feature = "dynload")]
         m.add_str("load", load, Dfn::nl(vec![Str], Type::result()));
+        #[cfg(feature = "dynload")]
         m.add_str(
             "load__source_imports",
             load__source_imports,
@@ -714,7 +723,9 @@ impl Module {
             chars,
             Dfn::nl(vec![Str], Type::Array(Box::new(Str))),
         );
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         m.add_str("wait_next", wait_next, Dfn::nl(vec![Type::in_ty()], Any));
+        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         m.add_str("next", next, Dfn::nl(vec![Type::in_ty()], Type::option()));
 
         m.no_ns();
