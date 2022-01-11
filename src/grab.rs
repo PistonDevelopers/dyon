@@ -180,6 +180,8 @@ pub fn grab_expr(
                 Flow::Continue,
             ))
         }
+        #[cfg(not(all(not(target_family = "wasm"), feature = "threading")))]
+        E::Go(ref go) => match **go {},
         E::Call(ref call) => Ok((
             Grabbed::Expression(E::Call(Box::new(ast::Call {
                 args: {
@@ -518,6 +520,16 @@ pub fn grab_expr(
             }))),
             Flow::Continue,
         )),
+        #[cfg(not(all(not(target_family = "wasm"), feature = "threading")))]
+        E::ForIn(ref for_in_expr) |
+        E::SumIn(ref for_in_expr) |
+        E::ProdIn(ref for_in_expr) |
+        E::MinIn(ref for_in_expr) |
+        E::MaxIn(ref for_in_expr) |
+        E::SiftIn(ref for_in_expr) |
+        E::AnyIn(ref for_in_expr) |
+        E::AllIn(ref for_in_expr) |
+        E::LinkIn(ref for_in_expr) => match **for_in_expr {},
         #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         E::SumIn(ref for_in_expr) => Ok((
             Grabbed::Expression(E::SumIn(Box::new(ast::ForIn {
@@ -678,7 +690,6 @@ pub fn grab_expr(
             }))),
             Flow::Continue,
         )),
-        #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         E::In(_) => Ok((Grabbed::Expression(expr.clone()), Flow::Continue)),
     }
 }

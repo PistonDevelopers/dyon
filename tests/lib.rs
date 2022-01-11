@@ -29,6 +29,7 @@ pub fn debug_src(source: &str) {
     });
 }
 
+#[cfg(feature = "file")]
 #[test]
 fn test_syntax() {
     test_src("source/syntax/main.dyon");
@@ -146,6 +147,7 @@ fn test_syntax() {
     test_src("source/syntax/lazy_pass_8.dyon");
 }
 
+#[cfg(feature = "file")]
 #[test]
 fn test_typechk() {
     test_fail_src("source/typechk/opt.dyon");
@@ -276,11 +278,13 @@ fn test_typechk() {
     test_fail_src("source/typechk/refine_quantifier_fail_2.dyon");
 }
 
+#[cfg(feature = "file")]
 #[test]
 fn test_functions() {
     test_src("source/functions/functions.dyon");
 }
 
+#[cfg(feature = "file")]
 #[test]
 fn test_error() {
     test_src("source/error/propagate.dyon");

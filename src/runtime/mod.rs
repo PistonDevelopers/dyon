@@ -82,7 +82,7 @@ lazy_static! {
 
 /// Module resolver
 #[cfg(feature = "dynload")]
-pub trait ModuleResolver {
+pub trait ModuleResolver: Send {
     /// Resolve target module
     fn resolve_module(&self, source: &str, target: &mut String) -> Result<(), String>;
 }
@@ -601,6 +601,8 @@ impl Runtime {
             Continue(ref b) => Ok((None, Flow::ContinueLoop(b.label.clone()))),
             #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             Go(ref go) => self.go(go),
+            #[cfg(not(all(not(target_family = "wasm"), feature = "threading")))]
+            Go(ref go) => match **go {},
             Call(ref call) => {
                 let loader = false;
                 self.call_internal(call, loader)
@@ -628,6 +630,16 @@ impl Runtime {
             ForN(ref for_n_expr) => self.for_n_expr(for_n_expr),
             #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             ForIn(ref for_in_expr) => self.for_in_expr(for_in_expr),
+            #[cfg(not(all(not(target_family = "wasm"), feature = "threading")))]
+            ForIn(ref for_in_expr) |
+            SumIn(ref for_in_expr) |
+            ProdIn(ref for_in_expr) |
+            MinIn(ref for_in_expr) |
+            MaxIn(ref for_in_expr) |
+            SiftIn(ref for_in_expr) |
+            AnyIn(ref for_in_expr) |
+            AllIn(ref for_in_expr) |
+            LinkIn(ref for_in_expr) => match **for_in_expr {},
             Sum(ref for_n_expr) => self.sum_n_expr(for_n_expr),
             #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             SumIn(ref sum_in_expr) => self.sum_in_expr(sum_in_expr),
@@ -670,6 +682,8 @@ impl Runtime {
             TryExpr(ref try_expr) => self.try_expr(try_expr),
             #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             In(ref in_expr) => self.in_expr(in_expr),
+            #[cfg(not(all(not(target_family = "wasm"), feature = "threading")))]
+            In(ref in_expr) => match **in_expr {},
         }
     }
 
@@ -991,6 +1005,7 @@ impl Runtime {
             stack,
             local_stack: vec![],
             current_stack: vec![],
+            module_resolver: Box::new(FileModuleResolver),
             // Add last call because of loaded functions
             // use relative index to the function it is calling from.
             call_stack: vec![Call {
@@ -2906,6 +2921,7 @@ impl Runtime {
         stack_trace(&self.call_stack)
     }
 
+    #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
     pub(crate) fn resolve_module(&self, source: &str, target: &mut String) -> Result<(), String> {
         self.module_resolver.resolve_module(source, target)
     }

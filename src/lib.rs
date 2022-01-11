@@ -620,7 +620,7 @@ pub(crate) fn check_str(
 /// - module - The module to load the source
 pub fn load_str(source: &str, d: Arc<String>, module: &mut Module) -> Result<(), String> {
     #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
-    use std::thread::{self, JoinHandle};
+    use std::thread;
 
     #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
     struct MaybeThread<T>(JoinHandle<T>);
@@ -903,6 +903,7 @@ mod tests {
         b.iter(|| run_bench("source/bench/threads_no_go.dyon"));
     }
 
+    #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
     #[bench]
     fn bench_threads_go(b: &mut Bencher) {
         b.iter(|| run_bench("source/bench/threads_go.dyon"));
@@ -923,6 +924,7 @@ mod tests {
         b.iter(|| run_bench("source/bench/push_link_for.dyon"));
     }
 
+    #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
     #[bench]
     fn bench_push_link_go(b: &mut Bencher) {
         b.iter(|| run_bench("source/bench/push_link_go.dyon"));
@@ -933,6 +935,7 @@ mod tests {
         b.iter(|| run_bench("source/bench/push_str.dyon"));
     }
 
+    #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
     #[bench]
     fn bench_push_in(b: &mut Bencher) {
         b.iter(|| run_bench("source/bench/push_in.dyon"));

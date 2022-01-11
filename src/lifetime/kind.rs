@@ -82,7 +82,6 @@ pub enum Kind {
     Res,
     RetType,
     ReturnVoid,
-    #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
     Go,
     Swizzle,
     Sw0,
@@ -100,7 +99,6 @@ pub enum Kind {
     ClRet,
     Grab,
     TryExpr,
-    #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
     In,
     Ty,
     TyArg,
@@ -193,7 +191,6 @@ impl Kind {
             "res" => Kind::Res,
             "ret_type" => Kind::RetType,
             "return_void" => Kind::ReturnVoid,
-            #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             "go" => Kind::Go,
             "swizzle" => Kind::Swizzle,
             "sw0" => Kind::Sw0,
@@ -212,7 +209,6 @@ impl Kind {
             "cl_ret" => Kind::ClRet,
             "grab" => Kind::Grab,
             "try_expr" => Kind::TryExpr,
-            #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
             "in" => Kind::In,
             "ty" => Kind::Ty,
             "ty_arg" => Kind::TyArg,
