@@ -80,31 +80,18 @@ lazy_static! {
     pub(crate) static ref MAIN: Arc<String> = Arc::new("main".into());
 }
 
-/// Module resolver
 #[cfg(feature = "dynload")]
-pub trait ModuleResolver: Send {
-    /// Resolve target module
-    fn resolve_module(&self, source: &str, target: &mut String) -> Result<(), String>;
-}
+fn file_resolve_module(source: &str, target: &mut String) -> Result<(), String> {
+    if cfg!(feature = "file") {
+        use std::fs::File;
+        use std::io::Read;
 
-/// The default module resolver
-#[cfg(feature = "dynload")]
-pub struct FileModuleResolver;
-
-#[cfg(feature = "dynload")]
-impl ModuleResolver for FileModuleResolver {
-    fn resolve_module(&self, source: &str, target: &mut String) -> Result<(), String> {
-        if cfg!(feature = "file") {
-            use std::fs::File;
-            use std::io::Read;
-
-            let mut data_file =
-                File::open(source).map_err(|err| format!("Could not open `{}`, {}", source, err))?;
-            data_file.read_to_string(target).unwrap();
-            Ok(())
-        } else {
-            Err(super::dyon_std::FILE_SUPPORT_DISABLED.into())
-        }
+        let mut data_file =
+            File::open(source).map_err(|err| format!("Could not open `{}`, {}", source, err))?;
+        data_file.read_to_string(target).unwrap();
+        Ok(())
+    } else {
+        Err(super::dyon_std::FILE_SUPPORT_DISABLED.into())
     }
 }
 
@@ -127,7 +114,7 @@ pub struct Runtime {
     pub(crate) rng: rand::rngs::StdRng,
     /// The module resolver instance
     #[cfg(feature = "dynload")]
-    pub module_resolver: Box<dyn ModuleResolver>,
+    pub module_resolver: fn(source: &str, target: &mut String) -> Result<(), String>,
     /// External functions can choose to report an error on an argument.
     pub arg_err_index: Cell<Option<usize>>,
 }
@@ -386,7 +373,7 @@ impl Runtime {
             #[cfg(feature = "rand")]
             rng: rand::rngs::StdRng::from_entropy(),
             #[cfg(feature = "dynload")]
-            module_resolver: Box::new(FileModuleResolver),
+            module_resolver: file_resolve_module,
             arg_err_index: Cell::new(None),
         }
     }
@@ -1005,7 +992,7 @@ impl Runtime {
             stack,
             local_stack: vec![],
             current_stack: vec![],
-            module_resolver: Box::new(FileModuleResolver),
+            module_resolver: self.module_resolver,
             // Add last call because of loaded functions
             // use relative index to the function it is calling from.
             call_stack: vec![Call {
@@ -2923,7 +2910,7 @@ impl Runtime {
 
     #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
     pub(crate) fn resolve_module(&self, source: &str, target: &mut String) -> Result<(), String> {
-        self.module_resolver.resolve_module(source, target)
+        (self.module_resolver)(source, target)
     }
 }
 
