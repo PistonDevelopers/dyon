@@ -28,4 +28,4 @@ features = ["glyph_cache_rusttype"]
 [dev-dependencies]
 pistoncore-sdl2_window = "0.67.0"
 piston2d-opengl_graphics = "0.78.0"
-piston-music = "0.26.0"
+kira = "0.5.3"
