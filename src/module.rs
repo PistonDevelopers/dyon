@@ -700,7 +700,7 @@ impl Module {
         m.add_str(
             "save__data_file",
             save__data_file,
-            Dfn::nl(vec![Any, Str], Str),
+            Dfn::nl(vec![Any, Str], Type::Result(Box::new(Str))),
         );
         m.add_str(
             "json_from_meta_data",
