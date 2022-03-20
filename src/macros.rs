@@ -74,7 +74,7 @@ macro_rules! dyon_fn {
                 $b
             }
 
-            Ok($crate::Variable::RustObject(Arc::new(Mutex::new(inner())) as RustObject))
+            Ok($crate::Variable::RustObject(Arc::new(Mutex::new(inner())) as $crate::RustObject))
         }
     };
     (fn $name:ident ($($rust_arg:tt : #&$rust_t:ty),+) -> # $rt:ty $b:block) => {
