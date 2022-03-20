@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate dyon;
 
-use dyon::{Mat4, RustObject, Vec4};
+use dyon::{Mat4, Vec4};
 use std::sync::Arc;
 
 fn main() {
