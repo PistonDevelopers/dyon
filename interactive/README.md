@@ -7,6 +7,18 @@ Run script: `dyongame <file.dyon>`
 
 ![snake](../images/snake.png)
 
+### Documentation
+
+Dyon-Interactive:
+
+- [lib.rs](https://github.com/PistonDevelopers/dyon/blob/master/interactive/src/lib.dyon)
+- [music.rs](https://github.com/PistonDevelopers/dyon/blob/master/interactive/src/music.dyon)
+- [render.rs](https://github.com/PistonDevelopers/dyon/blob/master/interactive/src/render.dyon)
+
+Dyon:
+
+- [lib.rs](https://github.com/PistonDevelopers/dyon/blob/master/src/lib.dyon)
+
 ### Made with dyon_interactive
 
 - [dyon_asteroids](https://github.com/pistondevelopers/dyon_asteroids)
