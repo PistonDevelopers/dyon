@@ -1,4 +1,4 @@
-# dyon_interactive
+# Dyon-Interactive
 A library for interactive coding with the Piston game engine
 
 Install: `cargo install piston-dyon_interactive --example dyongame`
@@ -11,13 +11,13 @@ Run script: `dyongame <file.dyon>`
 
 Dyon-Interactive:
 
-- [lib.rs](https://github.com/PistonDevelopers/dyon/blob/master/interactive/src/lib.dyon)
-- [music.rs](https://github.com/PistonDevelopers/dyon/blob/master/interactive/src/music.dyon)
-- [render.rs](https://github.com/PistonDevelopers/dyon/blob/master/interactive/src/render.dyon)
+- [lib.dyon](https://github.com/PistonDevelopers/dyon/blob/master/interactive/src/lib.dyon)
+- [music.dyon](https://github.com/PistonDevelopers/dyon/blob/master/interactive/src/music.dyon)
+- [render.dyon](https://github.com/PistonDevelopers/dyon/blob/master/interactive/src/render.dyon)
 
 Dyon:
 
-- [lib.rs](https://github.com/PistonDevelopers/dyon/blob/master/src/lib.dyon)
+- [lib.dyon](https://github.com/PistonDevelopers/dyon/blob/master/src/lib.dyon)
 
 ### Made with dyon_interactive
 
