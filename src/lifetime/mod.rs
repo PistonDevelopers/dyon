@@ -832,7 +832,7 @@ pub(crate) fn check_core(
     // Check the lifetime of declared locals.
     for &(a, i) in &locals {
         let right = nodes[a].children[1];
-        let lifetime_left = &Some(Lifetime::Local(i));
+        let lifetime_left = &Ok(Lifetime::Local(i));
         let lifetime_right = &nodes[right].lifetime(nodes, &arg_names);
         compare_lifetimes(lifetime_left, lifetime_right, nodes)
             .map_err(|err| nodes[right].source.wrap(err))?;
@@ -842,7 +842,7 @@ pub(crate) fn check_core(
     for &(a, i) in &assigned_locals {
         if let Some(j) = nodes[i].declaration {
             let right = nodes[a].children[1];
-            let lifetime_left = &Some(Lifetime::Local(j));
+            let lifetime_left = &Ok(Lifetime::Local(j));
             let lifetime_right = &nodes[right].lifetime(nodes, &arg_names);
             compare_lifetimes(lifetime_left, lifetime_right, nodes)
                 .map_err(|err| nodes[right].source.wrap(err))?;
@@ -853,14 +853,14 @@ pub(crate) fn check_core(
     for &i in &returns {
         let right = nodes[i].children[0];
         let lifetime_right = &nodes[right].lifetime(nodes, &arg_names);
-        compare_lifetimes(&Some(Lifetime::Return(vec![])), lifetime_right, nodes)
+        compare_lifetimes(&Ok(Lifetime::Return(vec![])), lifetime_right, nodes)
             .map_err(|err| nodes[right].source.wrap(err))?;
     }
 
     // Check the lifetime of expressions that are mathematically declared.
     for &i in &math_expr {
         let lifetime_right = &nodes[i].lifetime(nodes, &arg_names);
-        compare_lifetimes(&Some(Lifetime::Return(vec![])), lifetime_right, nodes)
+        compare_lifetimes(&Ok(Lifetime::Return(vec![])), lifetime_right, nodes)
             .map_err(|err| nodes[i].source.wrap(err))?;
     }
 
@@ -890,7 +890,7 @@ pub(crate) fn check_core(
     for &i in &end_of_blocks {
         let parent = nodes[i].parent.unwrap();
         // Fake a local variable.
-        let lifetime_left = &Some(Lifetime::Local(parent));
+        let lifetime_left = &Ok(Lifetime::Local(parent));
         let lifetime_right = &nodes[i].lifetime(nodes, &arg_names);
         compare_lifetimes(lifetime_left, lifetime_right, nodes)
             .map_err(|err| nodes[i].source.wrap(err))?;
@@ -900,7 +900,7 @@ pub(crate) fn check_core(
     for &c in &calls {
         let call = &nodes[c];
         // Fake a local variable.
-        let lifetime_left = &Some(Lifetime::Local(c));
+        let lifetime_left = &Ok(Lifetime::Local(c));
         for &a in call
             .children
             .iter()
@@ -1029,7 +1029,7 @@ pub(crate) fn check_core(
                     // make sure they are referenced.
                     let arg_lifetime = arg_lifetime(a, arg, nodes, &arg_names);
                     match arg_lifetime {
-                        Some(Lifetime::Return(_)) | Some(Lifetime::Argument(_)) => {
+                        Ok(Lifetime::Return(_)) | Ok(Lifetime::Argument(_)) => {
                             if !is_reference(i) {
                                 return Err(nodes[call.children[i]]
                                     .source

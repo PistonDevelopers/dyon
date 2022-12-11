@@ -75,10 +75,10 @@ pub(crate) fn arg_lifetime(
     arg: &Node,
     nodes: &[Node],
     arg_names: &ArgNames,
-) -> Option<Lifetime> {
-    Some(if let Some(ref lt) = arg.lifetime {
+) -> LifetimeResult {
+    Ok(if let Some(ref lt) = arg.lifetime {
         if &**lt == "return" {
-            return Some(Lifetime::Return(vec![declaration]));
+            return Ok(Lifetime::Return(vec![declaration]));
         } else {
             // Resolve lifetimes among arguments.
             let parent = arg.parent.expect("Expected parent");
@@ -92,7 +92,7 @@ pub(crate) fn arg_lifetime(
                 if let Some(ref lt) = nodes[arg].lifetime {
                     if &**lt == "return" {
                         // Lifetimes outlive return.
-                        return Some(Lifetime::Return(args));
+                        return Ok(Lifetime::Return(args));
                     }
                     name = lt.clone();
                 } else {
@@ -106,13 +106,31 @@ pub(crate) fn arg_lifetime(
     })
 }
 
+#[derive(Debug)]
+pub enum LifetimeError {
+    None,
+    FailedToUnify,
+}
+
+pub type LifetimeResult = Result<Lifetime, LifetimeError>;
+
 pub(crate) fn compare_lifetimes(
-    l: &Option<Lifetime>,
-    r: &Option<Lifetime>,
+    l: &LifetimeResult,
+    r: &LifetimeResult,
     nodes: &[Node],
 ) -> Result<(), String> {
     match (l, r) {
-        (&Some(ref l), &Some(ref r)) => {
+        (Err(LifetimeError::FailedToUnify), _) |
+        (_, Err(LifetimeError::FailedToUnify)) => {
+            // This gets triggered in cases like these:
+            /*
+            fn foo(mut a, x: 'a, y) {
+                a = [x, y]     // <--- 'x' outlives 'a', but 'y' does not.
+            }
+            */
+            return Err("Failed to unify lifetimes (perhaps use `clone`?)".into())
+        }
+        (&Ok(ref l), &Ok(ref r)) => {
             match l.partial_cmp(r) {
                 Some(Ordering::Greater) | Some(Ordering::Equal) => {
                     match *r {

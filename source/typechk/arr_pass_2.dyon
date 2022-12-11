@@ -1,10 +1,10 @@
 fn main() {
     x := 0
-    a := []
     y := 1
+    a := []
     foo(mut a, x, y)
 }
 
-fn foo(mut a, x: 'a, y) {
+fn foo(mut a, x: 'a, y: 'a) {
     a = [x, y]
 }
