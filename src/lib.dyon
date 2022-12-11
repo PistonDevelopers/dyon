@@ -456,7 +456,7 @@ fn scale(v: vec4) -> mat4 { ... }
 fn dir__angle(angle: f64) -> vec4 { ... }
 
 /// Returns the number of radians in a circle.
-/// Use this instead of pi.
+/// Use this instead of pi (`tau == 2 * pi`).
 fn tau() -> f64 { ... }
 
 /// Loads meta data from a file, using a meta syntax to parse the document.
