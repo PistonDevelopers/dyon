@@ -542,6 +542,25 @@ pub(crate) fn print(rt: &mut Runtime) -> Result<(), String> {
     Ok(())
 }
 
+#[cfg(feature = "stdio")]
+pub(crate) fn eprintln(rt: &mut Runtime) -> Result<(), String> {
+    use write::{eprint_variable, EscapeString};
+
+    let x = rt.stack.pop().expect(TINVOTS);
+    eprint_variable(rt, &x, EscapeString::None);
+    eprintln!();
+    Ok(())
+}
+
+#[cfg(feature = "stdio")]
+pub(crate) fn eprint(rt: &mut Runtime) -> Result<(), String> {
+    use write::{eprint_variable, EscapeString};
+
+    let x = rt.stack.pop().expect(TINVOTS);
+    eprint_variable(rt, &x, EscapeString::None);
+    Ok(())
+}
+
 dyon_fn! {fn sqrt(a: f64) -> f64 {a.sqrt()}}
 dyon_fn! {fn sin(a: f64) -> f64 {a.sin()}}
 dyon_fn! {fn asin(a: f64) -> f64 {a.asin()}}
