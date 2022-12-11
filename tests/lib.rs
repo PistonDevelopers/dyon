@@ -217,6 +217,7 @@ fn test_typechk() {
     test_fail_src("source/typechk/grab.dyon");
     test_fail_src("source/typechk/grab_2.dyon");
     test_src("source/typechk/grab_3.dyon");
+    test_src("source/typechk/grab_4.dyon");
     test_src("source/typechk/secret.dyon");
     test_fail_src("source/typechk/secret_2.dyon");
     test_fail_src("source/typechk/secret_3.dyon");

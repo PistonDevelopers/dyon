@@ -1,0 +1,4 @@
+fn main() {
+    // Prints `\(a: vec4) = (s(a, 1), s(a, 2), s(a, 0), s(a, 3))`.
+    println(\(a: vec4) = vec4 i s(a, grab if i == 3 { i } else { (i+1)%3 }))
+}

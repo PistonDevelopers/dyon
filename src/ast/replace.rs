@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use super::{
-    Array, ArrayFill, Assign, Block, Call, CallClosure, Expression, For, ForN, Id, If, Item, Link,
-    Mat4, Object, Swizzle, TryExpr, Vec4,
+    Array, ArrayFill, Assign, Block, Call, CallClosure, Expression, For, ForN, Grab,
+    Id, If, Item, Link, Mat4, Object, Swizzle, TryExpr, Vec4,
 };
 #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
 use super::{ForIn, Go};
@@ -283,7 +283,11 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
         E::CallClosure(ref call_expr) => {
             E::CallClosure(Box::new(number_call_closure(call_expr, name, val)))
         }
-        E::Grab(_) => expr.clone(),
+        E::Grab(ref grab_expr) => E::Grab(Box::new(Grab {
+            level: grab_expr.level,
+            expr: number(&grab_expr.expr, name, val),
+            source_range: grab_expr.source_range,
+        })),
         E::TryExpr(ref try_expr) => E::TryExpr(Box::new(TryExpr {
             expr: number(&try_expr.expr, name, val),
             source_range: try_expr.source_range,
