@@ -432,6 +432,10 @@ impl Module {
         m.add_str("println", println, Dfn::nl(vec![Any], Void));
         #[cfg(feature = "stdio")]
         m.add_str("print", print, Dfn::nl(vec![Any], Void));
+        #[cfg(feature = "stdio")]
+        m.add_str("eprintln", eprintln, Dfn::nl(vec![Any], Void));
+        #[cfg(feature = "stdio")]
+        m.add_str("eprint", eprint, Dfn::nl(vec![Any], Void));
         m.add_str("sqrt", sqrt, Dfn::nl(vec![F64], F64));
         m.add_str("sin", sin, Dfn::nl(vec![F64], F64));
         m.add_str("asin", asin, Dfn::nl(vec![F64], F64));

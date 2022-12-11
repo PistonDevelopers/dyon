@@ -163,6 +163,11 @@ pub(crate) fn print_variable(rt: &Runtime, v: &Variable, escape_string: EscapeSt
     write_variable(&mut io::stdout(), rt, v, escape_string, 0).unwrap();
 }
 
+#[cfg(feature = "stdio")]
+pub(crate) fn eprint_variable(rt: &Runtime, v: &Variable, escape_string: EscapeString) {
+    write_variable(&mut io::stderr(), rt, v, escape_string, 0).unwrap();
+}
+
 fn write_tabs<W: io::Write>(w: &mut W, tabs: u32) -> Result<(), io::Error> {
     for _ in 0..tabs {
         write!(w, "    ")?;

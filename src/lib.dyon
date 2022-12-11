@@ -74,6 +74,12 @@ fn println(var: any) { ... }
 /// Prints out variable to standard output.
 fn print(var: any) { ... }
 
+/// Prints out variable to standard error, adding newline character.
+fn eprintln(var: any) { ... }
+
+/// Prints out variable to standard error.
+fn eprint(var: any) { ... }
+
 /// Clones the variable and all references it contains.
 fn clone(var: any) -> any { ... }
 
