@@ -1,5 +1,5 @@
 use super::kind::Kind;
-use super::lt::{arg_lifetime, Lifetime};
+use super::lt::{arg_lifetime, Lifetime, LifetimeResult, LifetimeError};
 use super::piston_meta::bootstrap::Convert;
 use super::piston_meta::MetaData;
 use super::ArgNames;
@@ -199,9 +199,14 @@ impl Node {
         }
     }
 
-    pub fn lifetime(&self, nodes: &[Node], arg_names: &ArgNames) -> Option<Lifetime> {
+    /// Returns the lifetime of a node.
+    pub fn lifetime(
+        &self,
+        nodes: &[Node],
+        arg_names: &ArgNames
+    ) -> LifetimeResult {
         if !self.has_lifetime() {
-            return None;
+            return Err(LifetimeError::None);
         }
         if let Some(declaration) = self.declaration {
             if self.kind == Kind::Item {
@@ -209,9 +214,9 @@ impl Node {
                 if arg.kind == Kind::Arg {
                     return arg_lifetime(declaration, arg, nodes, arg_names);
                 } else if arg.kind == Kind::Current {
-                    return Some(Lifetime::Current(declaration));
+                    return Ok(Lifetime::Current(declaration));
                 } else {
-                    return Some(Lifetime::Local(declaration));
+                    return Ok(Lifetime::Local(declaration));
                 }
             }
         } else {
@@ -238,11 +243,11 @@ impl Node {
                 }
 
                 if returns_static {
-                    return None;
+                    return Err(LifetimeError::None);
                 }
             } else if self.kind == Kind::Item && self.name().map(|n| &**n == "return") == Some(true)
             {
-                return Some(Lifetime::Return(vec![]));
+                return Ok(Lifetime::Return(vec![]));
             }
         }
 
@@ -353,7 +358,7 @@ impl Node {
                             .nth(call_arg_ind)
                         {
                             match arg_lifetime(arg, &nodes[arg], nodes, arg_names) {
-                                Some(Lifetime::Return(_)) => {}
+                                Ok(Lifetime::Return(_)) => {}
                                 _ => {
                                     call_arg_ind += 1;
                                     continue;
@@ -370,16 +375,18 @@ impl Node {
                 ),
             }
             let lifetime = match nodes[c].lifetime(nodes, arg_names) {
-                Some(lifetime) => lifetime,
-                None => {
-                    continue;
-                }
+                Ok(lifetime) => lifetime,
+                Err(LifetimeError::None) => continue,
+                Err(LifetimeError::FailedToUnify) => return Err(LifetimeError::FailedToUnify),
             };
-            if min.is_none() || min.as_ref().map(|l| l < &lifetime) == Some(true) {
-                min = Some(lifetime);
-            }
+            min = match min.as_ref().map(|l| l.partial_cmp(&lifetime)) {
+                None => Some(lifetime),
+                Some(Some(std::cmp::Ordering::Less)) => Some(lifetime),
+                Some(None) => return Err(LifetimeError::FailedToUnify),
+                _ => min,
+            };
         }
-        min
+        min.ok_or(LifetimeError::None)
     }
 }
 
