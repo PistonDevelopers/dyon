@@ -470,6 +470,7 @@ impl Module {
         m.add_str("trim_left", trim_left, Dfn::nl(vec![Str], Str));
         m.add_str("trim_right", trim_right, Dfn::nl(vec![Str], Str));
         m.add_str("str", _str, Dfn::nl(vec![Any], Str));
+        m.add_str("fmt__tab_string", fmt__tab_string, Dfn::nl(vec![F64, Str], Str));
         m.add_str("json_string", json_string, Dfn::nl(vec![Str], Str));
         m.add_str("str__color", str__color, Dfn::nl(vec![Vec4], Str));
         m.add_str(

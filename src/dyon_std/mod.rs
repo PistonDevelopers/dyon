@@ -971,6 +971,10 @@ pub(crate) fn _str(rt: &mut Runtime) -> Result<Variable, String> {
     Ok(Variable::Str(Arc::new(String::from_utf8(buf).unwrap())))
 }
 
+dyon_fn! {fn fmt__tab_string(tab: f64, text: Arc<String>) -> String {
+    write::fmt(tab as i32, &text)
+}}
+
 pub(crate) fn json_string(rt: &mut Runtime) -> Result<Variable, String> {
     use write::{write_variable, EscapeString};
 
