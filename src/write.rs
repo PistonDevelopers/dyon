@@ -878,3 +878,121 @@ fn write_try_expr<W: io::Write>(
     write!(w, ")")?;
     Ok(())
 }
+
+#[derive(Clone)]
+enum Comment {
+    None,
+    First,
+    ActiveLine,
+    Terminated(bool),
+    ActiveMulti(bool, Box<Comment>),
+}
+
+impl Comment {
+    fn is_active(&self) -> bool {
+        use self::Comment::*;
+
+        match self {
+            ActiveLine | ActiveMulti(_, _) => true,
+            _ => false,
+        }
+    }
+
+    fn is_terminated(&self) -> bool {
+        if let Comment::Terminated(true) = self {true} else {false}
+    }
+
+    fn is_none(&self) -> bool {
+        if let Comment::None = self {true} else {false}
+    }
+
+    fn advance(&mut self, ch: char) {
+        use self::Comment::*;
+
+        match (&mut *self, ch) {
+            (None, '/') => *self = First,
+            (None, _) => *self = None,
+            (First, '/') => *self = ActiveLine,
+            (First, '*') => *self = ActiveMulti(false, Box::new(None)),
+            (First, _) => *self = None,
+            (ActiveLine, '\n') => *self = Terminated(true),
+            (ActiveLine, _) => *self = ActiveLine,
+            (Terminated(false), _) => *self = Terminated(true),
+            (Terminated(true), _) => *self = None,
+            (ActiveMulti(false, s), _) if !s.is_none() => s.advance(ch),
+            (ActiveMulti(false, _), '*') => *self = ActiveMulti(true, Box::new(None)),
+            (ActiveMulti(false, s), _) => s.advance(ch),
+            (ActiveMulti(true, _), '/') => *self = Terminated(false),
+            (ActiveMulti(true, _), _) => *self = ActiveMulti(false, Box::new(None)),
+        }
+    }
+}
+
+pub fn fmt(tab: i32, text: &str) -> String {
+    let tab = tab as i32;
+    let mut res = String::with_capacity(text.len());
+    let mut tabs: i32 = 0;
+    let mut newline = false;
+    let mut comment = Comment::None;
+    let mut string = false;
+    let mut string_escape = false;
+    for ch in text.chars() {
+        match ch {
+            '"' if string_escape => string_escape = false,
+            '"' if !string_escape => {
+                string = !string;
+                res.push(ch);
+                continue;
+            }
+            '\\' if string => string_escape = true,
+            _ => {}
+        }
+        if string {
+            res.push(ch);
+            continue;
+        }
+
+        comment.advance(ch);
+        if comment.is_terminated() {
+            newline = true;
+            comment = Comment::None;
+        }
+        if comment.is_active() {
+            res.push(ch);
+        } else {
+            match ch {
+                '\n' | ' ' => continue,
+                _ => {}
+            }
+            let current_newline = match ch {
+                ']' | '}' | ')' => true,
+                _ => false,
+            };
+            let (tab_diff, before): (i32, bool) = match ch {
+                '[' | '{' | '(' => (1, false),
+                ']' | '}' | ')' => (-1, true),
+                _ => (0, true),
+            };
+            if before {tabs += tab_diff};
+            let add_newline = newline || current_newline;
+            if add_newline {
+                res.push('\n');
+                for _ in 0..tabs * tab {res.push(' ')}
+            }
+            if !before {tabs += tab_diff};
+            match (add_newline, ch == ' ') {
+                (true, true) => {}
+                _ => res.push(ch),
+            };
+            match ch {
+                ':' => res.push(' '),
+                _ => {}
+            }
+            newline = match ch {
+                '[' | '{' | '(' | ',' => true,
+                _ => false,
+            };
+        }
+    }
+    res
+}

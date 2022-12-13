@@ -163,6 +163,9 @@ fn trim_right(text: str) -> str { ... }
 /// Returns a string representation of variable.
 fn str(var: any) -> str { ... }
 
+/// Formats text with newlines and tab shifts using spaces.
+fn fmt__tab_string(tab: f64, text: str) -> str { ... }
+
 /// Creates a JSON string of text.
 fn json_string(text: str) -> str { ... }
 
