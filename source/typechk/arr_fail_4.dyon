@@ -1,0 +1,6 @@
+fn main() {
+}
+
+fn foo(mut a, b, c) {
+    push_ref(mut a, [b, c])
+}

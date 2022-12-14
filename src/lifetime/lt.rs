@@ -120,6 +120,7 @@ pub(crate) fn compare_lifetimes(
     nodes: &[Node],
 ) -> Result<(), String> {
     match (l, r) {
+        (&Ok(Lifetime::Local(_)), Err(LifetimeError::FailedToUnify)) => {}
         (Err(LifetimeError::FailedToUnify), _) |
         (_, Err(LifetimeError::FailedToUnify)) => {
             // This gets triggered in cases like these:
