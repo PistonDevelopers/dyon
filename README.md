@@ -1,5 +1,11 @@
-# dyon
+# Dyon
 A rusty dynamically typed scripting language
+
+```
+fn main() {
+    println("hello world!")
+}
+```
 
 [Tutorial](https://www.piston.rs/dyon-tutorial/)  
 [Dyon-Interactive](https://github.com/PistonDevelopers/dyon/tree/master/interactive)  
@@ -115,6 +121,7 @@ The idea was to make a simple, but convenient scripting language that integrated
 - Type safety for secrets, easy load/save of Dyon data
 - Link loop for easier and faster code generation and templates
 - In-types for easy cross thread communication
+- Lazy invariants, simple refinement types and binary operator overloading
 
 Main goals:
 
