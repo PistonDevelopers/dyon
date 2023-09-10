@@ -14,6 +14,18 @@ fn main() {
 
 Dyon script files end with `.dyon`.
 
+To install Dyon REPL, type:
+
+```
+cargo install --example dyon dyon
+```
+
+Then, to run the Dyon REPL, type:
+
+```
+dyon
+```
+
 To run Dyon script files from command line, type:
 
 ```
