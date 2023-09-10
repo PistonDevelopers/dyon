@@ -13,7 +13,7 @@ fn main() {
     let mut module = Module::new();
     let mut ctx = String::new();
 
-    println!("=== Dyon 0.48 ===");
+    println!("=== Dyon 0.49 ===");
     println!("Type `help` for more information.");
     loop {
         if let Some(x) = file.as_ref() {
