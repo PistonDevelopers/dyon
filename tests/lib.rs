@@ -29,6 +29,12 @@ pub fn debug_src(source: &str) {
     });
 }
 
+pub fn run_src(source: &str) {
+    run(source).unwrap_or_else(|err| {
+        panic!("In `{}`:\n{}", source, err);
+    });
+}
+
 #[cfg(feature = "file")]
 #[test]
 fn test_syntax() {
@@ -281,6 +287,11 @@ fn test_typechk() {
     test_src("source/typechk/refine_quantifier_pass_5.dyon");
     test_fail_src("source/typechk/refine_quantifier_fail_1.dyon");
     test_fail_src("source/typechk/refine_quantifier_fail_2.dyon");
+}
+
+#[test]
+fn test_runs() {
+    run_src("source/print_closure/binop.dyon");
 }
 
 #[cfg(feature = "file")]

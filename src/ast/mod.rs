@@ -2237,7 +2237,7 @@ pub enum BinOp {
 pub(crate) const BINOP_PREC_POW: u8 = 3;
 pub(crate) const BINOP_PREC_MUL: u8 = 2;
 pub(crate) const BINOP_PREC_ADD: u8 = 1;
-pub(crate) const BINOP_PREC_OR: u8 = 0;
+pub(crate) const BINOP_PREC_EQ: u8 = 0;
 
 impl BinOp {
     /// Returns symbol of binary operator.
@@ -2280,8 +2280,9 @@ impl BinOp {
             | BinOp::Greater
             | BinOp::GreaterOrEqual
             | BinOp::Equal
-            | BinOp::NotEqual => BINOP_PREC_OR,
-            BinOp::OrElse | BinOp::AndAlso => BINOP_PREC_OR,
+            | BinOp::NotEqual => BINOP_PREC_EQ,
+            BinOp::OrElse => BINOP_PREC_ADD,
+            BinOp::AndAlso => BINOP_PREC_MUL,
             BinOp::Add | BinOp::Sub => BINOP_PREC_ADD,
             BinOp::Mul | BinOp::Dot | BinOp::Cross | BinOp::Div | BinOp::Rem => BINOP_PREC_MUL,
             BinOp::Pow => BINOP_PREC_POW,

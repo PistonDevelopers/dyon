@@ -421,21 +421,33 @@ fn write_block<W: io::Write>(
 fn binop_needs_parens(op: ast::BinOp, expr: &ast::Expression, right: bool) -> bool {
     use ast::Expression as E;
 
-    match *expr {
-        E::Call(ref call) => {
-            if let Some(binop_op) = standard_binop(&call.info.name, &call.args) {
-                match (op.precedence(), binop_op.precedence()) {
-                    (ast::BINOP_PREC_POW, _) => true,
-                    (ast::BINOP_PREC_MUL, ast::BINOP_PREC_ADD) => true,
-                    (ast::BINOP_PREC_MUL, ast::BINOP_PREC_MUL) if right => true,
-                    (ast::BINOP_PREC_ADD, ast::BINOP_PREC_ADD) if right => true,
-                    _ => false, // TODO: Handle precedence for comparison operators.
-                }
-            } else {
-                false
-            }
+    let binop: ast::BinOp = match *expr {
+        E::Call(ref call) => match standard_binop(&call.info.name, &call.args) {
+            Some(x) => x,
+            None => return false,
         }
-        // TODO: Handle `E::CallVoid` etc.
+        E::CallBinOp(ref call) => match standard_binop(&call.info.name,
+            &[call.left.clone(), call.right.clone()])
+        {
+            Some(x) => x,
+            None => return false,
+        }
+        E::CallLazy(ref call) => match standard_binop(&call.info.name, &call.args) {
+            Some(x) => x,
+            None => return false,
+        }
+        E::CallReturn(ref call) => match standard_binop(&call.info.name, &call.args) {
+            Some(x) => x,
+            None => return false,
+        }
+        _ => return false
+    };
+    match (op.precedence(), binop.precedence()) {
+        (ast::BINOP_PREC_POW, _) => true,
+        (ast::BINOP_PREC_MUL, ast::BINOP_PREC_ADD | ast::BINOP_PREC_EQ) => true,
+        (ast::BINOP_PREC_MUL, ast::BINOP_PREC_MUL) if right => true,
+        (ast::BINOP_PREC_ADD, ast::BINOP_PREC_ADD) if right => true,
+        (ast::BINOP_PREC_ADD, ast::BINOP_PREC_EQ) => true,
         _ => false,
     }
 }
