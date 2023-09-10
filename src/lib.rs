@@ -58,6 +58,8 @@ pub use vec4::Vec4;
 
 /// A common error message when there is no value on the stack.
 pub const TINVOTS: &str = "There is no value on the stack";
+/// A common error message when the call stack is empty.
+pub const CSIE: &str = "Call stack is empty";
 
 lazy_static! {
     pub(crate) static ref LESS: Arc<String> = Arc::new("less".into());

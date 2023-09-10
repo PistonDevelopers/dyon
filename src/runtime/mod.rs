@@ -15,6 +15,7 @@ use Module;
 use UnsafeRef;
 use Variable;
 use TINVOTS;
+use CSIE;
 
 #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
 mod for_in;
@@ -170,7 +171,7 @@ fn item_lookup(
                                 return Err(module.error_fnindex(
                                     prop.source_range(),
                                     &format!("{}\nExpected string", stack_trace(call_stack)),
-                                    call_stack.last().unwrap().index,
+                                    call_stack.last().expect(CSIE).index,
                                 ))
                             }
                         }
@@ -179,7 +180,7 @@ fn item_lookup(
                         return Err(module.error_fnindex(
                             range,
                             &format!("{}\nExpected string", stack_trace(call_stack)),
-                            call_stack.last().unwrap().index,
+                            call_stack.last().expect(CSIE).index,
                         ))
                     }
                 };
@@ -192,7 +193,7 @@ fn item_lookup(
                             return Err(module.error_fnindex(
                                 prop.source_range(),
                                 &format!("{}\nObject has no key `{}`", stack_trace(call_stack), id),
-                                call_stack.last().unwrap().index,
+                                call_stack.last().expect(CSIE).index,
                             ));
                         }
                     }
@@ -263,7 +264,7 @@ fn item_lookup(
                                                     stack_trace(call_stack),
                                                     id
                                                 ),
-                                                call_stack.last().unwrap().index,
+                                                call_stack.last().expect(CSIE).index,
                                             ))
                                         }
                                         Some(x) => x,
@@ -303,14 +304,14 @@ fn item_lookup(
                                         "{}\nArray of indices did not match lookup array",
                                         stack_trace(call_stack)
                                     ),
-                                    call_stack.last().unwrap().index,
+                                    call_stack.last().expect(CSIE).index,
                                 ));
                             }
                             _ => {
                                 return Err(module.error_fnindex(
                                     prop.source_range(),
                                     &format!("{}\nExpected number", stack_trace(call_stack)),
-                                    call_stack.last().unwrap().index,
+                                    call_stack.last().expect(CSIE).index,
                                 ))
                             }
                         }
@@ -319,7 +320,7 @@ fn item_lookup(
                         return Err(module.error_fnindex(
                             range,
                             &format!("{}\nExpected number", stack_trace(call_stack)),
-                            call_stack.last().unwrap().index,
+                            call_stack.last().expect(CSIE).index,
                         ))
                     }
                 };
@@ -328,7 +329,7 @@ fn item_lookup(
                         return Err(module.error_fnindex(
                             prop.source_range(),
                             &format!("{}\nOut of bounds `{}`", stack_trace(call_stack), id),
-                            call_stack.last().unwrap().index,
+                            call_stack.last().expect(CSIE).index,
                         ))
                     }
                     Some(x) => x,
@@ -352,7 +353,7 @@ fn item_lookup(
                     "{}\nLook up requires object or array",
                     stack_trace(call_stack)
                 ),
-                call_stack.last().unwrap().index,
+                call_stack.last().expect(CSIE).index,
             )),
         }
     }
@@ -836,7 +837,7 @@ impl Runtime {
         match v {
             Ok(ok) => Ok((Some(*ok), Flow::Continue)),
             Err(mut err) => {
-                let call = self.call_stack.last().unwrap();
+                let call = self.call_stack.last().expect(CSIE);
                 if call.stack_len == 0 {
                     return Err(self.module.error(
                         expr.source_range(),
@@ -955,7 +956,7 @@ impl Runtime {
 
         let n = go.call.args.len();
         let mut stack = vec![];
-        let relative = self.call_stack.last().map(|c| c.index).unwrap();
+        let relative = self.call_stack.last().map(|c| c.index).expect(CSIE);
         let mut fake_call = ast::Call {
             f_index: self.module.find_function(&go.call.info.name, relative),
             args: Vec::with_capacity(n),
@@ -986,7 +987,7 @@ impl Runtime {
         }
         stack.reverse();
 
-        let last_call = self.call_stack.last().unwrap();
+        let last_call = self.call_stack.last().expect(CSIE);
         let new_rt = Runtime {
             module: self.module.clone(),
             stack,
@@ -1628,7 +1629,8 @@ impl Runtime {
                 match self.stack.pop().expect(TINVOTS) {
                     Variable::Return => {
                         let source = custom_source.as_ref().unwrap_or(
-                            &self.module.functions[self.call_stack.last().unwrap().index].source,
+                            &self.module.functions[self.call_stack.last()
+                                .expect(CSIE).index].source,
                         );
                         Err(self.module.error_source(
                             info.source_range,
@@ -1649,7 +1651,8 @@ impl Runtime {
             }
             (false, Some(_)) => {
                 let source = custom_source.as_ref().unwrap_or(
-                    &self.module.functions[self.call_stack.last().unwrap().index].source,
+                    &self.module.functions[self.call_stack.last()
+                        .expect(CSIE).index].source,
                 );
                 Err(self.module.error_source(
                     info.source_range,
@@ -1665,7 +1668,8 @@ impl Runtime {
                 // TODO: Could return the last value on the stack.
                 //       Requires .pop_fn delayed after.
                 let source = custom_source.as_ref().unwrap_or(
-                    &self.module.functions[self.call_stack.last().unwrap().index].source,
+                    &self.module.functions[self.call_stack.last()
+                        .expect(CSIE).index].source,
                 );
                 Err(self.module.error_source(
                     info.source_range,
@@ -2351,7 +2355,7 @@ impl Runtime {
             match v {
                 Ok(ok) => Ok((Some(*ok), Flow::Continue)),
                 Err(mut err) => {
-                    let call = call_stack.last().unwrap();
+                    let call = call_stack.last().expect(CSIE);
                     if call.stack_len == 0 {
                         return Err(module.error_fnindex(
                             source_range,
@@ -2391,7 +2395,7 @@ impl Runtime {
 
         use ast::Id;
 
-        let locals = self.local_stack.len() - self.call_stack.last().unwrap().local_len;
+        let locals = self.local_stack.len() - self.call_stack.last().expect(CSIE).local_len;
         let stack_id = {
             if cfg!(not(feature = "debug_resolve")) {
                 self.stack.len() - item.static_stack_id.get().unwrap()
@@ -2429,7 +2433,7 @@ impl Runtime {
                                 &format!(
                                     "{}\nRequires `->` on function `{}`",
                                     self.stack_trace(),
-                                    &self.call_stack.last().unwrap().fn_name
+                                    &self.call_stack.last().expect(CSIE).fn_name
                                 ),
                                 self,
                             ));
@@ -2545,7 +2549,7 @@ impl Runtime {
                                     "{}\nExpected `ok(_)` or `err(_)`",
                                     stack_trace(call_stack)
                                 ),
-                                call_stack.last().unwrap().index,
+                                call_stack.last().expect(CSIE).index,
                             ));
                         }
                     }
@@ -2556,7 +2560,7 @@ impl Runtime {
                         try_id_ind += 1;
                     },
                     Err(ref err) => {
-                        let call = call_stack.last().unwrap();
+                        let call = call_stack.last().expect(CSIE);
                         if call.stack_len == 0 {
                             return Err(self.module.error_fnindex(
                                 item.ids[0].source_range(),
@@ -2621,7 +2625,7 @@ impl Runtime {
                                         "{}\nExpected `ok(_)`, `err(_)`, `bool`, `f64`",
                                         stack_trace(call_stack)
                                     ),
-                                    call_stack.last().unwrap().index,
+                                    call_stack.last().expect(CSIE).index,
                                 ));
                             }
                         }
@@ -2632,7 +2636,7 @@ impl Runtime {
                             try_id_ind += 1;
                         },
                         Err(ref err) => {
-                            let call = call_stack.last().unwrap();
+                            let call = call_stack.last().expect(CSIE);
                             if call.stack_len == 0 {
                                 return Err(self.module.error_fnindex(
                                     prop.source_range(),
