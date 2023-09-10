@@ -1,0 +1,30 @@
+=== Dyon Help ===
+Dyon was started by Sven Nilsen in 2016.
+
+To calculate something, try e.g. `1 + 1`.
+
+To define a constant, use e.g. `a() = 3`.
+Use `a` with parenthesis, e.g. `a() + 2`.
+
+To write multiple lines use `\` and finish with two empty lines:
+
+    > \
+    fn run() {
+        println("hello world!")
+    }
+
+    > call "run"
+    "hello world!"
+
+Commands:
+
+- bye               Exit program
+- ``                Prints separator for readability
+- \                 Input multiple lines
+- ctx               Show context
+- clear             Clear context and starts new file
+- load "<file>"     Clear context and load Dyon file
+- save              Save context
+- save "<file>"     Save context to file
+- import "<file>"   Import Dyon module
+- call "<fun>"      Call function
