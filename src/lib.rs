@@ -579,7 +579,8 @@ pub fn load(source: &str, module: &mut Module) -> Result<(), String> {
     let mut data_file =
         File::open(source).map_err(|err| format!("Could not open `{}`, {}", source, err))?;
     let mut data = Arc::new(String::new());
-    data_file.read_to_string(Arc::make_mut(&mut data)).unwrap();
+    data_file.read_to_string(Arc::make_mut(&mut data))
+        .map_err(|err| format!("Could not open `{}`, {}", source, err))?;
     load_str(source, data, module)
 }
 
