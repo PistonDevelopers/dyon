@@ -1,8 +1,6 @@
-use ast;
 use piston_meta::json;
 use std::io;
-use Runtime;
-use Variable;
+use crate::{ast, Runtime, Variable};
 
 use std::sync::Arc;
 
@@ -773,7 +771,7 @@ fn write_for<W: io::Write>(
 }
 
 fn standard_binop(name: &Arc<String>, args: &[ast::Expression]) -> Option<ast::BinOp> {
-    use ast::BinOp::*;
+    use crate::ast::BinOp::*;
 
     if args.len() != 2 {
         return None;

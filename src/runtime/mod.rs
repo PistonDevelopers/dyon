@@ -7,15 +7,16 @@ use std::cell::Cell;
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use ast;
-use embed;
-
-use FnIndex;
-use Module;
-use UnsafeRef;
-use Variable;
-use TINVOTS;
-use CSIE;
+use crate::{
+    ast,
+    embed,
+    FnIndex,
+    Module,
+    UnsafeRef,
+    Variable,
+    TINVOTS,
+    CSIE,
+};
 
 #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
 mod for_in;
@@ -476,7 +477,7 @@ impl Runtime {
     /// Pushes Rust object to stack.
     pub fn push_rust<T: 'static>(&mut self, val: T) {
         use std::sync::Mutex;
-        use RustObject;
+        use crate::RustObject;
         self.stack
             .push(Variable::RustObject(Arc::new(Mutex::new(val)) as RustObject))
     }
@@ -566,7 +567,7 @@ impl Runtime {
     }
 
     pub(crate) fn expression(&mut self, expr: &ast::Expression, side: Side) -> FlowResult {
-        use ast::Expression::*;
+        use crate::ast::Expression::*;
 
         match *expr {
             Link(ref link) => self.link(link),
@@ -656,7 +657,7 @@ impl Runtime {
             LinkIn(ref for_in_expr) => self.link_for_in_expr(for_in_expr),
             If(ref if_expr) => self.if_expr(if_expr),
             Variable(ref range_var) => Ok((Some(range_var.1.clone()), Flow::Continue)),
-            Try(ref expr) => self.try(expr, side),
+            Try(ref expr) => self.try_fun(expr, side),
             Swizzle(ref sw) => {
                 let flow = self.swizzle(sw)?;
                 Ok((None, flow))
@@ -693,7 +694,7 @@ impl Runtime {
                 f.senders.0.store(true, Ordering::Relaxed);
                 drop(guard);
                 Ok((
-                    Some(::Variable::In(Arc::new(Mutex::new(rx)))),
+                    Some(crate::Variable::In(Arc::new(Mutex::new(rx)))),
                     Flow::Continue,
                 ))
             }
@@ -702,7 +703,7 @@ impl Runtime {
     }
 
     fn try_expr(&mut self, try_expr: &ast::TryExpr) -> FlowResult {
-        use Error;
+        use crate::Error;
 
         let cs = self.call_stack.len();
         let st = self.stack.len();
@@ -731,8 +732,8 @@ impl Runtime {
     }
 
     fn closure(&mut self, closure: &ast::Closure) -> FlowResult {
-        use grab::{self, Grabbed};
-        use ClosureEnvironment;
+        use crate::grab::{self, Grabbed};
+        use crate::ClosureEnvironment;
 
         // Create closure.
         let relative = self.call_stack.last().map(|c| c.index).unwrap_or(0);
@@ -746,7 +747,7 @@ impl Runtime {
         };
 
         Ok((
-            Some(::Variable::Closure(
+            Some(crate::Variable::Closure(
                 Arc::new(ast::Closure {
                     currents: closure.currents.clone(),
                     args: closure.args.clone(),
@@ -765,8 +766,8 @@ impl Runtime {
         ))
     }
 
-    fn try_msg(v: &Variable) -> Option<Result<Box<Variable>, Box<::Error>>> {
-        use Error;
+    fn try_msg(v: &Variable) -> Option<Result<Box<Variable>, Box<crate::Error>>> {
+        use crate::Error;
 
         Some(match *v {
             Variable::Result(ref res) => res.clone(),
@@ -817,7 +818,7 @@ impl Runtime {
         })
     }
 
-    fn try(&mut self, expr: &ast::Expression, side: Side) -> FlowResult {
+    fn try_fun(&mut self, expr: &ast::Expression, side: Side) -> FlowResult {
         let v = match self.expression(expr, side)? {
             (Some(x), Flow::Continue) => x,
             (x, Flow::Return) => {
@@ -952,7 +953,7 @@ impl Runtime {
     #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
     pub fn go(&mut self, go: &ast::Go) -> FlowResult {
         use std::thread::{self, JoinHandle};
-        use Thread;
+        use crate::Thread;
 
         let n = go.call.args.len();
         let mut stack = vec![];
@@ -1821,7 +1822,7 @@ impl Runtime {
     }
 
     fn link(&mut self, link: &ast::Link) -> FlowResult {
-        use Link;
+        use crate::Link;
 
         Ok((
             Some(if link.items.is_empty() {
@@ -1924,8 +1925,8 @@ impl Runtime {
         left: &ast::Expression,
         right: &ast::Expression,
     ) -> FlowResult {
-        use ast::AssignOp::*;
-        use ast::Expression;
+        use crate::ast::AssignOp::*;
+        use crate::ast::Expression;
 
         if op != Assign {
             // Evaluate right side before left because the left leaves
@@ -2342,10 +2343,10 @@ impl Runtime {
     // This works only on objects, but does not have to check since it is
     // ignored for arrays.
     fn item(&mut self, item: &ast::Item, side: Side) -> FlowResult {
-        use Error;
+        use crate::Error;
 
         #[inline(always)]
-        fn try(
+        fn try_fun(
             stack: &mut Vec<Variable>,
             call_stack: &[Call],
             v: Result<Box<Variable>, Box<Error>>,
@@ -2477,7 +2478,7 @@ impl Runtime {
             stack_id
         };
         if item.ids.is_empty() {
-            if item.try {
+            if item.try_flag {
                 // Check for `err(_)` or unwrap when `?` follows item.
                 let v = match Runtime::try_msg(&self.stack[stack_id]) {
                     Some(v) => v,
@@ -2488,7 +2489,7 @@ impl Runtime {
                         )
                     }
                 };
-                return try(
+                return try_fun(
                     &mut self.stack,
                     &self.call_stack,
                     v,

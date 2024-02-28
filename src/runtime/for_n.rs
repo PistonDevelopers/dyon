@@ -537,7 +537,7 @@ impl Runtime {
         &mut self,
         for_n_expr: &ast::ForN,
     ) -> Result<(Option<Variable>, Flow), String> {
-        use Link;
+        use crate::Link;
 
         fn sub_link_for_n_expr(
             res: &mut Link,

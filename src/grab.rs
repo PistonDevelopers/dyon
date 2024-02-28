@@ -3,10 +3,9 @@ Evaluate grab expressions and return closure where grab expressions
 are constants.
 */
 
-use ast;
-use runtime::{Flow, Runtime, Side};
 use std::sync::Arc;
-use Variable;
+use crate::{ast, Variable};
+use crate::runtime::{Flow, Runtime, Side};
 
 #[derive(Debug)]
 pub enum Grabbed {
@@ -730,7 +729,7 @@ fn grab_item(
             stack_id: item.stack_id.clone(),
             static_stack_id: item.static_stack_id.clone(),
             current: item.current,
-            try: item.try,
+            try_flag: item.try_flag,
             ids: {
                 let mut new_ids = vec![];
                 for id in &item.ids {

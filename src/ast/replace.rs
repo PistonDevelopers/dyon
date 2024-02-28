@@ -6,7 +6,7 @@ use super::{
 };
 #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
 use super::{ForIn, Go};
-use Variable;
+use crate::Variable;
 
 /// Replaces an item with a number.
 /// Returns `(true, new_expression)` if item found declared with same name.
@@ -43,7 +43,7 @@ pub fn number(expr: &Expression, name: &Arc<String>, val: f64) -> Expression {
                     current: item.current,
                     stack_id: item.stack_id.clone(),
                     static_stack_id: item.static_stack_id.clone(),
-                    try: item.try,
+                    try_flag: item.try_flag,
                     ids: new_ids,
                     try_ids: item.try_ids.clone(),
                     source_range: item.source_range,

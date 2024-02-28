@@ -11,7 +11,7 @@ use read_token::{NumberSettings, ReadToken};
 #[cfg(feature = "file")]
 use super::io::io_error;
 
-use Variable;
+use crate::Variable;
 
 type Strings = HashSet<Arc<String>>;
 
@@ -234,7 +234,7 @@ fn array(read: &mut ReadToken, strings: &mut Strings, data: &str) -> Result<Vari
 }
 
 fn link(read: &mut ReadToken, strings: &mut Strings, data: &str) -> Result<Variable, String> {
-    use Link;
+    use crate::Link;
 
     opt_w(read);
 

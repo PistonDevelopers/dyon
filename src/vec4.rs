@@ -1,5 +1,5 @@
-use embed::{ConvertVec4, PopVariable, PushVariable};
-use {Runtime, Variable};
+use crate::embed::{ConvertVec4, PopVariable, PushVariable};
+use crate::{Runtime, Variable};
 
 /// Wraps a 4D vector for easier embedding with Dyon.
 #[derive(Debug, Copy, Clone)]

@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use super::{AssignOp, Block, Call, CallClosure, CallInfo, Expression, ForN, Id, Item};
-use FnIndex;
+use crate::FnIndex;
 
 pub fn infer(block: &Block, name: &str) -> Option<Expression> {
     let mut decls: Vec<Arc<String>> = vec![];

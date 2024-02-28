@@ -1,6 +1,6 @@
 #![allow(non_snake_case)]
 
-use *;
+use crate::*;
 
 mod data;
 mod functions;
@@ -1112,7 +1112,7 @@ pub(crate) fn load(rt: &mut Runtime) -> Result<Variable, String> {
 
 #[cfg(feature = "dynload")]
 pub(crate) fn load__source_imports(rt: &mut Runtime) -> Result<Variable, String> {
-    use load;
+    use crate::load;
 
     let modules = rt.stack.pop().expect(TINVOTS);
     let source = rt.stack.pop().expect(TINVOTS);
@@ -1276,7 +1276,7 @@ pub(crate) fn check__in_string_imports(rt: &mut Runtime) -> Result<Variable, Str
                 );
                 obj.insert(ALIAS.clone(), n.alias.push_var());
                 obj.insert(MUTABLE.clone(), n.mutable.push_var());
-                obj.insert(TRY.clone(), n.try.push_var());
+                obj.insert(TRY.clone(), n.try_flag.push_var());
                 obj.insert(GRAB_LEVEL.clone(), (n.grab_level as u32).push_var());
                 obj.insert(SOURCE_OFFSET.clone(), n.source.offset.push_var());
                 obj.insert(SOURCE_LENGTH.clone(), n.source.length.push_var());
@@ -1861,7 +1861,7 @@ pub(crate) fn save__data_file(rt: &mut Runtime) -> Result<Variable, String> {
     };
     let res = match write_variable(&mut f, rt, &data, EscapeString::Json, 0) {
         Ok(()) => Ok(Box::new(Variable::Str(file))),
-        Err(err) => Err(Box::new(::Error {
+        Err(err) => Err(Box::new(Error {
             message: Variable::Str(Arc::new(format!(
                 "Error when writing to file `{}`:\n{}",
                 file,

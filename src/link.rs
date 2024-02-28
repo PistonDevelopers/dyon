@@ -1,7 +1,7 @@
 use std::fmt;
 use std::sync::Arc;
 
-use Variable;
+use crate::Variable;
 
 // Do not change this without updating the algorithms!
 const BLOCK_SIZE: usize = 124;
