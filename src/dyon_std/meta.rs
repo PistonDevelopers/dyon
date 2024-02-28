@@ -10,7 +10,7 @@ use std::io;
 use std::io::Read;
 use std::sync::Arc;
 
-use Variable;
+use crate::Variable;
 
 pub fn parse_syntax_data(rules: &Syntax, file: &str, d: &str) -> Result<Vec<Variable>, String> {
     let mut tokens = vec![];

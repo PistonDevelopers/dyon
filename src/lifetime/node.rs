@@ -3,11 +3,10 @@ use super::lt::{arg_lifetime, Lifetime, LifetimeResult, LifetimeError};
 use super::piston_meta::bootstrap::Convert;
 use super::piston_meta::MetaData;
 use super::ArgNames;
-use ast::{AssignOp, BinOp};
 use range::Range;
 use std::sync::Arc;
-use Lt;
-use Type;
+use crate::ast::{AssignOp, BinOp};
+use crate::{Lt, Type};
 
 #[derive(Debug)]
 pub(crate) struct Node {
@@ -22,7 +21,7 @@ pub(crate) struct Node {
     /// Whether the argument or call argument is mutable.
     pub mutable: bool,
     /// Whether there is a `?` operator used on the node.
-    pub try: bool,
+    pub try_flag: bool,
     /// The grab level.
     pub grab_level: u16,
     /// The range in source.
@@ -80,7 +79,7 @@ impl Node {
             declaration: None,
             alias: None,
             mutable: false,
-            try: false,
+            try_flag: false,
             grab_level: 0,
             source: nodes[old_left].source,
             start: nodes[old_left].start,
@@ -100,7 +99,7 @@ impl Node {
             declaration: None,
             alias: None,
             mutable: false,
-            try: false,
+            try_flag: false,
             grab_level: 0,
             source: nodes[old_right].source,
             start: nodes[old_right].start,
@@ -175,7 +174,7 @@ impl Node {
     }
 
     pub fn inner_type(&self, ty: &Type) -> Type {
-        if self.try {
+        if self.try_flag {
             match ty {
                 &Type::Option(ref ty) => (**ty).clone(),
                 &Type::Result(ref ty) => (**ty).clone(),
@@ -463,7 +462,7 @@ pub(crate) fn convert_meta_data(
                     names: vec![],
                     ty,
                     mutable: false,
-                    try: false,
+                    try_flag: false,
                     grab_level: 0,
                     source: Range::empty(0),
                     parent,
@@ -573,7 +572,7 @@ pub(crate) fn convert_meta_data(
                     }
                     "try" | "try_item" => {
                         let i = *parents.last().unwrap();
-                        nodes[i].try = _val;
+                        nodes[i].try_flag = _val;
                     }
                     "bool" => {
                         let i = *parents.last().unwrap();

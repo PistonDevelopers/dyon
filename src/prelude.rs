@@ -1,10 +1,12 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use ast;
-use Lazy;
-use Module;
-use Type;
+use crate::{
+    ast,
+    Lazy,
+    Module,
+    Type,
+};
 
 /// Argument lifetime constraint.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]

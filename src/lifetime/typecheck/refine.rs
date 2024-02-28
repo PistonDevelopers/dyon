@@ -1,5 +1,5 @@
 use super::*;
-use prelude::Dfn;
+use crate::Dfn;
 
 use std::sync::Arc;
 

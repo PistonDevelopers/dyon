@@ -1,9 +1,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use Lt;
-use Module;
-use Variable;
+use crate::{Lt, Module, Variable};
 
 /// Lists all functions available in a module.
 pub fn list_functions(module: &Module) -> Vec<Variable> {

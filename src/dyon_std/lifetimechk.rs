@@ -1,8 +1,6 @@
-use ast;
 use std::collections::HashMap;
 use std::sync::Arc;
-use Array;
-use Variable;
+use crate::{ast, Array, Variable};
 
 /// Performs a runtime lifetime check on arguments.
 pub fn check(f: &ast::Function, args: &Array) -> Result<(), String> {

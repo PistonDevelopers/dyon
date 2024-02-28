@@ -1,9 +1,8 @@
 use super::kind::Kind;
 use super::node::Node;
-use ast::UseLookup;
 use range::Range;
-use Prelude;
-use Type;
+use crate::ast::UseLookup;
+use crate::{Prelude, Type};
 
 mod refine;
 
@@ -183,7 +182,7 @@ pub(crate) fn run(
                                     (&None, _) | (_, &None) => {}
                                 }
                             } else if let Some(ref alias) = nodes[parent].alias {
-                                use ast::FnAlias;
+                                use crate::ast::FnAlias;
 
                                 // External functions are treated as loaded in prelude.
                                 if let Some(&FnAlias::Loaded(f)) = use_lookup
@@ -247,7 +246,7 @@ pub(crate) fn run(
                             }
                         }
                     } else if let Some(ref alias) = nodes[i].alias {
-                        use ast::FnAlias;
+                        use crate::ast::FnAlias;
 
                         // External functions are treated as loaded in prelude.
                         if let Some(&FnAlias::Loaded(f)) = use_lookup
@@ -375,7 +374,7 @@ pub(crate) fn run(
                             | Kind::Vec4UnLoop
                             | Kind::ForN
                             | Kind::LinkFor => {
-                                if nodes[i].try {
+                                if nodes[i].try_flag {
                                     return Err(nodes[i].source.wrap(
                                         "Type mismatch (#300):\n\
                                         Can not use `?` with a number"
@@ -587,7 +586,7 @@ pub(crate) fn run(
                     for &ch in &nodes[i].children {
                         if nodes[ch].kind == Kind::Arg {
                             if let Some(ref ty) = nodes[ch].ty {
-                                use Lt;
+                                use crate::Lt;
 
                                 lts.push(Lt::Default);
                                 tys.push(ty.clone());
@@ -601,7 +600,7 @@ pub(crate) fn run(
                         }
                     }
                     if all_args && ret.is_some() {
-                        use Dfn;
+                        use crate::Dfn;
 
                         this_ty = Some(Type::Closure(Box::new(Dfn {
                             lts,
@@ -714,7 +713,7 @@ pub(crate) fn run(
             }
             Kind::If => check_if(i, nodes)?,
             Kind::Assign => {
-                use ast::AssignOp;
+                use crate::ast::AssignOp;
 
                 match nodes[i].op {
                     Some(AssignOp::Add) | Some(AssignOp::Sub) => {

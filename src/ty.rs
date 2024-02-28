@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use piston_meta::bootstrap::Convert;
 use range::Range;
-use Dfn;
+use crate::Dfn;
 
 /// Stores a Dyon type.
 #[derive(Debug, Clone, PartialEq)]
@@ -542,7 +542,7 @@ impl Type {
                 let mut lts = vec![];
                 let mut tys = vec![];
                 while let Ok((range, val)) = Type::from_meta_data("cl_arg", convert, ignored) {
-                    use Lt;
+                    use crate::Lt;
 
                     convert.update(range);
                     lts.push(Lt::Default);

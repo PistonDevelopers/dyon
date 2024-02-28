@@ -2,11 +2,13 @@
 
 use std::sync::Arc;
 
-use Error;
-use Object;
-use Runtime;
-use RustObject;
-use Variable;
+use crate::{
+    Error,
+    Object,
+    Runtime,
+    RustObject,
+    Variable,
+};
 
 /// Gets value of object field.
 pub fn obj_field<T: PopVariable>(rt: &Runtime, obj: &Object, name: &str) -> Result<T, String> {

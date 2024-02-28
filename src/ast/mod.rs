@@ -1,17 +1,18 @@
 //! Dyon Abstract Syntax Tree (AST).
 
-use piston_meta::bootstrap::Convert;
-use piston_meta::MetaData;
+use piston_meta::{Convert, MetaData};
 use range::Range;
 use std::cell::Cell;
 use std::collections::HashMap;
 use std::sync::{self, Arc};
 
-use FnIndex;
-use Module;
-use Prelude;
-use Type;
-use Variable;
+use crate::{
+    FnIndex,
+    Module,
+    Prelude,
+    Type,
+    Variable
+};
 
 mod infer_len;
 mod replace;
@@ -1760,7 +1761,7 @@ impl Link {
     }
 
     fn precompute(&self) -> Option<Variable> {
-        let mut link = ::link::Link::new();
+        let mut link = crate::link::Link::new();
         for it in &self.items {
             if let Some(v) = it.precompute() {
                 if link.push(&v).is_err() {
@@ -2351,7 +2352,7 @@ pub struct Item {
     /// Whether the item is a current object.
     pub current: bool,
     /// Whether there is a `?` after the item.
-    pub try: bool,
+    pub try_flag: bool,
     /// Item ids.
     pub ids: Vec<Id>,
     /// Stores indices of ids that should propagate errors.
@@ -2368,7 +2369,7 @@ impl Item {
             current: false,
             stack_id: Cell::new(None),
             static_stack_id: Cell::new(None),
-            try: false,
+            try_flag: false,
             ids: vec![],
             try_ids: vec![],
             source_range,
@@ -2382,7 +2383,7 @@ impl Item {
             current: self.current,
             stack_id: Cell::new(None),
             static_stack_id: Cell::new(None),
-            try: self.try,
+            try_flag: self.try_flag,
             ids: self.ids.iter().take(n).cloned().collect(),
             try_ids: {
                 let mut try_ids = vec![];
@@ -2414,7 +2415,7 @@ impl Item {
         let mut current = false;
         let mut ids = vec![];
         let mut try_ids = vec![];
-        let mut try = false;
+        let mut try_flag = false;
         loop {
             if let Ok(range) = convert.end_node(node) {
                 convert.update(range);
@@ -2427,7 +2428,7 @@ impl Item {
                 current = true;
             } else if let Ok((range, _)) = convert.meta_bool("try_item") {
                 convert.update(range);
-                try = true;
+                try_flag = true;
                 // Ignore item extra node, which is there to help the type checker.
             } else if let Ok(range) = convert.start_node("item_extra") {
                 convert.update(range);
@@ -2465,7 +2466,7 @@ impl Item {
                 stack_id: Cell::new(None),
                 static_stack_id: Cell::new(None),
                 current,
-                try,
+                try_flag,
                 ids,
                 try_ids,
                 source_range: convert.source(start).unwrap(),
@@ -2865,11 +2866,13 @@ impl Call {
         module: &Module,
         use_lookup: &UseLookup,
     ) {
-        use FnBinOpRef;
-        use FnExt;
-        use FnReturnRef;
-        use FnUnOpRef;
-        use FnVoidRef;
+        use crate::{
+            FnBinOpRef,
+            FnExt,
+            FnReturnRef,
+            FnUnOpRef,
+            FnVoidRef,
+        };
 
         let st = stack.len();
         let f_index = if let Some(ref alias) = self.info.alias {
@@ -4674,11 +4677,13 @@ impl In {
 
     #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
     fn resolve_locals(&mut self, relative: usize, module: &Module, use_lookup: &UseLookup) {
-        use FnBinOpRef;
-        use FnExt;
-        use FnReturnRef;
-        use FnUnOpRef;
-        use FnVoidRef;
+        use crate::{
+            FnBinOpRef,
+            FnExt,
+            FnReturnRef,
+            FnUnOpRef,
+            FnVoidRef,
+        };
 
         let f_index = if let Some(ref alias) = self.alias {
             if let Some(&i) = use_lookup

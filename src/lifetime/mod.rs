@@ -10,10 +10,10 @@ use self::range::Range;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
-use ast::{AssignOp, UseLookup};
-use prelude::{Lt, Prelude};
+use crate::ast::{AssignOp, UseLookup};
+use crate::prelude::{Lt, Prelude};
 
-use Type;
+use crate::Type;
 
 mod kind;
 mod lt;
@@ -66,7 +66,7 @@ pub(crate) fn check_core(
                 declaration: None,
                 alias: None,
                 mutable: false,
-                try: false,
+                try_flag: false,
                 grab_level: 0,
                 source: nodes[i].source,
                 start: nodes[i].start,
@@ -110,7 +110,7 @@ pub(crate) fn check_core(
                 _ => {}
             }
         } else if nodes[i].binops.len() == 1 && nodes[i].children.len() == 2 {
-            use ast::BinOp::*;
+            use crate::ast::BinOp::*;
 
             Node::rewrite_binop(
                 i,
@@ -621,7 +621,7 @@ pub(crate) fn check_core(
     let mut use_lookup: UseLookup = UseLookup::new();
     for node in nodes.iter() {
         if node.kind == Kind::Uses {
-            use ast::Uses;
+            use crate::ast::Uses;
             use piston_meta::bootstrap::Convert;
 
             let convert = Convert::new(&data[node.start..node.end]);
@@ -659,7 +659,7 @@ pub(crate) fn check_core(
         let node = &mut nodes[c];
         let name = node.name().expect("Expected name").clone();
         if let Some(ref alias) = node.alias {
-            use ast::FnAlias;
+            use crate::ast::FnAlias;
 
             // External functions are treated as loaded in prelude.
             if let Some(&FnAlias::Loaded(i)) =
@@ -712,7 +712,7 @@ pub(crate) fn check_core(
         let node = &mut nodes[c];
         let name = node.name().expect("Expected name").clone();
         if let Some(ref alias) = node.alias {
-            use ast::FnAlias;
+            use crate::ast::FnAlias;
 
             // External functions are treated as loaded in prelude.
             if let Some(&FnAlias::Loaded(i)) =
