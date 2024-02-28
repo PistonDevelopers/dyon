@@ -29,7 +29,7 @@ use std::collections::HashMap;
 use std::fmt;
 use std::sync::{Arc, Mutex};
 #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
-use std::thread::JoinHandle;
+use threading::JoinHandle;
 
 pub mod ast;
 pub mod embed;
@@ -40,6 +40,8 @@ mod mat4;
 mod module;
 mod prelude;
 pub mod runtime;
+#[cfg(all(not(target_family = "wasm"), feature = "threading"))]
+pub mod threading;
 mod ty;
 mod vec4;
 mod write;
@@ -623,10 +625,7 @@ pub(crate) fn check_str(
 /// - module - The module to load the source
 pub fn load_str(source: &str, d: Arc<String>, module: &mut Module) -> Result<(), String> {
     #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
-    use std::thread;
-
-    #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
-    struct MaybeThread<T>(JoinHandle<T>);
+    struct MaybeThread<T>(std::thread::JoinHandle<T>);
 
     #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
     impl<T> MaybeThread<T>
@@ -637,7 +636,7 @@ pub fn load_str(source: &str, d: Arc<String>, module: &mut Module) -> Result<(),
         where
             F: FnOnce() -> T + Send + 'static,
         {
-            Self(thread::spawn(func))
+            Self(std::thread::spawn(func))
         }
         fn join(self) -> T {
             self.0.join().unwrap()
