@@ -1774,7 +1774,7 @@ pub(crate) fn join__thread(rt: &mut Runtime) -> Result<Variable, String> {
     let handle_res = Thread::invalidate_handle(rt, thread);
     Ok(Variable::Result({
         match handle_res {
-            Ok(handle) => match handle.join() {
+            Ok(handle) => match join!(rt.tokio_runtime, handle) {
                 Ok(res) => match res {
                     Ok(res) => Ok(Box::new(res)),
                     Err(err) => Err(Box::new(Error {

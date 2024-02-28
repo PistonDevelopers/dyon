@@ -119,6 +119,9 @@ pub struct Runtime {
     pub module_resolver: fn(source: &str, target: &mut String) -> Result<(), String>,
     /// External functions can choose to report an error on an argument.
     pub arg_err_index: Cell<Option<usize>>,
+    /// Tokio runtime handle.
+    #[cfg(feature = "async")]
+    pub tokio_runtime: Arc<tokio::runtime::Runtime>,
 }
 
 impl Default for Runtime {
@@ -377,6 +380,8 @@ impl Runtime {
             #[cfg(feature = "dynload")]
             module_resolver: file_resolve_module,
             arg_err_index: Cell::new(None),
+            #[cfg(feature = "async")]
+            tokio_runtime: Arc::new(tokio::runtime::Runtime::new().unwrap()),
         }
     }
 
@@ -952,8 +957,9 @@ impl Runtime {
     /// Start a new thread and return the handle.
     #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
     pub fn go(&mut self, go: &ast::Go) -> FlowResult {
-        use std::thread::{self, JoinHandle};
         use crate::Thread;
+        use crate::threading::JoinHandle;
+        use crate::spawn;
 
         let n = go.call.args.len();
         let mut stack = vec![];
@@ -1007,8 +1013,10 @@ impl Runtime {
             }],
             rng: self.rng.clone(),
             arg_err_index: Cell::new(None),
+            #[cfg(feature = "async")]
+            tokio_runtime: self.tokio_runtime.clone(),
         };
-        let handle: JoinHandle<Result<Variable, String>> = thread::spawn(move || {
+        let handle: JoinHandle<Result<Variable, String>> = spawn!(self.tokio_runtime,
             let mut new_rt = new_rt;
             let fake_call = fake_call;
             let loader = false;
@@ -1018,7 +1026,7 @@ impl Runtime {
                 Ok((Some(x), _)) => x,
             }
             .deep_clone(&new_rt.stack))
-        });
+        );
         Ok((Some(Variable::Thread(Thread::new(handle))), Flow::Continue))
     }
 
