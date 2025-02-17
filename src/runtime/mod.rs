@@ -103,7 +103,9 @@ pub struct Runtime {
     pub module: Arc<Module>,
     /// Stores variables on the stack.
     pub stack: Vec<Variable>,
-    /// name, file, stack_len, local_len.
+    /// Stores the stack of function calls.
+    ///
+    /// This is used to generate proper error messages.
     pub call_stack: Vec<Call>,
     /// Stores stack of locals.
     pub local_stack: Vec<(Arc<String>, usize)>,
