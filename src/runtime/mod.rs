@@ -1222,7 +1222,12 @@ impl Runtime {
     pub fn call(&mut self, call: &ast::Call, module: &Arc<Module>) -> FlowResult {
         use std::mem::replace;
         let old_module = replace(&mut self.module, module.clone());
+        // Keep track of the call state,
+        // since `call` might be called from an external function.
+        let call_stack_len = self.call_stack.len();
         let res = self.call_internal(call, true);
+        // Restore call state.
+        self.call_stack.truncate(call_stack_len);
         self.module = old_module;
         res
     }

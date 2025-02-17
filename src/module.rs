@@ -778,6 +778,8 @@ impl Module {
     }
 
     /// Generates an error message.
+    ///
+    /// Uses the call stack to look up the source of the function.
     pub(crate) fn error(&self, range: Range, msg: &str, rt: &Runtime) -> String {
         let fnindex = if let Some(x) = rt.call_stack.last() {
             x.index
@@ -789,7 +791,11 @@ impl Module {
 
     /// Generates an error with a function index.
     pub(crate) fn error_fnindex(&self, range: Range, msg: &str, fnindex: usize) -> String {
-        let source = &self.functions[fnindex].source;
+        let source = match self.functions.get(fnindex) {
+            Some(x) => &x.source,
+            None => return format!("{}\nfnindex `{}` outside bounds of `0..{}`",
+                    msg, fnindex, self.functions.len()),
+        };
         self.error_source(range, msg, source)
     }
 
