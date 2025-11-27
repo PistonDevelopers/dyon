@@ -83,7 +83,7 @@ lazy_static! {
 }
 
 #[cfg(feature = "dynload")]
-fn file_resolve_module(source: &str, target: &mut String) -> Result<(), String> {
+fn file_lookup_module(source: &str, target: &mut String) -> Result<(), String> {
     if cfg!(feature = "file") {
         use std::fs::File;
         use std::io::Read;
@@ -116,9 +116,9 @@ pub struct Runtime {
     pub current_stack: Vec<(Arc<String>, usize)>,
     #[cfg(feature = "rand")]
     pub(crate) rng: rand::rngs::StdRng,
-    /// The module resolver instance
+    /// The module lookup instance
     #[cfg(feature = "dynload")]
-    pub module_resolver: fn(source: &str, target: &mut String) -> Result<(), String>,
+    pub module_lookup: fn(source: &str, target: &mut String) -> Result<(), String>,
     /// External functions can choose to report an error on an argument.
     pub arg_err_index: Cell<Option<usize>>,
     /// Tokio runtime handle.
@@ -129,14 +129,6 @@ pub struct Runtime {
 impl Default for Runtime {
     fn default() -> Runtime {
         Runtime::new()
-    }
-}
-
-#[inline(always)]
-fn resolve<'a>(stack: &'a [Variable], var: &'a Variable) -> &'a Variable {
-    match *var {
-        Variable::Ref(ind) => &stack[ind],
-        _ => var,
     }
 }
 
@@ -207,7 +199,7 @@ fn item_lookup(
             };
             // Resolve reference.
             if let Ref(id) = *v {
-                // Do not resolve if last, because references should be
+                // Do not look up if last, because references should be
                 // copy-on-write.
                 if last {
                     Ok(v)
@@ -280,7 +272,7 @@ fn item_lookup(
                                 if i + 1 == n {
                                     // Resolve reference.
                                     return if let Ref(id) = *v {
-                                        // Do not resolve if last, because references should be
+                                        // Do not look up if last, because references should be
                                         // copy-on-write.
                                         if last {
                                             Ok(v)
@@ -344,7 +336,7 @@ fn item_lookup(
             };
             // Resolve reference.
             if let Ref(id) = *v {
-                // Do not resolve if last, because references should be
+                // Do not look up if last, because references should be
                 // copy-on-write.
                 if last {
                     Ok(v)
@@ -381,7 +373,7 @@ impl Runtime {
             #[cfg(feature = "rand")]
             rng: rand::rngs::StdRng::from_entropy(),
             #[cfg(feature = "dynload")]
-            module_resolver: file_resolve_module,
+            module_lookup: file_lookup_module,
             arg_err_index: Cell::new(None),
             #[cfg(feature = "async")]
             tokio_runtime: Arc::new(tokio::runtime::Runtime::new().unwrap()),
@@ -391,13 +383,13 @@ impl Runtime {
     /// Pops variable from stack.
     pub fn pop<T: embed::PopVariable>(&mut self) -> Result<T, String> {
         let v = self.stack.pop().unwrap_or_else(|| panic!("{}", TINVOTS));
-        T::pop_var(self, self.resolve(&v))
+        T::pop_var(self, self.get(&v))
     }
 
     /// Pops 4D vector from stack.
     pub fn pop_vec4<T: embed::ConvertVec4>(&mut self) -> Result<T, String> {
         let v = self.stack.pop().unwrap_or_else(|| panic!("{}", TINVOTS));
-        match self.resolve(&v) {
+        match self.get(&v) {
             &Variable::Vec4(val) => Ok(T::from(val)),
             x => Err(self.expected(x, "vec4")),
         }
@@ -406,7 +398,7 @@ impl Runtime {
     /// Pops 4D matrix from stack.
     pub fn pop_mat4<T: embed::ConvertMat4>(&mut self) -> Result<T, String> {
         let v = self.stack.pop().unwrap_or_else(|| panic!("{}", TINVOTS));
-        match self.resolve(&v) {
+        match self.get(&v) {
             &Variable::Mat4(ref val) => Ok(T::from(**val)),
             x => Err(self.expected(x, "mat4")),
         }
@@ -414,7 +406,7 @@ impl Runtime {
 
     /// Gets variable.
     pub fn var<T: embed::PopVariable>(&self, var: &Variable) -> Result<T, String> {
-        T::pop_var(self, self.resolve(var))
+        T::pop_var(self, self.get(var))
     }
 
     /// Gets Current Object variable from the stack for Current Objects
@@ -448,12 +440,12 @@ impl Runtime {
             .map(|x| x.1)
             .ok_or(format!("Could not find current variable `{}`", name))?;
 
-        T::pop_var(self, self.resolve(&self.stack[current_object_index]))
+        T::pop_var(self, self.get(&self.stack[current_object_index]))
     }
 
     /// Gets 4D vector.
     pub fn var_vec4<T: embed::ConvertVec4>(&self, var: &Variable) -> Result<T, String> {
-        match self.resolve(var) {
+        match self.get(var) {
             &Variable::Vec4(val) => Ok(T::from(val)),
             x => Err(self.expected(x, "vec4")),
         }
@@ -461,7 +453,7 @@ impl Runtime {
 
     /// Gets 4D matrix.
     pub fn var_mat4<T: embed::ConvertMat4>(&self, var: &Variable) -> Result<T, String> {
-        match self.resolve(var) {
+        match self.get(var) {
             &Variable::Mat4(ref val) => Ok(T::from(**val)),
             x => Err(self.expected(x, "mat4")),
         }
@@ -510,10 +502,10 @@ impl Runtime {
         )
     }
 
-    /// Resolves a variable reference if any, getting a pointer to the variable on the stack.
+    /// Looks up a variable reference if any, getting a pointer to the variable on the stack.
     #[inline(always)]
-    pub fn resolve<'a>(&'a self, var: &'a Variable) -> &'a Variable {
-        resolve(&self.stack, var)
+    pub fn get<'a>(&'a self, var: &'a Variable) -> &'a Variable {
+        if let Variable::Ref(ind) = var {&self.stack[*ind]} else {var}
     }
 
     #[inline(always)]
@@ -834,7 +826,7 @@ impl Runtime {
             }
             _ => return self.err(expr.source_range(), "Expected something"),
         };
-        let v = match Runtime::try_msg(self.resolve(&v)) {
+        let v = match Runtime::try_msg(self.get(&v)) {
             Some(v) => v,
             None => {
                 return self.err(
@@ -1003,7 +995,7 @@ impl Runtime {
             stack,
             local_stack: vec![],
             current_stack: vec![],
-            module_resolver: self.module_resolver,
+            module_lookup: self.module_lookup,
             // Add last call because of loaded functions
             // use relative index to the function it is calling from.
             call_stack: vec![Call {
@@ -1050,7 +1042,7 @@ impl Runtime {
             }
         };
 
-        let (f, env) = match self.resolve(&item) {
+        let (f, env) = match self.get(&item) {
             &Variable::Closure(ref f, ref env) => (f.clone(), env.clone()),
             x => return self.err(call.source_range, &self.expected(x, "closure")),
         };
@@ -1134,7 +1126,7 @@ impl Runtime {
             self.local_stack.push((RETURN_TYPE.clone(), st - 1));
         }
         for (i, arg) in f.args.iter().enumerate() {
-            // Do not resolve locals to keep fixed length from end of stack.
+            // Do not look up locals to keep fixed length from end of stack.
             self.local_stack.push((arg.name.clone(), st + i));
         }
         let (x, flow) = self.expression_module(&f.expr, Side::Right, &env.module)?;
@@ -1334,8 +1326,8 @@ impl Runtime {
                 )
             }
         };
-        let left = self.resolve(&left);
-        let right = self.resolve(&right);
+        let left = self.get(&left);
+        let right = self.get(&right);
         Ok((
             Some((fun.0)(left, right).map_err(|err| {
                 let range = if let Some(ind) = self.arg_err_index.get() {
@@ -1375,7 +1367,7 @@ impl Runtime {
                 )
             }
         };
-        let r = self.resolve(&r);
+        let r = self.get(&r);
         Ok((
             Some((fun.0)(r).map_err(|err| {
                 let range = if let Some(ind) = self.arg_err_index.get() {
@@ -1410,22 +1402,22 @@ impl Runtime {
                         for lazy in ls {
                             match *lazy {
                                 Lazy::Variable(ref val) => {
-                                    if self.resolve(&x) == val {
+                                    if self.get(&x) == val {
                                         return Ok((Some(x), Flow::Continue));
                                     }
                                 }
                                 Lazy::UnwrapOk => {
-                                    if let Variable::Result(Ok(x)) = self.resolve(&x) {
+                                    if let Variable::Result(Ok(x)) = self.get(&x) {
                                         return Ok((Some((**x).clone()), Flow::Continue));
                                     }
                                 }
                                 Lazy::UnwrapErr => {
-                                    if let Variable::Result(Err(x)) = self.resolve(&x) {
+                                    if let Variable::Result(Err(x)) = self.get(&x) {
                                         return Ok((Some(x.message.clone()), Flow::Continue));
                                     }
                                 }
                                 Lazy::UnwrapSome => {
-                                    if let Variable::Option(Some(x)) = self.resolve(&x) {
+                                    if let Variable::Option(Some(x)) = self.get(&x) {
                                         return Ok((Some((**x).clone()), Flow::Continue));
                                     }
                                 }
@@ -1499,22 +1491,22 @@ impl Runtime {
                         for lazy in lz {
                             match *lazy {
                                 Lazy::Variable(ref val) => {
-                                    if self.resolve(&x) == val {
+                                    if self.get(&x) == val {
                                         return Ok((Some(x), Flow::Continue));
                                     }
                                 }
                                 Lazy::UnwrapOk => {
-                                    if let Variable::Result(Ok(x)) = self.resolve(&x) {
+                                    if let Variable::Result(Ok(x)) = self.get(&x) {
                                         return Ok((Some((**x).clone()), Flow::Continue));
                                     }
                                 }
                                 Lazy::UnwrapErr => {
-                                    if let Variable::Result(Err(x)) = self.resolve(&x) {
+                                    if let Variable::Result(Err(x)) = self.get(&x) {
                                         return Ok((Some(x.message.clone()), Flow::Continue));
                                     }
                                 }
                                 Lazy::UnwrapSome => {
-                                    if let Variable::Option(Some(x)) = self.resolve(&x) {
+                                    if let Variable::Option(Some(x)) = self.get(&x) {
                                         return Ok((Some((**x).clone()), Flow::Continue));
                                     }
                                 }
@@ -1607,7 +1599,7 @@ impl Runtime {
             self.local_stack.push((RETURN_TYPE.clone(), st - 1));
         }
         for (i, arg) in f.args.iter().enumerate() {
-            // Do not resolve locals to keep fixed length from end of stack.
+            // Do not look up locals to keep fixed length from end of stack.
             self.local_stack.push((arg.name.clone(), st + i));
         }
         let (x, flow) = self.block(&f.block)?;
@@ -1708,7 +1700,7 @@ impl Runtime {
         }
     }
 
-    /// Used internally because loaded functions are resolved
+    /// Used internally because loaded functions are looked up
     /// relative to the caller, which stores its index on the
     /// call stack.
     ///
@@ -1818,7 +1810,7 @@ impl Runtime {
                 ))
             }
         };
-        let v = match self.resolve(&v) {
+        let v = match self.get(&v) {
             &Variable::Vec4(v) => v,
             x => {
                 return Err(self
@@ -1856,7 +1848,7 @@ impl Runtime {
                             return Ok((res, flow));
                         }
                     };
-                    match new_link.push(self.resolve(&v)) {
+                    match new_link.push(self.get(&v)) {
                         Err(err) => {
                             return Err(self.module.error(
                                 item.source_range(),
@@ -1923,7 +1915,7 @@ impl Runtime {
             (Some(x), Flow::Continue) => x,
             _ => return self.err(array_fill.n.source_range(), "Expected something"),
         };
-        let v = match (self.resolve(&fill), self.resolve(&n)) {
+        let v = match (self.get(&fill), self.get(&n)) {
             (x, &Variable::F64(n, _)) => Variable::Array(Arc::new(vec![x.clone(); n as usize])),
             _ => {
                 return self.err(
@@ -1978,7 +1970,7 @@ impl Runtime {
                 x => panic!("Expected reference, found `{}`", x.typeof_var()),
             };
 
-            match *self.resolve(&b) {
+            match *self.get(&b) {
                 Variable::F64(b, ref sec) => unsafe {
                     match *r.0 {
                         Variable::F64(ref mut n, ref mut n_sec) => {
@@ -2414,7 +2406,7 @@ impl Runtime {
 
         let locals = self.local_stack.len() - self.call_stack.last().expect(CSIE).local_len;
         let stack_id = {
-            if cfg!(not(feature = "debug_resolve")) {
+            if cfg!(not(feature = "debug_lookup")) {
                 self.stack.len() - item.static_stack_id.get().unwrap()
             } else {
                 match item.stack_id.get() {
@@ -2431,7 +2423,7 @@ impl Runtime {
                                 if new_val != static_stack_id {
                                     return Err(self.module.error(item.source_range,
                                         &format!(
-                                            "DEBUG: resolved not same for {} `{:?}` vs static `{:?}`",
+                                            "DEBUG: lookup not same for {} `{:?}` vs static `{:?}`",
                                             name,
                                             new_val,
                                             static_stack_id
@@ -2470,7 +2462,7 @@ impl Runtime {
             }
         };
 
-        if cfg!(feature = "debug_resolve") {
+        if cfg!(feature = "debug_lookup") {
             for &(ref n, id) in self.local_stack.iter().rev().take(locals) {
                 if **n == **item.name {
                     if stack_id != id {
@@ -2714,7 +2706,7 @@ impl Runtime {
                 )
             }
         };
-        let val = match *self.resolve(&cond) {
+        let val = match *self.get(&cond) {
             Variable::Bool(val, _) => val,
             _ => {
                 return self.err(
@@ -2738,7 +2730,7 @@ impl Runtime {
                 }
                 _ => return self.err(cond.source_range(), "Expected bool from else if condition"),
             };
-            match *self.resolve(&else_if_cond) {
+            match *self.get(&else_if_cond) {
                 Variable::Bool(false, _) => {}
                 Variable::Bool(true, _) => {
                     return self.block(body);
@@ -2861,22 +2853,22 @@ impl Runtime {
             }
         }
         let w = self.stack.pop().expect(TINVOTS);
-        let w = match self.resolve(&w) {
+        let w = match self.get(&w) {
             &Variable::F64(val, _) => val,
             x => return self.err(vec4.args[3].source_range(), &self.expected(x, "number")),
         };
         let z = self.stack.pop().expect(TINVOTS);
-        let z = match self.resolve(&z) {
+        let z = match self.get(&z) {
             &Variable::F64(val, _) => val,
             x => return self.err(vec4.args[2].source_range(), &self.expected(x, "number")),
         };
         let y = self.stack.pop().expect(TINVOTS);
-        let y = match self.resolve(&y) {
+        let y = match self.get(&y) {
             &Variable::F64(val, _) => val,
             x => return self.err(vec4.args[1].source_range(), &self.expected(x, "number")),
         };
         let x = self.stack.pop().expect(TINVOTS);
-        let x = match self.resolve(&x) {
+        let x = match self.get(&x) {
             &Variable::F64(val, _) => val,
             x => return self.err(vec4.args[0].source_range(), &self.expected(x, "number")),
         };
@@ -2895,22 +2887,22 @@ impl Runtime {
             };
         }
         let w = self.stack.pop().expect(TINVOTS);
-        let w = match self.resolve(&w) {
+        let w = match self.get(&w) {
             &Variable::Vec4(val) => val,
             x => return self.err(mat4.args[3].source_range(), &self.expected(x, "vec4")),
         };
         let z = self.stack.pop().expect(TINVOTS);
-        let z = match self.resolve(&z) {
+        let z = match self.get(&z) {
             &Variable::Vec4(val) => val,
             x => return self.err(mat4.args[2].source_range(), &self.expected(x, "vec4")),
         };
         let y = self.stack.pop().expect(TINVOTS);
-        let y = match self.resolve(&y) {
+        let y = match self.get(&y) {
             &Variable::Vec4(val) => val,
             x => return self.err(mat4.args[1].source_range(), &self.expected(x, "vec4")),
         };
         let x = self.stack.pop().expect(TINVOTS);
-        let x = match self.resolve(&x) {
+        let x = match self.get(&x) {
             &Variable::Vec4(val) => val,
             x => return self.err(mat4.args[0].source_range(), &self.expected(x, "vec4")),
         };
@@ -2930,8 +2922,8 @@ impl Runtime {
     }
 
     #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
-    pub(crate) fn resolve_module(&self, source: &str, target: &mut String) -> Result<(), String> {
-        (self.module_resolver)(source, target)
+    pub(crate) fn get_module(&self, source: &str, target: &mut String) -> Result<(), String> {
+        (self.module_lookup)(source, target)
     }
 }
 

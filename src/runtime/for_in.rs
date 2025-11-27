@@ -9,7 +9,7 @@ macro_rules! iter(
                 &format!("{}\nExpected in-type from for iter",
                     $rt.stack_trace()), $rt))
         };
-        match $rt.resolve(&iter) {
+        match $rt.get(&iter) {
             &Variable::In(ref val) => val.clone(),
             x => return Err($rt.module.error($for_in_expr.iter.source_range(),
                             &$rt.expected(x, "in"), $rt))
@@ -138,7 +138,7 @@ impl Runtime {
         loop {
             match self.block(&for_in_expr.block)? {
                 (Some(x), Flow::Continue) => {
-                    match self.resolve(&x) {
+                    match self.get(&x) {
                         &Variable::F64(val, _) => sum += val,
                         x => {
                             return Err(self.module.error(
@@ -189,7 +189,7 @@ impl Runtime {
         loop {
             match self.block(&for_in_expr.block)? {
                 (Some(x), Flow::Continue) => {
-                    match self.resolve(&x) {
+                    match self.get(&x) {
                         &Variable::F64(val, _) => prod *= val,
                         x => {
                             return Err(self.module.error(
@@ -239,7 +239,7 @@ impl Runtime {
         loop {
             match self.block(&for_in_expr.block)? {
                 (Some(x), Flow::Continue) => {
-                    match self.resolve(&x) {
+                    match self.get(&x) {
                         &Variable::F64(val, ref val_sec) => {
                             if min.is_nan() || min > val {
                                 min = val;
@@ -307,7 +307,7 @@ impl Runtime {
         loop {
             match self.block(&for_in_expr.block)? {
                 (Some(x), Flow::Continue) => {
-                    match self.resolve(&x) {
+                    match self.get(&x) {
                         &Variable::F64(val, ref val_sec) => {
                             if max.is_nan() || max < val {
                                 max = val;
@@ -376,7 +376,7 @@ impl Runtime {
         loop {
             match self.block(&for_in_expr.block)? {
                 (Some(x), Flow::Continue) => {
-                    match self.resolve(&x) {
+                    match self.get(&x) {
                         &Variable::Bool(val, ref val_sec) => {
                             if val {
                                 any = true;
@@ -446,7 +446,7 @@ impl Runtime {
         loop {
             match self.block(&for_in_expr.block)? {
                 (Some(x), Flow::Continue) => {
-                    match self.resolve(&x) {
+                    match self.get(&x) {
                         &Variable::Bool(val, ref val_sec) => {
                             if !val {
                                 all = false;
@@ -525,7 +525,7 @@ impl Runtime {
                         // Evaluate link items directly.
                         'inner: for item in &link.items {
                             match rt.expression(item, Side::Right)? {
-                                (Some(ref x), Flow::Continue) => match res.push(rt.resolve(x)) {
+                                (Some(ref x), Flow::Continue) => match res.push(rt.get(x)) {
                                     Err(err) => {
                                         return Err(rt.module.error(
                                             for_in_expr.source_range,

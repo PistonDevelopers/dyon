@@ -587,11 +587,11 @@ pub fn draw_2d<C: CharacterCache<Texture = G::Texture>, G: Graphics>(
     use self::graphics::draw_state::{Blend, Stencil};
 
     let draw_list = rt.stack.pop().expect(TINVOTS);
-    let arr = rt.resolve(&draw_list);
+    let arr = rt.get(&draw_list);
     let mut transform = c.transform;
     if let &Variable::Array(ref arr) = arr {
         for it in &**arr {
-            let it = rt.resolve(it);
+            let it = rt.get(it);
             if let &Variable::Array(ref it) = it {
                 let ty: Arc<String> = rt.var(&it[0])?;
                 match &**ty {
