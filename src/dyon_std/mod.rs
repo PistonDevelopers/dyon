@@ -631,14 +631,14 @@ pub(crate) fn is_empty(rt: &mut Runtime) -> Result<Variable, String> {
 pub(crate) fn random(rt: &mut Runtime) -> Result<Variable, String> {
     use rand::Rng;
 
-    Ok(Variable::f64(rt.rng.gen()))
+    Ok(Variable::f64(rt.rng.r#gen()))
 }
 
 dyon_fn! {fn tau() -> f64 {6.283_185_307_179_586}}
 
 pub(crate) fn len(a: &Variable) -> Result<Variable, String> {
     match a {
-        Variable::Array(ref arr) => Ok(Variable::f64(arr.len() as f64)),
+        Variable::Array(arr) => Ok(Variable::f64(arr.len() as f64)),
         _ => Err("Expected array".into()),
     }
 }
@@ -1513,8 +1513,8 @@ pub(crate) fn is_err(rt: &mut Runtime) -> Result<Variable, String> {
 pub(crate) fn is_ok(rt: &mut Runtime) -> Result<Variable, String> {
     let v = rt.stack.pop().expect(TINVOTS);
     Ok(match rt.resolve(&v) {
-        &Variable::Result(Err(_)) => Variable::bool(false),
-        &Variable::Result(Ok(_)) => Variable::bool(true),
+        Variable::Result(Err(_)) => Variable::bool(false),
+        Variable::Result(Ok(_)) => Variable::bool(true),
         x => return Err(rt.expected_arg(0, x, "result")),
     })
 }
