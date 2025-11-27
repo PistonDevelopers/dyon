@@ -154,214 +154,215 @@ fn item_lookup(
 ) -> Result<*mut Variable, String> {
     use ast::Id;
     use std::collections::hash_map::Entry;
+    use Variable::*;
 
-    unsafe {
-        match *var {
-            Variable::Object(ref mut obj) => {
-                let id = match *prop {
-                    Id::String(_, ref id) => id.clone(),
-                    Id::Expression(_) => {
-                        let id = start_stack_len + *expr_j;
-                        // Resolve reference of computed expression.
-                        let id = if let Variable::Ref(ref_id) = stack[id] {
-                            ref_id
-                        } else {
-                            id
-                        };
-                        match stack[id] {
-                            Variable::Str(ref id) => {
-                                *expr_j += 1;
-                                id.clone()
-                            }
-                            _ => {
-                                return Err(module.error_fnindex(
-                                    prop.source_range(),
-                                    &format!("{}\nExpected string", stack_trace(call_stack)),
-                                    call_stack.last().expect(CSIE).index,
-                                ))
-                            }
+    match unsafe {var.as_mut().unwrap()} {
+        Object(obj) => {
+            let id = match *prop {
+                Id::String(_, ref id) => id.clone(),
+                Id::Expression(_) => {
+                    let id = start_stack_len + *expr_j;
+                    // Resolve reference of computed expression.
+                    let id = if let Ref(ref_id) = stack[id] {
+                        ref_id
+                    } else {
+                        id
+                    };
+                    match stack[id] {
+                        Str(ref id) => {
+                            *expr_j += 1;
+                            id.clone()
                         }
-                    }
-                    Id::F64(range, _) => {
-                        return Err(module.error_fnindex(
-                            range,
-                            &format!("{}\nExpected string", stack_trace(call_stack)),
-                            call_stack.last().expect(CSIE).index,
-                        ))
-                    }
-                };
-                let v = match Arc::make_mut(obj).entry(id.clone()) {
-                    Entry::Vacant(vac) => {
-                        if insert && last {
-                            // Insert a key to overwrite with new value.
-                            vac.insert(Variable::Return)
-                        } else {
+                        _ => {
                             return Err(module.error_fnindex(
                                 prop.source_range(),
-                                &format!("{}\nObject has no key `{}`", stack_trace(call_stack), id),
+                                &format!("{}\nExpected string", stack_trace(call_stack)),
+                                call_stack.last().expect(CSIE).index,
+                            ))
+                        }
+                    }
+                }
+                Id::F64(range, _) => {
+                    return Err(module.error_fnindex(
+                        range,
+                        &format!("{}\nExpected string", stack_trace(call_stack)),
+                        call_stack.last().expect(CSIE).index,
+                    ))
+                }
+            };
+            let v = match Arc::make_mut(obj).entry(id.clone()) {
+                Entry::Vacant(vac) => {
+                    if insert && last {
+                        // Insert a key to overwrite with new value.
+                        vac.insert(Return)
+                    } else {
+                        return Err(module.error_fnindex(
+                            prop.source_range(),
+                            &format!("{}\nObject has no key `{}`", stack_trace(call_stack), id),
+                            call_stack.last().expect(CSIE).index,
+                        ));
+                    }
+                }
+                Entry::Occupied(v) => v.into_mut(),
+            };
+            // Resolve reference.
+            if let Ref(id) = *v {
+                // Do not resolve if last, because references should be
+                // copy-on-write.
+                if last {
+                    Ok(v)
+                } else {
+                    Ok(&mut stack[id])
+                }
+            } else {
+                Ok(v)
+            }
+        }
+        Array(arr) => {
+            let id = match *prop {
+                Id::F64(_, id) => id,
+                Id::Expression(_) => {
+                    let id = start_stack_len + *expr_j;
+                    // Resolve reference of computed expression.
+                    let id = if let Ref(ref_id) = stack[id] {
+                        ref_id
+                    } else {
+                        id
+                    };
+                    let (prev_stack, stack) = stack.split_at_mut(id);
+                    match stack[0] {
+                        F64(id, _) => {
+                            *expr_j += 1;
+                            id
+                        }
+                        Array(ref indices) => {
+                            // Use indices in array.
+                            //
+                            // This uses an unsafe pointer safely, because an array lookup
+                            // will always point to some object on the heap or earlier stack.
+                            // The safety rule of references is enforced by the runtime,
+                            // guarded by the lifetime checker, but can not be checked
+                            // at compile time.
+                            //
+                            // `[0, 1]` are indices to look up `b` in `[[a, b], [c, d]]`.
+                            //   ^  ^---- to `b` in `[a, b]`.
+                            //   \---- points to first array `[a, b]`.
+                            let mut arr: *mut Vec<Variable> = Arc::make_mut(arr);
+                            let n = indices.len();
+                            for (i, ind) in indices.iter().enumerate() {
+                                let id: f64 = match ind {
+                                    F64(id, _) => *id,
+                                    Ref(x) => {
+                                        if let F64(id, _) = prev_stack[*x] {
+                                            id
+                                        } else {
+                                            break;
+                                        }
+                                    }
+                                    _ => break,
+                                };
+                                // Make it explicit `&mut (*arr)` to use
+                                // dangerous implicit autoref.
+                                let v = match unsafe {arr.as_mut().unwrap().get_mut(id as usize)} {
+                                    None => {
+                                        return Err(module.error_fnindex(
+                                            prop.source_range(),
+                                            &format!(
+                                                "{}\nOut of bounds `{}`",
+                                                stack_trace(call_stack),
+                                                id
+                                            ),
+                                            call_stack.last().expect(CSIE).index,
+                                        ))
+                                    }
+                                    Some(x) => x,
+                                };
+                                if i + 1 == n {
+                                    // Resolve reference.
+                                    return if let Ref(id) = *v {
+                                        // Do not resolve if last, because references should be
+                                        // copy-on-write.
+                                        if last {
+                                            Ok(v)
+                                        } else {
+                                            Ok(&mut prev_stack[id])
+                                        }
+                                    } else {
+                                        Ok(v)
+                                    };
+                                }
+                                match *v {
+                                    Array(ref mut new_arr) => {
+                                        arr = Arc::make_mut(new_arr);
+                                    }
+                                    Ref(x) => {
+                                        if let Array(ref mut new_arr) = prev_stack[x]
+                                        {
+                                            arr = Arc::make_mut(new_arr);
+                                        } else {
+                                            break;
+                                        }
+                                    }
+                                    _ => break,
+                                }
+                            }
+                            return Err(module.error_fnindex(
+                                prop.source_range(),
+                                &format!(
+                                    "{}\nArray of indices did not match lookup array",
+                                    stack_trace(call_stack)
+                                ),
                                 call_stack.last().expect(CSIE).index,
                             ));
                         }
-                    }
-                    Entry::Occupied(v) => v.into_mut(),
-                };
-                // Resolve reference.
-                if let Variable::Ref(id) = *v {
-                    // Do not resolve if last, because references should be
-                    // copy-on-write.
-                    if last {
-                        Ok(v)
-                    } else {
-                        Ok(&mut stack[id])
-                    }
-                } else {
-                    Ok(v)
-                }
-            }
-            Variable::Array(ref mut arr) => {
-                let id = match *prop {
-                    Id::F64(_, id) => id,
-                    Id::Expression(_) => {
-                        let id = start_stack_len + *expr_j;
-                        // Resolve reference of computed expression.
-                        let id = if let Variable::Ref(ref_id) = stack[id] {
-                            ref_id
-                        } else {
-                            id
-                        };
-                        let (prev_stack, stack) = stack.split_at_mut(id);
-                        match stack[0] {
-                            Variable::F64(id, _) => {
-                                *expr_j += 1;
-                                id
-                            }
-                            Variable::Array(ref indices) => {
-                                // Use indices in array.
-                                //
-                                // This uses an unsafe pointer safely, because an array lookup
-                                // will always point to some object on the heap or earlier stack.
-                                // The safety rule of references is enforced by the runtime,
-                                // guarded by the lifetime checker, but can not be checked
-                                // at compile time.
-                                //
-                                // `[0, 1]` are indices to look up `b` in `[[a, b], [c, d]]`.
-                                //   ^  ^---- to `b` in `[a, b]`.
-                                //   \---- points to first array `[a, b]`.
-                                let mut arr: *mut Vec<Variable> = Arc::make_mut(arr);
-                                let n = indices.len();
-                                for (i, ind) in indices.iter().enumerate() {
-                                    let id = match ind {
-                                        Variable::F64(id, _) => *id,
-                                        Variable::Ref(x) => {
-                                            if let Variable::F64(id, _) = prev_stack[*x] {
-                                                id
-                                            } else {
-                                                break;
-                                            }
-                                        }
-                                        _ => break,
-                                    };
-                                    let v = match (*arr).get_mut(id as usize) {
-                                        None => {
-                                            return Err(module.error_fnindex(
-                                                prop.source_range(),
-                                                &format!(
-                                                    "{}\nOut of bounds `{}`",
-                                                    stack_trace(call_stack),
-                                                    id
-                                                ),
-                                                call_stack.last().expect(CSIE).index,
-                                            ))
-                                        }
-                                        Some(x) => x,
-                                    };
-                                    if i + 1 == n {
-                                        // Resolve reference.
-                                        return if let Variable::Ref(id) = *v {
-                                            // Do not resolve if last, because references should be
-                                            // copy-on-write.
-                                            if last {
-                                                Ok(v)
-                                            } else {
-                                                Ok(&mut prev_stack[id])
-                                            }
-                                        } else {
-                                            Ok(v)
-                                        };
-                                    }
-                                    match *v {
-                                        Variable::Array(ref mut new_arr) => {
-                                            arr = Arc::make_mut(new_arr);
-                                        }
-                                        Variable::Ref(x) => {
-                                            if let Variable::Array(ref mut new_arr) = prev_stack[x]
-                                            {
-                                                arr = Arc::make_mut(new_arr);
-                                            } else {
-                                                break;
-                                            }
-                                        }
-                                        _ => break,
-                                    }
-                                }
-                                return Err(module.error_fnindex(
-                                    prop.source_range(),
-                                    &format!(
-                                        "{}\nArray of indices did not match lookup array",
-                                        stack_trace(call_stack)
-                                    ),
-                                    call_stack.last().expect(CSIE).index,
-                                ));
-                            }
-                            _ => {
-                                return Err(module.error_fnindex(
-                                    prop.source_range(),
-                                    &format!("{}\nExpected number", stack_trace(call_stack)),
-                                    call_stack.last().expect(CSIE).index,
-                                ))
-                            }
+                        _ => {
+                            return Err(module.error_fnindex(
+                                prop.source_range(),
+                                &format!("{}\nExpected number", stack_trace(call_stack)),
+                                call_stack.last().expect(CSIE).index,
+                            ))
                         }
                     }
-                    Id::String(range, _) => {
-                        return Err(module.error_fnindex(
-                            range,
-                            &format!("{}\nExpected number", stack_trace(call_stack)),
-                            call_stack.last().expect(CSIE).index,
-                        ))
-                    }
-                };
-                let v = match Arc::make_mut(arr).get_mut(id as usize) {
-                    None => {
-                        return Err(module.error_fnindex(
-                            prop.source_range(),
-                            &format!("{}\nOut of bounds `{}`", stack_trace(call_stack), id),
-                            call_stack.last().expect(CSIE).index,
-                        ))
-                    }
-                    Some(x) => x,
-                };
-                // Resolve reference.
-                if let Variable::Ref(id) = *v {
-                    // Do not resolve if last, because references should be
-                    // copy-on-write.
-                    if last {
-                        Ok(v)
-                    } else {
-                        Ok(&mut stack[id])
-                    }
-                } else {
-                    Ok(v)
                 }
+                Id::String(range, _) => {
+                    return Err(module.error_fnindex(
+                        range,
+                        &format!("{}\nExpected number", stack_trace(call_stack)),
+                        call_stack.last().expect(CSIE).index,
+                    ))
+                }
+            };
+            let v = match Arc::make_mut(arr).get_mut(id as usize) {
+                None => {
+                    return Err(module.error_fnindex(
+                        prop.source_range(),
+                        &format!("{}\nOut of bounds `{}`", stack_trace(call_stack), id),
+                        call_stack.last().expect(CSIE).index,
+                    ))
+                }
+                Some(x) => x,
+            };
+            // Resolve reference.
+            if let Ref(id) = *v {
+                // Do not resolve if last, because references should be
+                // copy-on-write.
+                if last {
+                    Ok(v)
+                } else {
+                    Ok(&mut stack[id])
+                }
+            } else {
+                Ok(v)
             }
-            _ => Err(module.error_fnindex(
-                prop.source_range(),
-                &format!(
-                    "{}\nLook up requires object or array",
-                    stack_trace(call_stack)
-                ),
-                call_stack.last().expect(CSIE).index,
-            )),
         }
+        _ => Err(module.error_fnindex(
+            prop.source_range(),
+            &format!(
+                "{}\nLook up requires object or array",
+                stack_trace(call_stack)
+            ),
+            call_stack.last().expect(CSIE).index,
+        )),
     }
 }
 
@@ -1414,17 +1415,17 @@ impl Runtime {
                                     }
                                 }
                                 Lazy::UnwrapOk => {
-                                    if let Variable::Result(Ok(ref x)) = self.resolve(&x) {
+                                    if let Variable::Result(Ok(x)) = self.resolve(&x) {
                                         return Ok((Some((**x).clone()), Flow::Continue));
                                     }
                                 }
                                 Lazy::UnwrapErr => {
-                                    if let Variable::Result(Err(ref x)) = self.resolve(&x) {
+                                    if let Variable::Result(Err(x)) = self.resolve(&x) {
                                         return Ok((Some(x.message.clone()), Flow::Continue));
                                     }
                                 }
                                 Lazy::UnwrapSome => {
-                                    if let Variable::Option(Some(ref x)) = self.resolve(&x) {
+                                    if let Variable::Option(Some(x)) = self.resolve(&x) {
                                         return Ok((Some((**x).clone()), Flow::Continue));
                                     }
                                 }
@@ -1503,17 +1504,17 @@ impl Runtime {
                                     }
                                 }
                                 Lazy::UnwrapOk => {
-                                    if let Variable::Result(Ok(ref x)) = self.resolve(&x) {
+                                    if let Variable::Result(Ok(x)) = self.resolve(&x) {
                                         return Ok((Some((**x).clone()), Flow::Continue));
                                     }
                                 }
                                 Lazy::UnwrapErr => {
-                                    if let Variable::Result(Err(ref x)) = self.resolve(&x) {
+                                    if let Variable::Result(Err(x)) = self.resolve(&x) {
                                         return Ok((Some(x.message.clone()), Flow::Continue));
                                     }
                                 }
                                 Lazy::UnwrapSome => {
-                                    if let Variable::Option(Some(ref x)) = self.resolve(&x) {
+                                    if let Variable::Option(Some(x)) = self.resolve(&x) {
                                         return Ok((Some((**x).clone()), Flow::Continue));
                                     }
                                 }

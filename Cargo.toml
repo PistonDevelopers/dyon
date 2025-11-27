@@ -1,7 +1,7 @@
 [package]
 name = "dyon"
 version = "0.49.2"
-edition = "2021"
+edition = "2024"
 authors = ["Sven Nilsen <bvssvni@gmail.com>"]
 keywords = ["script", "scripting", "game", "language", "piston"]
 description = "A rusty dynamically typed scripting language"
@@ -20,6 +20,13 @@ lazy_static = "1.0.0"
 vecmath = "1.0.0"
 advancedresearch-tree_mem_sort = "0.2.0"
 tokio = {version = "1.34.0", features = ["full"], optional = true}
+
+[dev-dependencies]
+criterion = "0.7.0"
+
+[[bench]]
+name = "dyon_benchmark"
+harness = false
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies.reqwest]
 version = "0.9.22"
