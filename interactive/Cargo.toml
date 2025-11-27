@@ -7,6 +7,7 @@ keywords = ["script", "scripting", "game", "language", "piston"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/pistondevelopers/dyon.git"
 homepage = "https://github.com/pistondevelopers/dyon/interactive"
+edition = "2024"
 
 [lib]
 name = "dyon_interactive"
