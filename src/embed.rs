@@ -10,6 +10,12 @@ use crate::{
     Variable,
 };
 
+/// Wraps object into a smart pointer to be used as variable.
+pub fn to_rust_object<T: 'static>(a: T) -> RustObject {
+    use crate::Mutex;
+    Arc::new(Mutex::new(a))
+}
+
 /// Gets value of object field.
 pub fn obj_field<T: PopVariable>(rt: &Runtime, obj: &Object, name: &str) -> Result<T, String> {
     let var = obj

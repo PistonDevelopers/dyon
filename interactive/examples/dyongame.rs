@@ -7,6 +7,7 @@ extern crate current;
 extern crate dyon_interactive;
 extern crate kira;
 extern crate image;
+extern crate graphics;
 
 use std::sync::Arc;
 use std::collections::HashMap;
@@ -147,9 +148,21 @@ fn load_module(file: &str) -> Option<Module> {
     module.add(Arc::new("set_music_volume".into()),
         set_music_volume, Dfn::nl(vec![Type::F64], Type::Void));
     module.add(Arc::new("create_texture".into()),
-        create_texture, Dfn::nl(vec![Type::F64], Type::F64));
+        create_texture, Dfn {
+            lts: vec![dyon::Lt::Default],
+            tys: vec![Type::Any],
+            ret: Type::Any,
+            ext: vec![(vec![], vec![Type::F64, Type::F64], Type::F64)],
+            lazy: dyon::LAZY_NO,
+        });
     module.add(Arc::new("update__texture_image".into()),
         update__texture_image, Dfn::nl(vec![Type::F64, Type::F64], Type::Void)
+    );
+    module.add(Arc::new("load_font".into()),
+        load_font, Dfn::nl(vec![Type::Str], Type::Result(Box::new(Type::F64)))
+    );
+    module.add(Arc::new("load_font_obj".into()),
+        load_font_obj, Dfn::nl(vec![Type::Str], Type::Result(Box::new(Type::Any)))
     );
 
     if error(dyon::load_str(
@@ -173,12 +186,51 @@ mod dyon_functions {
     use piston::event_loop::Events;
     use opengl_graphics::{GlGraphics, GlyphCache, Texture, TextureSettings};
     use dyon::{Runtime, Variable};
-    use dyon_interactive::{draw_2d, NO_EVENT};
+    use dyon_interactive::{draw_2d, FontNames, NO_EVENT};
     use current::Current;
     use std::sync::Arc;
     use image::RgbaImage;
 
     dyon_fn!{fn render_source() -> String {include_str!("../src/render.dyon").into()}}
+
+
+    pub fn load_font(rt: &mut Runtime) -> Result<Variable, String> {
+        use dyon::embed::PushVariable;
+        use opengl_graphics::{Filter, TextureSettings};
+        use graphics::glyph_cache::rusttype::GlyphCache;
+
+        let glyphs = unsafe { &mut *Current::<Vec<GlyphCache<'static, (), Texture>>>::new() };
+        let font_names = unsafe { &mut *Current::<FontNames>::new() };
+        let file: Arc<String> = rt.pop()?;
+        let texture_settings = TextureSettings::new().filter(Filter::Nearest);
+        Ok(match GlyphCache::<'static, (), Texture>::new(&**file, (), texture_settings) {
+            Ok(x) => {
+                let id = glyphs.len();
+                glyphs.push(x);
+                font_names.0.push(file.clone());
+                Ok::<usize, Arc<String>>(id).push_var()
+            }
+            Err(err) => {
+                Err::<usize, Arc<String>>(Arc::new(format!("{}", err))).push_var()
+            }
+        })
+    }
+
+    pub fn load_font_obj(rt: &mut Runtime) -> Result<Variable, String> {
+        use dyon::embed::{to_rust_object, PushVariable};
+        use dyon::RustObject;
+        use opengl_graphics::{Filter, TextureSettings};
+        use graphics::glyph_cache::rusttype::GlyphCache;
+
+        let file: Arc<String> = rt.pop()?;
+        let texture_settings = TextureSettings::new().filter(Filter::Nearest);
+        Ok(match GlyphCache::<'static, (), Texture>::new(
+            &**file, (), texture_settings
+        ) {
+            Ok(x) => Ok::<RustObject, Arc<String>>(to_rust_object(x)).push_var(),
+            Err(err) => Err::<RustObject, Arc<String>>(Arc::new(format!("{}", err))).push_var(),
+        })
+    }
 
     pub fn draw(rt: &mut Runtime) -> Result<(), String> {
         let e = unsafe { &*Current::<Option<Event>>::new() };
@@ -199,39 +251,85 @@ mod dyon_functions {
     }
 
     pub fn create_texture(rt: &mut Runtime) -> Result<Variable, String> {
-        use dyon::embed::PushVariable;
+        use dyon::embed::{to_rust_object, PushVariable};
 
-        let images = unsafe { &*Current::<Vec<RgbaImage>>::new() };
-        let textures = unsafe { &mut *Current::<Vec<Texture>>::new() };
-        let id: usize = rt.pop()?;
-        let new_id = textures.len();
-        let image = if let Some(x) = images.get(id) {
-            x
-        } else {
-            return Err("Image id is out of bounds".into());
-        };
-        textures.push(Texture::from_image(image, &TextureSettings::new()));
-        Ok(new_id.push_var())
+        let image: Variable = rt.pop()?;
+        match image {
+            Variable::F64(id, _) => {
+                let images = unsafe { &*Current::<Vec<RgbaImage>>::new() };
+                let textures = unsafe { &mut *Current::<Vec<Texture>>::new() };
+                let image: &RgbaImage = if let Some(x) = images.get(id as usize) {x}
+                            else {return Err("Image id is out of bounds".into())};
+
+                let new_id = textures.len();
+                textures.push(Texture::from_image(image, &TextureSettings::new()));
+                Ok(new_id.push_var())
+            }
+            Variable::RustObject(obj) => {
+                let mut guard = obj.lock().map_err(|_| "Could not obtain lock on Mutex".to_string())?;
+                let image: &mut RgbaImage = guard.downcast_mut()
+                    .ok_or_else(|| "Expected RgbaImage".to_string())?;
+
+                Ok(Variable::RustObject(
+                    to_rust_object(Texture::from_image(image, &TextureSettings::new()))))
+            }
+            _ => Err("Expected `f64` (image id) or `any` (rust object)".to_string()),
+        }
     }
 
     #[allow(non_snake_case)]
     pub fn update__texture_image(rt: &mut Runtime) -> Result<(), String> {
-        let images = unsafe { &*Current::<Vec<RgbaImage>>::new() };
-        let textures = unsafe { &mut *Current::<Vec<Texture>>::new() };
-        let image_id: usize = rt.pop()?;
-        let texture_id: usize = rt.pop()?;
-        let image = if let Some(x) = images.get(image_id) {
-            x
-        } else {
-            return Err("Image id is out of bounds".into());
-        };
-        let texture = if let Some(x) = textures.get_mut(texture_id) {
-            x
-        } else {
-            return Err("Texture id is out of bounds".into());
-        };
-        texture.update(&image);
-        Ok(())
+        let image: Variable = rt.pop()?;
+        let texture: Variable = rt.pop()?;
+        match image {
+            Variable::F64(id, _) => {
+                let images = unsafe { &*Current::<Vec<RgbaImage>>::new() };
+                let image: &RgbaImage = if let Some(x) = images.get(id as usize) {x}
+                            else {return Err("Image id is out of bounds".into())};
+                match texture {
+                    Variable::F64(id, _) => {
+                        let textures = unsafe { &mut *Current::<Vec<Texture>>::new() };
+                        let texture: &mut Texture = if let Some(x) = textures.get_mut(id as usize) {x}
+                                    else {return Err("Texture id is out of bounds".into())};
+                        texture.update(&image);
+                        Ok(())
+                    }
+                    Variable::RustObject(obj) => {
+                        let mut guard = obj.lock()
+                            .map_err(|_| "Could not obtain lock on Mutex".to_string())?;
+                        let texture: &mut Texture = guard.downcast_mut()
+                            .ok_or_else(|| "Expected Texture".to_string())?;
+                        texture.update(&image);
+                        Ok(())
+                    }
+                    _ => Err("Expected `f64` (texture id) or `any` (rust object)".to_string()),
+                }
+            }
+            Variable::RustObject(obj) => {
+                let mut guard = obj.lock().map_err(|_| "Could not obtain lock on Mutex".to_string())?;
+                let image: &mut RgbaImage = guard.downcast_mut()
+                    .ok_or_else(|| "Expected RgbaImage".to_string())?;
+                match texture {
+                    Variable::F64(id, _) => {
+                        let textures = unsafe { &mut *Current::<Vec<Texture>>::new() };
+                        let texture: &mut Texture = if let Some(x) = textures.get_mut(id as usize) {x}
+                                    else {return Err("Texture id is out of bounds".into())};
+                        texture.update(&image);
+                        Ok(())
+                    }
+                    Variable::RustObject(obj) => {
+                        let mut guard = obj.lock()
+                            .map_err(|_| "Could not obtain lock on Mutex".to_string())?;
+                        let texture: &mut Texture = guard.downcast_mut()
+                            .ok_or_else(|| "Expected Texture".to_string())?;
+                        texture.update(&image);
+                        Ok(())
+                    }
+                    _ => Err("Expected `f64` (texture id) or `any` (rust object)".to_string()),
+                }
+            }
+            _ => Err("Expected `f64` (image id) or `any` (rust object)".to_string()),
+        }
     }
 
     dyon_fn!{fn next_event() -> bool {

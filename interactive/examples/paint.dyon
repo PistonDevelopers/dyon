@@ -1,4 +1,8 @@
 fn main() {
+    // This example also works with (using a Rust object for image):
+    // img := create_image(size: window_draw_size())
+
+    // Create an image ID.
     img := create_image(name: "image", size: window_draw_size())
     img_texture := create_texture(img)
     down := false

@@ -159,6 +159,11 @@ fn font_names() -> [str] { ... }
 /// Returns `ok(id)` when successful.
 fn load_font(file: str) -> res[f64] { ... }
 
+/// Loads font from file as Rust object.
+///
+/// Returns `ok(obj)` when successful.
+fn load_font_obj(file: str) -> res[any] { ... }
+
 /// Returns list of image names.
 fn image_names() -> [str] { ... }
 
@@ -167,25 +172,40 @@ fn image_names() -> [str] { ... }
 /// Returns `ok(id)` when successful.
 fn load_image(file: str) -> res[f64] { ... }
 
+/// Loads image from file as Rust object.
+///
+/// Returns `ok(obj)` when successful.
+fn load_image_obj(file: str) -> res[any] { ... }
+
 /// Saves image to file.
 fn save__image_file(image: f64, file: str) -> res[str] { ... }
 
 /// Creates empty image.
+///
+/// Stores image in a list of current objects.
+/// This must be given a name since it is mimicking loading from a file.
 fn create_image__name_size(name: str, size: vec4) -> f64 { ... }
 
+/// Creates empty image.
+///
+/// Returns a Rust object that can be used on new threads.
+fn create_image__size(size: vec4) -> any { ... }
+
 /// Returns image size.
-fn image_size(image: f64) -> vec4 { ... }
+fn image_size(image: any) -> vec4 { ... }
 
 /// Sets pixel color in image.
-fn pxl__image_pos_color(image: f64, pos: vec4, color: vec4) { ... }
+fn pxl__image_pos_color(image: any, pos: vec4, color: vec4) { ... }
 
 /// Gets pixel color from image.
-fn pxl__image_pos(image: f64, pos: vec4) -> vec4 { ... }
+fn pxl__image_pos(image: any, pos: vec4) -> vec4 { ... }
 
 /// Creates texture from image.
 ///
-/// Takes an image id and returns a texture id.
-fn create_texture(image: f64) -> f64 { ... }
+/// If the input is an image id the output will be a texture id.
+/// If the input is a Rust object, the output will be a Rust object.
+fn create_texture(image: any) -> any { ... }
+    (f64, f64) -> f64
 
 /// Updates texture with image.
-fn update__texture_image(image: f64, texture: f64) { ... }
+fn update__texture_image(texture: any, image: any) { ... }
