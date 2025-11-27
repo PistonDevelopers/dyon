@@ -349,7 +349,7 @@ macro_rules! dyon_obj {
             impl $crate::embed::PopVariable for $t {
                 fn pop_var(rt: &$crate::Runtime, var: &$crate::Variable) -> Result<Self, String> {
                     use dyon::embed::obj_field;
-                    let var = rt.resolve(var);
+                    let var = rt.get(var);
                     if let &$crate::Variable::Object(ref obj) = var {
                         Ok($t {
                             $(

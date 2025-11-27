@@ -189,7 +189,7 @@ pub struct UnsafeRef(*mut Variable);
 pub struct ClosureEnvironment {
     /// The module that the closure was created.
     pub module: Arc<Module>,
-    /// Relative index, used to resolve function indices.
+    /// Relative index, used to look up function indices.
     pub relative: usize,
 }
 
@@ -555,7 +555,7 @@ impl Call {
         module: &Arc<Module>,
     ) -> Result<T, String> {
         let val = runtime.call_str_ret(&self.name, &self.args, module)?;
-        T::pop_var(runtime, runtime.resolve(&val))
+        T::pop_var(runtime, runtime.get(&val))
     }
 
     /// Convert return value to a Vec4 convertible type.
@@ -565,7 +565,7 @@ impl Call {
         module: &Arc<Module>,
     ) -> Result<T, String> {
         let val = runtime.call_str_ret(&self.name, &self.args, module)?;
-        match runtime.resolve(&val) {
+        match runtime.get(&val) {
             &Variable::Vec4(val) => Ok(T::from(val)),
             x => Err(runtime.expected(x, "vec4")),
         }

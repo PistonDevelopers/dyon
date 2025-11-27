@@ -10,7 +10,7 @@ macro_rules! start(
                     &format!("{}\nExpected number from for start",
                         $rt.stack_trace()), $rt))
             };
-            let start = match $rt.resolve(&start) {
+            let start = match $rt.get(&start) {
                 &Variable::F64(val, _) => val,
                 x => return Err($rt.module.error(start_expr.source_range(),
                                 &$rt.expected(x, "number"), $rt))
@@ -29,7 +29,7 @@ macro_rules! end(
                 &format!("{}\nExpected number from for end",
                     $rt.stack_trace()), $rt))
         };
-        match $rt.resolve(&end) {
+        match $rt.get(&end) {
             &Variable::F64(val, _) => val,
             x => return Err($rt.module.error($for_n_expr.end.source_range(),
                             &$rt.expected(x, "number"), $rt))
@@ -167,7 +167,7 @@ impl Runtime {
             cond!(self, for_n_expr, st, end);
             match self.block(&for_n_expr.block)? {
                 (Some(x), Flow::Continue) => {
-                    match self.resolve(&x) {
+                    match self.get(&x) {
                         &Variable::F64(val, _) => sum += val,
                         x => {
                             return Err(self.module.error(
@@ -223,7 +223,7 @@ impl Runtime {
             cond!(self, for_n_expr, st, end);
             match self.block(&for_n_expr.block)? {
                 (Some(x), Flow::Continue) => {
-                    match self.resolve(&x) {
+                    match self.get(&x) {
                         &Variable::F64(val, _) => prod *= val,
                         x => {
                             return Err(self.module.error(
@@ -279,7 +279,7 @@ impl Runtime {
             let ind = cond!(self, for_n_expr, st, end);
             match self.block(&for_n_expr.block)? {
                 (Some(x), Flow::Continue) => {
-                    match self.resolve(&x) {
+                    match self.get(&x) {
                         &Variable::F64(val, ref val_sec) => {
                             if min.is_nan() || min > val {
                                 min = val;
@@ -348,7 +348,7 @@ impl Runtime {
             let ind = cond!(self, for_n_expr, st, end);
             match self.block(&for_n_expr.block)? {
                 (Some(x), Flow::Continue) => {
-                    match self.resolve(&x) {
+                    match self.get(&x) {
                         &Variable::F64(val, ref val_sec) => {
                             if max.is_nan() || max < val {
                                 max = val;
@@ -417,7 +417,7 @@ impl Runtime {
             let ind = cond!(self, for_n_expr, st, end);
             match self.block(&for_n_expr.block)? {
                 (Some(x), Flow::Continue) => {
-                    match self.resolve(&x) {
+                    match self.get(&x) {
                         &Variable::Bool(val, ref val_sec) => {
                             if val {
                                 any = true;
@@ -487,7 +487,7 @@ impl Runtime {
             let ind = cond!(self, for_n_expr, st, end);
             match self.block(&for_n_expr.block)? {
                 (Some(x), Flow::Continue) => {
-                    match self.resolve(&x) {
+                    match self.get(&x) {
                         &Variable::Bool(val, ref val_sec) => {
                             if !val {
                                 all = false;
@@ -567,7 +567,7 @@ impl Runtime {
                         // Evaluate link items directly.
                         'inner: for item in &link.items {
                             match rt.expression(item, Side::Right)? {
-                                (Some(ref x), Flow::Continue) => match res.push(rt.resolve(x)) {
+                                (Some(ref x), Flow::Continue) => match res.push(rt.get(x)) {
                                     Err(err) => {
                                         return Err(rt.module.error(
                                             for_n_expr.source_range,
@@ -713,7 +713,7 @@ impl Runtime {
             cond!(self, for_n_expr, st, end);
             match self.block(&for_n_expr.block)? {
                 (Some(x), Flow::Continue) => {
-                    match self.resolve(&x) {
+                    match self.get(&x) {
                         &Variable::Vec4(val) => {
                             for i in 0..4 {
                                 sum[i] += val[i]
@@ -773,7 +773,7 @@ impl Runtime {
             cond!(self, for_n_expr, st, end);
             match self.block(&for_n_expr.block)? {
                 (Some(x), Flow::Continue) => {
-                    match self.resolve(&x) {
+                    match self.get(&x) {
                         &Variable::Vec4(val) => {
                             for i in 0..4 {
                                 prod[i] *= val[i]
