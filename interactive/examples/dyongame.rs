@@ -26,7 +26,7 @@ use kira::mixer::{SubTrackHandle, SubTrackSettings};
 type Sounds = HashMap<Arc<String>, SoundHandle>;
 type Music = HashMap<Arc<String>, SoundHandle>;
 
-fn main() {
+fn main() -> Result<(), ()> {
     let file = std::env::args_os().nth(1)
         .and_then(|s| s.into_string().ok());
     let file = if let Some(file) = file {
@@ -45,7 +45,7 @@ fn main() {
         }
     } else {
         println!("dyongame <file.dyon>");
-        return;
+        return Err(());
     };
 
     let opengl = OpenGL::V3_2;
@@ -57,7 +57,7 @@ fn main() {
         .build()
         .unwrap();
     let dyon_module = match load_module(&file) {
-        None => return,
+        None => return Err(()),
         Some(m) => Arc::new(m)
     };
 
@@ -101,7 +101,7 @@ fn main() {
     let music_guard: CurrentGuard<Music> = CurrentGuard::new(&mut music);
 
     if error(dyon_runtime.run(&dyon_module)) {
-        return;
+        return Err(());
     }
 
     drop(music_guard);
@@ -118,6 +118,8 @@ fn main() {
     drop(event_guard);
     drop(window_guard);
     drop(factory_guard);
+
+    Ok(())
 }
 
 fn load_module(file: &str) -> Option<Module> {
