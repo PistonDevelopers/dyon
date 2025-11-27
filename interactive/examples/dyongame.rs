@@ -347,8 +347,8 @@ mod dyon_functions {
 
     dyon_fn!{fn bind_sound__name_file(name: Arc<String>, file: Arc<String>) {
         use kira::sound::SoundSettings;
-        use AudioManager;
-        use Sounds;
+        use crate::AudioManager;
+        use crate::Sounds;
 
         let audio_manager = unsafe { &mut *Current::<AudioManager>::new() };
         let sounds = unsafe { &mut *Current::<Sounds>::new() };
@@ -358,8 +358,8 @@ mod dyon_functions {
 
     dyon_fn!{fn bind_music__name_file(name: Arc<String>, file: Arc<String>) {
         use kira::sound::SoundSettings;
-        use AudioManager;
-        use Music;
+        use crate::AudioManager;
+        use crate::Music;
 
         let audio_manager = unsafe { &mut *Current::<AudioManager>::new() };
         let music = unsafe { &mut *Current::<Music>::new() };
@@ -375,8 +375,8 @@ mod dyon_functions {
             LoopArrangementSettings,
             SoundClip
         };
-        use Sounds;
-        use AudioManager;
+        use crate::Sounds;
+        use crate::AudioManager;
 
         let audio_manager = unsafe { &mut *Current::<AudioManager>::new() };
         let sounds = unsafe { &mut *Current::<Sounds>::new() };
@@ -407,8 +407,8 @@ mod dyon_functions {
             Arrangement,
             LoopArrangementSettings,
         };
-        use Sounds;
-        use AudioManager;
+        use crate::Sounds;
+        use crate::AudioManager;
 
         let audio_manager = unsafe { &mut *Current::<AudioManager>::new() };
         let sounds = unsafe { &mut *Current::<Sounds>::new() };
@@ -430,9 +430,9 @@ mod dyon_functions {
             LoopArrangementSettings,
             SoundClip
         };
-        use Music;
-        use AudioManager;
-        use SubTrackHandle;
+        use crate::Music;
+        use crate::AudioManager;
+        use crate::SubTrackHandle;
 
         let audio_manager = unsafe { &mut *Current::<AudioManager>::new() };
         let music = unsafe { &mut *Current::<Music>::new() };
@@ -460,14 +460,14 @@ mod dyon_functions {
     }}
 
     dyon_fn!{fn play_music_forever__name(name: Arc<String>) {
-        use kira::instance::InstanceSettings;
-        use kira::arrangement::{
+        use crate::kira::instance::InstanceSettings;
+        use crate::kira::arrangement::{
             Arrangement,
             LoopArrangementSettings,
         };
-        use Music;
-        use AudioManager;
-        use SubTrackHandle;
+        use crate::Music;
+        use crate::AudioManager;
+        use crate::SubTrackHandle;
 
         let audio_manager = unsafe { &mut *Current::<AudioManager>::new() };
         let music = unsafe { &mut *Current::<Music>::new() };
@@ -483,7 +483,7 @@ mod dyon_functions {
     }}
 
     dyon_fn!{fn set_music_volume(volume: f64) {
-        use SubTrackHandle;
+        use crate::SubTrackHandle;
 
         let music_track = unsafe { &mut *Current::<SubTrackHandle>::new() };
         music_track.set_volume(volume).unwrap();
