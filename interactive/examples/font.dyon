@@ -1,4 +1,8 @@
 fn main() {
+    // This example also works with (using a Rust object for font):
+    // img := unwrap(load_font_obj("../assets/FiraSans-Regular.ttf"))
+
+    // Create an font ID.
     font := unwrap(load_font("../assets/FiraSans-Regular.ttf"))
     println(font_names())
     ~ draw_list := []

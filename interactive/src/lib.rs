@@ -8,6 +8,7 @@ extern crate image;
 use std::any::Any;
 use std::sync::Arc;
 use self::dyon::*;
+use self::dyon::embed::to_rust_object;
 use self::current::Current;
 use self::piston::input::*;
 use self::piston::window::*;
@@ -16,6 +17,18 @@ use self::graphics::character::CharacterCache;
 use texture::{CreateTexture, UpdateTexture};
 
 pub const NO_EVENT: &'static str = "No event";
+pub const CNGG: &'static str = "Could not get glyph";
+pub const CNOLOM: &'static str = "Could not obtain lock on Mutex";
+pub const EXPECTED_RGBA_IMAGE: &'static str = "Expected RgbaImage";
+pub const EXPECTED_TEXTURE: &'static str = "Expected Texture";
+pub const EXPECTED_FONT: &'static str = "Expected Font";
+pub const IMAGE_ID_IS_OFB: &'static str = "Image id is out of bounds";
+pub const FONT_ID_IS_OFB: &'static str = "Font index out of bounds";
+pub const PIXEL_IS_OFB: &'static str = "Pixel is out of image bounds";
+pub const EXPECTED_IMAGE_ID_OR_OBJECT: &'static str =
+    "Expected `f64` (image id) or `any` (rust object)";
+pub const EXPECTED_FONT_ID_OR_OBJECT: &'static str =
+    "Expected `f64` (font id) or `any` (rust object)";
 
 /// Adds functions to module, using a generic backend.
 ///
@@ -107,29 +120,32 @@ pub fn add_functions<W, F, C>(module: &mut Module)
     module.add(Arc::new("font_names".into()),
         font_names, Dfn::nl(vec![], Type::Array(Box::new(Type::Str)))
     );
-    module.add(Arc::new("load_font".into()),
-        load_font::<F, C::Texture>, Dfn::nl(vec![Type::Str], Type::Result(Box::new(Type::F64)))
-    );
     module.add(Arc::new("image_names".into()),
         image_names, Dfn::nl(vec![], Type::Array(Box::new(Type::Str)))
     );
     module.add(Arc::new("load_image".into()),
         load_image, Dfn::nl(vec![Type::Str], Type::Result(Box::new(Type::F64)))
     );
+    module.add(Arc::new("load_image_obj".into()),
+        load_image_obj, Dfn::nl(vec![Type::Str], Type::Result(Box::new(Type::Any)))
+    );
     module.add(Arc::new("create_image__name_size".into()),
         create_image__name_size, Dfn::nl(vec![Type::Str, Type::Vec4], Type::F64)
+    );
+    module.add(Arc::new("create_image__size".into()),
+        create_image__size, Dfn::nl(vec![Type::Vec4], Type::Any)
     );
     module.add(Arc::new("save__image_file".into()),
         save__image_file, Dfn::nl(vec![Type::F64, Type::Str], Type::Result(Box::new(Type::Str)))
     );
     module.add(Arc::new("image_size".into()),
-        image_size, Dfn::nl(vec![Type::F64], Type::Vec4)
+        image_size, Dfn::nl(vec![Type::Any], Type::Vec4)
     );
     module.add(Arc::new("pxl__image_pos_color".into()),
-        pxl__image_pos_color, Dfn::nl(vec![Type::F64, Type::Vec4, Type::Vec4], Type::Void)
+        pxl__image_pos_color, Dfn::nl(vec![Type::Any, Type::Vec4, Type::Vec4], Type::Void)
     );
     module.add(Arc::new("pxl__image_pos".into()),
-        pxl__image_pos, Dfn::nl(vec![Type::F64, Type::Vec4], Type::Vec4)
+        pxl__image_pos, Dfn::nl(vec![Type::Any, Type::Vec4], Type::Vec4)
     );
 }
 
@@ -423,8 +439,8 @@ pub fn width__font_size_string<C: Any + CharacterCache>(rt: &mut Runtime) -> Res
     let s: Arc<String> = rt.pop()?;
     let size: u32 = rt.pop()?;
     let font: usize = rt.pop()?;
-    Ok(Variable::f64(glyphs.get_mut(font).ok_or_else(|| "Font index outside range".to_owned())?
-        .width(size, &s).map_err(|_| "Could not get glyph".to_owned())?))
+    Ok(Variable::f64(glyphs.get_mut(font).ok_or_else(|| FONT_ID_IS_OFB.to_owned())?
+        .width(size, &s).map_err(|_| CNGG.to_owned())?))
 }
 
 /// Wraps font names as a current object.
@@ -437,34 +453,6 @@ dyon_fn!{fn font_names() -> Vec<Arc<String>> {
     let font_names = unsafe { &*Current::<FontNames>::new() };
     font_names.0.clone()
 }}
-
-/// Helper method for loading fonts.
-pub fn load_font<F, T>(rt: &mut Runtime) -> Result<Variable, String>
-    where F: 'static + Clone, T: 'static +
-          CreateTexture<F> + UpdateTexture<F> +
-          graphics::ImageSize
-{
-    use dyon::embed::PushVariable;
-    use texture::{Filter, TextureSettings};
-    use graphics::glyph_cache::rusttype::GlyphCache;
-
-    let glyphs = unsafe { &mut *Current::<Vec<GlyphCache<'static, F, T>>>::new() };
-    let font_names = unsafe { &mut *Current::<FontNames>::new() };
-    let factory = unsafe { &*Current::<F>::new() };
-    let file: Arc<String> = rt.pop()?;
-    let texture_settings = TextureSettings::new().filter(Filter::Nearest);
-    Ok(match GlyphCache::<'static, F, T>::new(&**file, factory.clone(), texture_settings) {
-        Ok(x) => {
-            let id = glyphs.len();
-            glyphs.push(x);
-            font_names.0.push(file.clone());
-            Ok::<usize, Arc<String>>(id).push_var()
-        }
-        Err(err) => {
-            Err::<usize, Arc<String>>(Arc::new(format!("{}", err))).push_var()
-        }
-    })
-}
 
 dyon_fn!{fn image_names() -> Vec<Arc<String>> {
     let image_names = unsafe { &*Current::<ImageNames>::new() };
@@ -489,6 +477,17 @@ dyon_fn!{fn load_image(file: Arc<String>) -> Result<usize, Arc<String>> {
     }
 }}
 
+dyon_fn!{fn load_image_obj(file: Arc<String>) -> Result<RustObject, Arc<String>> {
+    use image::open;
+
+    match open(&**file) {
+        Ok(x) => Ok(to_rust_object(x.to_rgba8())),
+        Err(err) => {
+            Err(Arc::new(format!("{}", err)))
+        }
+    }
+}}
+
 dyon_fn!{fn create_image__name_size(name: Arc<String>, size: Vec4) -> usize {
     use image::RgbaImage;
 
@@ -501,6 +500,13 @@ dyon_fn!{fn create_image__name_size(name: Arc<String>, size: Vec4) -> usize {
     id
 }}
 
+dyon_fn!{fn create_image__size(size: Vec4) -> RustObject {
+    use image::RgbaImage;
+
+    let size: [f64; 2] = size.into();
+    to_rust_object(RgbaImage::new(size[0] as u32, size[1] as u32))
+}}
+
 dyon_fn!{fn save__image_file(id: usize, file: Arc<String>) -> Result<Arc<String>, Arc<String>> {
     use image::RgbaImage;
 
@@ -511,77 +517,116 @@ dyon_fn!{fn save__image_file(id: usize, file: Arc<String>) -> Result<Arc<String>
     }
 }}
 
-dyon_fn!{fn image_size(id: usize) -> Vec4 {
+pub fn image_size(rt: &mut Runtime) -> Result<Variable, String> {
     use image::RgbaImage;
 
-    let images = unsafe { &*Current::<Vec<RgbaImage>>::new() };
-    let (w, h) = images[id].dimensions();
-    [w as f64, h as f64].into()
-}}
+    let var = rt.pop()?;
+    match var {
+        Variable::F64(id, _) => {
+            let images = unsafe { &*Current::<Vec<RgbaImage>>::new() };
+            let (w, h) = images.get(id as usize)
+                .ok_or_else(|| IMAGE_ID_IS_OFB.to_string())?.dimensions();
+            Ok(Variable::Vec4([w as f32, h as f32, 0.0, 0.0].into()))
+        }
+        Variable::RustObject(obj) => {
+            let guard = obj.lock().map_err(|_| CNOLOM.to_string())?;
+            let img: &RgbaImage = guard.downcast_ref()
+                .ok_or_else(|| EXPECTED_RGBA_IMAGE.to_string())?;
+            let (w, h) = img.dimensions();
+            Ok(Variable::Vec4([w as f32, h as f32, 0.0, 0.0].into()))
+        }
+        _ => Err(EXPECTED_IMAGE_ID_OR_OBJECT.to_string()),
+    }
+}
 
 #[allow(non_snake_case)]
 pub fn pxl__image_pos_color(rt: &mut Runtime) -> Result<(), String> {
     use image::{Rgba, RgbaImage};
 
-    let images = unsafe { &mut *Current::<Vec<RgbaImage>>::new() };
     let color: [f32; 4] = rt.pop_vec4()?;
-    let pos: [f64; 2] = rt.pop_vec4()?;
-    let id: usize = rt.pop()?;
-    let image = if let Some(x) = images.get_mut(id) {
-        x
-    } else {
-        return Err("Image id is out of bounds".into());
-    };
-    let x = pos[0] as u32;
-    let y = pos[1] as u32;
-    let (w, h) = image.dimensions();
-    if x >= w || y >= h {
-        return Err("Pixel is out of image bounds".into());
+    let pos: Vec4 = rt.pop()?;
+    let image: Variable = rt.pop()?;
+
+    let [x, y]: [u32; 2] = pos.into();
+
+    match image {
+        Variable::F64(id, _) => {
+            let images = unsafe { &mut *Current::<Vec<RgbaImage>>::new() };
+            let image: &mut RgbaImage = if let Some(x) = images.get_mut(id as usize) {x}
+                        else {return Err(IMAGE_ID_IS_OFB.into())};
+            let (w, h) = image.dimensions();
+            if x >= w || y >= h {return Err(PIXEL_IS_OFB.into())};
+
+            image.put_pixel(x, y, Rgba([
+                (color[0] * 255.0) as u8,
+                (color[1] * 255.0) as u8,
+                (color[2] * 255.0) as u8,
+                (color[3] * 255.0) as u8
+            ]));
+            Ok(())
+        }
+        Variable::RustObject(obj) => {
+            let mut guard = obj.lock().map_err(|_| CNOLOM.to_string())?;
+            let image: &mut RgbaImage = guard.downcast_mut()
+                .ok_or_else(|| EXPECTED_RGBA_IMAGE.to_string())?;
+            let (w, h) = image.dimensions();
+            if x >= w || y >= h {return Err(PIXEL_IS_OFB.into())};
+
+            image.put_pixel(x, y, Rgba([
+                (color[0] * 255.0) as u8,
+                (color[1] * 255.0) as u8,
+                (color[2] * 255.0) as u8,
+                (color[3] * 255.0) as u8
+            ]));
+            Ok(())
+        }
+        _ => Err(EXPECTED_IMAGE_ID_OR_OBJECT.to_string()),
     }
-    image.put_pixel(x, y, Rgba([
-        (color[0] * 255.0) as u8,
-        (color[1] * 255.0) as u8,
-        (color[2] * 255.0) as u8,
-        (color[3] * 255.0) as u8
-    ]));
-    Ok(())
 }
 
-#[allow(non_snake_case)]
-pub fn pxl__image_pos(rt: &mut Runtime) -> Result<Variable, String> {
+dyon_fn!{fn pxl__image_pos(image: Variable, pos: Vec4) -> Result<Vec4, String> {
     use image::RgbaImage;
 
-    let images = unsafe { &*Current::<Vec<RgbaImage>>::new() };
-    let pos: [f64; 2] = rt.pop_vec4()?;
-    let id: usize = rt.pop()?;
-    let image = if let Some(x) = images.get(id) {
-        x
-    } else {
-        return Err("Image id is out of bounds".into());
+    let [x, y] = pos.into();
+    let color = match image {
+        Variable::F64(id, _) => {
+            let images = unsafe { &mut *Current::<Vec<RgbaImage>>::new() };
+            let image: &mut RgbaImage = if let Some(x) = images.get_mut(id as usize) {x}
+                        else {return Err(IMAGE_ID_IS_OFB.into())};
+            let (w, h) = image.dimensions();
+            if x >= w || y >= h {return Err(PIXEL_IS_OFB.into())};
+
+            image.get_pixel(x, y).0
+        }
+        Variable::RustObject(obj) => {
+            let mut guard = obj.lock().map_err(|_| CNOLOM.to_string())?;
+            let image: &mut RgbaImage = guard.downcast_mut()
+                .ok_or_else(|| EXPECTED_RGBA_IMAGE.to_string())?;
+            let (w, h) = image.dimensions();
+            if x >= w || y >= h {return Err(PIXEL_IS_OFB.into())};
+
+            image.get_pixel(x, y).0
+        }
+        _ => return Err(EXPECTED_IMAGE_ID_OR_OBJECT.to_string()),
     };
-    let x = pos[0] as u32;
-    let y = pos[1] as u32;
-    let (w, h) = image.dimensions();
-    if x >= w || y >= h {
-        return Err("Pixel is out of image bounds".into());
-    }
-    let color = image.get_pixel(x, y).0;
-    Ok(Variable::Vec4([
+    Ok([
         color[0] as f32 / 255.0,
         color[1] as f32 / 255.0,
         color[2] as f32 / 255.0,
         color[3] as f32 / 255.0
-    ]))
-}
+    ].into())
+}}
 
 /// Helper method for drawing 2D in Dyon environment.
-pub fn draw_2d<C: CharacterCache<Texture = G::Texture>, G: Graphics>(
+pub fn draw_2d<C: CharacterCache<Texture = G::Texture> + 'static, G: Graphics>(
     rt: &mut Runtime,
     glyphs: &mut Vec<C>,
     textures: &mut Vec<G::Texture>,
     mut c: Context,
     g: &mut G
-) -> Result<(), String> {
+) -> Result<(), String>
+    where G::Texture: 'static,
+{
     use self::graphics::*;
     use self::graphics::types::Matrix2d;
     use self::graphics::draw_state::{Blend, Stencil};
@@ -673,42 +718,88 @@ pub fn draw_2d<C: CharacterCache<Texture = G::Texture>, G: Graphics>(
                         .draw([corner[0], corner[1], size[0], size[1]], &c.draw_state, transform, g);
                     }
                     "text__font_color_size_pos_string" => {
-                        let font: usize = rt.var(&it[1])?;
+                        let font: Variable = rt.var(&it[1])?;
                         let color: [f32; 4] = rt.var_vec4(&it[2])?;
                         let size: u32 = rt.var(&it[3])?;
                         let pos: [f64; 2] = rt.var_vec4(&it[4])?;
                         let text: Arc<String> = rt.var(&it[5])?;
-                        text::Text::new_color(color, size).draw(
-                            &text,
-                            glyphs.get_mut(font)
-                                .ok_or_else(|| "Font index outside range".to_owned())?,
-                            &c.draw_state,
-                            transform.trans(pos[0], pos[1]), g
-                        ).map_err(|_| "Could not get glyph".to_owned())?;
+                        match font {
+                            Variable::F64(id, _) => {
+                                text::Text::new_color(color, size).draw(
+                                    &text,
+                                    glyphs.get_mut(id as usize)
+                                        .ok_or_else(|| FONT_ID_IS_OFB.to_owned())?,
+                                    &c.draw_state,
+                                    transform.trans(pos[0], pos[1]), g
+                                ).map_err(|_| CNGG.to_owned())?;
+                            }
+                            Variable::RustObject(obj) => {
+                                let mut guard = obj.lock().map_err(|_| CNOLOM.to_string())?;
+                                let font: &mut C = guard.downcast_mut()
+                                    .ok_or_else(|| EXPECTED_FONT.to_string())?;
+                                text::Text::new_color(color, size).draw(
+                                    &text,
+                                    font,
+                                    &c.draw_state,
+                                    transform.trans(pos[0], pos[1]), g
+                                ).map_err(|_| CNGG.to_owned())?;
+                            }
+                            _ => return Err(EXPECTED_FONT_ID_OR_OBJECT.to_string()),
+                        }
                     }
                     "image__texture_pos_color" => {
-                        let id: usize = rt.var(&it[1])?;
+                        let image = rt.var(&it[1])?;
                         let pos: [f64; 2] = rt.var_vec4(&it[2])?;
                         let color: [f32; 4] = rt.var_vec4(&it[3])?;
-                        Image::new_color(color).draw(
-                            &textures[id],
-                            &c.draw_state,
-                            transform.trans(pos[0], pos[1]), g
-                        );
+                        match image {
+                            Variable::F64(id, _) => {
+                                Image::new_color(color).draw(
+                                    &textures[id as usize],
+                                    &c.draw_state,
+                                    transform.trans(pos[0], pos[1]), g
+                                );
+                            }
+                            Variable::RustObject(obj) => {
+                                let guard = obj.lock().map_err(|_| CNOLOM.to_string())?;
+                                let texture: &G::Texture = guard.downcast_ref()
+                                    .ok_or_else(|| EXPECTED_TEXTURE.to_string())?;
+                                Image::new_color(color).draw(
+                                    texture,
+                                    &c.draw_state,
+                                    transform.trans(pos[0], pos[1]), g
+                                );
+                            }
+                            _ => return Err(EXPECTED_IMAGE_ID_OR_OBJECT.to_string()),
+                        }
                     }
                     "image__texture_pos_color_srccorner_srcsize" => {
-                        let id: usize = rt.var(&it[1])?;
+                        let image = rt.var(&it[1])?;
                         let pos: [f64; 2] = rt.var_vec4(&it[2])?;
                         let color: [f32; 4] = rt.var_vec4(&it[3])?;
                         let srccorner: [f64; 2] = rt.var_vec4(&it[4])?;
                         let srcsize: [f64; 2] = rt.var_vec4(&it[5])?;
-                        Image::new_color(color)
-                        .src_rect([srccorner[0], srccorner[1], srcsize[0], srcsize[1]])
-                        .draw(
-                            &textures[id],
-                            &c.draw_state,
-                            transform.trans(pos[0], pos[1]), g
-                        );
+                        let im = Image::new_color(color)
+                            .src_rect([srccorner[0], srccorner[1], srcsize[0], srcsize[1]]);
+                        match image {
+                            Variable::F64(id, _) => {
+                                im.draw(
+                                    &textures[id as usize],
+                                    &c.draw_state,
+                                    transform.trans(pos[0], pos[1]), g
+                                );
+                            }
+                            Variable::RustObject(obj) => {
+                                let guard = obj.lock().map_err(|_| CNOLOM.to_string())?;
+                                let texture: &G::Texture = guard.downcast_ref()
+                                    .ok_or_else(|| EXPECTED_TEXTURE.to_string())?;
+                                im.draw(
+                                    texture,
+                                    &c.draw_state,
+                                    transform.trans(pos[0], pos[1]), g
+                                );
+                            }
+                            _ => return Err(EXPECTED_IMAGE_ID_OR_OBJECT.to_string()),
+                        }
                     }
                     "draw_state_alpha" => {
                         c.draw_state = DrawState::new_alpha();

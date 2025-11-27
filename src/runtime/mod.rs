@@ -460,9 +460,8 @@ impl Runtime {
     }
 
     /// Push value to stack.
-    pub fn push<T: embed::PushVariable>(&mut self, val: T) {
-        self.stack.push(val.push_var())
-    }
+    #[inline(always)]
+    pub fn push<T: embed::PushVariable>(&mut self, val: T) {self.stack.push(val.push_var())}
 
     /// Push Vec4 to stack.
     pub fn push_vec4<T: embed::ConvertVec4>(&mut self, val: T) {
@@ -478,8 +477,7 @@ impl Runtime {
     pub fn push_rust<T: 'static>(&mut self, val: T) {
         use std::sync::Mutex;
         use crate::RustObject;
-        self.stack
-            .push(Variable::RustObject(Arc::new(Mutex::new(val)) as RustObject))
+        self.stack.push(Variable::RustObject(Arc::new(Mutex::new(val)) as RustObject))
     }
 
     /// Generates error message that a certain type was expected for argument.
