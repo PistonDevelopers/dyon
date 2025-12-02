@@ -5,5 +5,5 @@ fn main() {
         pxl(image: img, pos: (x, y), color: #00ff00)
     }
     println(str(color: pxl(image: img, pos: (0, 0))))
-    _ := unwrap(save(image: img, file: "../assets/img.png"))
+    _ := unwrap(save(image: img, file: "../images/img.png"))
 }

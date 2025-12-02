@@ -1,6 +1,6 @@
 [package]
 name = "piston-dyon_interactive"
-version = "0.47.0"
+version = "0.47.1"
 authors = ["Sven Nilsen <bvssvni@gmail.com>","TheSlam <32799244+salmmanfred@users.noreply.github.com>"]
 description = "A library for interactive coding with the Piston game engine"
 keywords = ["script", "scripting", "game", "language", "piston"]
@@ -8,13 +8,13 @@ license = "MIT OR Apache-2.0"
 repository = "https://github.com/pistondevelopers/dyon.git"
 homepage = "https://github.com/pistondevelopers/dyon/interactive"
 edition = "2024"
-exclude = ["assets/*"]
+exclude = ["images/*", "source/*"]
 
 [lib]
 name = "dyon_interactive"
 
 [dependencies.dyon]
-version = "0.50.0"
+version = "0.50.1"
 path = ".."
 
 [dependencies]
