@@ -9,7 +9,8 @@ license = "MIT OR Apache-2.0"
 readme = "README.md"
 repository = "https://github.com/pistondevelopers/dyon.git"
 homepage = "https://github.com/pistondevelopers/dyon"
-exclude = ["images/*"]
+exclude = ["images/*", "data/*", "interactive/*", "meta/*", "source/*",
+           "string/*", "tests/*"]
 
 [dependencies]
 piston_meta = "2.0.0"
