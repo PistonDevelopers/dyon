@@ -13,7 +13,7 @@ fn main() {
     let mut module = Module::new();
     let mut ctx = String::new();
 
-    println!("=== Dyon 0.49 ===");
+    println!("=== Dyon 0.50 ===");
     println!("Type `help` for more information.");
     loop {
         if let Some(x) = file.as_ref() {
@@ -148,7 +148,7 @@ fn main() {
 
         let mut sub_module = Module::new();
         sub_module.import(&module);
-        let res = load_str("dyonrepl", Arc::new(input.clone()), &mut sub_module); 
+        let res = load_str("dyonrepl", Arc::new(input.clone()), &mut sub_module);
         if res.is_err() {
             // Try evaluation expression.
             let code = format!("fn main() {{println({})}}", input);
