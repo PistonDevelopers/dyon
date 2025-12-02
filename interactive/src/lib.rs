@@ -717,6 +717,21 @@ pub fn draw_2d<C: CharacterCache<Texture = G::Texture> + 'static, G: Graphics>(
                         .resolution(resolution as u32)
                         .draw([corner[0], corner[1], size[0], size[1]], &c.draw_state, transform, g);
                     }
+                    "polygon__color_points" => {
+                        let color: [f32; 4] = rt.var_vec4(&it[1])?;
+                        let it_points = rt.get(&it[2]);
+                        if let &Variable::Array(ref it_points) = it_points {
+                            let mut polygon = it_points.iter()
+                                .map(|v| rt.get(v))
+                                .filter(|v| if let Variable::Vec4(_) = v {true} else {false})
+                                .map(|v| if let Variable::Vec4(p) = v {[p[0] as f64, p[1] as f64]}
+                                         else {unreachable!()});
+                            g.tri_list(&c.draw_state, &color, |f| {
+                                triangulation::stream_polygon_tri_list(
+                                    transform, &mut polygon, |vertices| f(vertices))
+                            });
+                        }
+                    }
                     "text__font_color_size_pos_string" => {
                         let font: Variable = rt.var(&it[1])?;
                         let color: [f32; 4] = rt.var_vec4(&it[2])?;
