@@ -92,6 +92,7 @@ fn render() ~ settings: Settings, data: Data {
     }
 
     text(font: 0, color: #004400, size: 60, pos: (250, 80), string: "Hello!")
+    polygon(color: #00ff00, points: [(200, 0), (200, 50), (250, 50)])
 
     font_names := font_names()
     if len(font_names) == 2 {
