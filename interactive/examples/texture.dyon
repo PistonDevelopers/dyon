@@ -1,5 +1,5 @@
 fn main() {
-    test := unwrap(load_image("../assets/test.png"))
+    test := unwrap(load_image("../images/test.png"))
     test := create_texture(test)
     println(test)
     ~ draw_list := []
