@@ -1,12 +1,4 @@
-//! # Dyon - a rusty dynamically typed scripting language
-//!
-//! [Tutorial](http://www.piston.rs/dyon-tutorial/)
-//!
-//! If you want to say thanks for Dyon, or you found any of these ideas inspiring,
-//! please donate a small amount of money as a symbolic gesture to PayPal `post at cutoutpro.com`.
-//! Write a sentence describing why you think this is a good language and what you want to achieve.
-//! I (bvssvni, creator of Dyon) appreciate grateful and heart-warming responses!
-
+#![doc = include_str!("../README.md")]
 #![deny(missing_docs)]
 extern crate piston_meta;
 #[cfg(feature = "rand")]
