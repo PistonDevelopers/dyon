@@ -1,7 +1,7 @@
 # Dyon
 A rusty dynamically typed scripting language
 
-```
+```dyon no_run
 fn main() {
     println("hello world!")
 }
@@ -16,25 +16,25 @@ Dyon script files end with `.dyon`.
 
 To install Dyon REPL, type:
 
-```
+```text
 cargo install --example dyon dyon
 ```
 
 Then, to run the Dyon REPL, type:
 
-```
+```text
 dyon
 ```
 
 To run Dyon script files from command line, type:
 
-```
+```text
 cargo install --example dyonrun dyon
 ```
 
 Then, to run a script file you type:
 
-```
+```text
 dyonrun <file.dyon>
 ```
 
@@ -142,7 +142,7 @@ Main goals:
 
 Performance will be optimized for the cycle:
 
-```
+```text
 coding -> parsing -> running -> debugging -> coding
 ```
 
