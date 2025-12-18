@@ -31,3 +31,9 @@ However, remember to put a blank line between functions for readability.
 
 By convention, it is a good practice to keep doc comments short.
 If you need extensive documentation, then link to more information.
+
+At the bottom of each "DYON-API.md" file, there should be the following declaration:
+
+### Dyon API policy
+
+This document follows [the official Dyon API policy](https://github.com/PistonDevelopers/dyon/blob/master/DYON-API.md).
