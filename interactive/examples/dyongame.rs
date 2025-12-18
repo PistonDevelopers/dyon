@@ -20,12 +20,20 @@ use piston::window::WindowSettings;
 use piston::event_loop::{Events, EventSettings};
 use sdl2_window::Sdl2Window;
 use opengl_graphics::{OpenGL, Filter, GlGraphics, GlyphCache, Texture, TextureSettings};
-use kira::manager::{AudioManager, AudioManagerSettings};
-use kira::sound::handle::SoundHandle;
-use kira::mixer::{SubTrackHandle, SubTrackSettings};
+use kira::{AudioManager, AudioManagerSettings};
+use kira::sound::static_sound::StaticSoundData;
+use kira::sound::streaming::StreamingSoundHandle;
+use kira::sound::FromFileError;
+use kira::track::TrackHandle;
 
-type Sounds = HashMap<Arc<String>, SoundHandle>;
-type Music = HashMap<Arc<String>, SoundHandle>;
+type Sounds = HashMap<Arc<String>, (
+    Arc<String>,
+    Option<StaticSoundData>,
+)>;
+type Music = HashMap<Arc<String>, (
+    Arc<String>,
+    Option<StreamingSoundHandle<FromFileError>>,
+)>;
 
 fn main() -> Result<(), ()> {
     let file = std::env::args_os().nth(1)
@@ -80,7 +88,7 @@ fn main() -> Result<(), ()> {
     let mut gl = GlGraphics::new(opengl);
     let mut events = Events::new(EventSettings::new());
     let mut audio_manager = AudioManager::new(AudioManagerSettings::default()).unwrap();
-    let mut music_track = audio_manager.add_sub_track(SubTrackSettings::default()).unwrap();
+    let mut music_track = audio_manager.add_sub_track(Default::default()).unwrap();
     let mut sounds: Sounds = HashMap::new();
     let mut music: Music = HashMap::new();
 
@@ -95,7 +103,7 @@ fn main() -> Result<(), ()> {
     let gl_guard: CurrentGuard<GlGraphics> = CurrentGuard::new(&mut gl);
     let events_guard: CurrentGuard<Events> = CurrentGuard::new(&mut events);
     let audio_manager_guard: CurrentGuard<AudioManager> = CurrentGuard::new(&mut audio_manager);
-    let music_track_guard: CurrentGuard<SubTrackHandle> = CurrentGuard::new(&mut music_track);
+    let music_track_guard: CurrentGuard<TrackHandle> = CurrentGuard::new(&mut music_track);
     let sounds_guard: CurrentGuard<Sounds> = CurrentGuard::new(&mut sounds);
     let music_guard: CurrentGuard<Music> = CurrentGuard::new(&mut music);
 
@@ -343,146 +351,160 @@ mod dyon_functions {
     }}
 
     dyon_fn!{fn bind_sound__name_file(name: Arc<String>, file: Arc<String>) {
-        use kira::sound::SoundSettings;
-        use crate::AudioManager;
-        use crate::Sounds;
-
-        let audio_manager = unsafe { &mut *Current::<AudioManager>::new() };
+        use super::Sounds;
         let sounds = unsafe { &mut *Current::<Sounds>::new() };
-        let sound_handle = audio_manager.load_sound(&**file, SoundSettings::default()).unwrap();
-        sounds.insert(name, sound_handle);
+        sounds.insert(name, (file, None));
     }}
 
     dyon_fn!{fn bind_music__name_file(name: Arc<String>, file: Arc<String>) {
-        use kira::sound::SoundSettings;
-        use crate::AudioManager;
-        use crate::Music;
-
-        let audio_manager = unsafe { &mut *Current::<AudioManager>::new() };
+        use super::Music;
         let music = unsafe { &mut *Current::<Music>::new() };
-        let sound_handle = audio_manager.load_sound(&**file, SoundSettings::default()).unwrap();
-        music.insert(name, sound_handle);
+        music.insert(name, (file, None));
     }}
 
     dyon_fn!{fn play_sound__name_repeat_volume(name: Arc<String>, repeat: f64, volume: f64) {
-        use kira::instance::InstanceSettings;
-        use kira::arrangement::{
-            Arrangement,
-            ArrangementSettings,
-            LoopArrangementSettings,
-            SoundClip
-        };
-        use crate::Sounds;
-        use crate::AudioManager;
+        use super::Sounds;
+        use super::AudioManager;
+        use kira::sound::static_sound::StaticSoundData;
+        use kira::StartTime;
+        use std::path::Path;
+        use std::time::Duration;
+
+        let f = |x| amplitude_to_decibels(x);
 
         let audio_manager = unsafe { &mut *Current::<AudioManager>::new() };
         let sounds = unsafe { &mut *Current::<Sounds>::new() };
-        if let Some(sound_handle) = sounds.get_mut(&name) {
-            let instance_settings = InstanceSettings::default().volume(volume);
+        let sound_track = audio_manager.main_track();
+        if let Some((file, sound_data)) = sounds.get_mut(&name) {
             if repeat == -1.0 {
-                let mut arrangement_handle = audio_manager.add_arrangement(Arrangement::new_loop(
-                	&sound_handle,
-                	LoopArrangementSettings::default(),
-                )).unwrap();
-                arrangement_handle.play(instance_settings).unwrap();
-            } else if repeat != 0.0 {
-                let mut arrangement = Arrangement::new(ArrangementSettings::new());
-                let mut start = 0.0;
-                for _ in 0..repeat as u32 {
-                    arrangement.add_clip(SoundClip::new(&sound_handle, start));
-                    start += sound_handle.duration();
+                if let Some(sound_data) = sound_data {
+                    let _ = sound_track.play(sound_data.clone().loop_region(..).volume(f(volume as f32)));
+                } else {
+                    let data = StaticSoundData::from_file(Path::new(&**file)).unwrap();
+                    let _ = sound_track.play(data.clone().loop_region(..).volume(f(volume as f32)));
+                    *sound_data = Some(data);
                 }
-                let mut arrangement_handle = audio_manager.add_arrangement(arrangement).unwrap();
-                arrangement_handle.play(instance_settings).unwrap();
+            } else if repeat != 0.0 {
+                if let Some(sound_data) = sound_data {
+                    let _ = sound_track.play(sound_data.clone().volume(f(volume as f32)));
+                } else {
+                    let data = StaticSoundData::from_file(Path::new(&**file)).unwrap();
+                    let _ = sound_track.play(data.clone().volume(f(volume as f32)));
+                    *sound_data = Some(data);
+                }
+                let duration = if let Some(sound_data) = sound_data {
+                    sound_data.duration()
+                } else {Duration::new(0, 0)};
+
+                let mut start = duration;
+                if let Some(data) = sound_data {
+                    for _ in 1..repeat as u32 {
+                        let mut handle = sound_track.play(data.clone().volume(f(volume as f32))).unwrap();
+                        handle.pause(Default::default());
+                        handle.resume_at(StartTime::Delayed(start), Default::default());
+
+                        start += duration;
+                    }
+                }
             }
         }
     }}
 
+    fn amplitude_to_decibels(amplitude: f32) -> kira::Decibels {
+        if amplitude <= 0.0 {return kira::Decibels::SILENCE};
+        (20.0 * amplitude.log10()).into()
+    }
+
     dyon_fn!{fn play_sound_forever__name_volume(name: Arc<String>, volume: f64) {
-        use kira::instance::InstanceSettings;
-        use kira::arrangement::{
-            Arrangement,
-            LoopArrangementSettings,
-        };
-        use crate::Sounds;
-        use crate::AudioManager;
+        use super::Sounds;
+        use super::AudioManager;
+        use kira::sound::static_sound::StaticSoundData;
+        use std::path::Path;
+
+        let f = |x| amplitude_to_decibels(x);
 
         let audio_manager = unsafe { &mut *Current::<AudioManager>::new() };
         let sounds = unsafe { &mut *Current::<Sounds>::new() };
-        if let Some(sound_handle) = sounds.get_mut(&name) {
-            let instance_settings = InstanceSettings::default().volume(volume);
-            let mut arrangement_handle = audio_manager.add_arrangement(Arrangement::new_loop(
-            	&sound_handle,
-            	LoopArrangementSettings::default(),
-            )).unwrap();
-            arrangement_handle.play(instance_settings).unwrap();
+        let sound_track = audio_manager.main_track();
+        if let Some((file, sound_data)) = sounds.get_mut(&name) {
+            if let Some(sound_data) = sound_data {
+                let _ = sound_track.play(sound_data.loop_region(..).volume(f(volume as f32)));
+            } else {
+                let data = StaticSoundData::from_file(Path::new(&**file)).unwrap();
+                let _ = sound_track.play(data.clone().loop_region(..).volume(f(volume as f32)));
+                *sound_data = Some(data);
+            }
         }
     }}
 
     dyon_fn!{fn play_music__name_repeat(name: Arc<String>, repeat: f64) {
-        use kira::instance::InstanceSettings;
-        use kira::arrangement::{
-            Arrangement,
-            ArrangementSettings,
-            LoopArrangementSettings,
-            SoundClip
-        };
-        use crate::Music;
-        use crate::AudioManager;
-        use crate::SubTrackHandle;
+        use super::Music;
+        use super::TrackHandle;
+        use kira::sound::streaming::StreamingSoundData;
+        use kira::StartTime;
+        use std::path::Path;
 
-        let audio_manager = unsafe { &mut *Current::<AudioManager>::new() };
         let music = unsafe { &mut *Current::<Music>::new() };
-        let music_track = unsafe { &mut *Current::<SubTrackHandle>::new() };
-        if let Some(sound_handle) = music.get_mut(&name) {
-            let instance_settings = InstanceSettings::default();
+        let music_track = unsafe { &mut *Current::<TrackHandle>::new() };
+        if let Some((file, sound_handle)) = music.get_mut(&name) {
             if repeat == -1.0 {
-                let mut arrangement_handle = audio_manager.add_arrangement(Arrangement::new_loop(
-                	&sound_handle,
-                	LoopArrangementSettings::default().default_track(music_track.id()),
-                )).unwrap();
-                arrangement_handle.play(instance_settings).unwrap();
-            } else if repeat != 0.0 {
-                let mut arrangement = Arrangement::new(ArrangementSettings::new()
-                    .default_track(music_track.id()));
-                let mut start = 0.0;
-                for _ in 0..repeat as u32 {
-                    arrangement.add_clip(SoundClip::new(&sound_handle, start));
-                    start += sound_handle.duration();
+                if let Some(sound_handle) = sound_handle {
+                    sound_handle.set_loop_region(..);
+                    sound_handle.resume(Default::default());
+                } else {
+                    let sound_data = StreamingSoundData::from_file(Path::new(&**file)).unwrap();
+                    let sound = music_track.play(
+                        sound_data.loop_region(..)
+                    ).unwrap();
+                    *sound_handle = Some(sound);
                 }
-                let mut arrangement_handle = audio_manager.add_arrangement(arrangement).unwrap();
-                arrangement_handle.play(instance_settings).unwrap();
+            } else if repeat != 0.0 {
+                let sound_data = StreamingSoundData::from_file(Path::new(&**file)).unwrap();
+                let duration = sound_data.duration();
+                let sound = music_track.play(
+                    sound_data
+                ).unwrap();
+                *sound_handle = Some(sound);
+
+                let mut start = duration;
+                for _ in 1..repeat as u32 {
+                    let sound_data = StreamingSoundData::from_file(Path::new(&**file)).unwrap();
+                    let mut sound = music_track.play(sound_data).unwrap();
+                    sound.pause(Default::default());
+                    sound.resume_at(StartTime::Delayed(start), Default::default());
+
+                    start += duration;
+                }
             }
         }
     }}
 
     dyon_fn!{fn play_music_forever__name(name: Arc<String>) {
-        use crate::kira::instance::InstanceSettings;
-        use crate::kira::arrangement::{
-            Arrangement,
-            LoopArrangementSettings,
-        };
-        use crate::Music;
-        use crate::AudioManager;
-        use crate::SubTrackHandle;
+        use super::Music;
+        use super::TrackHandle;
+        use kira::sound::streaming::StreamingSoundData;
+        use std::path::Path;
 
-        let audio_manager = unsafe { &mut *Current::<AudioManager>::new() };
         let music = unsafe { &mut *Current::<Music>::new() };
-        let music_track = unsafe { &mut *Current::<SubTrackHandle>::new() };
-        if let Some(sound_handle) = music.get_mut(&name) {
-            let instance_settings = InstanceSettings::default();
-            let mut arrangement_handle = audio_manager.add_arrangement(Arrangement::new_loop(
-            	&sound_handle,
-            	LoopArrangementSettings::default().default_track(music_track.id()),
-            )).unwrap();
-            arrangement_handle.play(instance_settings).unwrap();
+        let music_track = unsafe { &mut *Current::<TrackHandle>::new() };
+        if let Some((file, sound_handle)) = music.get_mut(&name) {
+            if let Some(sound_handle) = sound_handle {
+                sound_handle.set_loop_region(..);
+                sound_handle.resume(Default::default());
+            } else {
+                let sound_data = StreamingSoundData::from_file(Path::new(&**file)).unwrap();
+                let sound = music_track.play(
+                    sound_data.loop_region(..)
+                ).unwrap();
+                *sound_handle = Some(sound);
+            }
         }
     }}
 
     dyon_fn!{fn set_music_volume(volume: f64) {
-        use crate::SubTrackHandle;
+        use super::TrackHandle;
 
-        let music_track = unsafe { &mut *Current::<SubTrackHandle>::new() };
-        music_track.set_volume(volume).unwrap();
+        let music_track = unsafe { &mut *Current::<TrackHandle>::new() };
+        music_track.set_volume(amplitude_to_decibels(volume as f32), Default::default());
     }}
 }
