@@ -62,7 +62,6 @@ fn main() -> Result<(), ()> {
         Some(m) => Arc::new(m)
     };
 
-    let mut factory = ();
     let mut dyon_runtime = Runtime::new();
     let fira_sans = include_bytes!("../assets/FiraSans-Regular.ttf");
     let hack = include_bytes!("../assets/Hack-Regular.ttf");
@@ -86,7 +85,6 @@ fn main() -> Result<(), ()> {
     let mut music: Music = HashMap::new();
 
     let mut e: Option<Event> = None;
-    let factory_guard: CurrentGuard<()> = CurrentGuard::new(&mut factory);
     let window_guard = CurrentGuard::new(&mut window);
     let event_guard: CurrentGuard<Option<Event>> = CurrentGuard::new(&mut e);
     let glyphs_guard: CurrentGuard<Vec<GlyphCache>> = CurrentGuard::new(&mut glyphs);
@@ -118,7 +116,6 @@ fn main() -> Result<(), ()> {
     drop(glyphs_guard);
     drop(event_guard);
     drop(window_guard);
-    drop(factory_guard);
 
     Ok(())
 }
