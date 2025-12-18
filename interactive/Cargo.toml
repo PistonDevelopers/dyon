@@ -14,7 +14,7 @@ exclude = ["images/*", "source/*"]
 name = "dyon_interactive"
 
 [dependencies.dyon]
-version = "0.50.1"
+version = "0.50.2"
 path = ".."
 
 [dependencies]
@@ -30,4 +30,4 @@ features = ["glyph_cache_rusttype"]
 [dev-dependencies]
 pistoncore-sdl2_window = "0.71.0"
 piston2d-opengl_graphics = "0.89.0"
-kira = "0.5.3"
+kira = "0.11.0"
