@@ -1,4 +1,4 @@
-# Dyon
+# Dyon [![Crates.io](https://img.shields.io/crates/v/dyon.svg)](https://crates.io/crates/dyon) [![Crates.io](https://img.shields.io/crates/l/dyon.svg)](https://github.com/PistonDevelopers/dyon/blob/master/LICENSE-MIT)
 A rusty dynamically typed scripting language
 
 ```dyon no_run
@@ -6,6 +6,8 @@ fn main() {
     println("hello world!")
 }
 ```
+
+[DYON-API](./DYON-API.md) | [LICENSE-MIT](LICENSE-MIT) | [LICENSE-APACHE](./LICENSE-APACHE)
 
 ### Introduction
 
