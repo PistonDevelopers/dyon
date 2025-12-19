@@ -41,6 +41,11 @@ pub fn add_functions<W, F, C>(module: &mut Module)
           C::Texture: CreateTexture<F> + UpdateTexture<F>,
           C: Any + CharacterCache,
 {
+    module.ns("piston::interactive");
+    // `render_source` has been renamed to `graphics2d_source`.
+    // This function might be removed in future versions.
+    module.add(Arc::new("render_source".into()), graphics2d_source, Dfn::nl(vec![], Type::Str));
+    module.add(Arc::new("graphics2d_source".into()), graphics2d_source, Dfn::nl(vec![], Type::Str));
     module.add(Arc::new("window_size".into()), window_size::<W>,
         Dfn::nl(vec![], Type::Vec4));
     module.add(Arc::new("set_window__size".into()), set_window__size::<W>,
@@ -148,6 +153,13 @@ pub fn add_functions<W, F, C>(module: &mut Module)
         pxl__image_pos, Dfn::nl(vec![Type::Any, Type::Vec4], Type::Vec4)
     );
 }
+
+dyon_fn!{fn render_source() -> String {
+    eprintln!("WARNING: `render_source` has been renamed to `graphics2d_source`.");
+    include_str!("../src/graphics2d.dyon").into()
+}}
+
+dyon_fn!{fn graphics2d_source() -> String {include_str!("../src/graphics2d.dyon").into()}}
 
 pub fn window_size<W: Any + Window>(_rt: &mut Runtime) -> Result<Variable, String> {
     let size = unsafe { Current::<W>::new() }.size();
