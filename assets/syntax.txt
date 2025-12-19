@@ -243,4 +243,4 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\\"
 207 mul_expr = {mul:"mul"}
 208 add = .s!({+ -} mul_expr:"expr")
 
-1000 document = [?ns:"ns" ?w ?uses:"uses" ?w .l({[.w? fn:"fn"] comment})]
+1000 document = [?[?w ns:"ns"] ?w ?uses:"uses" ?w .l({[.w? fn:"fn"] comment})]
