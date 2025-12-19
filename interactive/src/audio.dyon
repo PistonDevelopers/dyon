@@ -1,5 +1,7 @@
 /// These functions are added by `dyongame` to play sound and music.
 
+ns piston::audio
+
 /// Binds sound to name.
 fn bind_sound__name_file(name: str, file: str) { ... }
 

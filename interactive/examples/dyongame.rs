@@ -134,24 +134,9 @@ fn load_module(file: &str) -> Option<Module> {
 
     let mut module = Module::new();
     add_functions::<Sdl2Window, (), GlyphCache>(&mut module);
-    module.add(Arc::new("render_source".into()), render_source, Dfn::nl(vec![], Type::Str));
     module.add(Arc::new("draw".into()), draw, Dfn::nl(vec![Type::array()], Type::Void));
     module.add(Arc::new("next_event".into()),
         next_event, Dfn::nl(vec![], Type::Bool));
-    module.add(Arc::new("bind_sound__name_file".into()),
-        bind_sound__name_file, Dfn::nl(vec![Type::Str; 2], Type::Void));
-    module.add(Arc::new("bind_music__name_file".into()),
-        bind_music__name_file, Dfn::nl(vec![Type::Str; 2], Type::Void));
-    module.add(Arc::new("play_sound__name_repeat_volume".into()),
-        play_sound__name_repeat_volume, Dfn::nl(vec![Type::Str, Type::F64, Type::F64], Type::Void));
-    module.add(Arc::new("play_sound_forever__name_volume".into()),
-        play_sound_forever__name_volume, Dfn::nl(vec![Type::Str, Type::F64], Type::Void));
-    module.add(Arc::new("play_music__name_repeat".into()),
-        play_music__name_repeat, Dfn::nl(vec![Type::Str, Type::F64], Type::Void));
-    module.add(Arc::new("play_music_forever__name".into()),
-        play_music_forever__name, Dfn::nl(vec![Type::Str], Type::Void));
-    module.add(Arc::new("set_music_volume".into()),
-        set_music_volume, Dfn::nl(vec![Type::F64], Type::Void));
     module.add(Arc::new("create_texture".into()),
         create_texture, Dfn {
             lts: vec![dyon::Lt::Default],
@@ -170,9 +155,25 @@ fn load_module(file: &str) -> Option<Module> {
         load_font_obj, Dfn::nl(vec![Type::Str], Type::Result(Box::new(Type::Any)))
     );
 
+    module.ns("piston::audio");
+    module.add(Arc::new("bind_sound__name_file".into()),
+        bind_sound__name_file, Dfn::nl(vec![Type::Str; 2], Type::Void));
+    module.add(Arc::new("bind_music__name_file".into()),
+        bind_music__name_file, Dfn::nl(vec![Type::Str; 2], Type::Void));
+    module.add(Arc::new("play_sound__name_repeat_volume".into()),
+        play_sound__name_repeat_volume, Dfn::nl(vec![Type::Str, Type::F64, Type::F64], Type::Void));
+    module.add(Arc::new("play_sound_forever__name_volume".into()),
+        play_sound_forever__name_volume, Dfn::nl(vec![Type::Str, Type::F64], Type::Void));
+    module.add(Arc::new("play_music__name_repeat".into()),
+        play_music__name_repeat, Dfn::nl(vec![Type::Str, Type::F64], Type::Void));
+    module.add(Arc::new("play_music_forever__name".into()),
+        play_music_forever__name, Dfn::nl(vec![Type::Str], Type::Void));
+    module.add(Arc::new("set_music_volume".into()),
+        set_music_volume, Dfn::nl(vec![Type::F64], Type::Void));
+
     if error(dyon::load_str(
-        "render.dyon",
-        Arc::new(include_str!("../src/render.dyon").into()),
+        "graphics2d.dyon",
+        Arc::new(include_str!("../src/graphics2d.dyon").into()),
         &mut module
     )) {
         return None;
@@ -195,9 +196,6 @@ mod dyon_functions {
     use current::Current;
     use std::sync::Arc;
     use image::RgbaImage;
-
-    dyon_fn!{fn render_source() -> String {include_str!("../src/render.dyon").into()}}
-
 
     pub fn load_font(rt: &mut Runtime) -> Result<Variable, String> {
         use dyon::embed::PushVariable;

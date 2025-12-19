@@ -1,3 +1,5 @@
+ns piston::interactive
+
 /// Returns the source code of render module.
 /// The render module is imported from source by default in the top module.
 ///
