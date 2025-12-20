@@ -1,0 +1,15 @@
+fn main() {
+    set_window(size: (120, 120))
+    ~ draw_list := []
+    loop {
+        if !next_event() {break}
+        if render() {
+            clear(color: #ffffff)
+
+            rectangle(color: #ff0000, corner: (10, 10), size: (100, 100))
+
+            draw(draw_list)
+            clear(mut draw_list)
+        }
+    }
+}
