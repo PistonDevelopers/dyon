@@ -1,3 +1,5 @@
+#![doc = include_str!("../README.md")]
+
 extern crate piston;
 extern crate dyon;
 extern crate current;
