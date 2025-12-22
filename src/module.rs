@@ -455,6 +455,7 @@ impl Module {
         #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
         m.add_str("sleep", sleep, Dfn::nl(vec![F64], Void));
         #[cfg(feature = "rand")]
+        #[cfg(not(target_family = "wasm"))]
         m.add_str("random", random, Dfn::nl(vec![], F64));
         m.add_str("tau", tau, Dfn::nl(vec![], F64));
         #[cfg(feature = "stdio")]
