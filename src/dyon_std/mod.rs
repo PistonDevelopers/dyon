@@ -628,10 +628,11 @@ pub(crate) fn is_empty(rt: &mut Runtime) -> Result<Variable, String> {
 }
 
 #[cfg(feature = "rand")]
+#[cfg(not(target_family = "wasm"))]
 pub(crate) fn random(rt: &mut Runtime) -> Result<Variable, String> {
     use rand::Rng;
 
-    Ok(Variable::f64(rt.rng.r#gen()))
+    Ok(Variable::f64(rt.rng.random()))
 }
 
 dyon_fn! {fn tau() -> f64 {6.283_185_307_179_586}}

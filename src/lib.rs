@@ -1,8 +1,6 @@
 #![doc = include_str!("../README.md")]
 #![deny(missing_docs)]
 extern crate piston_meta;
-#[cfg(feature = "rand")]
-extern crate rand;
 extern crate range;
 extern crate read_color;
 extern crate read_token;

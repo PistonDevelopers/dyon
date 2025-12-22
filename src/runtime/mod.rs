@@ -1,6 +1,7 @@
 //! Dyon runtime.
 
 #[cfg(feature = "rand")]
+#[cfg(not(target_family = "wasm"))]
 use rand;
 use range::Range;
 use std::cell::Cell;
@@ -115,6 +116,7 @@ pub struct Runtime {
     /// until it finds the last current variable with the name.
     pub current_stack: Vec<(Arc<String>, usize)>,
     #[cfg(feature = "rand")]
+    #[cfg(not(target_family = "wasm"))]
     pub(crate) rng: rand::rngs::StdRng,
     /// The module lookup instance
     #[cfg(feature = "dynload")]
@@ -362,7 +364,8 @@ impl Runtime {
     /// Creates a new Runtime.
     pub fn new() -> Runtime {
         #[cfg(feature = "rand")]
-        use rand::FromEntropy;
+        #[cfg(not(target_family = "wasm"))]
+        use rand::SeedableRng;
 
         Runtime {
             module: Arc::new(Module::empty()),
@@ -371,7 +374,8 @@ impl Runtime {
             local_stack: vec![],
             current_stack: vec![],
             #[cfg(feature = "rand")]
-            rng: rand::rngs::StdRng::from_entropy(),
+            #[cfg(not(target_family = "wasm"))]
+            rng: rand::rngs::StdRng::from_rng(&mut rand::rng()),
             #[cfg(feature = "dynload")]
             module_lookup: file_lookup_module,
             arg_err_index: Cell::new(None),
@@ -2919,7 +2923,6 @@ impl Runtime {
         stack_trace(&self.call_stack)
     }
 
-    #[cfg(all(not(target_family = "wasm"), feature = "threading"))]
     pub(crate) fn get_module(&self, source: &str, target: &mut String) -> Result<(), String> {
         (self.module_lookup)(source, target)
     }
