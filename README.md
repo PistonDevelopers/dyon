@@ -104,6 +104,7 @@ dyonrun <file.dyon>
 - [HTML hex colors](https://github.com/PistonDevelopers/dyon/issues/167) `#fab3ee`
 - [Meta parsing](https://github.com/PistonDevelopers/dyon/issues/168)
 - [Macros for embedding in Rust](https://github.com/PistonDevelopers/dyon/blob/master/examples/functions.rs) `dyon_fn!{fn say_hello() { println!("hi!"); }}`
+- [Transitive Modules](https://github.com/PistonDevelopers/dyon/issues/786) for making Dyon modules behave similar to external functions
 
 ### Why the name Dyon?
 
@@ -138,6 +139,7 @@ The idea was to make a simple, but convenient scripting language that integrated
 - Link loop for easier and faster code generation and templates
 - In-types for easy cross thread communication
 - Lazy invariants, simple refinement types and binary operator overloading
+- Transitive modules for making Dyon modules behave similar to external functions
 
 Main goals:
 
