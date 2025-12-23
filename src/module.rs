@@ -4,6 +4,8 @@ use super::*;
 #[derive(Clone)]
 pub struct Module {
     pub(crate) functions: Vec<ast::Function>,
+    // The length where lower indices are made transitive.
+    pub(crate) transitive_functions_len: usize,
     pub(crate) ext_prelude: Vec<FnExternal>,
     pub(crate) register_namespace: Arc<Vec<Arc<String>>>,
 }
@@ -19,6 +21,7 @@ impl Module {
     pub fn empty() -> Module {
         Module {
             functions: vec![],
+            transitive_functions_len: 0,
             ext_prelude: vec![],
             register_namespace: Arc::new(vec![]),
         }
@@ -29,6 +32,15 @@ impl Module {
         for f in &other.ext_prelude {
             self.ext_prelude.push(f.clone());
         }
+    }
+
+    /// Import transitive prelude from other module.
+    pub fn import_tr_prelude(&mut self, other: &Module) {
+        for f in &other.functions[..other.transitive_functions_len] {
+            self.functions.push(f.clone())
+        }
+        // Set transitivity to the loaded functions so far.
+        self.transitive_functions_len = self.functions.len();
     }
 
     /// Import external prelude and loaded functions from module.
@@ -564,16 +576,35 @@ impl Module {
             load__source_imports,
             Dfn::nl(vec![Str, Type::array()], Type::result()),
         );
+        #[cfg(feature = "dynload")]
+        m.add_str(
+            "load__source_imports_tr_usetr",
+            load__source_imports_tr_usetr,
+            Dfn::nl(vec![Str, Type::array(), Type::Bool, Type::Bool], Type::result()),
+        );
         m.add_str(
             "module__in_string_imports",
             module__in_string_imports,
             Dfn::nl(vec![Str, Str, Type::array()], Type::result()),
         );
         m.add_str(
+            "module__in_string_imports_tr_usetr",
+            module__in_string_imports_tr_usetr,
+            Dfn::nl(vec![Str, Str, Type::array(), Type::Bool, Type::Bool], Type::result()),
+        );
+        m.add_str(
             "check__in_string_imports",
             check__in_string_imports,
             Dfn::nl(
                 vec![Str, Str, Type::array()],
+                Type::Result(Box::new(Type::Array(Box::new(Type::Object)))),
+            ),
+        );
+        m.add_str(
+            "check__in_string_imports_usetr",
+            check__in_string_imports_usetr,
+            Dfn::nl(
+                vec![Str, Str, Type::array(), Type::Bool],
                 Type::Result(Box::new(Type::Array(Box::new(Type::Object)))),
             ),
         );

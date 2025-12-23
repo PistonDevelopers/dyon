@@ -1,0 +1,6 @@
+foo() = 42
+
+fn main() {
+    m := unwrap(load("source/transitive/inner_mod.dyon"))
+    call(m, "main", [])
+}

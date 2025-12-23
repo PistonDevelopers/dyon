@@ -1,0 +1,9 @@
+fn main() {
+    m := unwrap(load(
+        source: "source/transitive/tr_mod.dyon",
+        imports: [],
+        tr: true,
+        usetr: false
+    ))
+    call(m, "main", [])
+}

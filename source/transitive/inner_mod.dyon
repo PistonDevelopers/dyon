@@ -1,0 +1,5 @@
+fn main() {
+    fs := functions()
+    println(any i {fs[i].name == "foo"})
+    println(foo())
+}
