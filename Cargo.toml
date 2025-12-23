@@ -1,6 +1,6 @@
 [package]
 name = "dyon"
-version = "0.50.3"
+version = "0.51.0"
 edition = "2024"
 authors = ["Sven Nilsen <bvssvni@gmail.com>"]
 keywords = ["script", "scripting", "game", "language", "piston"]
