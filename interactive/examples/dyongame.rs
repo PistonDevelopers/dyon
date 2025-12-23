@@ -178,6 +178,9 @@ fn load_module(file: &str) -> Option<Module> {
     )) {
         return None;
     }
+    // Make `graphics2d.dyon` part of the downstream API,
+    // so users do not have to reload this module as dependency.
+    module.make_transitive();
 
     if error(load(file, &mut module)) {
         None
