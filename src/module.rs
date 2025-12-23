@@ -43,6 +43,11 @@ impl Module {
         self.transitive_functions_len = self.functions.len();
     }
 
+    /// Set transitivity to the loaded functions so far.
+    pub fn make_transitive(&mut self) {
+        self.transitive_functions_len = self.functions.len();
+    }
+
     /// Import external prelude and loaded functions from module.
     pub fn import(&mut self, other: &Module) {
         // Add external functions from imports.
