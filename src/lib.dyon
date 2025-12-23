@@ -241,14 +241,41 @@ fn load(source: str) -> res[any] { ... }
 /// Returns `ok(module)` if the loading succeeds.
 fn load__source_imports(source: str, imports: [any]) -> res[any] { ... }
 
+/// Loads module from source, using imports as dependencies.
+/// Returns `ok(module)` if the loading succeeds.
+///
+/// - `tr`: Whether the loaded module is transitive
+/// - `usetr`: Whether transitivity is enabled
+fn load__source_imports_tr_usetr(
+    source: str, imports: [any], tr: bool, usetr: bool
+) -> res[any] { ... }
+
 /// Creates module from string.
 /// Returns `ok(module)` if it succeeds.
 fn module__in_string_imports(name: str, code: str, imports: [any]) -> res[any] { ... }
+
+/// Creates module from string.
+/// Returns `ok(module)` if it succeeds.
+///
+/// - `tr`: Whether the loaded module is transitive
+/// - `usetr`: Whether transitivity is enabled
+fn module__in_string_imports_tr_usetr(
+    name: str, code: str, imports: [any], tr: bool, usetr: bool
+) -> res[any] { ... }
 
 /// Returns data from lifetime/type-checker from source.
 /// Ignores any lifetime or type error.
 /// Returns an error if there are any syntax errors.
 fn check__in_string_imports(name: str, code: str, imports: [any]) -> res[[{}]] { ... }
+
+/// Returns data from lifetime/type-checker from source.
+/// Ignores any lifetime or type error.
+/// Returns an error if there are any syntax errors.
+///
+/// - `usetr`: Whether transitivity is enabled
+fn check__in_string_imports_usetr(
+    name: str, code: str, imports: [any], usetr: bool
+) -> res[[{}]] { ... }
 
 /// Calls function in module with arguments.
 fn call(module: any, function: str, arguments: [any]) { ... }

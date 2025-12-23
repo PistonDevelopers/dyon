@@ -1194,3 +1194,64 @@ fn suggestions(
 
 /// Maps (function, argument_name) => (argument, index)
 pub type ArgNames = HashMap<(usize, Arc<String>), (usize, usize)>;
+
+pub(crate) fn to_array(nodes: &[Node]) -> Vec<crate::Variable> {
+    use crate::embed::PushVariable;
+    use crate::Variable;
+
+    let mut res = vec![];
+    lazy_static! {
+        static ref KIND: Arc<String> = Arc::new("kind".into());
+        static ref CHILDREN: Arc<String> = Arc::new("children".into());
+        static ref NAMES: Arc<String> = Arc::new("names".into());
+        static ref PARENT: Arc<String> = Arc::new("parent".into());
+        static ref TY: Arc<String> = Arc::new("ty".into());
+        static ref ALIAS: Arc<String> = Arc::new("alias".into());
+        static ref MUTABLE: Arc<String> = Arc::new("mutable".into());
+        static ref TRY: Arc<String> = Arc::new("try".into());
+        static ref GRAB_LEVEL: Arc<String> = Arc::new("grab_level".into());
+        static ref SOURCE_OFFSET: Arc<String> = Arc::new("source_offset".into());
+        static ref SOURCE_LENGTH: Arc<String> = Arc::new("source_length".into());
+        static ref START: Arc<String> = Arc::new("start".into());
+        static ref END: Arc<String> = Arc::new("end".into());
+        static ref LIFETIME: Arc<String> = Arc::new("lifetime".into());
+        static ref DECLARATION: Arc<String> = Arc::new("declaration".into());
+        static ref OP: Arc<String> = Arc::new("op".into());
+        static ref LTS: Arc<String> = Arc::new("lts".into());
+    }
+    for n in nodes {
+        let mut obj = HashMap::new();
+        obj.insert(KIND.clone(), format!("{:?}", n.kind).push_var());
+        obj.insert(CHILDREN.clone(), n.children.push_var());
+        obj.insert(NAMES.clone(), n.names.push_var());
+        obj.insert(PARENT.clone(), n.parent.push_var());
+        obj.insert(
+            TY.clone(),
+            n.ty.as_ref().map(|ty| ty.description()).push_var(),
+        );
+        obj.insert(ALIAS.clone(), n.alias.push_var());
+        obj.insert(MUTABLE.clone(), n.mutable.push_var());
+        obj.insert(TRY.clone(), n.try_flag.push_var());
+        obj.insert(GRAB_LEVEL.clone(), (n.grab_level as u32).push_var());
+        obj.insert(SOURCE_OFFSET.clone(), n.source.offset.push_var());
+        obj.insert(SOURCE_LENGTH.clone(), n.source.length.push_var());
+        obj.insert(START.clone(), n.start.push_var());
+        obj.insert(END.clone(), n.end.push_var());
+        obj.insert(LIFETIME.clone(), n.lifetime.push_var());
+        obj.insert(DECLARATION.clone(), n.declaration.push_var());
+        obj.insert(
+            OP.clone(),
+            n.op.as_ref().map(|op| format!("{:?}", op)).push_var(),
+        );
+        obj.insert(
+            LTS.clone(),
+            n.lts
+                .iter()
+                .map(|lt| format!("{:?}", lt))
+                .collect::<Vec<String>>()
+                .push_var(),
+        );
+        res.push(Variable::Object(Arc::new(obj)));
+    }
+    res
+}
