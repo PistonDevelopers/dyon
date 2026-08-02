@@ -200,7 +200,7 @@ fn image_size(image: any) -> vec4 { ... }
 fn pxl__image_pos_color(image: any, pos: vec4, color: vec4) { ... }
 
 /// Gets pixel color from image.
-fn pxl__image_pos(image: any, pos: vec4) -> vec4 { ... }
+fn pxl__image_pos(image: any, pos: vec4) -> res[vec4] { ... }
 
 /// Creates texture from image.
 ///
