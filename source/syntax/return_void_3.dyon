@@ -5,5 +5,4 @@ fn main() {
 fn foo() {
     return
     println("hi")
-    // This fails as syntax currently for some unknown reason.
 }
