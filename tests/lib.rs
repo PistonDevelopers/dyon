@@ -151,6 +151,7 @@ fn test_syntax() {
     test_src("source/syntax/lazy_pass_6.dyon");
     test_src("source/syntax/lazy_pass_7.dyon");
     test_src("source/syntax/lazy_pass_8.dyon");
+    test_src("source/syntax/returns.dyon");
 }
 
 #[cfg(feature = "file")]
