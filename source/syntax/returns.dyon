@@ -1,0 +1,4 @@
+fn main() {
+    returns := 2
+    println({a: returns})
+}

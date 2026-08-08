@@ -57,8 +57,8 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\\"
     block:"block"
     assign:"assign"
     compare:"compare"
-    ["return" wn expr:"return"]
-    ["return":"return_void"]
+    ["return" !.._seps! wn expr:"return"]
+    ["return":"return_void" !.._seps!]
     add:"add"
     in_loops
     short_loops
