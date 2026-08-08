@@ -109,12 +109,12 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\\"
 28 unop_not = [{"!" "¬"} ?w lexpr:"expr"]
 29 unop_neg = ["-" ?w mul_expr:"expr"]
 30 norm = ["|" ?w expr:"expr" ?w "|"]
-31 item = [?"~":"current" ?w .._seps!:"name" ?[wn "?":"try_item"]
+31 item = [?"~":"current" ?w .._seps!:"name" ?[?wn "?":"try_item"]
     ?item_extra:"item_extra"]
 32 item_extra = .r!([{
-  [wn "[" ?w {.t?:"id" .$_:"id" expr:"id"} ?w "]"]
+  [?wn "[" ?w {.t?:"id" .$_:"id" expr:"id"} ?w "]"]
   [?w "." ?w .._seps!:"id"]
-} ?[wn "?":"try_id"]])
+} ?[?wn "?":"try_id"]])
 33 link = ["link" ?w "{" ?w link_body "}"]
 34 link_body = .s?.(?w expr:"link_item")
 // Generate link block for body.
@@ -132,21 +132,21 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\\"
 39 for_n = [label "for" short_body]
 40 for_in = [label "for" in_body]
 41 loop = [label "loop" .w!  block:"block"]
-42 break = ["break" !.._seps! wn ?["'" .._seps!:"label"]]
-43 continue = ["continue" !.._seps! wn ?["'" .._seps!:"label"]]
+42 break = ["break" !.._seps! ?[wn "'" .._seps!:"label"]]
+43 continue = ["continue" !.._seps! ?[wn "'" .._seps!:"label"]]
 44 if = ["if" .w! expr:"cond" ?w block:"true_block"
          .r?([?w "else" w "if" ?w expr:"else_if_cond" ?w block:"else_if_block"])
          ?[?w "else" ?w block:"else_block"]]
-45 call = [?[.._seps!:"alias" "::"] .._seps!:"name" wn "(" ?w
+45 call = [?[.._seps!:"alias" "::"] .._seps!:"name" ?wn "(" ?w
     .s?.(, arg_expr:"call_arg") ?w ")"]
-46 named_call = [?[.._seps!:"alias" "::"] .._seps!:"word" wn "(" ?w
+46 named_call = [?[.._seps!:"alias" "::"] .._seps!:"word" ?wn "(" ?w
     .s?.(, [.._seps!:"word" ?w ":" ?w arg_expr:"call_arg" ?w]) ")"]
 47 go = ["go " ?w {call:"call" named_call:"named_call"}]
-48 assign = [lexpr:"left" wn assign_op ?w expr:"right"]
+48 assign = [lexpr:"left" ?wn assign_op ?w expr:"right"]
 49 assign_op = {
   ":=":":=" "=":"=" "+=":"+=" "-=":"-=" "*=":"*=" "/=":"/=" "%=":"%=" "^=":"^="
 }
-50 compare = [lexpr:"expr" wn compare_op ?w expr:"expr"]
+50 compare = [lexpr:"expr" ?wn compare_op ?w expr:"expr"]
 51 compare_op = {"==":"==" "!=":"!=" "¬=":"!=" "<=":"<=" "<":"<" ">=":">=" ">":">"}
 52 grab = ["grab" ?[w "'" .$:"grab_level"] w expr:"expr"]
 53 try_expr = ["try" w expr:"expr"]
@@ -159,7 +159,7 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\\"
         [!"{" expr:"end"]
     }]) ?w block:"block"]
 62 in_body = [.w! .._seps!:"name" .w! "in" .w! expr:"iter" ?w block:"block"]
-63 try = ?[wn "?":"try"]
+63 try = ?[?wn "?":"try"]
 64 , = [?w "," ?w]
 65 arr = {array:"array" array_fill:"array_fill"}
 66 items = {mat4:"mat4" vec4:"vec4" link:"link" grab:"grab" try_expr:"try_expr"
@@ -169,7 +169,7 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\\"
             call:"call" named_call:"named_call"
             num bool color item:"item"}
 // Allow whitespace, but no new line.
-67 wn = .r?({" " "\t" "\r"})
+67 wn = .r!({" " "\t" "\r"})
 
 70 in_loops = {sum_in:"sum_in" prod_in:"prod_in"
     min_in:"min_in" max_in:"max_in" any_in:"any_in" all_in:"all_in"
@@ -227,18 +227,20 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\\"
 101 closure_type = ["\\(" ?w .s?.(, type:"cl_arg") ?w ")"
     ?w "->" ?w type:"cl_ret"]
 
-200 + = [wn {"+":"+" "||":"||" "∨":"+" ["or":"+" w]} ?w]
-201 - = [wn "-":"-" ?w]
+200 + = [?wn {"+":"+" "||":"||" "∨":"+" ["or":"+" w]} ?w]
+201 - = [?wn "-":"-" ?w]
 // Allow whitespace before multiplication sign, but no new line.
 // This prevents `x` on a new line from being interpreted as multiplication sign.
-202 * = [wn {
-    "*.":"*." "·":"*."
-    ["x":"x" w] "⨯":"x"
-    "*":"*" "&&":"&&" "∧":"*" ["and":"*" w]
-} ?w]
-203 / = [wn "/":"/" !"/" ?w]
-204 % = [wn "%":"%" ?w]
-205 pow = [lexpr:"expr" wn {"^":"^" "⊻":"^" ["xor":"^" w]} ?w lexpr:"expr"]
+202 * = {
+    [wn {["x":"x" w] ["and":"*" w]}]
+    [?wn {
+        "*.":"*." "·":"*." "⨯":"x"
+        "*":"*" "&&":"&&" "∧":"*"
+    } ?w]
+}
+203 / = [?wn "/":"/" !"/" ?w]
+204 % = [?wn "%":"%" ?w]
+205 pow = [lexpr:"expr" {[?wn "^":"^"] [?wn "⊻":"^"] [wn "xor":"^" w]} ?w lexpr:"expr"]
 206 mul = .s!({* / %} {unop_neg:"neg" pow:"pow" lexpr:"expr"})
 207 mul_expr = {mul:"mul"}
 208 add = .s!({+ -} mul_expr:"expr")
