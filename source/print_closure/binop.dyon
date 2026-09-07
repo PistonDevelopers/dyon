@@ -138,6 +138,7 @@ fn main() {
     assert(\(x: any) = x == x || x || x, "\\(x: any) = x == x || x || x")
     assert(\(x: any) = (x == x) && (x == x), "\\(x: any) = (x == x) && (x == x)")
     assert(\(x: any) = x == x && x && x, "\\(x: any) = x == x && x && x")
+    assert(\(x: any) = 1 + (if false {1} else {0}), "\\(x: any) = 1 + (if false { 1 } else { 0 })")
 }
 
 fn assert(f: \(any) -> any, s: str) {

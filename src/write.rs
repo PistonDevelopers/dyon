@@ -438,6 +438,7 @@ fn binop_needs_parens(op: ast::BinOp, expr: &ast::Expression, right: bool) -> bo
             Some(x) => x,
             None => return false,
         }
+        E::If(_) => return true,
         _ => return false
     };
     match (op.precedence(), binop.precedence()) {
