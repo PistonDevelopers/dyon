@@ -60,9 +60,6 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\\"
     ["return" !.._seps! wn expr:"return"]
     ["return":"return_void" !.._seps!]
     add:"add"
-    in_loops
-    short_loops
-    items
 } try]
 // Interprets "return" as variable, does not expect loops or assignment.
 14 arg_expr = {
@@ -77,9 +74,6 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\\"
         block:"block"
         compare:"compare"
         add:"add"
-        in_loops
-        short_loops
-        items
     } try]
 }
 15 lexpr = [{
