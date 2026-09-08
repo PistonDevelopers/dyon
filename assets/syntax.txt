@@ -242,7 +242,7 @@ _seps: "(){}[],.:;=<>*·+-/%^?~|&∧∨!¬∑∃∀\n\"\\"
 204 % = [?wn "%":"%" ?w]
 205 pow = [lexpr:"expr" {[?wn "^":"^"] [?wn "⊻":"^"] [wn "xor":"^" w]} ?w lexpr:"expr"]
 206 mul = .s!({* / %} {unop_neg:"neg" pow:"pow" lexpr:"expr"})
-207 mul_expr = {mul:"mul"}
+207 mul_expr = mul:"mul"
 208 add = .s!({+ -} mul_expr:"expr")
 
 1000 document = [?[?w ns:"ns"] ?w ?uses:"uses" ?w .l({[.w? fn:"fn"] comment})]
