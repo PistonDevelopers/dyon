@@ -143,7 +143,7 @@ pub fn add_functions<W, F, C>(module: &mut Module)
         create_image__size, Dfn::nl(vec![Type::Vec4], Type::Any)
     );
     module.add(Arc::new("save__image_file".into()),
-        save__image_file, Dfn::nl(vec![Type::F64, Type::Str], Type::Result(Box::new(Type::Str)))
+        save__image_file, Dfn::nl(vec![Type::Any, Type::Str], Type::Result(Box::new(Type::Str)))
     );
     module.add(Arc::new("image_size".into()),
         image_size, Dfn::nl(vec![Type::Any], Type::Vec4)
@@ -521,13 +521,30 @@ dyon_fn!{fn create_image__size(size: Vec4) -> RustObject {
     to_rust_object(RgbaImage::new(size[0] as u32, size[1] as u32))
 }}
 
-dyon_fn!{fn save__image_file(id: usize, file: Arc<String>) -> Result<Arc<String>, Arc<String>> {
+dyon_fn!{fn save__image_file(im: Variable, file: Arc<String>) -> Result<Arc<String>, Arc<String>> {
     use image::RgbaImage;
 
-    let images = unsafe { &mut *Current::<Vec<RgbaImage>>::new() };
-    match images[id].save(&**file) {
-        Ok(_) => Ok(file),
-        Err(err) => Err(Arc::new(format!("{}", err))),
+    match im {
+        Variable::F64(id, _) => {
+            let images = unsafe { &mut *Current::<Vec<RgbaImage>>::new() };
+            match images.get(id as usize)
+                .ok_or_else(|| IMAGE_ID_IS_OFB.to_string())?
+                .save(&**file)
+            {
+                Ok(_) => Ok(file),
+                Err(err) => Err(Arc::new(format!("{}", err))),
+            }
+        }
+        Variable::RustObject(obj) => {
+            let guard = obj.lock().map_err(|_| CNOLOM.to_string())?;
+            let img: &RgbaImage = guard.downcast_ref()
+                .ok_or_else(|| EXPECTED_RGBA_IMAGE.to_string())?;
+            match img.save(&**file) {
+                Ok(_) => Ok(file),
+                Err(err) => Err(Arc::new(format!("{}", err))),
+            }
+        }
+        _ => Err(Arc::new("Expected image".to_string())),
     }
 }}
 

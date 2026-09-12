@@ -180,7 +180,7 @@ fn load_image(file: str) -> res[f64] { ... }
 fn load_image_obj(file: str) -> res[any] { ... }
 
 /// Saves image to file.
-fn save__image_file(image: f64, file: str) -> res[str] { ... }
+fn save__image_file(image: any, file: str) -> res[str] { ... }
 
 /// Creates empty image.
 ///
