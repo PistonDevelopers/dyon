@@ -14,7 +14,7 @@ exclude = ["images/*", "source/*"]
 name = "dyon_interactive"
 
 [dependencies.dyon]
-version = "0.51.0"
+version = "0.51.3"
 path = ".."
 
 [dependencies]
